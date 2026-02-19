@@ -1,6 +1,6 @@
 // src/app/admin/inventory/page.tsx
 import { createClient } from '@/utils/supabase/server'
-import { Plus, Edit, Package } from 'lucide-react'
+import { Plus, Edit, Package, Link } from 'lucide-react'
 
 export default async function InventoryPage() {
   const supabase = await createClient()
@@ -18,9 +18,12 @@ export default async function InventoryPage() {
     <div className="max-w-6xl mx-auto space-y-8">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold text-slate-900">Inventory Management</h1>
-        <button className="bg-slate-900 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-slate-800 transition">
+        <Link 
+          href="/admin/inventory/new" 
+          className="bg-slate-900 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-slate-800 transition"
+        >
           <Plus className="w-5 h-5" /> Add New Sofa
-        </button>
+        </Link>
       </div>
 
       {/* Inventory List */}
