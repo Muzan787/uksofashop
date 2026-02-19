@@ -4,6 +4,7 @@
 import { useState } from 'react'
 import { ShoppingCart, Check } from 'lucide-react'
 import { Database } from '@/types/supabase'
+import { useCart } from '@/context/CartContext'
 
 // Extracting types generated from Supabase
 type Product = Database['public']['Tables']['products']['Row']
@@ -23,6 +24,25 @@ export default function VariantSelector({ product, variants }: VariantSelectorPr
   // 2. Dynamically calculate price and image based on selection
   const displayPrice = product.base_price + (selectedVariant?.price_adjustment || 0)
   const displayImage = selectedVariant?.image_url || '/placeholder-sofa.jpg'
+
+  // 3. Cart Context for adding items to cart
+  const { addToCart } = useCart()
+
+  const handleAddToCart = () => {
+    if (!selectedVariant) return
+
+    addToCart({
+      variant_id: selectedVariant.id,
+      quantity: 1,
+      price: displayPrice,
+      title: product.title,
+      color: selectedVariant.color || 'Standard',
+      image_url: displayImage
+    })
+    
+    // Optional: You could trigger a toast notification here!
+    alert('Added to cart!')
+  }
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
@@ -78,7 +98,8 @@ export default function VariantSelector({ product, variants }: VariantSelectorPr
         {/* --- Sticky Mobile Add to Cart --- */}
         {/* The 'fixed bottom-0' classes make it stick to the bottom on mobile, while 'md:relative' puts it back in normal flow on desktop */}
         <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-md border-t border-gray-200 md:relative md:bg-transparent md:border-none md:p-0 md:mt-10 z-50">
-          <button 
+          <button
+            onClick={handleAddToCart}
             className="w-full bg-slate-900 text-white flex items-center justify-center gap-3 py-4 rounded-xl font-semibold text-lg hover:bg-slate-800 transition-all active:scale-[0.98] disabled:bg-slate-300 disabled:cursor-not-allowed shadow-lg md:shadow-none"
             disabled={selectedVariant?.stock_quantity === 0}
           >

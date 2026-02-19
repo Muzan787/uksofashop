@@ -1,65 +1,114 @@
-import Image from "next/image";
+import Link from 'next/link'
+import { createClient } from '@/utils/supabase/server'
+import { ArrowRight, Truck, ShieldCheck, Clock } from 'lucide-react'
 
-export default function Home() {
+export default async function Home() {
+  const supabase = await createClient()
+
+  // 1. Fetch Categories for the grid
+  const { data: categories } = await supabase
+    .from('categories')
+    .select('*')
+    .limit(4)
+
+  // 2. Fetch Featured Products
+  const { data: featuredProducts } = await supabase
+    .from('products')
+    .select(`
+      id, title, slug, base_price,
+      product_variants ( image_url )
+    `)
+    .limit(4)
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <main className="min-h-screen bg-white">
+      {/* Crucial UI Rule: Small, compact promotional banner.
+        This ensures it doesn't push main content below the fold on mobile.
+      */}
+      <div className="bg-slate-900 text-white text-center py-2 text-sm font-medium">
+        Free Delivery on all UK orders over £500. <Link href="/shop/all" className="underline hover:text-gray-300">Shop Now</Link>
+      </div>
+
+      {/* Hero Section */}
+      <section className="relative w-full h-[60vh] min-h-[400px] bg-gray-100 flex items-center justify-center overflow-hidden">
+        {/* Replace with your actual hero image later */}
+        <img 
+          src="/placeholder-hero.jpg" 
+          alt="Modern living room" 
+          className="absolute inset-0 w-full h-full object-cover opacity-60"
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+        <div className="relative z-10 text-center px-4 max-w-3xl mx-auto mt-10">
+          <h1 className="text-4xl md:text-6xl font-bold text-slate-900 tracking-tight mb-6">
+            Design Your Perfect Living Space.
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p className="text-lg md:text-xl text-slate-800 mb-8 font-medium">
+            Premium, handcrafted UK sofas delivered straight to your door. Cash on delivery available.
           </p>
+          <Link href="/shop/sofas" className="inline-flex items-center gap-2 bg-slate-900 text-white px-8 py-4 rounded-full font-semibold hover:bg-slate-800 transition-transform hover:scale-105 shadow-lg">
+            Shop Sofas <ArrowRight className="w-5 h-5" />
+          </Link>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      </section>
+
+      {/* Trust Badges */}
+      <section className="border-y border-gray-200 bg-gray-50 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+          <div className="flex flex-col items-center justify-center">
+            <Truck className="w-8 h-8 text-slate-700 mb-3" />
+            <h3 className="font-semibold text-slate-900">Fast UK Delivery</h3>
+            <p className="text-sm text-slate-600">Delivered carefully by our team.</p>
+          </div>
+          <div className="flex flex-col items-center justify-center">
+            <ShieldCheck className="w-8 h-8 text-slate-700 mb-3" />
+            <h3 className="font-semibold text-slate-900">5-Year Warranty</h3>
+            <p className="text-sm text-slate-600">Built to last a lifetime.</p>
+          </div>
+          <div className="flex flex-col items-center justify-center">
+            <Clock className="w-8 h-8 text-slate-700 mb-3" />
+            <h3 className="font-semibold text-slate-900">Cash on Delivery</h3>
+            <p className="text-sm text-slate-600">Pay only when you are satisfied.</p>
+          </div>
         </div>
-      </main>
-    </div>
-  );
+      </section>
+
+      {/* Featured Categories */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <h2 className="text-3xl font-bold text-slate-900 mb-8">Shop by Category</h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8">
+          {categories?.map((category) => (
+            <Link key={category.id} href={`/shop/${category.slug}`} className="group relative aspect-square overflow-hidden rounded-2xl bg-gray-100">
+              <img 
+                src={category.image_url || '/placeholder.jpg'} 
+                alt={category.name}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex flex-col justify-end p-6">
+                <h3 className="text-white font-bold text-xl capitalize">{category.name}</h3>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      {/* Featured Products */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <h2 className="text-3xl font-bold text-slate-900 mb-8">Customer Favorites</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+          {featuredProducts?.map((product) => (
+            <Link href={`/shop/featured/${product.slug}`} key={product.id} className="group">
+              <div className="aspect-square bg-gray-100 rounded-xl overflow-hidden mb-4">
+                <img 
+                  src={Array.isArray(product.product_variants) && product.product_variants.length > 0 ? product.product_variants[0].image_url : '/placeholder.jpg'} 
+                  alt={product.title}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                />
+              </div>
+              <h3 className="text-lg font-medium text-slate-900">{product.title}</h3>
+              <p className="text-slate-600">£{product.base_price.toFixed(2)}</p>
+            </Link>
+          ))}
+        </div>
+      </section>
+    </main>
+  )
 }
