@@ -3,7 +3,7 @@ import { createClient } from '@/utils/supabase/server'
 import { Clock, CheckCircle } from 'lucide-react'
 
 export default async function AdminOrdersPage() {
-  const supabase = createClient()
+  const supabase = await createClient()
 
   // Fetch orders, ordered by newest first
   const { data: orders, error } = await supabase

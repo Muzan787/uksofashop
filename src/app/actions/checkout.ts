@@ -12,7 +12,8 @@ export type CartItem = {
 }
 
 export async function submitCodOrder(formData: FormData, cartItems: CartItem[], totalAmount: number) {
-  const supabase = createClient()
+
+  const supabase = await createClient()
 
   // 1. Extract customer details from the form
   const customerName = formData.get('name') as string

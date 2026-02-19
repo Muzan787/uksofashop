@@ -3,7 +3,7 @@ import { createClient } from '@/utils/supabase/server'
 import { Plus, Edit, Package } from 'lucide-react'
 
 export default async function InventoryPage() {
-  const supabase = createClient()
+  const supabase = await createClient()
 
   // Fetch all products with their variants
   const { data: products } = await supabase

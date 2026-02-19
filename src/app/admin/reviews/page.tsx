@@ -4,7 +4,7 @@ import { approveReview, deleteReview } from '@/app/actions/reviews'
 import { CheckCircle, Trash2, Star } from 'lucide-react'
 
 export default async function AdminReviewsPage() {
-  const supabase = createClient()
+  const supabase = await createClient()
 
   // Fetch all reviews, including the product title they belong to
   const { data: reviews } = await supabase

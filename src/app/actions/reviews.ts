@@ -5,7 +5,7 @@ import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 
 export async function approveReview(formData: FormData) {
-  const supabase = createClient()
+  const supabase = await createClient()
   const reviewId = formData.get('reviewId') as string
 
   const { error } = await supabase
@@ -20,7 +20,7 @@ export async function approveReview(formData: FormData) {
 }
 
 export async function deleteReview(formData: FormData) {
-  const supabase = createClient()
+  const supabase = await createClient()
   const reviewId = formData.get('reviewId') as string
 
   const { error } = await supabase

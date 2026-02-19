@@ -5,7 +5,7 @@ import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 
 export async function addProduct(formData: FormData, variants: any[]) {
-  const supabase = createClient()
+  const supabase = await createClient()
 
   const title = formData.get('title') as string
   const slug = formData.get('slug') as string
