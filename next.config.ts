@@ -11,7 +11,11 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'res.cloudinary.com', // Added Cloudinary!
+        hostname: 'res.cloudinary.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'ae01.alicdn.com', // Added this new domain!
       },
     ],
   },

@@ -3,25 +3,33 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ShoppingCart, Menu, X, Search, Phone, ChevronDown } from 'lucide-react';
+import { ShoppingCart, Menu, X, Search, Phone } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
-
-const navCategories = [
-  { name: 'Sofas', href: '/shop/sofas' },
-  { name: 'Beds', href: '/shop/beds' },
-  { name: 'Dining', href: '/shop/dining' },
-  { name: 'Chairs', href: '/shop/chairs' },
-  { name: 'Storage', href: '/shop/storage' },
-];
+import { createClient } from '@/utils/supabase/client';
 
 export default function Header() {
-  const { itemCount } = useCart(); // Using our custom context!
+  const { itemCount } = useCart();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  
+  // State to hold our dynamic database categories
+  const [categories, setCategories] = useState<{ id: string, name: string, slug: string }[]>([]);
 
   useEffect(() => {
+    // 1. Scroll effect
     const handleScroll = () => setScrolled(window.scrollY > 10);
     window.addEventListener('scroll', handleScroll, { passive: true });
+    
+    // 2. Fetch categories from Supabase
+    const fetchCategories = async () => {
+      const supabase = createClient();
+      const { data } = await supabase.from('categories').select('id, name, slug').order('name');
+      if (data) {
+        setCategories(data);
+      }
+    };
+    fetchCategories();
+
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
@@ -55,10 +63,10 @@ export default function Header() {
               </span>
             </Link>
 
-            {/* Desktop Nav */}
-            <nav className="hidden lg:flex items-center gap-4">
-              {navCategories.map((cat) => (
-                <Link key={cat.name} href={cat.href} className="text-sm font-medium text-stone-700 hover:text-stone-900 transition-colors">
+            {/* Desktop Nav (Dynamic) */}
+            <nav className="hidden lg:flex items-center gap-6">
+              {categories.map((cat) => (
+                <Link key={cat.id} href={`/shop/${cat.slug}`} className="text-sm font-medium text-stone-700 hover:text-stone-900 transition-colors">
                   {cat.name}
                 </Link>
               ))}
@@ -79,18 +87,18 @@ export default function Header() {
         </div>
       </header>
 
-      {/* Mobile Drawer */}
+      {/* Mobile Drawer (Dynamic) */}
       {mobileOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <div className="absolute inset-0 bg-black/50" onClick={() => setMobileOpen(false)} />
           <div className="absolute left-0 top-0 bottom-0 w-72 bg-white shadow-xl overflow-y-auto">
-            <div className="flex items-center justify-between p-4 border-b">
+            <div className="flex items-center justify-between p-4 border-b border-stone-100">
               <span className="font-bold text-stone-800 text-lg">UKSofa<span className="text-amber-600">Shop</span></span>
               <button onClick={() => setMobileOpen(false)}><X className="w-5 h-5 text-stone-600" /></button>
             </div>
-            <nav className="p-4">
-              {navCategories.map((cat) => (
-                <Link key={cat.name} href={cat.href} onClick={() => setMobileOpen(false)} className="block py-3 text-stone-800 font-medium border-b border-stone-100">
+            <nav className="p-4 flex flex-col space-y-4">
+              {categories.map((cat) => (
+                <Link key={cat.id} href={`/shop/${cat.slug}`} onClick={() => setMobileOpen(false)} className="text-stone-800 font-medium">
                   {cat.name}
                 </Link>
               ))}
