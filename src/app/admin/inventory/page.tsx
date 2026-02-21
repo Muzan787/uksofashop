@@ -1,6 +1,8 @@
 // src/app/admin/inventory/page.tsx
 import { createClient } from '@/utils/supabase/server'
-import { Plus, Edit, Package, Link } from 'lucide-react'
+import { Plus, Edit, Package, Trash2 } from 'lucide-react'
+import Link from 'next/link'
+import { deleteProduct } from '@/app/actions/inventory'
 
 export default async function InventoryPage() {
   const supabase = await createClient()
@@ -53,9 +55,24 @@ export default async function InventoryPage() {
                     </span>
                   </td>
                   <td className="p-4 text-right">
-                    <button className="text-slate-400 hover:text-slate-900 transition">
-                      <Edit className="w-5 h-5 inline" />
-                    </button>
+                    <div className="flex justify-end items-center gap-3">
+                      {/* Placeholder for future edit functionality */}
+                      <button className="text-slate-400 hover:text-blue-600 transition" title="Edit">
+                        <Edit className="w-5 h-5" />
+                      </button>
+                      
+                      {/* New Delete Form */}
+                      <form action={deleteProduct}>
+                        <input type="hidden" name="productId" value={product.id} />
+                        <button 
+                          type="submit" 
+                          className="text-slate-400 hover:text-red-600 transition"
+                          title="Delete Product"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      </form>
+                    </div>
                   </td>
                 </tr>
               )

@@ -58,3 +58,26 @@ export async function addProduct(formData: FormData, variants: any[]) {
   revalidatePath('/admin/inventory')
   return { success: true }
 }
+
+// Add this at the bottom of src/app/actions/inventory.ts
+
+export async function deleteProduct(formData: FormData) {
+  const supabase = await createClient()
+  const productId = formData.get('productId') as string
+
+  if (!productId) return { error: 'Product ID is required' }
+
+  const { error } = await supabase
+    .from('products')
+    .delete()
+    .eq('id', productId)
+
+  if (error) {
+    return { error: 'Failed to delete product.' }
+  }
+
+  // Refresh both the inventory page and the frontend homepage
+  revalidatePath('/admin/inventory')
+  revalidatePath('/')
+  revalidatePath('/shop/[category]', 'layout')
+}
