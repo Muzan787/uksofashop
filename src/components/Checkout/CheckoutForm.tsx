@@ -2,80 +2,116 @@
 'use client'
 
 import { useState } from 'react'
-import { submitCodOrder, CartItem } from '@/app/actions/checkout'
-import { CheckCircle2, Loader2 } from 'lucide-react'
+import { useCart } from '@/context/CartContext'
+import { placeOrder } from '@/app/actions/checkout'
+import { Loader2, CheckCircle } from 'lucide-react'
+import Link from 'next/link'
 
-interface CheckoutFormProps {
-  cartItems: CartItem[]
-  totalAmount: number
-  onSuccess?: () => void // Callback to clear global cart state
-}
-
-export default function CheckoutForm({ cartItems, totalAmount, onSuccess }: CheckoutFormProps) {
+export default function CheckoutForm() {
+  const { cartItems, totalAmount, clearCart } = useCart()
   const [isPending, setIsPending] = useState(false)
-  const [isSuccess, setIsSuccess] = useState(false)
-  const [errorMessage, setErrorMessage] = useState('')
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState(false)
+  const [orderId, setOrderId] = useState('')
 
-  // Client-side wrapper to handle the Server Action
-  async function handleCheckout(formData: FormData) {
+  async function handleSubmit(formData: FormData) {
     setIsPending(true)
-    setErrorMessage('')
+    setError('')
 
-    const result = await submitCodOrder(formData, cartItems, totalAmount)
+    // Map the cart items to match our Server Action's expected format
+    const itemsToSave = cartItems.map(item => ({
+      variant_id: item.variant_id,
+      quantity: item.quantity,
+      price: item.price
+    }))
+
+    const result = await placeOrder(formData, itemsToSave, totalAmount)
 
     if (result?.error) {
-      setErrorMessage(result.error)
+      setError(result.error)
+      setIsPending(false)
     } else if (result?.success) {
-      setIsSuccess(true)
-      if (onSuccess) onSuccess()
+      setSuccess(true)
+      setOrderId(result.orderId || '')
+      clearCart() // Empty the cart!
+      setIsPending(false)
     }
-    
-    setIsPending(false)
   }
 
-  if (isSuccess) {
+  // If the order is successful, show a lovely confirmation screen
+  if (success) {
     return (
-      <div className="flex flex-col items-center justify-center p-8 bg-green-50 rounded-xl text-green-800">
-        <CheckCircle2 className="w-16 h-16 mb-4 text-green-600" />
-        <h2 className="text-2xl font-bold">Order Placed!</h2>
-        <p className="mt-2 text-center">Thank you for your order. You will pay £{totalAmount.toFixed(2)} upon delivery.</p>
+      <div className="text-center py-12 px-4 bg-white rounded-2xl shadow-sm border border-stone-200">
+        <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
+        <h2 className="text-3xl font-bold text-stone-900 mb-2">Order Confirmed!</h2>
+        <p className="text-stone-600 mb-6">
+          Thank you for your purchase. Your Cash on Delivery order has been received.
+        </p>
+        <div className="bg-stone-50 p-4 rounded-lg inline-block text-left mb-8 border border-stone-200">
+          <p className="text-sm text-stone-500">Order Reference:</p>
+          <p className="font-mono font-bold text-stone-900">{orderId}</p>
+        </div>
+        <div>
+          <Link href="/" className="bg-amber-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-amber-700 transition">
+            Continue Shopping
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
+  // If the cart is empty, don't show the checkout form
+  if (cartItems.length === 0) {
+    return (
+      <div className="text-center py-12 bg-white rounded-2xl shadow-sm border border-stone-200">
+        <h2 className="text-2xl font-bold text-stone-900 mb-4">Your cart is empty</h2>
+        <p className="text-stone-500 mb-8">Looks like you haven't added any furniture yet.</p>
+        <Link href="/shop/sofas" className="bg-stone-900 text-white px-6 py-3 rounded-xl font-medium hover:bg-stone-800 transition">
+          Browse Sofas
+        </Link>
       </div>
     )
   }
 
   return (
-    <form action={handleCheckout} className="max-w-md mx-auto space-y-6 bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-      <h2 className="text-2xl font-bold text-slate-900 mb-6">Cash on Delivery</h2>
+    <form action={handleSubmit} className="space-y-6 bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-stone-200">
+      <h2 className="text-2xl font-bold text-stone-900 mb-6">Shipping Details</h2>
       
-      {errorMessage && (
-        <div className="p-3 text-sm text-red-600 bg-red-50 rounded-lg">{errorMessage}</div>
-      )}
+      {error && <div className="p-4 bg-red-50 text-red-600 rounded-lg">{error}</div>}
 
-      <div>
-        <label htmlFor="name" className="block text-sm font-medium text-slate-700">Full Name</label>
-        <input type="text" id="name" name="name" required disabled={isPending}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-slate-900 focus:ring-slate-900 p-2 border" />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label className="block text-sm font-medium text-stone-700 mb-1">Full Name</label>
+          <input type="text" name="customerName" required className="w-full p-3 border border-stone-300 rounded-lg focus:ring-2 focus:ring-amber-600 outline-none" placeholder="John Doe" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-stone-700 mb-1">Email Address</label>
+          <input type="email" name="customerEmail" required className="w-full p-3 border border-stone-300 rounded-lg focus:ring-2 focus:ring-amber-600 outline-none" placeholder="john@example.com" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-stone-700 mb-1">Phone Number</label>
+          <input type="tel" name="customerPhone" required className="w-full p-3 border border-stone-300 rounded-lg focus:ring-2 focus:ring-amber-600 outline-none" placeholder="07123 456789" />
+        </div>
       </div>
 
       <div>
-        <label htmlFor="phone" className="block text-sm font-medium text-slate-700">Phone Number</label>
-        <input type="tel" id="phone" name="phone" required disabled={isPending}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-slate-900 focus:ring-slate-900 p-2 border" />
+        <label className="block text-sm font-medium text-stone-700 mb-1">Full Shipping Address</label>
+        <textarea name="shippingAddress" rows={3} required className="w-full p-3 border border-stone-300 rounded-lg focus:ring-2 focus:ring-amber-600 outline-none" placeholder="123 Sofa Street, London, SW1A 1AA"></textarea>
       </div>
 
-      <div>
-        <label htmlFor="address" className="block text-sm font-medium text-slate-700">Full Shipping Address</label>
-        <textarea id="address" name="address" rows={3} required disabled={isPending}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-slate-900 focus:ring-slate-900 p-2 border" />
+      <div className="bg-stone-50 p-4 rounded-xl border border-stone-200 mt-6">
+        <div className="flex justify-between items-center font-bold text-lg text-stone-900">
+          <span>Total to pay (Cash on Delivery):</span>
+          <span className="text-amber-700">£{totalAmount.toFixed(2)}</span>
+        </div>
       </div>
 
-      <button
-        type="submit"
-        disabled={isPending || cartItems.length === 0}
-        className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-base font-medium text-white bg-slate-900 hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-900 disabled:bg-slate-400"
-      >
-        {isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : `Place Order (£${totalAmount.toFixed(2)})`}
+      <button type="submit" disabled={isPending} className="w-full bg-stone-900 text-white py-4 rounded-xl font-bold text-lg hover:bg-stone-800 transition disabled:opacity-70 flex justify-center items-center gap-2">
+        {isPending ? <Loader2 className="w-6 h-6 animate-spin" /> : 'Place Order'}
       </button>
+      <p className="text-xs text-stone-500 text-center mt-4">
+        By placing this order, you agree to pay the delivery driver via cash or card upon arrival.
+      </p>
     </form>
   )
 }

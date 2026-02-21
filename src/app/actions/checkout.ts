@@ -2,37 +2,31 @@
 'use server'
 
 import { createClient } from '@/utils/supabase/server'
-import { revalidatePath } from 'next/cache'
 
-// Define the shape of our cart items for the action
-export type CartItem = {
+export interface CartItem {
   variant_id: string
   quantity: number
   price: number
 }
 
-export async function submitCodOrder(formData: FormData, cartItems: CartItem[], totalAmount: number) {
-
+export async function placeOrder(formData: FormData, cartItems: CartItem[], totalAmount: number) {
   const supabase = await createClient()
 
-  // 1. Extract customer details from the form
-  const customerName = formData.get('name') as string
-  const customerPhone = formData.get('phone') as string
-  const shippingAddress = formData.get('address') as string
+  const customerName = formData.get('customerName') as string
+  const customerEmail = formData.get('customerEmail') as string
+  const customerPhone = formData.get('customerPhone') as string
+  const shippingAddress = formData.get('shippingAddress') as string
 
-  if (!customerName || !customerPhone || !shippingAddress || cartItems.length === 0) {
-    return { error: 'Missing required fields or empty cart.' }
-  }
-
-  // 2. Insert the main Order record
+  // 1. Insert the main order record
   const { data: order, error: orderError } = await supabase
     .from('orders')
     .insert({
       customer_name: customerName,
+      customer_email: customerEmail,
       customer_phone: customerPhone,
       shipping_address: shippingAddress,
       total_amount: totalAmount,
-      status: 'pending_cod'
+      status: 'pending_cod', // Default status for Cash on Delivery
     })
     .select('id')
     .single()
@@ -41,12 +35,12 @@ export async function submitCodOrder(formData: FormData, cartItems: CartItem[], 
     return { error: 'Failed to create order. Please try again.' }
   }
 
-  // 3. Prepare and insert the Order Items
-  const orderItemsData = cartItems.map(item => ({
+  // 2. Insert all the individual items from the cart
+  const orderItemsData = cartItems.map((item) => ({
     order_id: order.id,
     variant_id: item.variant_id,
     quantity: item.quantity,
-    price_at_time_of_purchase: item.price
+    price_at_time_of_purchase: item.price,
   }))
 
   const { error: itemsError } = await supabase
@@ -56,9 +50,6 @@ export async function submitCodOrder(formData: FormData, cartItems: CartItem[], 
   if (itemsError) {
     return { error: 'Order created, but failed to save items.' }
   }
-
-  // Optional: Clear cached pages if needed
-  revalidatePath('/admin/orders')
 
   return { success: true, orderId: order.id }
 }
