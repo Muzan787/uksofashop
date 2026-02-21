@@ -31,8 +31,10 @@ export async function placeOrder(formData: FormData, cartItems: CartItem[], tota
     .select('id')
     .single()
 
+// ---> UPDATED: Show the exact Supabase error <---
   if (orderError || !order) {
-    return { error: 'Failed to create order. Please try again.' }
+    console.error("Supabase Order Error:", orderError)
+    return { error: `Database Error: ${orderError?.message || 'Could not insert order'}` }
   }
 
   // 2. Insert all the individual items from the cart
