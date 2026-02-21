@@ -1,7 +1,7 @@
 // src/app/page.tsx
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowRight, Truck, Shield, RotateCcw, Star, Zap } from 'lucide-react';
+import { ArrowRight, Truck, Shield, RotateCcw, Star, Zap, Tags, Package } from 'lucide-react';
 import { createClient } from '@/utils/supabase/server';
 
 const perks = [
@@ -105,7 +105,13 @@ export default async function HomePage() {
             </Link>
           ))}
           {(!categories || categories.length === 0) && (
-            <p className="text-stone-500 col-span-full">No categories found. Add some in your Admin Dashboard!</p>
+            <div className="col-span-full py-12 flex flex-col items-center justify-center text-center bg-white border border-stone-200 border-dashed rounded-2xl">
+              <div className="p-4 bg-stone-50 rounded-full mb-3">
+                <Tags className="w-8 h-8 text-stone-300" />
+              </div>
+              <p className="font-semibold text-stone-900">No Categories Set Up</p>
+              <p className="text-stone-500 text-sm mt-1">Head to the admin dashboard to add your first category.</p>
+            </div>
           )}
         </div>
       </section>
@@ -133,7 +139,14 @@ export default async function HomePage() {
               <Link key={product.id} href={`/shop/${categorySlug}/${product.slug}`} className="group block">
                 <div className="relative aspect-square overflow-hidden rounded-2xl bg-stone-100 mb-3">
                   {displayImage ? (
-                    <img src={displayImage} alt={product.title} className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500" />
+                    /* --- CHANGED TO NEXT/IMAGE --- */
+                    <Image 
+                      src={displayImage} 
+                      alt={product.title} 
+                      fill
+                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                      className="object-cover group-hover:scale-105 transition-transform duration-500" 
+                    />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-stone-400 text-xs">No Image</div>
                   )}
@@ -144,7 +157,15 @@ export default async function HomePage() {
             )
           })}
           {(!featuredProducts || featuredProducts.length === 0) && (
-            <p className="text-stone-500 col-span-full">No products found. Add your first product!</p>
+            <div className="col-span-full py-16 flex flex-col items-center justify-center text-center bg-white border border-stone-200 border-dashed rounded-2xl">
+              <div className="p-4 bg-stone-50 rounded-full mb-3">
+                <Package className="w-8 h-8 text-stone-300" />
+              </div>
+              <p className="font-semibold text-stone-900">Store is Empty</p>
+              <p className="text-stone-500 text-sm mt-1 max-w-sm">
+                Products added to your inventory will automatically be featured here.
+              </p>
+            </div>
           )}
         </div>
       </section>

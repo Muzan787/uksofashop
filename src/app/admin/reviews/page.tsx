@@ -1,7 +1,7 @@
 // src/app/admin/reviews/page.tsx
 import { createClient } from '@/utils/supabase/server'
 import { approveReview, deleteReview } from '@/app/actions/reviews'
-import { CheckCircle, Trash2, Star } from 'lucide-react'
+import { CheckCircle, Trash2, Star, MessageSquare } from 'lucide-react'
 
 export default async function AdminReviewsPage() {
   const supabase = await createClient()
@@ -77,8 +77,12 @@ export default async function AdminReviewsPage() {
             ))}
             {(!reviews || reviews.length === 0) && (
               <tr>
-                <td colSpan={5} className="p-8 text-center text-slate-500">
-                  No reviews found.
+                <td colSpan={5} className="p-12 text-center bg-white">
+                  <div className="flex flex-col items-center justify-center">
+                    <MessageSquare className="w-12 h-12 text-stone-200 mb-3" />
+                    <p className="text-lg font-medium text-stone-900">No reviews to moderate</p>
+                    <p className="text-stone-500 mt-1">You're all caught up! Customer reviews will show up here.</p>
+                  </div>
                 </td>
               </tr>
             )}

@@ -3,6 +3,7 @@ import { createClient } from '@/utils/supabase/server'
 import AddCategoryForm from '@/components/Admin/AddCategoryForm'
 import { deleteCategory } from '@/app/actions/categories'
 import { Trash2 } from 'lucide-react'
+import Image from 'next/image'
 
 export default async function AdminCategoriesPage() {
   const supabase = await createClient()
@@ -31,15 +32,19 @@ export default async function AdminCategoriesPage() {
               {categories?.map((category) => (
                 <tr key={category.id} className="hover:bg-stone-50 transition-colors">
                   <td className="p-4 w-20">
-                    <div className="w-12 h-12 bg-stone-100 rounded-lg overflow-hidden border border-stone-200">
-                      <img src={category.image_url || '/placeholder.jpg'} alt={category.name} className="w-full h-full object-cover" />
+                    {/* ADDED 'relative' to the parent div */}
+                    <div className="relative w-12 h-12 bg-stone-100 rounded-lg overflow-hidden border border-stone-200">
+                      {/* CHANGED TO NEXT/IMAGE */}
+                      <Image 
+                        src={category.image_url || '/placeholder.jpg'} 
+                        alt={category.name} 
+                        fill
+                        sizes="48px"
+                        className="object-cover" 
+                      />
                     </div>
                   </td>
                   <td className="p-4">
-                    <div className="font-bold text-stone-900">{category.name}</div>
-                    <div className="text-sm text-stone-500 font-mono">/{category.slug}</div>
-                  </td>
-                  <td className="p-4 text-right">
                     <form action={deleteCategory} className="inline-block">
                       <input type="hidden" name="categoryId" value={category.id} />
                       <button type="submit" className="p-2 text-stone-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition" title="Delete Category">

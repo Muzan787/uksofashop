@@ -3,8 +3,10 @@
 
 import { useState } from 'react'
 import { ShoppingCart, Check } from 'lucide-react'
+import Image from 'next/image'
 import { Database } from '@/types/supabase'
 import { useCart } from '@/context/CartContext'
+import toast from 'react-hot-toast' // <-- Import toast
 
 // Extracting types generated from Supabase
 type Product = Database['public']['Tables']['products']['Row']
@@ -40,32 +42,39 @@ export default function VariantSelector({ product, variants }: VariantSelectorPr
       image_url: displayImage
     })
     
-    // Optional: You could trigger a toast notification here!
-    alert('Added to cart!')
+    // --> Trigger the smooth toast notification <--
+    toast.success(`${product.title} added to cart!`, {
+      icon: '🛋️',
+    });
   }
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
       
       {/* --- Image Gallery --- */}
-      <div className="relative aspect-square bg-gray-50 rounded-xl overflow-hidden shadow-sm">
-        <img 
+      {/* The parent container already has 'relative', which is required for 'fill' */}
+      <div className="relative aspect-square bg-stone-50 rounded-2xl overflow-hidden shadow-sm">
+        {/* --- 2. CHANGED TO NEXT/IMAGE --- */}
+        <Image 
           src={displayImage} 
           alt={`${product.title} in ${selectedVariant?.color || 'default'}`}
-          className="object-cover w-full h-full transition-opacity duration-300"
+          fill
+          priority // <-- Tells Next.js to preload this image since it's above the fold!
+          sizes="(max-width: 768px) 100vw, 50vw"
+          className="object-cover transition-opacity duration-300"
         />
       </div>
 
       {/* --- Product Details & Interactions --- */}
       <div className="flex flex-col justify-center">
-        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">{product.title}</h1>
-        <p className="text-2xl font-semibold text-slate-800 mt-4">£{displayPrice.toFixed(2)}</p>
+        <h1 className="text-3xl font-bold text-stone-900 tracking-tight">{product.title}</h1>
+        <p className="text-2xl font-semibold text-stone-800 mt-4">£{displayPrice.toFixed(2)}</p>
 
         {/* Variant Swatches (Colors/Materials) */}
         {variants.length > 0 && (
           <div className="mt-8">
-            <h3 className="text-sm font-semibold text-slate-900 uppercase tracking-wider">
-              Color: <span className="font-normal text-slate-600 capitalize">{selectedVariant?.color}</span>
+            <h3 className="text-sm font-semibold text-stone-900 uppercase tracking-wider">
+              Color: <span className="font-normal text-stone-600 capitalize">{selectedVariant?.color}</span>
             </h3>
             
             <div className="flex flex-wrap gap-4 mt-4">
@@ -75,8 +84,8 @@ export default function VariantSelector({ product, variants }: VariantSelectorPr
                   onClick={() => setSelectedVariant(variant)}
                   className={`relative w-12 h-12 rounded-full border-2 flex items-center justify-center focus:outline-none transition-all duration-200 ${
                     selectedVariant?.id === variant.id 
-                      ? 'border-slate-900 scale-110 shadow-md' 
-                      : 'border-transparent ring-1 ring-gray-200 hover:scale-105'
+                      ? 'border-stone-900 scale-110 shadow-md' 
+                      : 'border-transparent ring-1 ring-stone-200 hover:scale-105'
                   }`}
                   // In a real app, map color names to hex codes, or use tailwind classes
                   style={{ backgroundColor: variant.color?.toLowerCase() || '#e2e8f0' }}
@@ -91,16 +100,15 @@ export default function VariantSelector({ product, variants }: VariantSelectorPr
           </div>
         )}
 
-        <div className="mt-8 space-y-4 text-slate-600 leading-relaxed">
+        <div className="mt-8 space-y-4 text-stone-600 leading-relaxed">
           <p>{product.description}</p>
         </div>
 
         {/* --- Sticky Mobile Add to Cart --- */}
-        {/* The 'fixed bottom-0' classes make it stick to the bottom on mobile, while 'md:relative' puts it back in normal flow on desktop */}
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-md border-t border-gray-200 md:relative md:bg-transparent md:border-none md:p-0 md:mt-10 z-50">
+        <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-md border-t border-stone-200 md:relative md:bg-transparent md:border-none md:p-0 md:mt-10 z-40">
           <button
             onClick={handleAddToCart}
-            className="w-full bg-slate-900 text-white flex items-center justify-center gap-3 py-4 rounded-xl font-semibold text-lg hover:bg-slate-800 transition-all active:scale-[0.98] disabled:bg-slate-300 disabled:cursor-not-allowed shadow-lg md:shadow-none"
+            className="w-full bg-stone-900 text-white flex items-center justify-center gap-3 py-4 rounded-xl font-semibold text-lg hover:bg-stone-800 transition-all active:scale-[0.98] disabled:bg-stone-300 disabled:cursor-not-allowed shadow-lg md:shadow-none"
             disabled={selectedVariant?.stock_quantity === 0}
           >
             <ShoppingCart className="w-5 h-5" />

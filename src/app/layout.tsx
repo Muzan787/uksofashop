@@ -1,8 +1,10 @@
+// src/app/layout.tsx
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { CartProvider } from "@/context/CartContext";
 import Header from "@/components/Layout/Header"; 
+import { Toaster } from "react-hot-toast"; // <-- Import Toaster
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -28,7 +30,19 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-white`}>
         <CartProvider>
-          <Header /> {/* Add Header here */}
+          {/* Configure the Toaster position and styling globally */}
+          <Toaster 
+            position="bottom-right" 
+            toastOptions={{
+              duration: 3000,
+              style: {
+                background: '#1c1917', // stone-900
+                color: '#fff',
+                borderRadius: '12px',
+              }
+            }} 
+          />
+          <Header />
           {children}
         </CartProvider>
       </body>

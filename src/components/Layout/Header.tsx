@@ -3,14 +3,17 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ShoppingCart, Menu, X, Search, Phone } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { createClient } from '@/utils/supabase/client';
 
 export default function Header() {
   const { itemCount } = useCart();
+  const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   
   // State to hold our dynamic database categories
   const [categories, setCategories] = useState<{ id: string, name: string, slug: string }[]>([]);
@@ -33,6 +36,15 @@ export default function Header() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+      setSearchQuery('');
+      setMobileOpen(false); // Close mobile menu if open
+    }
+  };
+
   return (
     <>
       {/* Top Announcement Bar */}
@@ -46,7 +58,7 @@ export default function Header() {
       {/* Main Navigation */}
       <header className={`sticky top-0 z-50 bg-white transition-shadow duration-200 ${scrolled ? 'shadow-md' : 'border-b border-stone-100'}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
+          <div className="flex items-center justify-between h-16 gap-4">
             
             {/* Mobile Menu Button */}
             <button className="lg:hidden p-2 -ml-2 text-stone-600" onClick={() => setMobileOpen(true)}>
@@ -72,9 +84,23 @@ export default function Header() {
               ))}
             </nav>
 
-            {/* Icons */}
-            <div className="flex items-center gap-2">
-              <Link href="/checkout" className="relative p-2 text-stone-600 hover:text-stone-900 transition-colors">
+            <div className="flex items-center gap-4 flex-1 justify-end">
+              {/* Search Bar (Desktop) */}
+              <form onSubmit={handleSearch} className="hidden sm:flex relative w-full max-w-xs">
+                <input
+                  type="text"
+                  placeholder="Search sofas..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-4 pr-10 py-2 rounded-full border border-stone-300 bg-stone-50 text-sm outline-none focus:border-amber-600 focus:ring-1 focus:ring-amber-600 transition-all"
+                />
+                <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600">
+                  <Search className="w-4 h-4" />
+                </button>
+              </form>
+
+              {/* Cart Icon */}
+              <Link href="/checkout" className="relative p-2 text-stone-600 hover:text-stone-900 transition-colors shrink-0">
                 <ShoppingCart className="w-5 h-5" />
                 {itemCount > 0 && (
                   <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-amber-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
@@ -91,12 +117,29 @@ export default function Header() {
       {mobileOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <div className="absolute inset-0 bg-black/50" onClick={() => setMobileOpen(false)} />
-          <div className="absolute left-0 top-0 bottom-0 w-72 bg-white shadow-xl overflow-y-auto">
-            <div className="flex items-center justify-between p-4 border-b border-stone-100">
+          <div className="absolute left-0 top-0 bottom-0 w-72 bg-white shadow-xl flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-stone-100 shrink-0">
               <span className="font-bold text-stone-800 text-lg">UKSofa<span className="text-amber-600">Shop</span></span>
               <button onClick={() => setMobileOpen(false)}><X className="w-5 h-5 text-stone-600" /></button>
             </div>
-            <nav className="p-4 flex flex-col space-y-4">
+            
+            {/* Mobile Search */}
+            <div className="p-4 border-b border-stone-100 shrink-0">
+              <form onSubmit={handleSearch} className="relative w-full">
+                <input
+                  type="text"
+                  placeholder="Search..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-4 pr-10 py-2.5 rounded-xl border border-stone-300 bg-stone-50 text-sm outline-none focus:border-amber-600 focus:ring-1 focus:ring-amber-600"
+                />
+                <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400">
+                  <Search className="w-5 h-5" />
+                </button>
+              </form>
+            </div>
+
+            <nav className="p-4 flex flex-col space-y-4 overflow-y-auto">
               {categories.map((cat) => (
                 <Link key={cat.id} href={`/shop/${cat.slug}`} onClick={() => setMobileOpen(false)} className="text-stone-800 font-medium">
                   {cat.name}

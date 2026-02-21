@@ -4,7 +4,7 @@
 import { useState } from 'react'
 import { useCart } from '@/context/CartContext'
 import { placeOrder } from '@/app/actions/checkout'
-import { Loader2, CheckCircle } from 'lucide-react'
+import { Loader2, CheckCircle, ShoppingBag } from 'lucide-react'
 import Link from 'next/link'
 
 export default function CheckoutForm() {
@@ -63,11 +63,16 @@ export default function CheckoutForm() {
   // If the cart is empty, don't show the checkout form
   if (cartItems.length === 0) {
     return (
-      <div className="text-center py-12 bg-white rounded-2xl shadow-sm border border-stone-200">
-        <h2 className="text-2xl font-bold text-stone-900 mb-4">Your cart is empty</h2>
-        <p className="text-stone-500 mb-8">Looks like you haven't added any furniture yet.</p>
-        <Link href="/shop/sofas" className="bg-stone-900 text-white px-6 py-3 rounded-xl font-medium hover:bg-stone-800 transition">
-          Browse Sofas
+      <div className="flex flex-col items-center justify-center py-16 px-4 bg-white rounded-2xl shadow-sm border border-stone-200 text-center">
+        <div className="w-20 h-20 bg-stone-50 rounded-full flex items-center justify-center mb-6">
+          <ShoppingBag className="w-10 h-10 text-stone-300" />
+        </div>
+        <h2 className="text-2xl font-bold text-stone-900 mb-2">Your cart is empty</h2>
+        <p className="text-stone-500 mb-8 max-w-sm">
+          Looks like you haven't added any furniture yet. Let's find the perfect piece for your home.
+        </p>
+        <Link href="/shop/all" className="bg-stone-900 text-white px-8 py-3.5 rounded-xl font-medium hover:bg-stone-800 transition active:scale-95">
+          Browse Collection
         </Link>
       </div>
     )
