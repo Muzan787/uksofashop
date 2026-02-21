@@ -20,9 +20,11 @@ export default function AddProductForm({ categories }: { categories: any[] }) {
   }
 
   const updateVariant = (index: number, field: string, value: string | boolean) => {
-    const newVariants = [...variants]
-    newVariants[index] = { ...newVariants[index], [field]: value }
-    setVariants(newVariants)
+    setVariants((prevVariants) => {
+      const newVariants = [...prevVariants]
+      newVariants[index] = { ...newVariants[index], [field]: value }
+      return newVariants
+    })
   }
 
   const removeVariant = (index: number) => {

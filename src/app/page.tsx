@@ -126,7 +126,7 @@ export default async function HomePage() {
             return (
               <Link key={product.id} href={`/shop/${categorySlug}/${product.slug}`} className="group block">
                 <div className="relative aspect-square overflow-hidden rounded-2xl bg-stone-100 mb-3">
-                  <img src={displayImage || ''} alt={product.title} className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500" />
+                  <img src={displayImage || '/placeholder-sofa.jpg'} alt={product.title} className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500" />
                 </div>
                 <h3 className="font-semibold text-stone-900 line-clamp-1">{product.title}</h3>
                 <p className="text-amber-700 font-medium mt-1">£{product.base_price.toFixed(2)}</p>
