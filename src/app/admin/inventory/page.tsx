@@ -56,10 +56,13 @@ export default async function InventoryPage() {
                   </td>
                   <td className="p-4 text-right">
                     <div className="flex justify-end items-center gap-3">
-                      {/* Placeholder for future edit functionality */}
-                      <button className="text-slate-400 hover:text-blue-600 transition" title="Edit">
-                        <Edit className="w-5 h-5" />
-                      </button>
+                      <Link 
+                        href={`/admin/inventory/${product.id}/edit`} 
+                        className="text-stone-400 hover:text-blue-600 transition" 
+                        title="Edit Product"
+                      >
+                        <Edit className="w-5 h-5 inline" />
+                      </Link>
                       
                       {/* New Delete Form */}
                       <form action={deleteProduct}>

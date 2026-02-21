@@ -1,6 +1,6 @@
 // src/app/admin/layout.tsx
 import Link from 'next/link'
-import { Package, ShoppingCart, MessageSquare, LayoutDashboard } from 'lucide-react'
+import { Package, ShoppingCart, MessageSquare, LayoutDashboard, Tags } from 'lucide-react'
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -19,6 +19,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </Link>
           <Link href="/admin/inventory" className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-800 hover:text-white transition-colors">
             <Package className="w-5 h-5" /> <span className="hidden md:inline">Inventory</span>
+          </Link>
+          <Link href="/admin/categories" className="flex items-center gap-3 p-3 rounded-lg hover:bg-stone-800 hover:text-white transition-colors">
+            <Tags className="w-5 h-5" /> <span className="hidden md:inline">Categories</span>
           </Link>
           <Link href="/admin/reviews" className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-800 hover:text-white transition-colors">
             <MessageSquare className="w-5 h-5" /> <span className="hidden md:inline">Reviews</span>

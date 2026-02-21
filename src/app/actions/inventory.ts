@@ -82,3 +82,60 @@ export async function deleteProduct(formData: FormData) {
   revalidatePath('/')
   revalidatePath('/shop/[category]', 'layout')
 }
+
+// Add this to the bottom of src/app/actions/inventory.ts
+
+export async function updateProduct(formData: FormData, variants: any[], productId: string) {
+  const supabase = await createClient()
+
+  const title = formData.get('title') as string
+  const slug = formData.get('slug') as string
+  const categoryId = formData.get('categoryId') as string
+  const basePrice = parseFloat(formData.get('basePrice') as string)
+  const description = formData.get('description') as string
+  const style = formData.get('style') as string
+  const dimensions = formData.get('dimensions') as string
+
+  // 1. Update the Base Product
+  const { error: productError } = await supabase
+    .from('products')
+    .update({
+      title,
+      slug,
+      category_id: categoryId,
+      base_price: basePrice,
+      description,
+      specifications: { style, dimensions }
+    })
+    .eq('id', productId)
+
+  if (productError) {
+    return { error: `Failed to update product: ${productError.message}` }
+  }
+
+  // 2. Upsert the Variants (Update existing ones, insert new ones)
+  if (variants.length > 0) {
+    const variantData = variants.map(v => ({
+      ...(v.id ? { id: v.id } : {}), // If it has an ID, include it so Supabase updates it!
+      product_id: productId,
+      sku: v.sku,
+      color: v.color,
+      stock_quantity: parseInt(v.stock),
+      price_adjustment: parseFloat(v.priceAdjustment || '0'),
+      image_url: v.image_url || null
+    }))
+
+    // .upsert() is magic: it updates rows with matching IDs, and inserts rows without IDs.
+    const { error: variantError } = await supabase
+      .from('product_variants')
+      .upsert(variantData)
+
+    if (variantError) {
+      return { error: 'Product updated, but failed to sync variants.' }
+    }
+  }
+
+  revalidatePath('/admin/inventory')
+  revalidatePath(`/shop/${categoryId}/${slug}`) // Clear the cache for the frontend!
+  return { success: true }
+}
