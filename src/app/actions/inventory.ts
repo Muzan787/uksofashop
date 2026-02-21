@@ -42,7 +42,8 @@ export async function addProduct(formData: FormData, variants: any[]) {
       sku: v.sku,
       color: v.color,
       stock_quantity: parseInt(v.stock),
-      price_adjustment: parseFloat(v.priceAdjustment || '0')
+      price_adjustment: parseFloat(v.priceAdjustment || '0'),
+      image_url: v.image_url || null
     }))
 
     const { error: variantError } = await supabase

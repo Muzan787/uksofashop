@@ -1,114 +1,140 @@
-import Link from 'next/link'
-import { createClient } from '@/utils/supabase/server'
-import { ArrowRight, Truck, ShieldCheck, Clock } from 'lucide-react'
+// src/app/page.tsx
+import Link from 'next/link';
+import Image from 'next/image';
+import { ArrowRight, Truck, Shield, RotateCcw, Star, Zap } from 'lucide-react';
+import { createClient } from '@/utils/supabase/server';
 
-export default async function Home() {
-  const supabase = await createClient()
+const categoryHighlights = [
+  { name: 'Corner Sofas', slug: 'sofas?style=corner', img: 'https://images.pexels.com/photos/1457842/pexels-photo-1457842.jpeg' },
+  { name: '3 Seater Sofas', slug: 'sofas?dimensions=3-seater', img: 'https://images.pexels.com/photos/276528/pexels-photo-276528.jpeg' },
+  { name: 'Beds', slug: 'beds', img: 'https://images.pexels.com/photos/271624/pexels-photo-271624.jpeg' },
+  { name: 'Dining', slug: 'dining', img: 'https://images.pexels.com/photos/1395967/pexels-photo-1395967.jpeg' },
+  { name: 'Chairs', slug: 'chairs', img: 'https://images.pexels.com/photos/116910/pexels-photo-116910.jpeg' },
+  { name: 'Storage', slug: 'storage', img: 'https://images.pexels.com/photos/276583/pexels-photo-276583.jpeg' },
+];
 
-  // 1. Fetch Categories for the grid
-  const { data: categories } = await supabase
-    .from('categories')
-    .select('*')
-    .limit(4)
+const perks = [
+  { icon: Truck, title: 'Free Delivery', desc: 'On all orders over £500' },
+  { icon: Shield, title: '10 Year Guarantee', desc: 'On all frames & springs' },
+  { icon: RotateCcw, title: 'Easy Returns', desc: '30-day no-quibble policy' },
+  { icon: Zap, title: 'Cash on Delivery', desc: 'Pay when it arrives' },
+];
 
-  // 2. Fetch Featured Products
+export default async function HomePage() {
+  const supabase = await createClient(); // Our secure backend fetch!
+  
   const { data: featuredProducts } = await supabase
     .from('products')
-    .select(`
-      id, title, slug, base_price,
-      product_variants ( image_url )
-    `)
-    .limit(4)
+    .select('*, product_variants(image_url), categories(slug)')
+    .limit(8);
 
   return (
-    <main className="min-h-screen bg-white">
-      {/* Crucial UI Rule: Small, compact promotional banner.
-        This ensures it doesn't push main content below the fold on mobile.
-      */}
-      <div className="bg-slate-900 text-white text-center py-2 text-sm font-medium">
-        Free Delivery on all UK orders over £500. <Link href="/shop/all" className="underline hover:text-gray-300">Shop Now</Link>
-      </div>
-
+    <>
       {/* Hero Section */}
-      <section className="relative w-full h-[60vh] min-h-[400px] bg-gray-100 flex items-center justify-center overflow-hidden">
-        {/* Replace with your actual hero image later */}
-        <img 
-          src="/placeholder-hero.jpg" 
-          alt="Modern living room" 
-          className="absolute inset-0 w-full h-full object-cover opacity-60"
-        />
-        <div className="relative z-10 text-center px-4 max-w-3xl mx-auto mt-10">
-          <h1 className="text-4xl md:text-6xl font-bold text-slate-900 tracking-tight mb-6">
-            Design Your Perfect Living Space.
-          </h1>
-          <p className="text-lg md:text-xl text-slate-800 mb-8 font-medium">
-            Premium, handcrafted UK sofas delivered straight to your door. Cash on delivery available.
-          </p>
-          <Link href="/shop/sofas" className="inline-flex items-center gap-2 bg-slate-900 text-white px-8 py-4 rounded-full font-semibold hover:bg-slate-800 transition-transform hover:scale-105 shadow-lg">
-            Shop Sofas <ArrowRight className="w-5 h-5" />
-          </Link>
+      <section className="relative overflow-hidden bg-stone-900 text-white">
+        <div className="absolute inset-0">
+          <Image
+            src="https://images.pexels.com/photos/1571452/pexels-photo-1571452.jpeg"
+            alt="Luxury living room"
+            fill
+            priority
+            className="object-cover opacity-40"
+          />
         </div>
-      </section>
-
-      {/* Trust Badges */}
-      <section className="border-y border-gray-200 bg-gray-50 py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
-          <div className="flex flex-col items-center justify-center">
-            <Truck className="w-8 h-8 text-slate-700 mb-3" />
-            <h3 className="font-semibold text-slate-900">Fast UK Delivery</h3>
-            <p className="text-sm text-slate-600">Delivered carefully by our team.</p>
-          </div>
-          <div className="flex flex-col items-center justify-center">
-            <ShieldCheck className="w-8 h-8 text-slate-700 mb-3" />
-            <h3 className="font-semibold text-slate-900">5-Year Warranty</h3>
-            <p className="text-sm text-slate-600">Built to last a lifetime.</p>
-          </div>
-          <div className="flex flex-col items-center justify-center">
-            <Clock className="w-8 h-8 text-slate-700 mb-3" />
-            <h3 className="font-semibold text-slate-900">Cash on Delivery</h3>
-            <p className="text-sm text-slate-600">Pay only when you are satisfied.</p>
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-28 lg:py-36">
+          <div className="max-w-2xl">
+            <span className="inline-block px-3 py-1 bg-amber-600/20 border border-amber-500/40 text-amber-400 text-xs font-semibold uppercase tracking-wider rounded-full mb-4">
+              New Season Collection
+            </span>
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight tracking-tight">
+              Furniture That<br />
+              <span className="text-amber-400">Feels Like Home</span>
+            </h1>
+            <p className="mt-5 text-lg text-stone-300 leading-relaxed max-w-xl">
+              Discover our curated range of premium British furniture. From luxurious corner sofas to elegant dining sets — crafted for comfort, built to last.
+            </p>
+            <div className="flex flex-wrap gap-3 mt-8">
+              <Link href="/shop/sofas" className="inline-flex items-center gap-2 px-7 py-3.5 bg-amber-600 text-white font-semibold rounded-xl hover:bg-amber-700 transition-colors">
+                Shop Sofas
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Featured Categories */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <h2 className="text-3xl font-bold text-slate-900 mb-8">Shop by Category</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8">
-          {categories?.map((category) => (
-            <Link key={category.id} href={`/shop/${category.slug}`} className="group relative aspect-square overflow-hidden rounded-2xl bg-gray-100">
-              <img 
-                src={category.image_url || '/placeholder.jpg'} 
-                alt={category.name}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex flex-col justify-end p-6">
-                <h3 className="text-white font-bold text-xl capitalize">{category.name}</h3>
+      {/* Perks Section */}
+      <section className="bg-stone-50 border-b border-stone-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6">
+            {perks.map(({ icon: Icon, title, desc }) => (
+              <div key={title} className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center shrink-0">
+                  <Icon className="w-5 h-5 text-amber-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-stone-800">{title}</p>
+                  <p className="text-xs text-stone-500 hidden sm:block">{desc}</p>
+                </div>
               </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Categories Grid */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h2 className="text-2xl sm:text-3xl font-bold text-stone-900">Shop by Category</h2>
+            <p className="text-stone-500 mt-1 text-sm">Find exactly what you are looking for</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+          {categoryHighlights.map((cat) => (
+            <Link key={cat.slug} href={`/shop/${cat.slug}`} className="group relative overflow-hidden rounded-2xl aspect-square bg-stone-100">
+              <Image src={cat.img} alt={cat.name} fill className="object-cover group-hover:scale-110 transition-transform duration-500" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
+              <span className="absolute bottom-3 left-3 right-3 text-white text-sm font-semibold leading-tight">
+                {cat.name}
+              </span>
             </Link>
           ))}
         </div>
       </section>
 
-      {/* Featured Products */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <h2 className="text-3xl font-bold text-slate-900 mb-8">Customer Favorites</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-          {featuredProducts?.map((product) => (
-            <Link href={`/shop/featured/${product.slug}`} key={product.id} className="group">
-              <div className="aspect-square bg-gray-100 rounded-xl overflow-hidden mb-4">
-                <img 
-                  src={Array.isArray(product.product_variants) && product.product_variants.length > 0 ? product.product_variants[0].image_url : '/placeholder.jpg'} 
-                  alt={product.title}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                />
-              </div>
-              <h3 className="text-lg font-medium text-slate-900">{product.title}</h3>
-              <p className="text-slate-600">£{product.base_price.toFixed(2)}</p>
-            </Link>
-          ))}
+      {/* Featured Products (Dynamic from Supabase!) */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-14">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h2 className="text-2xl sm:text-3xl font-bold text-stone-900">Featured Products</h2>
+            <p className="text-stone-500 mt-1 text-sm">Our most popular picks this season</p>
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+          {featuredProducts?.map((product) => {
+            const displayImage = Array.isArray(product.product_variants) && product.product_variants.length > 0 
+              ? product.product_variants[0].image_url 
+              : '/placeholder-sofa.jpg';
+              
+            // Safely extract category slug
+            const categorySlug = product.categories && !Array.isArray(product.categories) 
+              ? product.categories.slug 
+              : 'all';
+
+            return (
+              <Link key={product.id} href={`/shop/${categorySlug}/${product.slug}`} className="group block">
+                <div className="relative aspect-square overflow-hidden rounded-2xl bg-stone-100 mb-3">
+                  <img src={displayImage || ''} alt={product.title} className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500" />
+                </div>
+                <h3 className="font-semibold text-stone-900 line-clamp-1">{product.title}</h3>
+                <p className="text-amber-700 font-medium mt-1">£{product.base_price.toFixed(2)}</p>
+              </Link>
+            )
+          })}
         </div>
       </section>
-    </main>
-  )
+    </>
+  );
 }
