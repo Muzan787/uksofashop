@@ -2,6 +2,7 @@
 'use server'
 
 import { createClient } from '@/utils/supabase/server'
+import { z } from 'zod'
 
 export interface CartItem {
   variant_id: string
@@ -9,15 +10,35 @@ export interface CartItem {
   price: number
 }
 
+// 1. Define the validation schema
+const checkoutSchema = z.object({
+  customerName: z.string().min(2, 'Full name must be at least 2 characters.'),
+  customerEmail: z.string().email('Please provide a valid email address.'),
+  customerPhone: z.string().min(8, 'Please provide a valid phone number.'),
+  shippingAddress: z.string().min(10, 'Please provide a complete shipping address.'),
+})
+
 export async function placeOrder(formData: FormData, cartItems: CartItem[], totalAmount: number) {
   const supabase = await createClient()
 
-  const customerName = formData.get('customerName') as string
-  const customerEmail = formData.get('customerEmail') as string
-  const customerPhone = formData.get('customerPhone') as string
-  const shippingAddress = formData.get('shippingAddress') as string
+  // 2. Extract and parse data safely
+  const rawData = {
+    customerName: formData.get('customerName'),
+    customerEmail: formData.get('customerEmail'),
+    customerPhone: formData.get('customerPhone'),
+    shippingAddress: formData.get('shippingAddress'),
+  }
 
-  // 1. Insert the main order record
+  const validatedData = checkoutSchema.safeParse(rawData)
+
+  // 3. Return exact error messages to the frontend if validation fails
+  if (!validatedData.success) {
+    return { error: validatedData.error.issues[0].message }
+  }
+
+  // Use the cleanly parsed and typed data
+  const { customerName, customerEmail, customerPhone, shippingAddress } = validatedData.data
+
   const { data: order, error: orderError } = await supabase
     .from('orders')
     .insert({
@@ -26,18 +47,16 @@ export async function placeOrder(formData: FormData, cartItems: CartItem[], tota
       customer_phone: customerPhone,
       shipping_address: shippingAddress,
       total_amount: totalAmount,
-      status: 'pending_cod', // Default status for Cash on Delivery
+      status: 'pending_cod',
     })
     .select('id')
     .single()
 
-// ---> UPDATED: Show the exact Supabase error <---
   if (orderError || !order) {
     console.error("Supabase Order Error:", orderError)
-    return { error: `Database Error: ${orderError?.message || 'Could not insert order'}` }
+    return { error: 'Database Error: Could not insert order.' }
   }
 
-  // 2. Insert all the individual items from the cart
   const orderItemsData = cartItems.map((item) => ({
     order_id: order.id,
     variant_id: item.variant_id,

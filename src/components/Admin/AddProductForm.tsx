@@ -1,17 +1,27 @@
+// src/components/Admin/AddProductForm.tsx
 'use client'
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { addProduct } from '@/app/actions/inventory'
+import { addProduct, VariantInput } from '@/app/actions/inventory'
 import { Plus, Trash2, Loader2, ImagePlus } from 'lucide-react'
+import { Database } from '@/types/supabase'
 
-export default function AddProductForm({ categories }: { categories: any[] }) {
+// 1. Define strict types based on your database
+type Category = Pick<Database['public']['Tables']['categories']['Row'], 'id' | 'name'>
+
+// We extend the Action input type to include our local UI state (isUploading)
+interface VariantState extends VariantInput {
+  isUploading: boolean;
+}
+
+export default function AddProductForm({ categories }: { categories: Category[] }) {
   const router = useRouter()
   const [isPending, setIsPending] = useState(false)
   const [error, setError] = useState('')
   
-  // Notice we added image_url and isUploading state to the variants
-  const [variants, setVariants] = useState([
+  // 2. Strongly type the state
+  const [variants, setVariants] = useState<VariantState[]>([
     { sku: '', color: '', stock: '10', priceAdjustment: '0', image_url: '', isUploading: false }
   ])
 
@@ -19,9 +29,11 @@ export default function AddProductForm({ categories }: { categories: any[] }) {
     setVariants([...variants, { sku: '', color: '', stock: '10', priceAdjustment: '0', image_url: '', isUploading: false }])
   }
 
-  const updateVariant = (index: number, field: string, value: string | boolean) => {
+  // 3. Strongly type the field update function
+  const updateVariant = (index: number, field: keyof VariantState, value: string | boolean) => {
     setVariants((prevVariants) => {
       const newVariants = [...prevVariants]
+      // @ts-ignore - Dynamic key assignment can sometimes confuse TS, but we know it's safe here
       newVariants[index] = { ...newVariants[index], [field]: value }
       return newVariants
     })
@@ -31,7 +43,6 @@ export default function AddProductForm({ categories }: { categories: any[] }) {
     setVariants(variants.filter((_, i) => i !== index))
   }
 
-  // --- CLOUDINARY UPLOAD LOGIC ---
   const handleImageUpload = async (index: number, file: File) => {
     if (!file) return;
     

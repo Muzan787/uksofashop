@@ -3,22 +3,34 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { updateProduct } from '@/app/actions/inventory'
+import { updateProduct, VariantInput } from '@/app/actions/inventory'
 import { Plus, Trash2, Loader2, ImagePlus } from 'lucide-react'
+import { Database } from '@/types/supabase'
 
-export default function EditProductForm({ product, categories }: { product: any, categories: any[] }) {
+// 1. Map our types to the Supabase Schema
+type Category = Pick<Database['public']['Tables']['categories']['Row'], 'id' | 'name'>
+type DBVariant = Database['public']['Tables']['product_variants']['Row']
+type Product = Database['public']['Tables']['products']['Row'] & {
+  product_variants: DBVariant[]
+}
+
+interface VariantState extends VariantInput {
+  isUploading: boolean;
+}
+
+export default function EditProductForm({ product, categories }: { product: Product, categories: Category[] }) {
   const router = useRouter()
   const [isPending, setIsPending] = useState(false)
   const [error, setError] = useState('')
   
-  // Pre-load variants, mapping them to our component's state structure
-  const [variants, setVariants] = useState(
-    product.product_variants.map((v: any) => ({
+  // 2. Pre-load variants, strictly mapping DB values to UI state strings
+  const [variants, setVariants] = useState<VariantState[]>(
+    product.product_variants.map((v) => ({
       id: v.id,
       sku: v.sku,
-      color: v.color,
-      stock: v.stock_quantity.toString(),
-      priceAdjustment: v.price_adjustment.toString(),
+      color: v.color || '',
+      stock: (v.stock_quantity || 0).toString(),
+      priceAdjustment: (v.price_adjustment || 0).toString(),
       image_url: v.image_url || '',
       isUploading: false
     }))
@@ -28,18 +40,17 @@ export default function EditProductForm({ product, categories }: { product: any,
     setVariants([...variants, { sku: '', color: '', stock: '10', priceAdjustment: '0', image_url: '', isUploading: false }])
   }
 
-  const updateVariant = (index: number, field: string, value: string | boolean) => {
-    setVariants((prev: any) => {
+  const updateVariant = (index: number, field: keyof VariantState, value: string | boolean) => {
+    setVariants((prev) => {
       const newVariants = [...prev]
+      // @ts-ignore
       newVariants[index] = { ...newVariants[index], [field]: value }
       return newVariants
     })
   }
 
-  // We only allow removing variants that haven't been saved to the DB yet (no ID).
-  // For saved variants, the admin should just set stock to 0 to prevent breaking order history!
   const removeVariant = (index: number) => {
-    setVariants(variants.filter((_: any, i: number) => i !== index))
+    setVariants(variants.filter((_, i) => i !== index))
   }
 
   const handleImageUpload = async (index: number, file: File) => {
@@ -76,10 +87,12 @@ export default function EditProductForm({ product, categories }: { product: any,
     }
   }
 
-  // Extract specs safely
+  // 3. Strongly type the JSONB JSON parsing
   const specs = typeof product.specifications === 'object' && product.specifications !== null 
-    ? product.specifications 
+    ? (product.specifications as Record<string, string>) 
     : {};
+
+// ... (keep the rest of the return statement identical)
 
   return (
     <form action={handleSubmit} className="space-y-8 bg-white p-8 rounded-xl shadow-sm border border-stone-200">
@@ -96,19 +109,19 @@ export default function EditProductForm({ product, categories }: { product: any,
         </div>
         <div>
           <label className="block text-sm font-medium text-stone-700 mb-1">Category</label>
-          <select name="categoryId" defaultValue={product.category_id} required className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-amber-600 outline-none bg-white">
+          <select name="categoryId" defaultValue={product.category_id || ''} required className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-amber-600 outline-none bg-white">
             {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </div>
         <div>
           <label className="block text-sm font-medium text-stone-700 mb-1">Base Price (£)</label>
-          <input type="number" step="0.01" name="basePrice" defaultValue={product.base_price} required className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-amber-600 outline-none" />
+          <input type="number" step="0.01" name="basePrice" defaultValue={product.base_price || ''} required className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-amber-600 outline-none" />
         </div>
       </div>
 
       <div>
         <label className="block text-sm font-medium text-stone-700 mb-1">Description</label>
-        <textarea name="description" rows={3} defaultValue={product.description} required className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-amber-600 outline-none"></textarea>
+        <textarea name="description" rows={3} defaultValue={product.description || ''} required className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-amber-600 outline-none"></textarea>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
