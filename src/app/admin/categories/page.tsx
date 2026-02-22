@@ -45,7 +45,9 @@ export default async function AdminCategoriesPage() {
                     </div>
                   </td>
                   <td className="p-4">
-                    <form action={deleteCategory} className="inline-block">
+                    <form action={async (formData) => {
+                      await deleteCategory(formData)
+                    }} className="inline-block">
                       <input type="hidden" name="categoryId" value={category.id} />
                       <button type="submit" className="p-2 text-stone-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition" title="Delete Category">
                         <Trash2 className="w-5 h-5" />

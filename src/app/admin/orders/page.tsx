@@ -101,16 +101,18 @@ export default async function AdminOrdersPage() {
                 </td>
                 <td className="p-4 align-top pt-5">
                   <div className="flex items-center gap-2 font-medium text-sm capitalize whitespace-nowrap">
-                    <StatusIcon status={order.status} />
-                    {order.status.replace('_', ' ')}
+                    <StatusIcon status={order.status || 'pending_cod'} />
+                    {(order.status || 'pending_cod').replace('_', ' ')}
                   </div>
                 </td>
                 <td className="p-4 text-right align-top pt-4">
-                  <form action={updateOrderStatus} className="flex items-center justify-end gap-2">
+                  <form action={async (formData) => {
+                    await updateOrderStatus(formData)
+                  }} className="flex items-center justify-end gap-2">
                     <input type="hidden" name="orderId" value={order.id} />
                     <select 
                       name="status" 
-                      defaultValue={order.status}
+                      defaultValue={order.status ?? 'pending_cod'}
                       className="text-sm border border-stone-300 rounded-lg p-1.5 bg-white focus:ring-2 focus:ring-amber-600 outline-none cursor-pointer"
                     >
                       <option value="pending_cod">Pending (COD)</option>

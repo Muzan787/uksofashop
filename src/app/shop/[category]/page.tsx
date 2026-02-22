@@ -66,7 +66,7 @@ export default async function CategoryPage(props: { params: Params; searchParams
                   <Link href={`/shop/${params.category}/${product.slug}`} key={product.id} className="group">
                     <div className="relative aspect-square bg-gray-100 rounded-xl overflow-hidden mb-4">
                       <Image 
-                        src={Array.isArray(product.image_url) ? product.image_url[0].image_url : '/placeholder.jpg'} 
+                        src={Array.isArray(product.image_url) && product.image_url[0].image_url ? product.image_url[0].image_url : '/placeholder.jpg'} 
                         alt={product.title}
                         fill
                         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
