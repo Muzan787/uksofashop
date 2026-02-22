@@ -95,7 +95,7 @@ export async function deleteProduct(formData: FormData) {
 
   const { error } = await supabase
     .from('products')
-    .delete()
+    .update({ is_active: false })
     .eq('id', productId)
 
   if (error) {

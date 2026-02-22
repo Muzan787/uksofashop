@@ -26,6 +26,7 @@ export default async function HomePage() {
     .from('products')
     .select('*, product_variants(image_url), categories(slug)')
     .order('created_at', { ascending: false })
+    .eq('is_active', true)
     .limit(8);
 
   return (

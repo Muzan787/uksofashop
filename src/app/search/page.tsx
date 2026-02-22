@@ -26,6 +26,7 @@ export default async function SearchPage(props: { searchParams: SearchParams }) 
         product_variants(image_url),
         categories!inner(slug)
       `)
+      .eq('is_active', true)
       .or(`title.ilike.%${query}%,description.ilike.%${query}%`)
       .order('created_at', { ascending: false });
       

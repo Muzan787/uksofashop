@@ -34,6 +34,7 @@ export default async function CategoryPage(props: { params: Params; searchParams
     .from('products')
     .select('id, title, slug, base_price, image_url:product_variants!inner(image_url)', { count: 'exact' })
     .eq('category_id', categoryData.id)
+    .eq('is_active', true)
 
   // Apply Filters
   if (typeof searchParams.style === 'string') {
