@@ -50,7 +50,7 @@ export default async function SearchPage(props: { searchParams: SearchParams }) 
             // Safely extract the first variant image if it exists
             const displayImage = Array.isArray(product.product_variants) && product.product_variants.length > 0 
               ? product.product_variants[0].image_url 
-              : '/placeholder-sofa.jpg';
+              : '/placeholder.svg';
             
             // Extract the category slug for the link routing
             const categorySlug = product.categories && !Array.isArray(product.categories) 

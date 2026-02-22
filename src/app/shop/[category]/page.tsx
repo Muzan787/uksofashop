@@ -1,7 +1,8 @@
 // src/app/shop/[category]/page.tsx
+import { Metadata } from 'next'
 import { createClient } from '@/utils/supabase/server'
 import FilterSidebar from '@/components/Category/FilterSidebar'
-import Pagination from '@/components/UI/Pagination' // <-- 1. Import Pagination
+import Pagination from '@/components/UI/Pagination'
 import Link from 'next/link'
 import Image from 'next/image'
 import { PackageSearch } from 'lucide-react'
@@ -9,20 +10,48 @@ import { PackageSearch } from 'lucide-react'
 type Params = Promise<{ category: string }>
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>
 
-const ITEMS_PER_PAGE = 6; // Set to 6 or 9 for a grid layout
+// --- ADD THIS NEW FUNCTION ---
+export async function generateMetadata(props: { params: Params }): Promise<Metadata> {
+  const params = await props.params;
+  const supabase = await createClient()
+  
+  const { data: categoryData } = await supabase
+    .from('categories')
+    .select('name')
+    .eq('slug', params.category)
+    .single()
+
+  if (!categoryData) return { title: 'Category Not Found | UK Sofa Shop' }
+
+  return {
+    title: `Premium ${categoryData.name} | Free UK Delivery | UK Sofa Shop`,
+    description: `Shop our premium collection of ${categoryData.name.toLowerCase()}. Free delivery to UK mainland on orders over £500. Cash on delivery available.`,
+    alternates: {
+      canonical: `/shop/${params.category}`
+    }
+  }
+}
+
+const ITEMS_PER_PAGE = 6; 
 
 export default async function CategoryPage(props: { params: Params; searchParams: SearchParams }) {
   const params = await props.params;
   const searchParams = await props.searchParams;
   const supabase = await createClient()
 
-  const { data: categoryData } = await supabase
-    .from('categories')
-    .select('id, name')
-    .eq('slug', params.category)
-    .single()
+  let categoryData = null;
 
-  if (!categoryData) return <div>Category not found</div>
+  // 1. Only fetch category if the slug is NOT "all"
+  if (params.category !== 'all') {
+    const { data } = await supabase
+      .from('categories')
+      .select('id, name')
+      .eq('slug', params.category)
+      .single()
+
+    if (!data) return <div className="text-center py-20 text-2xl font-semibold">Category not found</div>
+    categoryData = data;
+  }
 
   // 2. Determine current page and calculate range
   const currentPage = typeof searchParams.page === 'string' ? parseInt(searchParams.page, 10) : 1
@@ -33,8 +62,12 @@ export default async function CategoryPage(props: { params: Params; searchParams
   let query = supabase
     .from('products')
     .select('id, title, slug, base_price, image_url:product_variants!inner(image_url)', { count: 'exact' })
-    .eq('category_id', categoryData.id)
     .eq('is_active', true)
+
+  // 4. Apply category filter ONLY if a specific category was found
+  if (categoryData) {
+    query = query.eq('category_id', categoryData.id)
+  }
 
   // Apply Filters
   if (typeof searchParams.style === 'string') {
@@ -44,17 +77,20 @@ export default async function CategoryPage(props: { params: Params; searchParams
     query = query.filter('specifications->>material', 'ilike', searchParams.material)
   }
 
-  // 4. Apply the range and execute
+  // 5. Apply the range and execute
   const { data: products, count } = await query
     .order('created_at', { ascending: false })
     .range(from, to)
 
   // Calculate total pages
   const totalPages = count ? Math.ceil(count / ITEMS_PER_PAGE) : 0
+  
+  // Set display name for header
+  const pageTitle = categoryData ? categoryData.name : 'All Products'
 
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 mt-10">
-      <h1 className="text-4xl font-bold text-slate-900 mb-8 capitalize">{categoryData.name}</h1>
+      <h1 className="text-4xl font-bold text-slate-900 mb-8 capitalize">{pageTitle}</h1>
       <div className="flex flex-col md:flex-row">
         <FilterSidebar />
         
@@ -66,7 +102,7 @@ export default async function CategoryPage(props: { params: Params; searchParams
                   <Link href={`/shop/${params.category}/${product.slug}`} key={product.id} className="group">
                     <div className="relative aspect-square bg-gray-100 rounded-xl overflow-hidden mb-4">
                       <Image 
-                        src={Array.isArray(product.image_url) && product.image_url[0].image_url ? product.image_url[0].image_url : '/placeholder.jpg'} 
+                        src={Array.isArray(product.image_url) && product.image_url[0]?.image_url ? product.image_url[0].image_url : '/placeholder.svg'} 
                         alt={product.title}
                         fill
                         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
@@ -79,7 +115,7 @@ export default async function CategoryPage(props: { params: Params; searchParams
                 ))}
               </div>
 
-              {/* 5. Render Pagination Component */}
+              {/* Render Pagination Component */}
               <Pagination currentPage={currentPage} totalPages={totalPages} />
             </>
           ) : (

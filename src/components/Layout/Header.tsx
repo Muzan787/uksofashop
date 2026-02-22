@@ -47,31 +47,34 @@ export default function Header() {
 
   return (
     <>
-      {/* Top Announcement Bar */}
-      <div className="bg-stone-800 text-white text-center py-1.5 text-xs font-medium tracking-wide">
-        <span className="hidden sm:inline">Free UK Mainland Delivery on orders over £500 &nbsp;|&nbsp; </span>
-        <Phone className="inline-block w-3 h-3 mr-1 mb-0.5" />
-        0800 123 4567
-        <span className="hidden sm:inline"> &nbsp;|&nbsp; Cash on Delivery Available</span>
+      {/* Top Announcement Bar (Marquee on Mobile, Static on Desktop) */}
+      <div className="bg-stone-900 text-white py-2 text-xs font-medium tracking-wide overflow-hidden">
+        <div className="whitespace-nowrap animate-marquee lg:animate-none lg:text-center lg:whitespace-normal">
+          <span className="inline-block px-4 lg:px-0">
+            Free UK Mainland Delivery on orders over £500 &nbsp;|&nbsp; 
+            <Phone className="inline-block w-3 h-3 mr-1 mb-0.5" /> 0800 123 4567 &nbsp;|&nbsp; 
+            Cash on Delivery Available
+          </span>
+        </div>
       </div>
 
-      {/* Main Navigation */}
-      <header className={`sticky top-0 z-50 bg-white transition-shadow duration-200 ${scrolled ? 'shadow-md' : 'border-b border-stone-100'}`}>
+      {/* Main Navigation (Dark on Mobile, White on Desktop) */}
+      <header className={`sticky top-0 z-50 transition-shadow duration-200 ${scrolled ? 'shadow-md' : 'border-b border-stone-800 lg:border-stone-100'} bg-stone-800 lg:bg-white`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 gap-4">
             
             {/* Mobile Menu Button */}
-            <button className="lg:hidden p-2 -ml-2 text-stone-600" onClick={() => setMobileOpen(true)}>
+            <button className="lg:hidden p-2 -ml-2 text-white" onClick={() => setMobileOpen(true)}>
               <Menu className="w-6 h-6" />
             </button>
 
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2 shrink-0">
-              <div className="w-8 h-8 bg-stone-800 rounded flex items-center justify-center">
+              <div className="w-8 h-8 bg-white/10 lg:bg-stone-800 rounded flex items-center justify-center">
                 <span className="text-white font-bold text-sm">U</span>
               </div>
-              <span className="font-bold text-stone-800 text-lg tracking-tight hidden sm:block">
-                UKSofa<span className="text-amber-600">Shop</span>
+              <span className="font-bold text-white lg:text-stone-800 text-lg tracking-tight hidden sm:block">
+                UKSofa<span className="text-amber-500 lg:text-amber-600">Shop</span>
               </span>
             </Link>
 
@@ -100,10 +103,10 @@ export default function Header() {
               </form>
 
               {/* Cart Icon */}
-              <Link href="/checkout" className="relative p-2 text-stone-600 hover:text-stone-900 transition-colors shrink-0">
+              <Link href="/checkout" className="relative p-2 text-white lg:text-stone-600 hover:text-stone-300 lg:hover:text-stone-900 transition-colors shrink-0">
                 <ShoppingCart className="w-5 h-5" />
                 {itemCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-amber-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                  <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-amber-500 lg:bg-amber-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
                     {itemCount}
                   </span>
                 )}

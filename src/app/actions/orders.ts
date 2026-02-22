@@ -26,3 +26,28 @@ export async function updateOrderStatus(formData: FormData) {
   revalidatePath('/admin/orders')
   return { success: true }
 }
+
+export async function trackOrderByShortCode(shortCode: string) {
+  const supabase = await createClient()
+
+  // Supabase uses PostgREST, allowing us to cast the UUID to text on the fly
+  // and use the 'like' operator to match the first 8 characters.
+  const { data, error } = await supabase
+    .from('orders')
+    .select(`
+      id, status, created_at, total_amount, shipping_address,
+      order_items (
+        quantity,
+        price_at_time_of_purchase,
+        product_variants ( color, products (title) )
+      )
+    `)
+    .filter('id::text', 'like', `${shortCode.toLowerCase()}%`)
+    .single()
+
+  if (error || !data) {
+    return { error: "We couldn't find an order matching that reference code." }
+  }
+
+  return { success: true, order: data }
+}

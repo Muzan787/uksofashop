@@ -42,7 +42,7 @@ export default async function HomePage() {
             className="object-cover opacity-40"
           />
         </div>
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-8 lg:py-10">
           <div className="max-w-2xl">
             <span className="inline-block px-3 py-1 bg-amber-600/20 border border-amber-500/40 text-amber-400 text-xs font-semibold uppercase tracking-wider rounded-full mb-4">
               New Season Collection
@@ -63,8 +63,7 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
-
-      {/* Perks Section */}
+{/* Perks Section */}
       <section className="bg-stone-50 border-b border-stone-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6">
@@ -74,7 +73,8 @@ export default async function HomePage() {
                   <Icon className="w-5 h-5 text-amber-600" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-stone-800">{title}</p>
+                  {/* CHANGED FROM <p> TO <h3> FOR SEMANTIC SEO */}
+                  <h3 className="text-sm font-semibold text-stone-800">{title}</h3>
                   <p className="text-xs text-stone-500 hidden sm:block">{desc}</p>
                 </div>
               </div>
@@ -100,9 +100,11 @@ export default async function HomePage() {
                 <div className="w-full h-full flex items-center justify-center bg-stone-200 text-stone-500 text-xs">No Image</div>
               )}
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
-              <span className="absolute bottom-3 left-3 right-3 text-white text-sm font-semibold leading-tight">
+              
+              {/* CHANGED FROM <span> TO <h3> FOR SEMANTIC SEO */}
+              <h3 className="absolute bottom-3 left-3 right-3 text-white text-sm font-semibold leading-tight m-0">
                 {cat.name}
-              </span>
+              </h3>
             </Link>
           ))}
           {(!categories || categories.length === 0) && (

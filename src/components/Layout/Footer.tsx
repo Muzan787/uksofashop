@@ -1,8 +1,17 @@
-// src/components/Layout/Footer.tsx
 import Link from 'next/link';
 import { Facebook, Instagram, Twitter, Mail, Phone, MapPin } from 'lucide-react';
+import { createClient } from '@/utils/supabase/server';
 
-export default function Footer() {
+export default async function Footer() {
+  const supabase = await createClient();
+  
+  // Fetch up to 4 categories dynamically for the footer
+  const { data: categories } = await supabase
+    .from('categories')
+    .select('id, name, slug')
+    .order('name')
+    .limit(4);
+
   return (
     <footer className="bg-stone-900 text-stone-300 pt-16 pb-8 border-t border-stone-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -25,14 +34,18 @@ export default function Footer() {
             </div>
           </div>
 
-          {/* Quick Links */}
+          {/* Quick Links (Now Dynamic) */}
           <div>
             <h3 className="text-white font-semibold mb-4 uppercase tracking-wider text-sm">Shop</h3>
             <ul className="space-y-3 text-sm">
               <li><Link href="/shop/all" className="hover:text-amber-500 transition">All Sofas</Link></li>
-              <li><Link href="/shop/corner-sofas" className="hover:text-amber-500 transition">Corner Sofas</Link></li>
-              <li><Link href="/shop/3-seaters" className="hover:text-amber-500 transition">3 Seaters</Link></li>
-              <li><Link href="/shop/2-seaters" className="hover:text-amber-500 transition">2 Seaters</Link></li>
+              {categories?.map((cat) => (
+                <li key={cat.id}>
+                  <Link href={`/shop/${cat.slug}`} className="hover:text-amber-500 transition">
+                    {cat.name}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
 

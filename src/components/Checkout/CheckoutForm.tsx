@@ -1,4 +1,3 @@
-// src/components/Checkout/CheckoutForm.tsx
 'use client'
 
 import { useState } from 'react'
@@ -18,7 +17,6 @@ export default function CheckoutForm() {
     setIsPending(true)
     setError('')
 
-    // Map the cart items to match our Server Action's expected format
     const itemsToSave = cartItems.map(item => ({
       variant_id: item.variant_id,
       quantity: item.quantity,
@@ -33,12 +31,11 @@ export default function CheckoutForm() {
     } else if (result?.success) {
       setSuccess(true)
       setOrderId(result.orderId || '')
-      clearCart() // Empty the cart!
+      clearCart()
       setIsPending(false)
     }
   }
 
-  // If the order is successful, show a lovely confirmation screen
   if (success) {
     return (
       <div className="text-center py-12 px-4 bg-white rounded-2xl shadow-sm border border-stone-200">
@@ -49,10 +46,13 @@ export default function CheckoutForm() {
         </p>
         <div className="bg-stone-50 p-4 rounded-lg inline-block text-left mb-8 border border-stone-200">
           <p className="text-sm text-stone-500">Order Reference:</p>
-          <p className="font-mono font-bold text-stone-900">{orderId}</p>
+          <p className="font-mono font-bold text-stone-900 text-xl tracking-widest">{orderId}</p>
         </div>
-        <div>
-          <Link href="/" className="bg-amber-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-amber-700 transition">
+        <div className="flex flex-col sm:flex-row justify-center gap-4">
+          <Link href={`/track-order?code=${orderId}`} className="bg-stone-900 text-white px-8 py-3 rounded-xl font-bold hover:bg-stone-800 transition text-center">
+            Track Order
+          </Link>
+          <Link href="/" className="bg-amber-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-amber-700 transition text-center">
             Continue Shopping
           </Link>
         </div>
@@ -60,7 +60,6 @@ export default function CheckoutForm() {
     )
   }
 
-  // If the cart is empty, don't show the checkout form
   if (cartItems.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 px-4 bg-white rounded-2xl shadow-sm border border-stone-200 text-center">
@@ -102,6 +101,11 @@ export default function CheckoutForm() {
       <div>
         <label className="block text-sm font-medium text-stone-700 mb-1">Full Shipping Address</label>
         <textarea name="shippingAddress" rows={3} required className="w-full p-3 border border-stone-300 rounded-lg focus:ring-2 focus:ring-amber-600 outline-none" placeholder="123 Sofa Street, London, SW1A 1AA"></textarea>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-stone-700 mb-1">Special Instructions (Optional)</label>
+        <textarea name="specialInstructions" rows={2} className="w-full p-3 border border-stone-300 rounded-lg focus:ring-2 focus:ring-amber-600 outline-none" placeholder="e.g. Leave by the back door, narrow hallway, etc."></textarea>
       </div>
 
       <div className="bg-stone-50 p-4 rounded-xl border border-stone-200 mt-6">

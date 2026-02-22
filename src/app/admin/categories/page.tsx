@@ -36,7 +36,7 @@ export default async function AdminCategoriesPage() {
                     <div className="relative w-12 h-12 bg-stone-100 rounded-lg overflow-hidden border border-stone-200">
                       {/* CHANGED TO NEXT/IMAGE */}
                       <Image 
-                        src={category.image_url || '/placeholder.jpg'} 
+                        src={category.image_url || '/placeholder.svg'} 
                         alt={category.name} 
                         fill
                         sizes="48px"

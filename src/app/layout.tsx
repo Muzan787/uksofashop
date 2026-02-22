@@ -22,13 +22,43 @@ export const metadata: Metadata = {
   description: "Buy the best premium sofas in the UK. Cash on Delivery available.",
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+// --- ADD THIS SCHEMA OBJECT ---
+const localBusinessSchema = {
+  "@context": "https://schema.org",
+  "@type": "FurnitureStore",
+  "name": "UK Sofa Shop",
+  "alternateName": "Vantage Group LTD",
+  "url": "https://uksofashop.co.uk",
+  "telephone": "0800 123 4567",
+  "priceRange": "££",
+  "address": {
+    "@type": "PostalAddress",
+    "streetAddress": "123 Furniture Way",
+    "addressLocality": "London",
+    "postalCode": "SW1A 1AA",
+    "addressCountry": "UK"
+  },
+  "areaServed": "GB",
+  "paymentAccepted": "Cash, Bank Transfer",
+  "makesOffer": {
+    "@type": "Offer",
+    "itemOffered": {
+      "@type": "Service",
+      "name": "Cash on Delivery"
+    }
+  }
+};
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
+      <head>
+        {/* --- INJECT SCHEMA HERE --- */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessSchema) }}
+        />
+      </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-white flex flex-col min-h-screen`}>
         <CartProvider>
           <Toaster 
