@@ -29,7 +29,7 @@ const localBusinessSchema = {
   "name": "UK Sofa Shop",
   "alternateName": "Vantage Group LTD",
   "url": "https://uksofashop.co.uk",
-  "telephone": "0800 123 4567",
+  "telephone": "0747 661 6022",
   "priceRange": "££",
   "address": {
     "@type": "PostalAddress",
