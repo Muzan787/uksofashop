@@ -31,10 +31,10 @@ export default async function AdminCategoriesPage() {
             <tbody className="divide-y divide-stone-200">
               {categories?.map((category) => (
                 <tr key={category.id} className="hover:bg-stone-50 transition-colors">
+                  
+                  {/* Column 1: Image */}
                   <td className="p-4 w-20">
-                    {/* ADDED 'relative' to the parent div */}
                     <div className="relative w-12 h-12 bg-stone-100 rounded-lg overflow-hidden border border-stone-200">
-                      {/* CHANGED TO NEXT/IMAGE */}
                       <Image 
                         src={category.image_url || '/placeholder.svg'} 
                         alt={category.name} 
@@ -44,8 +44,17 @@ export default async function AdminCategoriesPage() {
                       />
                     </div>
                   </td>
+
+                  {/* Column 2: Name & Slug (THIS WAS MISSING!) */}
                   <td className="p-4">
+                    <div className="font-semibold text-stone-900">{category.name}</div>
+                    <div className="text-sm text-stone-500 font-mono mt-0.5">/{category.slug}</div>
+                  </td>
+
+                  {/* Column 3: Actions */}
+                  <td className="p-4 text-right">
                     <form action={async (formData) => {
+                      "use server";
                       await deleteCategory(formData)
                     }} className="inline-block">
                       <input type="hidden" name="categoryId" value={category.id} />
@@ -54,6 +63,7 @@ export default async function AdminCategoriesPage() {
                       </button>
                     </form>
                   </td>
+
                 </tr>
               ))}
               {(!categories || categories.length === 0) && (

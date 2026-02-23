@@ -106,7 +106,8 @@ export default async function InventoryPage() {
                       {/* Conditionally render delete button only for active products */}
                       {product.is_active && (
                         <form action={async (formData) => {
-                          await deleteProduct(formData)
+                          "use server";
+                          await deleteProduct(formData);
                         }}>
                           <input type="hidden" name="productId" value={product.id} />
                           <button 

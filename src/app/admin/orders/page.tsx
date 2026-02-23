@@ -107,8 +107,9 @@ export default async function AdminOrdersPage() {
                 </td>
                 <td className="p-4 text-right align-top pt-4">
                   <form action={async (formData) => {
-                    await updateOrderStatus(formData)
-                  }} className="flex items-center justify-end gap-2">
+                      "use server";
+                      await updateOrderStatus(formData);
+                    }} className="flex items-center justify-end gap-2">
                     <input type="hidden" name="orderId" value={order.id} />
                     <select 
                       name="status" 
