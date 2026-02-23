@@ -5,7 +5,8 @@ import { updateOrderStatus } from '@/app/actions/orders'
 
 const StatusIcon = ({ status }: { status: string }) => {
   switch (status) {
-    case 'pending_cod': return <Clock className="w-4 h-4 text-amber-600" />
+    case 'pending_cod': return <Clock className="w-4 h-4 text-stone-400" />
+    case 'confirmed': return <CheckCircle className="w-4 h-4 text-amber-600" /> // <--- Add this line
     case 'processing': return <Clock className="w-4 h-4 text-blue-600" />
     case 'shipped': return <Truck className="w-4 h-4 text-indigo-600" />
     case 'delivered': return <CheckCircle className="w-4 h-4 text-green-600" />
@@ -117,6 +118,7 @@ export default async function AdminOrdersPage() {
                       className="text-sm border border-stone-300 rounded-lg p-1.5 bg-white focus:ring-2 focus:ring-amber-600 outline-none cursor-pointer"
                     >
                       <option value="pending_cod">Pending (COD)</option>
+                      <option value="confirmed">Confirmed</option> {/* <--- Add this line */}
                       <option value="processing">Processing</option>
                       <option value="shipped">Shipped</option>
                       <option value="delivered">Delivered</option>

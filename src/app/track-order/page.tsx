@@ -7,26 +7,21 @@ import { useSearchParams } from 'next/navigation';
 
 function TrackOrderInterface() {
   const searchParams = useSearchParams();
-  const [orderId, setOrderId] = useState(searchParams.get('code') || '');
+  const codeParam = searchParams.get('code');
+  const [orderId, setOrderId] = useState(codeParam || '');
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState('');
   const [orderData, setOrderData] = useState<any>(null);
 
-  useEffect(() => {
-    if (orderId && searchParams.get('code')) {
-      handleTrack(new Event('submit') as any);
-    }
-  }, []);
-
-  const handleTrack = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!orderId.trim()) return;
+  // Extract the tracking logic so it can be called safely without a form event
+  const performTracking = async (codeToTrack: string) => {
+    if (!codeToTrack.trim()) return;
 
     setIsSearching(true);
     setError('');
     setOrderData(null);
 
-    const result = await trackOrderByShortCode(orderId.trim());
+    const result = await trackOrderByShortCode(codeToTrack.trim());
 
     if (result.error) {
       setError(result.error);
@@ -37,25 +32,43 @@ function TrackOrderInterface() {
     setIsSearching(false);
   };
 
+  // Run automatically if the URL has a ?code= parameter
+  useEffect(() => {
+    if (codeParam) {
+      performTracking(codeParam);
+    }
+  }, [codeParam]);
+
+  // Handle manual form submission
+  const handleTrack = async (e: React.FormEvent) => {
+    e.preventDefault();
+    performTracking(orderId);
+  };
+
   const StatusDisplay = ({ status }: { status: string }) => {
-    const config = {
+    // Added 'confirmed' to the config mapping
+    const config: Record<string, any> = {
       pending_cod: { icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50', text: 'Pending (Cash on Delivery)' },
+      confirmed: { icon: CheckCircle, color: 'text-amber-600', bg: 'bg-amber-50', text: 'Order Confirmed' },
       processing: { icon: Clock, color: 'text-blue-600', bg: 'bg-blue-50', text: 'Processing' },
       shipped: { icon: Truck, color: 'text-indigo-600', bg: 'bg-indigo-50', text: 'Out for Delivery' },
       delivered: { icon: CheckCircle, color: 'text-green-600', bg: 'bg-green-50', text: 'Delivered' },
       cancelled: { icon: XCircle, color: 'text-red-600', bg: 'bg-red-50', text: 'Cancelled' },
-    }[status] || { icon: Package, color: 'text-stone-600', bg: 'bg-stone-50', text: 'Unknown Status' };
+    };
 
-    const Icon = config.icon;
+    const current = config[status] || { icon: Package, color: 'text-stone-600', bg: 'bg-stone-50', text: 'Unknown Status' };
+    const Icon = current.icon;
 
     return (
-      <div className={`mt-8 p-6 rounded-xl border ${config.bg.replace('bg-', 'border-').replace('50', '200')} ${config.bg} flex flex-col items-center justify-center text-center`}>
-        <Icon className={`w-12 h-12 mb-3 ${config.color}`} />
-        <h3 className={`text-xl font-bold ${config.color.replace('text-', 'text-').replace('600', '900')}`}>
-          {config.text}
+      <div className={`mt-8 p-6 rounded-xl border ${current.bg.replace('bg-', 'border-').replace('50', '200')} ${current.bg} flex flex-col items-center justify-center text-center`}>
+        <Icon className={`w-12 h-12 mb-3 ${current.color}`} />
+        <h3 className={`text-xl font-bold ${current.color.replace('text-', 'text-').replace('600', '900')}`}>
+          {current.text}
         </h3>
         <p className="text-sm text-stone-600 mt-2">
-          {status === 'pending_cod' && "We've received your order and are preparing it."}
+          {status === 'pending_cod' && "We've received your order and are waiting for confirmation."}
+          {status === 'confirmed' && "Your order has been confirmed and is being prepared."}
+          {status === 'processing' && "We are getting your furniture ready for dispatch."}
           {status === 'shipped' && "Your furniture is on its way to you!"}
           {status === 'delivered' && "This order has been completed."}
         </p>
@@ -118,7 +131,8 @@ function TrackOrderInterface() {
             {orderData.order_items.map((item: any, i: number) => (
               <div key={i} className="flex justify-between items-center text-sm border-b border-stone-50 pb-2 last:border-0 last:pb-0">
                 <span className="text-stone-700">
-                  {item.quantity}x {item.product_variants.products.title} ({item.product_variants.color})
+                  {/* Added optional chaining here to prevent crashes if a variant was deleted */}
+                  {item.quantity}x {item.product_variants?.products?.title || 'Product'} ({item.product_variants?.color || 'N/A'})
                 </span>
                 <span className="font-medium text-stone-900">£{item.price_at_time_of_purchase.toFixed(2)}</span>
               </div>

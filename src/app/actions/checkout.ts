@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/utils/supabase/server'
+import { sendOrderConfirmation } from '@/utils/email'
 import { z } from 'zod'
 
 export interface CartItem {
@@ -72,6 +73,14 @@ export async function placeOrder(formData: FormData, cartItems: CartItem[], tota
 
   // Return only the first 8 characters for the user-facing short code
   const shortCode = order.id.substring(0, 8).toUpperCase()
+
+  // --- ADD THIS EMAIL TRIGGER ---
+  try {
+    // Pass shortCode AND order.id
+    await sendOrderConfirmation(customerEmail, customerName, shortCode, order.id, totalAmount)
+  } catch (err) {
+    console.error("Failed to send confirmation email", err)
+  }
 
   return { success: true, orderId: shortCode }
 }
