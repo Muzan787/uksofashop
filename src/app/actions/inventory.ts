@@ -9,6 +9,7 @@ export interface VariantInput {
   id?: string;
   sku: string;
   color: string;
+  color_hex: string;
   stock: string;
   priceAdjustment: string;
   image_url: string;
@@ -18,7 +19,7 @@ export interface VariantInput {
 const productSchema = z.object({
   title: z.string().min(3, 'Product title must be at least 3 characters.'),
   slug: z.string().regex(/^[a-z0-9-]+$/, 'Slug can only contain lowercase letters, numbers, and hyphens.'),
-  categoryId: z.string().uuid('Please select a valid category.'),
+  categoryIds: z.array(z.string().uuid()).min(1, 'Select at least one category.'),
   basePrice: z.number().positive('Base price must be greater than 0.'),
   description: z.string().min(10, 'Description must be at least 10 characters.'),
   style: z.string().optional(),
@@ -28,11 +29,14 @@ const productSchema = z.object({
 export async function addProduct(formData: FormData, variants: VariantInput[]) {
   const supabase = await createClient()
 
+  // Grab multiple categories from the checkboxes
+  const formCategoryIds = formData.getAll('categoryIds') as string[];
+
   // 2. Validate the Form Data
   const rawData = {
     title: formData.get('title'),
     slug: formData.get('slug'),
-    categoryId: formData.get('categoryId'),
+    categoryIds: formCategoryIds, // <-- UPDATED
     basePrice: parseFloat(formData.get('basePrice') as string),
     description: formData.get('description'),
     style: formData.get('style') || '',
@@ -45,14 +49,14 @@ export async function addProduct(formData: FormData, variants: VariantInput[]) {
     return { error: validatedData.error.issues[0].message }
   }
 
-  const { title, slug, categoryId, basePrice, description, style, dimensions } = validatedData.data
+  const { title, slug, categoryIds, basePrice, description, style, dimensions } = validatedData.data
 
+// 1. Insert Product (without category_id)
   const { data: product, error: productError } = await supabase
     .from('products')
     .insert({
       title,
       slug,
-      category_id: categoryId,
       base_price: basePrice,
       description,
       specifications: { style, dimensions } 
@@ -60,27 +64,27 @@ export async function addProduct(formData: FormData, variants: VariantInput[]) {
     .select('id')
     .single()
 
-  if (productError || !product) {
-    // Check for unique constraint violation on the slug
-    if (productError?.code === '23505') {
-      return { error: 'A product with this URL slug already exists.' }
-    }
-    return { error: `Failed to add product: ${productError?.message}` }
-  }
+  if (productError || !product) return { error: `Failed to add product: ${productError?.message}` }
 
-  // Insert variants... (keep the existing variants code here)
+  // 2. Insert into the Product Categories Junction Table <-- NEW
+  const productCategoryData = categoryIds.map(id => ({
+    product_id: product.id,
+    category_id: id
+  }))
+  await supabase.from('product_categories').insert(productCategoryData)
+
+  // 3. Insert Variants with color_hex <-- UPDATED
   if (variants.length > 0) {
     const variantData = variants.map(v => ({
       product_id: product.id,
       sku: v.sku,
       color: v.color,
+      color_hex: v.color_hex || null, // <-- NEW
       stock_quantity: parseInt(v.stock),
       price_adjustment: parseFloat(v.priceAdjustment || '0'),
       image_url: v.image_url || null
     }))
-
-    const { error: variantError } = await supabase.from('product_variants').insert(variantData)
-    if (variantError) return { error: 'Product created, but failed to add variants.' }
+    await supabase.from('product_variants').insert(variantData)
   }
 
   revalidatePath('/admin/inventory')

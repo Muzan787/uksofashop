@@ -61,12 +61,16 @@ export default async function CategoryPage(props: { params: Params; searchParams
   // 3. Setup the base query asking for an exact count
   let query = supabase
     .from('products')
-    .select('id, title, slug, base_price, image_url:product_variants!inner(image_url)', { count: 'exact' })
+    .select(`
+      id, title, slug, base_price, 
+      image_url:product_variants(image_url),
+      product_categories!inner(category_id)
+    `, { count: 'exact' })
     .eq('is_active', true)
 
-  // 4. Apply category filter ONLY if a specific category was found
   if (categoryData) {
-    query = query.eq('category_id', categoryData.id)
+    // Filter where the inner join matches the category ID
+    query = query.eq('product_categories.category_id', categoryData.id)
   }
 
   // Apply Filters

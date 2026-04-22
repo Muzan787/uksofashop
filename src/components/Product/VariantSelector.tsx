@@ -90,11 +90,12 @@ return (
                       ? 'border-stone-900 scale-110 shadow-md' 
                       : 'border-transparent ring-1 ring-stone-200 hover:scale-105'
                   }`}
-                  style={{ backgroundColor: variant.color?.toLowerCase() || '#e2e8f0' }}
+                  // IT WILL NOW USE THE DB HEX CODE FIRST, OR FALLBACK TO THE LOWERCASE NAME
+                  style={{ backgroundColor: variant.color_hex || variant.color?.toLowerCase() || '#e2e8f0' }}
                   aria-label={`Select ${variant.color} variant`}
                 >
                   {selectedVariant?.id === variant.id && (
-                    <Check className="w-5 h-5 text-white drop-shadow-md" />
+                    <Check className="w-5 h-5 text-white drop-shadow-md mix-blend-difference" />
                   )}
                 </button>
               ))}

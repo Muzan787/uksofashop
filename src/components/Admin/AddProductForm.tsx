@@ -20,13 +20,16 @@ export default function AddProductForm({ categories }: { categories: Category[] 
   const [isPending, setIsPending] = useState(false)
   const [error, setError] = useState('')
   
-  // 2. Strongly type the state
+  // 1. Update the initial variant state
   const [variants, setVariants] = useState<VariantState[]>([
-    { sku: '', color: '', stock: '10', priceAdjustment: '0', image_url: '', isUploading: false }
+    { sku: '', color: '', color_hex: '#000000', stock: '10', priceAdjustment: '0', image_url: '', isUploading: false }
   ])
 
   const addVariantRow = () => {
-    setVariants([...variants, { sku: '', color: '', stock: '10', priceAdjustment: '0', image_url: '', isUploading: false }])
+    setVariants([...variants, {
+      sku: '', color: '', stock: '10', priceAdjustment: '0', image_url: '', isUploading: false,
+      color_hex: ''
+    }])
   }
 
   // 3. Strongly type the field update function
@@ -103,11 +106,15 @@ export default function AddProductForm({ categories }: { categories: Category[] 
           <input type="text" name="slug" required className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-slate-900 outline-none" placeholder="e.g. the-cloud-sofa" />
         </div>
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Category</label>
-          <select name="categoryId" required className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-slate-900 outline-none bg-white">
-            <option value="">Select a category</option>
-            {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Categories</label>
+          <div className="w-full p-3 border rounded-lg bg-white max-h-40 overflow-y-auto space-y-2">
+            {categories.map(c => (
+              <label key={c.id} className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" name="categoryIds" value={c.id} className="rounded text-slate-900 focus:ring-slate-900" />
+                <span className="text-sm">{c.name}</span>
+              </label>
+            ))}
+          </div>
         </div>
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1">Base Price (£)</label>
@@ -146,8 +153,20 @@ export default function AddProductForm({ categories }: { categories: Category[] 
               
               {/* Text Inputs */}
               <div className="flex flex-wrap md:flex-nowrap items-center gap-3">
-                <input type="text" placeholder="SKU (e.g. CLD-BLU)" value={variant.sku} onChange={(e) => updateVariant(index, 'sku', e.target.value)} required className="flex-1 p-2 border rounded-md text-sm outline-none" />
-                <input type="text" placeholder="Color (e.g. Blue)" value={variant.color} onChange={(e) => updateVariant(index, 'color', e.target.value)} required className="flex-1 p-2 border rounded-md text-sm outline-none" />
+                <input type="text" placeholder="SKU" value={variant.sku} onChange={(e) => updateVariant(index, 'sku', e.target.value)} required className="flex-1 p-2 border rounded-md text-sm outline-none" />
+                
+                {/* COLOR PICKER ADDED HERE */}
+                <div className="flex items-center gap-2 flex-1">
+                  <input 
+                    type="color" 
+                    value={variant.color_hex || '#000000'} 
+                    onChange={(e) => updateVariant(index, 'color_hex', e.target.value)} 
+                    className="w-8 h-8 rounded cursor-pointer border-0 p-0"
+                    title="Pick exact color"
+                  />
+                  <input type="text" placeholder="Color Name (e.g. Navy)" value={variant.color} onChange={(e) => updateVariant(index, 'color', e.target.value)} required className="w-full p-2 border rounded-md text-sm outline-none" />
+                </div>
+
                 <input type="number" placeholder="Stock" value={variant.stock} onChange={(e) => updateVariant(index, 'stock', e.target.value)} required className="w-24 p-2 border rounded-md text-sm outline-none" />
                 <input type="number" step="0.01" placeholder="+£ Price" value={variant.priceAdjustment} onChange={(e) => updateVariant(index, 'priceAdjustment', e.target.value)} className="w-24 p-2 border rounded-md text-sm outline-none" />
                 
