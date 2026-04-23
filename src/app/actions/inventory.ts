@@ -10,6 +10,7 @@ export interface VariantInput {
   sku: string;
   color: string;
   color_hex: string;
+  material: string;
   stock: string;
   priceAdjustment: string;
   image_url: string;
@@ -24,6 +25,7 @@ const productSchema = z.object({
   description: z.string().min(10, 'Description must be at least 10 characters.'),
   style: z.string().optional(),
   dimensions: z.string().optional(),
+  material: z.string().optional(),
 })
 
 export async function addProduct(formData: FormData, variants: VariantInput[]) {
@@ -49,7 +51,7 @@ export async function addProduct(formData: FormData, variants: VariantInput[]) {
     return { error: validatedData.error.issues[0].message }
   }
 
-  const { title, slug, categoryIds, basePrice, description, style, dimensions } = validatedData.data
+  const { title, slug, categoryIds, basePrice, description, style, dimensions, material } = validatedData.data
 
 // 1. Insert Product (without category_id)
   const { data: product, error: productError } = await supabase
@@ -59,7 +61,7 @@ export async function addProduct(formData: FormData, variants: VariantInput[]) {
       slug,
       base_price: basePrice,
       description,
-      specifications: { style, dimensions } 
+      specifications: { style, dimensions} 
     })
     .select('id')
     .single()
@@ -80,6 +82,7 @@ export async function addProduct(formData: FormData, variants: VariantInput[]) {
       sku: v.sku,
       color: v.color,
       color_hex: v.color_hex || null, // <-- NEW
+      material: v.material, // <-- ADDED
       stock_quantity: parseInt(v.stock),
       price_adjustment: parseFloat(v.priceAdjustment || '0'),
       image_url: v.image_url || null
@@ -122,6 +125,7 @@ export async function updateProduct(formData: FormData, variants: VariantInput[]
   const description = formData.get('description') as string
   const style = formData.get('style') as string
   const dimensions = formData.get('dimensions') as string
+  const material = formData.get('material') as string
 
   const { error: productError } = await supabase
     .from('products')
@@ -131,7 +135,7 @@ export async function updateProduct(formData: FormData, variants: VariantInput[]
       category_id: categoryId,
       base_price: basePrice,
       description,
-      specifications: { style, dimensions }
+      specifications: { style, dimensions, material }
     })
     .eq('id', productId)
 

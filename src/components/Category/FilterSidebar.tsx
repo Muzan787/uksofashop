@@ -1,32 +1,26 @@
-// src/components/Category/FilterSidebar.tsx
 'use client'
 
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { useCallback } from 'react'
 
-// Hardcoded for demonstration, but you could dynamically generate these from your database
-const FILTER_OPTIONS = {
-  style: ['Modern', 'Mid-Century', 'Traditional', 'Minimalist'],
-  material: ['Velvet', 'Leather', 'Linen', 'Boucle'],
+interface FilterSidebarProps {
+  availableStyles: string[];
+  availableMaterials: string[];
 }
 
-export default function FilterSidebar() {
+export default function FilterSidebar({ availableStyles, availableMaterials }: FilterSidebarProps) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
 
-  // Creates a new URL string with the updated query parameters
   const createQueryString = useCallback(
     (name: string, value: string) => {
       const params = new URLSearchParams(searchParams.toString())
-      
-      // Toggle logic: If the filter is already applied, remove it. Otherwise, set it.
       if (params.get(name) === value) {
         params.delete(name)
       } else {
         params.set(name, value)
       }
-      
       return params.toString()
     },
     [searchParams]
@@ -34,8 +28,12 @@ export default function FilterSidebar() {
 
   const handleFilterClick = (key: string, value: string) => {
     const queryString = createQueryString(key, value)
-    // Push the new URL without triggering a full page reload (shallow routing)
     router.push(queryString ? `${pathname}?${queryString}` : pathname, { scroll: false })
+  }
+
+  const FILTER_OPTIONS = {
+    ...(availableStyles.length > 0 && { style: availableStyles }),
+    ...(availableMaterials.length > 0 && { material: availableMaterials }),
   }
 
   return (

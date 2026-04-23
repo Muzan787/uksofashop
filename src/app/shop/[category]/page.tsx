@@ -58,27 +58,27 @@ export default async function CategoryPage(props: { params: Params; searchParams
   const from = (currentPage - 1) * ITEMS_PER_PAGE
   const to = from + ITEMS_PER_PAGE - 1
 
-  // 3. Setup the base query asking for an exact count
+  // 3. Setup the base query asking for an exact count. 
+  // We must inner join product_variants to filter by material
   let query = supabase
     .from('products')
     .select(`
       id, title, slug, base_price, 
-      image_url:product_variants(image_url),
-      product_categories!inner(category_id)
+      product_variants!inner(image_url, material)
     `, { count: 'exact' })
     .eq('is_active', true)
 
   if (categoryData) {
-    // Filter where the inner join matches the category ID
-    query = query.eq('product_categories.category_id', categoryData.id)
+    query = query.eq('category_id', categoryData.id)
   }
 
-  // Apply Filters
   if (typeof searchParams.style === 'string') {
     query = query.filter('specifications->>style', 'ilike', searchParams.style)
   }
+
+  // 4. NEW: Filter material via the inner joined variants table
   if (typeof searchParams.material === 'string') {
-    query = query.filter('specifications->>material', 'ilike', searchParams.material)
+    query = query.filter('product_variants.material', 'ilike', searchParams.material)
   }
 
   // 5. Apply the range and execute
@@ -92,11 +92,25 @@ export default async function CategoryPage(props: { params: Params; searchParams
   // Set display name for header
   const pageTitle = categoryData ? categoryData.name : 'All Products'
 
+  // --- NEW: Fetch all specifications for this category to build dynamic filters ---
+  let specsQuery = supabase.from('products').select('specifications, product_categories!inner(category_id)').eq('is_active', true)
+  if (categoryData) {
+    specsQuery = specsQuery.eq('product_categories.category_id', categoryData.id)
+  }
+  const { data: allSpecs } = await specsQuery
+
+  // Extract unique, non-empty styles and materials
+  const uniqueStyles = Array.from(new Set(allSpecs?.map(p => (p.specifications as any)?.style).filter(Boolean) as string[]))
+  const uniqueMaterials = Array.from(new Set(allSpecs?.map(p => (p.specifications as any)?.material).filter(Boolean) as string[]))
+
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 mt-10">
       <h1 className="text-4xl font-bold text-slate-900 mb-8 capitalize">{pageTitle}</h1>
       <div className="flex flex-col md:flex-row">
-        <FilterSidebar />
+        <FilterSidebar 
+          availableStyles={uniqueStyles} 
+          availableMaterials={uniqueMaterials} 
+        />
         
         <div className="flex-1">
           {products && products.length > 0 ? (
@@ -106,7 +120,7 @@ export default async function CategoryPage(props: { params: Params; searchParams
                   <Link href={`/shop/${params.category}/${product.slug}`} key={product.id} className="group">
                     <div className="relative aspect-square bg-gray-100 rounded-xl overflow-hidden mb-4">
                       <Image 
-                        src={Array.isArray(product.image_url) && product.image_url[0]?.image_url ? product.image_url[0].image_url : '/placeholder.svg'} 
+                        src={product.product_variants[0]?.image_url || '/placeholder.svg'} 
                         alt={product.title}
                         fill
                         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"

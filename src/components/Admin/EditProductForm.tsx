@@ -29,6 +29,8 @@ export default function EditProductForm({ product, categories }: { product: Prod
       id: v.id,
       sku: v.sku,
       color: v.color || '',
+      color_hex: v.color_hex || '',
+      material: v.material || '',
       stock: (v.stock_quantity || 0).toString(),
       priceAdjustment: (v.price_adjustment || 0).toString(),
       image_url: v.image_url || '',
@@ -37,7 +39,9 @@ export default function EditProductForm({ product, categories }: { product: Prod
   )
 
   const addVariantRow = () => {
-    setVariants([...variants, { sku: '', color: '', stock: '10', priceAdjustment: '0', image_url: '', isUploading: false }])
+    setVariants([...variants, {
+      sku: '', color: '',color_hex: '', material: '' , stock: '10', priceAdjustment: '0', image_url: '', isUploading: false
+    }])
   }
 
   const updateVariant = (index: number, field: keyof VariantState, value: string | boolean) => {
@@ -128,6 +132,10 @@ export default function EditProductForm({ product, categories }: { product: Prod
         <div>
           <label className="block text-sm font-medium text-stone-700 mb-1">Style</label>
           <input type="text" name="style" defaultValue={specs.style || ''} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-amber-600 outline-none" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-stone-700 mb-1">Material (For Filters)</label>
+          <input type="text" name="material" defaultValue={specs.material || ''} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-amber-600 outline-none" />
         </div>
         <div>
           <label className="block text-sm font-medium text-stone-700 mb-1">Dimensions</label>
