@@ -58,25 +58,27 @@ export default async function CategoryPage(props: { params: Params; searchParams
   const from = (currentPage - 1) * ITEMS_PER_PAGE
   const to = from + ITEMS_PER_PAGE - 1
 
-  // 3. Setup the base query asking for an exact count. 
-  // We must inner join product_variants to filter by material
+  // 3. Setup the base query asking for an exact count
+  // Notice we added product_categories!inner to correctly link categories
   let query = supabase
     .from('products')
     .select(`
       id, title, slug, base_price, 
-      product_variants!inner(image_url, material)
+      product_variants!inner(image_url, material),
+      product_categories!inner(category_id)
     `, { count: 'exact' })
     .eq('is_active', true)
 
+  // 4. Apply category filter ONLY if a specific category was found
   if (categoryData) {
-    query = query.eq('category_id', categoryData.id)
+    // UPDATED: Filter using the junction table instead of the main products table
+    query = query.eq('product_categories.category_id', categoryData.id)
   }
 
+  // Apply Filters
   if (typeof searchParams.style === 'string') {
     query = query.filter('specifications->>style', 'ilike', searchParams.style)
   }
-
-  // 4. NEW: Filter material via the inner joined variants table
   if (typeof searchParams.material === 'string') {
     query = query.filter('product_variants.material', 'ilike', searchParams.material)
   }
@@ -120,7 +122,7 @@ export default async function CategoryPage(props: { params: Params; searchParams
                   <Link href={`/shop/${params.category}/${product.slug}`} key={product.id} className="group">
                     <div className="relative aspect-square bg-gray-100 rounded-xl overflow-hidden mb-4">
                       <Image 
-                        src={product.product_variants[0]?.image_url || '/placeholder.svg'} 
+                        src={product.product_variants?.[0]?.image_url || '/placeholder.svg'} 
                         alt={product.title}
                         fill
                         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"

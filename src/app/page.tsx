@@ -121,7 +121,7 @@ export default async function HomePage() {
 
   const { data: featuredProducts } = await supabase
     .from('products')
-    .select('*, product_variants(image_url), categories(slug, name)')
+    .select('*, product_variants(image_url), product_categories( categories(slug, name) )')
     .order('created_at', { ascending: false })
     .eq('is_active', true)
     .limit(8);
@@ -384,9 +384,9 @@ export default async function HomePage() {
                 ? product.product_variants[0].image_url 
                 : null;
               
-              const categorySlug = product.categories && !Array.isArray(product.categories) 
-                ? product.categories.slug 
-                : 'all';
+              // UPDATED: Safely grab the first category from the multiple categories array
+              const firstCategory = product.product_categories?.[0]?.categories;
+              const categorySlug = firstCategory ? firstCategory.slug : 'all';
 
               return (
                 <Link 
@@ -423,9 +423,9 @@ export default async function HomePage() {
                     </button>
 
                     {/* Category Tag */}
-                    {product.categories && !Array.isArray(product.categories) && (
+                    {firstCategory && (
                       <span className="absolute top-4 left-4 px-3 py-1 bg-white/90 backdrop-blur-sm rounded-full text-xs font-medium text-zinc-700">
-                        {product.categories.name}
+                        {firstCategory.name}
                       </span>
                     )}
                   </div>
