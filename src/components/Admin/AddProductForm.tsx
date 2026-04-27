@@ -126,19 +126,23 @@ export default function AddProductForm({ categories }: { categories: Category[] 
         <textarea name="description" rows={3} required className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-slate-900 outline-none" placeholder="Product description..."></textarea>
       </div>
 
+      {/* Style sits alone or with other small inputs now */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1">Style (For Filters)</label>
           <input type="text" name="style" className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-slate-900 outline-none" placeholder="e.g. Modern" />
         </div>
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Material (For Filters)</label>
-          <input type="text" name="material" className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-slate-900 outline-none" placeholder="e.g. Velvet" />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Dimensions</label>
-          <input type="text" name="dimensions" className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-slate-900 outline-none" placeholder="e.g. 3-Seater" />
-        </div>
+      </div>
+
+      {/* Dimensions is now a full-width textarea */}
+      <div>
+        <label className="block text-sm font-medium text-slate-700 mb-1">Dimensions</label>
+        <textarea 
+          name="dimensions" 
+          rows={4} 
+          className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-slate-900 outline-none" 
+          placeholder="Width: 200cm&#10;Depth: 90cm&#10;Height: 85cm&#10;Seat Height: 45cm"
+        ></textarea>
       </div>
 
       {/* --- Dynamic Variants Section --- */}

@@ -25,7 +25,6 @@ const productSchema = z.object({
   description: z.string().min(10, 'Description must be at least 10 characters.'),
   style: z.string().optional(),
   dimensions: z.string().optional(),
-  material: z.string().optional(),
 })
 
 export async function addProduct(formData: FormData, variants: VariantInput[]) {
@@ -51,7 +50,7 @@ export async function addProduct(formData: FormData, variants: VariantInput[]) {
     return { error: validatedData.error.issues[0].message }
   }
 
-  const { title, slug, categoryIds, basePrice, description, style, dimensions, material } = validatedData.data
+  const { title, slug, categoryIds, basePrice, description, style, dimensions} = validatedData.data
 
 // 1. Insert Product (without category_id)
   const { data: product, error: productError } = await supabase
