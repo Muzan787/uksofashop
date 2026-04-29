@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { ShoppingCart, Check, Truck, Wallet, ShieldCheck } from 'lucide-react'
+import { useState } from 'react'
+import { ShoppingCart, Check, Truck, Wallet, ShieldCheck, Ruler, X, ChevronDown, ChevronUp } from 'lucide-react'
 import Image from 'next/image'
 import { Database } from '@/types/supabase'
 import { useCart } from '@/context/CartContext'
@@ -18,14 +18,16 @@ interface VariantSelectorProps {
 export default function VariantSelector({ product, variants }: VariantSelectorProps) {
   const { addToCart } = useCart()
 
+  // --- NEW STATES ---
+  const [showDimensions, setShowDimensions] = useState(false)
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false)
+
   // 1. Extract unique materials
   const uniqueMaterials = Array.from(new Set(variants.map(v => v.material || 'Standard')))
-  
   const [selectedMaterial, setSelectedMaterial] = useState<string>(uniqueMaterials[0] || 'Standard')
   
   // 2. Filter colors based on the selected material
   const availableVariants = variants.filter(v => (v.material || 'Standard') === selectedMaterial)
-  
   const [selectedColor, setSelectedColor] = useState<string>(
     availableVariants.length > 0 ? availableVariants[0].color! : ''
   )
@@ -35,11 +37,9 @@ export default function VariantSelector({ product, variants }: VariantSelectorPr
     v => (v.material || 'Standard') === selectedMaterial && v.color === selectedColor
   ) || availableVariants[0]
 
-  // Automatically switch to a valid color if the user clicks a material that doesn't have their currently selected color
   const handleMaterialChange = (material: string) => {
     setSelectedMaterial(material)
     const colorsForNewMaterial = variants.filter(v => (v.material || 'Standard') === material)
-    
     if (!colorsForNewMaterial.find(v => v.color === selectedColor)) {
       setSelectedColor(colorsForNewMaterial[0]?.color || '')
     }
@@ -63,6 +63,23 @@ export default function VariantSelector({ product, variants }: VariantSelectorPr
     toast.success(`${product.title} added to cart!`, { icon: '🛋️' });
     if (window.innerWidth < 768) window.scrollTo({ top: 0, behavior: 'smooth' });
   }
+
+  // --- FIX: Safely Parse Dimensions ---
+  let specs: Record<string, string> = {};
+  if (typeof product.specifications === 'string') {
+    try { specs = JSON.parse(product.specifications); } catch (e) {}
+  } else if (typeof product.specifications === 'object' && product.specifications !== null) {
+    specs = product.specifications as Record<string, string>;
+  }
+  const dimensions = specs?.dimensions?.trim() || '';
+
+  // --- NEW: Description Truncation Logic ---
+  const MAX_DESC_LENGTH = 150;
+  const safeDescription = product.description || '';
+  const isLongDescription = safeDescription.length > MAX_DESC_LENGTH;
+  const displayDescription = isLongDescription && !isDescriptionExpanded 
+    ? `${safeDescription.substring(0, MAX_DESC_LENGTH)}...` 
+    : safeDescription;
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
@@ -136,11 +153,39 @@ export default function VariantSelector({ product, variants }: VariantSelectorPr
           </div>
         )}
 
-        <div className="mt-8 space-y-4 text-stone-600 leading-relaxed">
-          <p>{product.description}</p>
+        {/* --- UPDATED: Description Section --- */}
+        <div className="mt-8">
+          <div className="text-stone-600 leading-relaxed font-sans text-base whitespace-pre-wrap">
+            {displayDescription}
+          </div>
+          {isLongDescription && (
+            <button 
+              onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+              className="mt-2 text-amber-600 font-medium hover:text-amber-700 flex items-center gap-1 transition-colors outline-none"
+            >
+              {isDescriptionExpanded ? (
+                <>Show Less <ChevronUp className="w-4 h-4" /></>
+              ) : (
+                <>Read More <ChevronDown className="w-4 h-4" /></>
+              )}
+            </button>
+          )}
         </div>
 
-        {/* ... (Keep existing Add to Cart & Trust Signals logic) */}
+        {/* --- FIXED: View Dimensions Button --- */}
+        {dimensions.length > 0 && (
+          <div className="mt-6">
+            <button 
+              onClick={() => setShowDimensions(true)}
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-stone-100 hover:bg-stone-200 text-stone-900 rounded-xl font-medium transition-colors"
+            >
+              <Ruler className="w-4 h-4 text-amber-600" />
+              View Dimensions
+            </button>
+          </div>
+        )}
+
+        {/* Add to Cart & Trust Signals */}
         <div className="mt-10">
           <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-md border-t border-stone-200 md:relative md:bg-transparent md:border-none md:p-0 z-40">
             <button
@@ -152,8 +197,58 @@ export default function VariantSelector({ product, variants }: VariantSelectorPr
               {selectedVariant?.stock_quantity === 0 ? 'Out of Stock' : 'Add to Cart'}
             </button>
           </div>
+
+          <div className="hidden md:grid grid-cols-1 gap-3 mt-6 p-5 bg-stone-50 rounded-xl border border-stone-100">
+            <div className="flex items-center gap-3 text-sm text-stone-700 font-medium">
+              <Truck className="w-5 h-5 text-amber-600" /> Free UK Mainland Delivery over £500
+            </div>
+            <div className="flex items-center gap-3 text-sm text-stone-700 font-medium">
+              <Wallet className="w-5 h-5 text-amber-600" /> Cash or Bank Transfer on Delivery Available
+            </div>
+            <div className="flex items-center gap-3 text-sm text-stone-700 font-medium">
+              <ShieldCheck className="w-5 h-5 text-amber-600" /> 1-Year Structural Guarantee
+            </div>
+          </div>
         </div>
       </div>
+
+      {/* --- Dimensions Modal Popup --- */}
+      {showDimensions && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 animate-fade-in">
+          <div 
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm" 
+            onClick={() => setShowDimensions(false)} 
+          />
+          
+          <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden animate-scale-in">
+            <div className="flex items-center justify-between p-5 border-b border-stone-100 bg-stone-50">
+              <h3 className="font-bold text-lg text-stone-900 flex items-center gap-2">
+                <Ruler className="w-5 h-5 text-amber-600" /> Product Dimensions
+              </h3>
+              <button 
+                onClick={() => setShowDimensions(false)} 
+                className="p-2 text-stone-400 hover:text-stone-900 hover:bg-stone-200 rounded-lg transition-colors outline-none"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-6 text-stone-700 whitespace-pre-wrap leading-relaxed font-medium font-sans">
+              {dimensions}
+            </div>
+            
+            <div className="p-4 bg-stone-50 border-t border-stone-100">
+              <button 
+                onClick={() => setShowDimensions(false)}
+                className="w-full py-2.5 bg-stone-900 text-white rounded-xl font-medium hover:bg-stone-800 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }
