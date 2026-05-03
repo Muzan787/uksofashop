@@ -248,7 +248,6 @@ export default function VariantSelector({ product, variants }: VariantSelectorPr
           </div>
         </div>
       )}
-
     </div>
   )
 }
