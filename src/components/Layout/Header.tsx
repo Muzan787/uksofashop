@@ -7,6 +7,7 @@ import {
   ShoppingBag, Menu, X, Search, ChevronDown,
   User, Heart, Package, Phone, Truck, Shield,
   Sparkles, ArrowRight, Clock,
+  Sofa,
 } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { createClient } from '@/utils/supabase/client';
@@ -276,9 +277,11 @@ export default function Header() {
                 }}
                 className="hover:scale-110"
               >
-                <svg viewBox="0 0 24 24" style={{ width: 17, height: 17, fill: 'white' }}>
-                  <path d="M21 9V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v2a1 1 0 0 0-1 1v3a1 1 0 0 0 1 1v1a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-1a1 1 0 0 0 1-1v-3a1 1 0 0 0-1-1zM5 7h14v2H5zm14 8H5v-1h14zm1-3H4v-1h16z"/>
-                </svg>
+                <div className="absolute inset-0 bg-white/20 animate-shimmer" 
+                     style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)', backgroundSize: '200% 100%' }} />
+                <div className="relative h-full flex items-center justify-center">
+                  <Sofa className="w-6 h-6 text-white" />
+                </div>
               </div>
               {/* Wordmark */}
               <div className="hidden sm:block">

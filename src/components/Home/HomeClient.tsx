@@ -182,9 +182,7 @@ function ProductCard({ product }: { product: Product }) {
 
         {/* Quick view pill */}
         <div
-          className="absolute bottom-2 left-2 right-2 bg-white text-stone-900 text-center font-semibold
-                     opacity-0 group-hover:opacity-100 translate-y-3 group-hover:translate-y-0
-                     transition-all duration-300"
+          className="absolute bottom-2 left-2 right-2 bg-white text-stone-900 text-center font-semibold opacity-0 group-hover:opacity-100 translate-y-3 group-hover:translate-y-0 transition-all duration-300"
           style={{ padding: '7px 0', fontSize: 10, letterSpacing: '0.12em',
                    textTransform: 'uppercase', borderRadius: 6 }}
         >
@@ -274,8 +272,7 @@ function TestimonialsCarousel() {
       <div className="flex items-center justify-center gap-4 mt-4">
         <button
           onClick={prev}
-          className="w-7 h-7 rounded-full border border-stone-200 flex items-center justify-center
-                     hover:border-[#d4871a] hover:text-[#d4871a] transition-colors"
+          className="w-7 h-7 rounded-full border border-stone-200 flex items-center justify-center hover:border-[#d4871a] hover:text-[#d4871a] transition-colors"
         >
           <ChevronLeft className="w-4 h-4" />
         </button>
@@ -292,8 +289,7 @@ function TestimonialsCarousel() {
         ))}
         <button
           onClick={next}
-          className="w-7 h-7 rounded-full border border-stone-200 flex items-center justify-center
-                     hover:border-[#d4871a] hover:text-[#d4871a] transition-colors"
+          className="w-7 h-7 rounded-full border border-stone-200 flex items-center justify-center hover:border-[#d4871a] hover:text-[#d4871a] transition-colors"
         >
           <ChevronRight className="w-4 h-4" />
         </button>
@@ -355,8 +351,8 @@ export default function HomeClient({ categories, products }: Props) {
         <div className="absolute top-0 left-0 right-0 h-0.5" style={{ background: '#d4871a' }} />
 
         {/* Content */}
-        <div className="relative max-w-5xl mx-auto px-4 sm:px-6 flex flex-col justify-end"
-          style={{ minHeight: '88vh', paddingBottom: '10vw' }}>
+        <div className="relative top-4 max-w-6xl mx-auto px-4 sm:px-2 flex flex-col justify-end"
+          style={{ minHeight: '8vh', paddingBottom: '2vw' }}>
 
           {/* Eyebrow */}
           <div
@@ -413,17 +409,14 @@ export default function HomeClient({ categories, products }: Props) {
             }}
           >
             <Link href="/shop/all"
-              className="group inline-flex items-center gap-2 text-white font-semibold
-                         hover:bg-[#b8721a] active:scale-95 transition-all duration-200"
-              style={{ background: '#d4871a', padding: '11px 22px', fontSize: 11,
-                       letterSpacing: '0.12em', textTransform: 'uppercase', borderRadius: 6 }}
+              className="group inline-flex items-center gap-2 text-white font-semibold hover:bg-[#b8721a] active:scale-95 transition-all duration-200"
+              style={{ background: '#d4871a', padding: '11px 22px', fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', borderRadius: 6 }}
             >
               Shop Now
               <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
             </Link>
             <Link href="/track-order"
-              className="inline-flex items-center gap-2 text-zinc-300 font-medium
-                         hover:text-white transition-colors border border-white/15 hover:border-white/30"
+              className="inline-flex items-center gap-2 text-zinc-300 font-medium hover:text-white transition-colors border border-white/15 hover:border-white/30"
               style={{ padding: '10px 20px', fontSize: 11, borderRadius: 6 }}
             >
               <Package className="w-3.5 h-3.5" />
@@ -478,8 +471,7 @@ export default function HomeClient({ categories, products }: Props) {
                   onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#fef9f0'}
                   onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = ''}
                 >
-                  <Icon className="w-4 h-4 text-[#d4871a] shrink-0
-                                   group-hover:scale-110 transition-transform duration-200" />
+                  <Icon className="w-4 h-4 text-[#d4871a] shrink-0 group-hover:scale-110 transition-transform duration-200" />
                   <div>
                     <div className="text-stone-900 font-semibold leading-tight" style={{ fontSize: 11 }}>
                       {label}
@@ -546,8 +538,7 @@ export default function HomeClient({ categories, products }: Props) {
                       </span>
                     </div>
                     {/* Hover border */}
-                    <div className="absolute inset-0 border-2 border-transparent
-                                   group-hover:border-[#d4871a]/50 transition-all duration-300 rounded-[10px]" />
+                    <div className="absolute inset-0 border-2 border-transparent group-hover:border-[#d4871a]/50 transition-all duration-300 rounded-[10px]" />
                   </Link>
                 </Reveal>
               )}
@@ -569,14 +560,12 @@ export default function HomeClient({ categories, products }: Props) {
                       <h3 className="font-playfair font-bold text-white leading-tight" style={{ fontSize: 13 }}>
                         {cat.name}
                       </h3>
-                      <span className="inline-flex items-center gap-0.5 text-white/50
-                                       group-hover:text-[#d4871a] transition-colors"
+                      <span className="inline-flex items-center gap-0.5 text-white/50 group-hover:text-[#d4871a] transition-colors"
                         style={{ fontSize: 9 }}>
                         Explore <ArrowUpRight className="w-2.5 h-2.5" />
                       </span>
                     </div>
-                    <div className="absolute inset-0 border-2 border-transparent
-                                   group-hover:border-[#d4871a]/50 transition-all duration-300 rounded-[10px]" />
+                    <div className="absolute inset-0 border-2 border-transparent group-hover:border-[#d4871a]/50 transition-all duration-300 rounded-[10px]" />
                   </Link>
                 </Reveal>
               ))}
@@ -628,8 +617,7 @@ export default function HomeClient({ categories, products }: Props) {
                 ))}
               </div>
               <Link href="/about"
-                className="inline-flex items-center gap-2 text-white font-medium mt-6 group
-                           hover:text-[#d4871a] transition-colors"
+                className="inline-flex items-center gap-2 text-white font-medium mt-6 group hover:text-[#d4871a] transition-colors"
                 style={{ fontSize: 12, borderBottom: '1px solid rgba(255,255,255,0.2)', paddingBottom: 2 }}>
                 Our Story <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
               </Link>
@@ -819,17 +807,14 @@ export default function HomeClient({ categories, products }: Props) {
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-8">
               <Link href="/shop/all"
-                className="group w-full sm:w-auto inline-flex items-center justify-center gap-2
-                           text-white font-semibold hover:bg-[#b8721a] active:scale-95 transition-all duration-200"
+                className="group w-full sm:w-auto inline-flex items-center justify-center gap-2 text-white font-semibold hover:bg-[#b8721a] active:scale-95 transition-all duration-200"
                 style={{ background: '#d4871a', padding: '12px 28px', fontSize: 11,
                          letterSpacing: '0.12em', textTransform: 'uppercase', borderRadius: 6 }}>
                 Shop the Collection
                 <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
               </Link>
               <Link href="/contact"
-                className="group w-full sm:w-auto inline-flex items-center justify-center gap-2
-                           text-white font-medium hover:text-[#d4871a] hover:border-[#d4871a]/50
-                           transition-all duration-200"
+                className="group w-full sm:w-auto inline-flex items-center justify-center gap-2 text-white font-medium hover:text-[#d4871a] hover:border-[#d4871a]/50 transition-all duration-200"
                 style={{ border: '1px solid rgba(255,255,255,0.15)', padding: '11px 24px',
                          fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase', borderRadius: 6 }}>
                 <Phone className="w-3.5 h-3.5" />
@@ -847,8 +832,7 @@ export default function HomeClient({ categories, products }: Props) {
         href="https://wa.me/447476616022"
         target="_blank" rel="noopener noreferrer"
         aria-label="Chat on WhatsApp"
-        className="fixed bottom-5 right-4 z-50 flex items-center justify-center shadow-xl
-                   hover:scale-110 active:scale-95 transition-transform duration-200"
+        className="fixed bottom-5 right-4 z-50 flex items-center justify-center shadow-xl hover:scale-110 active:scale-95 transition-transform duration-200"
         style={{ width: 46, height: 46, borderRadius: '50%', background: '#25D366' }}
       >
         {/* Ping ring */}

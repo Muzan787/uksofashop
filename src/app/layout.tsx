@@ -109,7 +109,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <main className="flex-grow">
             {children}
           </main>
-          <Footer />
+          <Footer categories={[]} />
         </CartProvider>
       </body>
     </html>
