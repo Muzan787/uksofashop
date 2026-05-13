@@ -11,7 +11,7 @@ export async function login(formData: FormData) {
   const password = formData.get('password') as string
 
   // Authenticate with Supabase
-  const { error } = await supabase.auth.signInWithPassword({
+  const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
   })
@@ -20,6 +20,13 @@ export async function login(formData: FormData) {
     return { error: error.message }
   }
 
-  // If successful, redirect straight to the admin dashboard
-  redirect('/admin')
+  // Role-based redirection logic
+  const userEmail = data.user?.email;
+  const adminEmail = process.env.ADMIN_EMAIL;
+
+  if (userEmail && adminEmail && userEmail.toLowerCase() === adminEmail.toLowerCase()) {
+    redirect('/admin');
+  } else {
+    redirect('/account');
+  }
 }

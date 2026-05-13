@@ -3,78 +3,42 @@
 
 import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
-import { z } from 'zod'
-
-export async function approveReview(formData: FormData) {
-  const supabase = await createClient()
-  const reviewId = formData.get('reviewId') as string
-
-  const { error } = await supabase
-    .from('reviews')
-    .update({ status: 'approved' })
-    .eq('id', reviewId)
-
-  if (error) throw new Error('Failed to approve review')
-
-  revalidatePath('/admin/reviews')
-  revalidatePath('/', 'layout') // Clears cache so it shows on product page
-}
-
-export async function deleteReview(formData: FormData) {
-  const supabase = await createClient()
-  const reviewId = formData.get('reviewId') as string
-
-  const { error } = await supabase
-    .from('reviews')
-    .delete()
-    .eq('id', reviewId)
-
-  if (error) throw new Error('Failed to delete review')
-
-  revalidatePath('/admin/reviews')
-  revalidatePath('/', 'layout') 
-}
-
-// 1. Define the Review Schema
-const reviewSchema = z.object({
-  customerName: z.string().min(2, 'Name must be at least 2 characters.'),
-  rating: z.number().int().min(1, 'Rating must be at least 1.').max(5, 'Rating cannot exceed 5.'),
-  comment: z.string().min(5, 'Review comment must be at least 5 characters long.'),
-})
-
-// --- NEW FUNCTION TO ADD ---
-export async function submitReview(formData: FormData, productId: string) {
+ 
+export async function submitGlobalReview(formData: FormData, imageUrl: string | null = null) {
   const supabase = await createClient()
   
-// 2. Extract and Parse
-  const rawData = {
-    customerName: formData.get('customerName'),
-    rating: parseInt(formData.get('rating') as string, 10),
-    comment: formData.get('comment'),
+  // 1. Check Authentication
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return { error: 'You must be logged in to submit a review.' }
   }
 
-  const validatedData = reviewSchema.safeParse(rawData)
+  // 2. Extract Data
+  const rating = parseInt(formData.get('rating') as string, 10)
+  const comment = formData.get('comment') as string
+  const productId = formData.get('productId') as string | null
 
-  if (!validatedData.success) {
-    return { error: validatedData.error.issues[0].message }
+  if (!rating || rating < 1 || rating > 5) {
+    return { error: 'Please provide a valid rating between 1 and 5.' }
   }
 
-  // 3. Insert using safe data
-  const { customerName, rating, comment } = validatedData.data
-
+  // 3. Insert into Supabase
   const { error } = await supabase
     .from('reviews')
     .insert({
-      product_id: productId,
-      customer_name: customerName,
+      user_id: user.id,
+      product_id: productId || null,
       rating,
       comment,
-      status: 'pending' // Requires admin approval
+      image_url: imageUrl,
+      is_approved: false // Defaulting to false for admin approval
     })
 
-  if (error) {  
+  if (error) {
+    console.error(error);
     return { error: 'Failed to submit review. Please try again.' }
   }
 
+  revalidatePath('/reviews')
   return { success: true }
 }

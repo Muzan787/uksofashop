@@ -7,8 +7,9 @@ import {
   ShoppingBag, Check, Truck, Wallet, ShieldCheck,
   Ruler, X, ChevronDown, ChevronUp, Star, ZoomIn,
   ArrowLeft, ArrowRight, Loader2, CheckCircle,
-  ChevronRight, Package, RotateCcw, Gem,
+  ChevronRight, Package, RotateCcw, Gem, Heart,
 } from 'lucide-react';
+import { toggleWishlist } from '@/app/actions/wishlist';
 import { useCart } from '@/context/CartContext';
 import { submitReview } from '@/app/actions/reviews';
 import toast from 'react-hot-toast';
@@ -286,7 +287,7 @@ function ReviewForm({ productId, accent, accentTint }: {
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
-export default function ProductPageClient({ product, variants, approvedReviews, categorySlug }: Props) {
+export default function ProductPageClient({ product, initialWishlistState, variants, approvedReviews, categorySlug }: Props) {
   const { addToCart } = useCart();
 
   // ── Variant selection ──
@@ -311,13 +312,28 @@ export default function ProductPageClient({ product, variants, approvedReviews, 
   const [imgLoaded, setImgLoaded]       = useState(false);
   const [activeTab, setActiveTab]       = useState<'description'|'specs'|'delivery'>('description');
 
+  //handleWishlistToggle
+  const [inWishlist, setInWishlist] = useState(initialWishlistState)
+  const [loading, setLoading] = useState(false)
+  const handleWishlistToggle = async () => {
+    setLoading(true)
+    const result = await toggleWishlist(product.id)
+    if (result.success) {
+      setInWishlist(result.isWishlisted)
+    } else {
+      // Handle not logged in (e.g., alert or redirect to login)
+      alert(result.error) 
+    }
+    setLoading(false)
+  }
+
   // Gallery — all variant images as thumbnails
   const gallery = useMemo(() => {
     const seen = new Set<string>();
-    return variants
+    return filtered
       .filter(v => v.image_url && !seen.has(v.image_url) && seen.add(v.image_url))
       .map(v => ({ src: v.image_url!, variantId: v.id, color: v.color_hex || accent }));
-  }, [variants, accent]);
+  }, [filtered, accent]);
   const [activeGallery, setActiveGallery] = useState(0);
   const displayImage = selVariant?.image_url ?? gallery[0]?.src ?? '/placeholder.svg';
 
@@ -367,6 +383,49 @@ export default function ProductPageClient({ product, variants, approvedReviews, 
   const { ref: reviewsRef, visible: reviewsVisible } = useReveal();
   const outOfStock = selVariant?.stock_quantity === 0;
 
+  // ── Helper to render the title block responsibly ──
+  const renderTitleBlock = (className?: string) => (
+    <div className={className} style={{ marginBottom: 16 }}>
+      <div style={{
+        display: 'inline-flex', alignItems: 'center', gap: 6,
+        background: accentTint, border: `1px solid ${accent}33`,
+        borderRadius: 4, padding: '3px 10px', marginBottom: 10,
+      }}>
+        <div style={{ width: 5, height: 5, borderRadius: '50%', background: accent }} />
+        <span style={{ fontSize: 9, color: accent, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase' }}>
+          British Handcrafted
+        </span>
+      </div>
+
+      <h1 className="font-playfair" style={{ fontSize: 'clamp(22px,4vw,34px)', fontWeight: 700, color: '#1c1917', lineHeight: 1.1, letterSpacing: '-0.02em', marginBottom: 10 }}>
+        {product.title}
+      </h1>
+
+      {/* Rating row */}
+      {approvedReviews.length > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+          <StarRow rating={Math.round(approvedReviews.reduce((s, r) => s + r.rating, 0) / approvedReviews.length)} accent={accent} />
+          <span style={{ fontSize: 11, color: '#78716c' }}>
+            {(approvedReviews.reduce((s, r) => s + r.rating, 0) / approvedReviews.length).toFixed(1)} · {approvedReviews.length} {approvedReviews.length === 1 ? 'review' : 'reviews'}
+          </span>
+        </div>
+      )}
+
+      {/* Price */}
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginTop: 8 }}>
+        <span className="font-playfair" style={{ fontSize: 30, fontWeight: 700, color: '#1c1917', lineHeight: 1 }}>
+          £{price.toFixed(0)}
+        </span>
+        {selVariant?.price_adjustment !== 0 && (
+          <span style={{ fontSize: 12, color: '#a8a29e' }}>
+            (base £{product.base_price.toFixed(0)} + variant adjustment)
+          </span>
+        )}
+      </div>
+    </div>
+  );
+
+
   return (
     <>
       {/* Global keyframes */}
@@ -406,21 +465,25 @@ export default function ProductPageClient({ product, variants, approvedReviews, 
 
         {/* ── Main product grid ── */}
         <div
+          className="px-4 pt-1 pb-10 md:pt-4"
           style={{
-            maxWidth: 1100, margin: '0 auto', padding: '16px 16px 40px',
+            maxWidth: 1100, margin: '0 auto',
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
             gap: 32, alignItems: 'start',
           }}
         >
           {/* ════ LEFT: IMAGE GALLERY ════ */}
-          <div style={{ position: 'sticky', top: 70, animation: 'slideUp 0.55s ease 0.05s both' }}>
-
+          <div className="relative md:sticky md:top-[70px]" style={{ animation: 'slideUp 0.55s ease 0.05s both' }}>
+            
+            {/* Mobile-only Title Block */}
+            {renderTitleBlock('md:hidden')}
             {/* Main image */}
             <div
+              className="aspect-square md:aspect-[4/5]"
               style={{
                 position: 'relative', borderRadius: 14,
-                overflow: 'hidden', aspectRatio: '4/5',
+                overflow: 'hidden',
                 background: accentTint,
                 boxShadow: `0 24px 60px ${accent}22, 0 4px 16px rgba(0,0,0,0.06)`,
                 transition: 'box-shadow 0.7s ease',
@@ -486,7 +549,7 @@ export default function ProductPageClient({ product, variants, approvedReviews, 
                 {gallery.map((g, i) => (
                   <button
                     key={g.src}
-                    onClick={() => { setActiveGallery(i); setSelColor(variants.find(v => v.image_url === g.src)?.color ?? selColor); }}
+                    onClick={() => { setActiveGallery(i); setSelColor(filtered.find(v => v.image_url === g.src)?.color ?? selColor); }}
                     style={{
                       position: 'relative', width: 60, aspectRatio: '1',
                       borderRadius: 8, overflow: 'hidden', cursor: 'pointer',
@@ -507,45 +570,8 @@ export default function ProductPageClient({ product, variants, approvedReviews, 
           {/* ════ RIGHT: PRODUCT INFO ════ */}
           <div style={{ animation: 'slideUp 0.55s ease 0.1s both' }}>
 
-            {/* Title block */}
-            <div style={{ marginBottom: 16 }}>
-              <div style={{
-                display: 'inline-flex', alignItems: 'center', gap: 6,
-                background: accentTint, border: `1px solid ${accent}33`,
-                borderRadius: 4, padding: '3px 10px', marginBottom: 10,
-              }}>
-                <div style={{ width: 5, height: 5, borderRadius: '50%', background: accent }} />
-                <span style={{ fontSize: 9, color: accent, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase' }}>
-                  British Handcrafted
-                </span>
-              </div>
-
-              <h1 className="font-playfair" style={{ fontSize: 'clamp(22px,4vw,34px)', fontWeight: 700, color: '#1c1917', lineHeight: 1.1, letterSpacing: '-0.02em', marginBottom: 10 }}>
-                {product.title}
-              </h1>
-
-              {/* Rating row */}
-              {approvedReviews.length > 0 && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                  <StarRow rating={Math.round(approvedReviews.reduce((s, r) => s + r.rating, 0) / approvedReviews.length)} accent={accent} />
-                  <span style={{ fontSize: 11, color: '#78716c' }}>
-                    {(approvedReviews.reduce((s, r) => s + r.rating, 0) / approvedReviews.length).toFixed(1)} · {approvedReviews.length} {approvedReviews.length === 1 ? 'review' : 'reviews'}
-                  </span>
-                </div>
-              )}
-
-              {/* Price */}
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginTop: 8 }}>
-                <span className="font-playfair" style={{ fontSize: 30, fontWeight: 700, color: '#1c1917', lineHeight: 1 }}>
-                  £{price.toFixed(0)}
-                </span>
-                {selVariant?.price_adjustment !== 0 && (
-                  <span style={{ fontSize: 12, color: '#a8a29e' }}>
-                    (base £{product.base_price.toFixed(0)} + variant adjustment)
-                  </span>
-                )}
-              </div>
-            </div>
+            {/* Desktop-only Title block */}
+            {renderTitleBlock('hidden md:block')}
 
             {/* ── Material selector ── */}
             {uniqueMaterials.length > 1 && (
@@ -902,7 +928,7 @@ export default function ProductPageClient({ product, variants, approvedReviews, 
             </div>
 
             {/* Review form */}
-            <div style={{ position: 'sticky', top: 80 }}>
+            <div className="relative md:sticky" style={{ top: 80 }}>
               <div style={{
                 background: '#fff', borderRadius: 10, padding: 20,
                 borderTop: `3px solid ${accent}`,
