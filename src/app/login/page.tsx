@@ -109,7 +109,10 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <div style={{ textAlign: 'center', marginTop: 16 }}>
+        <div style={{ textAlign: 'center', marginTop: 24 }}>
+          <p style={{ fontSize: 12, color: '#57534e', marginBottom: 8 }}>
+            Don't have an account? <Link href="/signup" style={{ color: ACCENT, fontWeight: 600, textDecoration: 'none' }}>Sign Up</Link>
+          </p>
           <Link href="/" style={{ fontSize: 11, color: '#a8a29e', textDecoration: 'none' }}
             className="hover:text-stone-600 transition-colors">← Back to Store</Link>
         </div>

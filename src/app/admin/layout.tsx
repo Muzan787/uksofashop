@@ -1,6 +1,7 @@
 // src/app/admin/layout.tsx
 import Link from 'next/link'
-import { Package, ShoppingCart, MessageSquare, LayoutDashboard, Tags } from 'lucide-react'
+import { Package, ShoppingCart, MessageSquare, LayoutDashboard, Tags, LogOut } from 'lucide-react'
+import { logout } from '@/app/actions/auth'
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -20,13 +21,23 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <Link href="/admin/inventory" className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-800 hover:text-white transition-colors">
             <Package className="w-5 h-5" /> <span className="hidden md:inline">Inventory</span>
           </Link>
-          <Link href="/admin/categories" className="flex items-center gap-3 p-3 rounded-lg hover:bg-stone-800 hover:text-white transition-colors">
+          <Link href="/admin/categories" className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-800 hover:text-white transition-colors">
             <Tags className="w-5 h-5" /> <span className="hidden md:inline">Categories</span>
           </Link>
           <Link href="/admin/reviews" className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-800 hover:text-white transition-colors">
             <MessageSquare className="w-5 h-5" /> <span className="hidden md:inline">Reviews</span>
           </Link>
         </nav>
+        
+        {/* Admin Sign Out Button */}
+        <div className="p-4 mt-auto border-t border-slate-800">
+          <form action={logout}>
+            <button type="submit" className="w-full flex items-center justify-center md:justify-start gap-3 p-3 rounded-lg text-red-400 hover:bg-slate-800 hover:text-red-300 transition-colors">
+              <LogOut className="w-5 h-5" />
+              <span className="hidden md:inline font-medium">Sign Out</span>
+            </button>
+          </form>
+        </div>
       </aside>
 
       {/* Main Admin Content Area */}

@@ -216,3 +216,63 @@ export async function sendContactNotification(
 
   await transporter.sendMail(mailOptions);
 }
+
+export async function sendAdminReviewNotification(
+  reviewerEmail: string,
+  rating: number,
+  comment: string,
+  imageUrl: string | null
+) {
+  const adminEmail = process.env.ADMIN_EMAIL;
+  if (!adminEmail) return;
+
+  const content = `
+    <div style="text-align: left;">
+      <div style="display: inline-block; background-color: #fef3c7; color: #b45309; padding: 8px 16px; border-radius: 20px; font-weight: bold; font-size: 14px; margin-bottom: 24px; letter-spacing: 0.5px; text-transform: uppercase;">
+        Action Required: New Review
+      </div>
+      
+      <h2 style="margin-top: 0; font-size: 22px;">New Customer Review Submitted</h2>
+      <p style="color: #57534e; line-height: 1.6; font-size: 16px;">A customer has submitted a new review that requires your approval before it appears on the website.</p>
+      
+      <table style="width: 100%; border-collapse: collapse; margin: 24px 0;">
+        <tr>
+          <td style="padding: 12px 0; border-bottom: 1px solid #e7e5e4; color: #78716c; width: 120px;"><strong>Customer:</strong></td>
+          <td style="padding: 12px 0; border-bottom: 1px solid #e7e5e4; font-weight: bold;">${reviewerEmail}</td>
+        </tr>
+        <tr>
+          <td style="padding: 12px 0; border-bottom: 1px solid #e7e5e4; color: #78716c;"><strong>Rating:</strong></td>
+          <td style="padding: 12px 0; border-bottom: 1px solid #e7e5e4; font-weight: bold; color: #d97706;">${rating} / 5 Stars</td>
+        </tr>
+        ${imageUrl ? `
+        <tr>
+          <td style="padding: 12px 0; border-bottom: 1px solid #e7e5e4; color: #78716c;"><strong>Image:</strong></td>
+          <td style="padding: 12px 0; border-bottom: 1px solid #e7e5e4;">
+            <a href="${imageUrl}" style="color: #d97706; text-decoration: none; font-weight: bold;">View Uploaded Image</a>
+          </td>
+        </tr>
+        ` : ''}
+      </table>
+
+      <h3 style="margin-top: 32px; font-size: 16px;">Review Comment:</h3>
+      <div style="background-color: #f5f5f4; padding: 20px; border-radius: 8px; font-style: italic; color: #57534e; white-space: pre-wrap; line-height: 1.6;">
+        ${comment}
+      </div>
+
+      <div style="margin-top: 32px;">
+        <a href="${process.env.NEXT_PUBLIC_SITE_URL}/admin/reviews" style="background-color: #1c1917; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">
+          Moderate Review
+        </a>
+      </div>
+    </div>
+  `;
+
+  const mailOptions = {
+    from: `"Vantage Group LTD" <${process.env.EMAIL_USER}>`,
+    to: adminEmail,
+    subject: `New Customer Review Requires Approval (${rating} Stars)`,
+    html: generateEmailHTML(content), // Reusing your awesome HTML wrapper!
+  };
+
+  await transporter.sendMail(mailOptions);
+}

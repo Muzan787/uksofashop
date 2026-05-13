@@ -3,7 +3,8 @@
 
 import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
- 
+import { sendAdminReviewNotification } from '@/utils/email'
+
 export async function submitGlobalReview(formData: FormData, imageUrl: string | null = null) {
   const supabase = await createClient()
   
@@ -39,6 +40,43 @@ export async function submitGlobalReview(formData: FormData, imageUrl: string | 
     return { error: 'Failed to submit review. Please try again.' }
   }
 
+  // 4. Send Admin Notification
+  try {
+    await sendAdminReviewNotification(user.email || 'Unknown User', rating, comment, imageUrl);
+  } catch (emailErr) {
+    console.error("Failed to send review notification email", emailErr);
+  }
+
   revalidatePath('/reviews')
   return { success: true }
+}
+
+export async function approveReview(formData: FormData) {
+  const supabase = await createClient()
+  const reviewId = formData.get('reviewId') as string
+
+  const { error } = await supabase
+    .from('reviews')
+    .update({ is_approved: true }) // Updated from status: 'approved'
+    .eq('id', reviewId)
+
+  if (error) throw new Error('Failed to approve review')
+
+  revalidatePath('/admin/reviews')
+  revalidatePath('/', 'layout') // Clears cache so it shows on product page
+}
+
+export async function deleteReview(formData: FormData) {
+  const supabase = await createClient()
+  const reviewId = formData.get('reviewId') as string
+
+  const { error } = await supabase
+    .from('reviews')
+    .delete()
+    .eq('id', reviewId)
+
+  if (error) throw new Error('Failed to delete review')
+
+  revalidatePath('/admin/reviews')
+  revalidatePath('/', 'layout') 
 }
