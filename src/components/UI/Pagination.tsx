@@ -1,79 +1,59 @@
-// src/components/UI/Pagination.tsx
 'use client'
-
+// src/components/UI/Pagination.tsx
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
-interface PaginationProps {
-  currentPage: number
-  totalPages: number
-}
+const ACCENT = '#d4871a'
 
-export default function Pagination({ currentPage, totalPages }: PaginationProps) {
+export default function Pagination({ currentPage, totalPages }: { currentPage: number; totalPages: number }) {
   const pathname = usePathname()
-  const searchParams = useSearchParams()
+  const sp = useSearchParams()
 
-  // Helper to create the correct URL for a specific page
-  const createPageUrl = (pageNumber: number) => {
-    const params = new URLSearchParams(searchParams.toString())
-    params.set('page', pageNumber.toString())
+  const url = (p: number) => {
+    const params = new URLSearchParams(sp.toString())
+    params.set('page', p.toString())
     return `${pathname}?${params.toString()}`
   }
 
   if (totalPages <= 1) return null
 
+  // Build page numbers with ellipsis
+  const pages: (number | '…')[] = []
+  for (let i = 1; i <= totalPages; i++) {
+    if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
+      pages.push(i)
+    } else if (pages[pages.length - 1] !== '…') {
+      pages.push('…')
+    }
+  }
+
+  const btn = (content: React.ReactNode, href: string | null, active = false, disabled = false) => {
+    const style: React.CSSProperties = {
+      minWidth: 36, height: 36, borderRadius: 7,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontSize: 12, fontWeight: active ? 700 : 500,
+      border: `1.5px solid ${active ? ACCENT : disabled ? '#f0ede8' : '#e7e5e4'}`,
+      background: active ? ACCENT : 'transparent',
+      color: active ? '#fff' : disabled ? '#d6d3d1' : '#57534e',
+      cursor: disabled ? 'not-allowed' : 'pointer',
+      transition: 'all 0.2s ease',
+      textDecoration: 'none',
+      padding: '0 8px',
+    }
+    if (!href || disabled) return <div style={style}>{content}</div>
+    return <Link href={href} style={style}>{content}</Link>
+  }
+
   return (
-    <div className="flex items-center justify-center space-x-2 mt-12">
-      {/* Previous Button */}
-      {currentPage > 1 ? (
-        <Link 
-          href={createPageUrl(currentPage - 1)}
-          className="p-2 rounded-lg border border-stone-200 text-stone-600 hover:bg-stone-50 transition"
-          aria-label="Previous Page"
-        >
-          <ChevronLeft className="w-5 h-5" />
-        </Link>
-      ) : (
-        <div className="p-2 rounded-lg border border-stone-100 text-stone-300 cursor-not-allowed">
-          <ChevronLeft className="w-5 h-5" />
-        </div>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 40 }}>
+      {btn(<ChevronLeft style={{ width: 14, height: 14 }} />, currentPage > 1 ? url(currentPage - 1) : null, false, currentPage <= 1)}
+      {pages.map((p, i) =>
+        p === '…'
+          ? <span key={`e${i}`} style={{ width: 24, textAlign: 'center', color: '#a8a29e', fontSize: 12 }}>…</span>
+          : btn(p, url(p as number), p === currentPage)
       )}
-
-      {/* Page Numbers */}
-      <div className="flex items-center space-x-1">
-        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
-          const isActive = page === currentPage
-          return (
-            <Link
-              key={page}
-              href={createPageUrl(page)}
-              className={`min-w-[40px] h-10 flex items-center justify-center rounded-lg font-medium transition-colors ${
-                isActive 
-                  ? 'bg-stone-900 text-white' 
-                  : 'text-stone-600 hover:bg-stone-100'
-              }`}
-            >
-              {page}
-            </Link>
-          )
-        })}
-      </div>
-
-      {/* Next Button */}
-      {currentPage < totalPages ? (
-        <Link 
-          href={createPageUrl(currentPage + 1)}
-          className="p-2 rounded-lg border border-stone-200 text-stone-600 hover:bg-stone-50 transition"
-          aria-label="Next Page"
-        >
-          <ChevronRight className="w-5 h-5" />
-        </Link>
-      ) : (
-        <div className="p-2 rounded-lg border border-stone-100 text-stone-300 cursor-not-allowed">
-          <ChevronRight className="w-5 h-5" />
-        </div>
-      )}
+      {btn(<ChevronRight style={{ width: 14, height: 14 }} />, currentPage < totalPages ? url(currentPage + 1) : null, false, currentPage >= totalPages)}
     </div>
   )
 }

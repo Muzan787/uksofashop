@@ -1,56 +1,96 @@
-// src/app/privacy/page.tsx
-export default function PrivacyPage() {
+// ─── PRIVACY PAGE  →  src/app/privacy/page.tsx ────────────────────────────────
+import Link from 'next/link'
+import { ShieldCheck } from 'lucide-react'
+
+const ACCENT = '#d4871a'
+
+function ProseSection({ num, title, children }: { num: string; title: string; children: React.ReactNode }) {
   return (
-    <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-      <div className="mb-12">
-        <h1 className="text-4xl font-bold text-stone-900 mb-4">Privacy Policy</h1>
-        <p className="text-stone-500">Last updated: {new Date().toLocaleDateString('en-GB')}</p>
+    <div style={{ marginBottom: 28 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 8 }}>
+        <span style={{ fontSize: 10, color: ACCENT, fontWeight: 700, letterSpacing: '0.1em', flexShrink: 0 }}>{num}</span>
+        <h2 style={{ fontSize: 16, fontWeight: 700, color: '#1c1917', lineHeight: 1.2 }}>{title}</h2>
       </div>
-
-      <div className="prose prose-stone max-w-none space-y-8 text-stone-700">
-        <p>
-          At UK Sofa Shop (operated by Vantage Group LTD), we are committed to protecting and respecting your privacy. This policy explains when and why we collect personal information about people who visit our website, how we use it, and how we keep it secure.
-        </p>
-
-        <section>
-          <h2 className="text-2xl font-bold text-stone-900 mb-3">1. Information We Collect</h2>
-          <p>
-            We collect information from you when you place an order, make an inquiry, or browse our website. The personal information we collect might include your name, address, email address, IP address, and information regarding what pages are accessed and when.
-          </p>
-        </section>
-
-        <section>
-          <h2 className="text-2xl font-bold text-stone-900 mb-3">2. How We Use Your Information</h2>
-          <p>We may use your information to:</p>
-          <ul className="list-disc pl-5 space-y-2 mt-2">
-            <li>Process orders that you have submitted.</li>
-            <li>Carry out our obligations arising from any contracts entered into by you and us.</li>
-            <li>Notify you of changes to our services or your order status.</li>
-            <li>Send you communications which you have requested and that may be of interest to you.</li>
-          </ul>
-        </section>
-
-        <section>
-          <h2 className="text-2xl font-bold text-stone-900 mb-3">3. Data Sharing</h2>
-          <p>
-            We will not sell or rent your information to third parties. We will not share your information with third parties for marketing purposes. We only share necessary delivery information (Name, Address, Phone) with our trusted logistics partners to ensure your sofa reaches you safely.
-          </p>
-        </section>
-
-        <section>
-          <h2 className="text-2xl font-bold text-stone-900 mb-3">4. Cookies</h2>
-          <p>
-            Like many other websites, the UK Sofa Shop website uses cookies. 'Cookies' are small pieces of information sent by an organisation to your computer and stored on your hard drive to allow that website to recognise you when you visit. They help us improve our website and deliver a better, more personalised service.
-          </p>
-        </section>
-
-        <section>
-          <h2 className="text-2xl font-bold text-stone-900 mb-3">5. Your Rights</h2>
-          <p>
-            Under UK GDPR, you have the right to access the personal information we hold about you, request corrections, or ask for your data to be deleted. To exercise any of these rights, please contact us at support@uksofashop.co.uk.
-          </p>
-        </section>
-      </div>
-    </main>
-  );
+      <div style={{ paddingLeft: 28, fontSize: 13, color: '#57534e', lineHeight: 1.8 }}>{children}</div>
+    </div>
+  )
 }
+
+export function PrivacyPage() {
+  return (
+    <div style={{ minHeight: '100vh', background: '#f8f6f2' }}>
+      <div style={{ background: '#0c0c0b', borderBottom: `2px solid ${ACCENT}` }}>
+        <div style={{ maxWidth: 800, margin: '0 auto', padding: '36px 16px 28px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+            <div style={{ width: 40, height: 40, borderRadius: 10, background: `${ACCENT}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <ShieldCheck style={{ width: 18, height: 18, color: ACCENT }} />
+            </div>
+            <div>
+              <div style={{ fontSize: 9, color: ACCENT, textTransform: 'uppercase', letterSpacing: '0.22em', fontWeight: 700, marginBottom: 4 }}>Legal</div>
+              <h1 className="font-playfair" style={{ fontSize: 'clamp(22px,4vw,36px)', fontWeight: 700, color: '#fff' }}>Privacy Policy</h1>
+            </div>
+          </div>
+          <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginLeft: 52 }}>Last updated: {new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+        </div>
+      </div>
+
+      <div style={{ maxWidth: 800, margin: '0 auto', padding: '32px 16px 60px' }}>
+        <div style={{ background: '#fff', borderRadius: 14, padding: '28px 24px', border: '1px solid #f0ede8', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
+
+          <p style={{ fontSize: 13, color: '#57534e', lineHeight: 1.8, marginBottom: 28, paddingBottom: 20, borderBottom: '1px solid #f5f5f4' }}>
+            At UK Sofa Shop (operated by Vantage Group LTD), we are committed to protecting your privacy. This policy explains when and why we collect personal information, how we use it, and how we keep it secure.
+          </p>
+
+          <ProseSection num="1." title="Information We Collect">
+            We collect information when you place an order, make an enquiry, or browse our website. This may include your name, postal address, email address, phone number, IP address, and information about which pages you access and when.
+          </ProseSection>
+
+          <ProseSection num="2." title="How We Use Your Information">
+            <p style={{ marginBottom: 8 }}>We use your information to:</p>
+            <ul style={{ paddingLeft: 16, display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {[
+                'Process and fulfil orders you have placed with us',
+                'Notify you of changes to your order status',
+                'Send communications you have requested',
+                'Improve our website and customer experience',
+                'Comply with legal and regulatory obligations',
+              ].map(i => <li key={i} style={{ listStyleType: 'disc', listStylePosition: 'outside' }}>{i}</li>)}
+            </ul>
+          </ProseSection>
+
+          <ProseSection num="3." title="Data Sharing">
+            We will never sell or rent your personal data to third parties. We only share the minimum necessary delivery information (name, address, phone number) with our trusted logistics partners to complete your order.
+          </ProseSection>
+
+          <ProseSection num="4." title="Cookies">
+            We use cookies to improve your browsing experience and deliver a more personalised service. Cookies are small data files stored on your device. You may disable cookies in your browser settings, though this may affect site functionality.
+          </ProseSection>
+
+          <ProseSection num="5." title="Data Retention">
+            We retain your personal data for as long as necessary to fulfil your order and comply with legal requirements. Order records are kept for 7 years in line with UK tax law. You may request deletion of non-essential data at any time.
+          </ProseSection>
+
+          <ProseSection num="6." title="Your Rights (UK GDPR)">
+            <p style={{ marginBottom: 8 }}>Under UK GDPR you have the right to:</p>
+            <ul style={{ paddingLeft: 16, display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {[
+                'Access the personal data we hold about you',
+                'Request correction of inaccurate data',
+                'Request deletion of your data ("right to be forgotten")',
+                'Object to or restrict how we process your data',
+                'Portability of your data in a machine-readable format',
+              ].map(i => <li key={i} style={{ listStyleType: 'disc', listStylePosition: 'outside' }}>{i}</li>)}
+            </ul>
+            <p style={{ marginTop: 10 }}>To exercise any of these rights, contact us at <a href="mailto:support@uksofashop.co.uk" style={{ color: ACCENT }}>support@uksofashop.co.uk</a>.</p>
+          </ProseSection>
+
+          <div style={{ paddingTop: 20, borderTop: '1px solid #f5f5f4', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 11, color: '#a8a29e' }}>Questions about this policy?</span>
+            <Link href="/contact" style={{ fontSize: 11, color: ACCENT, fontWeight: 700, textDecoration: 'none' }}>Contact our team →</Link>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+export default PrivacyPage

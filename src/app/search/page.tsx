@@ -1,91 +1,111 @@
 // src/app/search/page.tsx
 import { createClient } from '@/utils/supabase/server'
 import Link from 'next/link'
-import { Search } from 'lucide-react'
+import Image from 'next/image'
+import { Search, PackageSearch, Star, ArrowRight } from 'lucide-react'
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>
+const ACCENT = '#d4871a'
 
 export default async function SearchPage(props: { searchParams: SearchParams }) {
-  const searchParams = await props.searchParams;
-  const query = typeof searchParams.q === 'string' ? searchParams.q : '';
+  const sp    = await props.searchParams
+  const query = typeof sp.q === 'string' ? sp.q.trim() : ''
   const supabase = await createClient()
 
-  // Initialize an empty array for products
-  let products: any[] = [];
-
+  let products: any[] = []
   if (query) {
-    // Search the products table where the title OR description matches the query
-    // We also fetch the related category slug so we can construct the correct URL
     const { data } = await supabase
       .from('products')
-      .select(`
-        id, 
-        title, 
-        slug, 
-        base_price, 
-        product_variants(image_url),
-        categories!inner(slug)
-      `)
+      .select('id, title, slug, base_price, average_rating, review_count, product_variants(image_url), product_categories!inner(categories(slug, name))')
       .eq('is_active', true)
       .or(`title.ilike.%${query}%,description.ilike.%${query}%`)
-      .order('created_at', { ascending: false });
-      
-    if (data) products = data;
+      .order('created_at', { ascending: false })
+      .limit(24)
+    if (data) products = data
   }
 
   return (
-    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 mt-10 min-h-screen">
-      <div className="mb-8 border-b border-stone-200 pb-8">
-        <h1 className="text-3xl font-bold text-stone-900">
-          Search Results for &quot;<span className="text-amber-600">{query}</span>&quot;
-        </h1>
-        <p className="text-stone-500 mt-2">
-          {products.length} {products.length === 1 ? 'product' : 'products'} found
-        </p>
+    <div style={{ minHeight: '100vh', background: '#f8f6f2' }}>
+
+      {/* Header */}
+      <div style={{ background: '#0c0c0b', borderBottom: `2px solid ${ACCENT}` }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto', padding: '32px 16px 24px' }}>
+          <div style={{ fontSize: 9, color: ACCENT, textTransform: 'uppercase', letterSpacing: '0.22em', fontWeight: 700, marginBottom: 8 }}>Search Results</div>
+          <h1 className="font-playfair" style={{ fontSize: 'clamp(22px,4vw,36px)', fontWeight: 700, color: '#fff', lineHeight: 1.1 }}>
+            {query
+              ? <><em style={{ color: ACCENT, fontStyle: 'normal' }}>"{query}"</em> — {products.length} {products.length === 1 ? 'result' : 'results'}</>
+              : 'Search Our Collection'
+            }
+          </h1>
+        </div>
       </div>
 
-      {products.length > 0 ? (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {products.map((product) => {
-            // Safely extract the first variant image if it exists
-            const displayImage = Array.isArray(product.product_variants) && product.product_variants.length > 0 
-              ? product.product_variants[0].image_url 
-              : '/placeholder.svg';
-            
-            // Extract the category slug for the link routing
-            const categorySlug = product.categories && !Array.isArray(product.categories) 
-              ? product.categories.slug 
-              : 'all';
+      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '28px 16px 60px' }}>
 
-            return (
-              <Link href={`/shop/${categorySlug}/${product.slug}`} key={product.id} className="group block">
-                <div className="aspect-square bg-stone-100 rounded-xl overflow-hidden mb-4 relative">
-                  <img 
-                    src={displayImage} 
-                    alt={product.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
-                </div>
-                <h3 className="text-lg font-medium text-stone-900 line-clamp-1">{product.title}</h3>
-                <p className="text-amber-700 font-semibold mt-1">£{product.base_price.toFixed(2)}</p>
-              </Link>
-            )
-          })}
-        </div>
-      ) : (
-        <div className="flex flex-col items-center justify-center py-20 text-center bg-stone-50 rounded-2xl border border-stone-100">
-          <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mb-4 shadow-sm border border-stone-200">
-            <Search className="w-8 h-8 text-stone-400" />
+        {/* Search box (client fallback — just a form that hits ?q=) */}
+        <form method="GET" action="/search" style={{ marginBottom: 28 }}>
+          <div style={{ position: 'relative', maxWidth: 480 }}>
+            <Search style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', width: 15, height: 15, color: '#a8a29e', pointerEvents: 'none' }} />
+            <input name="q" defaultValue={query} placeholder="Search sofas, fabric, style…"
+              style={{ width: '100%', padding: '11px 50px 11px 40px', fontSize: 13, border: `1.5px solid ${ACCENT}`, borderRadius: 8, outline: 'none', background: '#fff', color: '#1c1917', boxSizing: 'border-box', fontFamily: 'inherit' }} />
+            <button type="submit"
+              style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: ACCENT, border: 'none', borderRadius: 5, padding: '5px 10px', cursor: 'pointer', color: '#fff', fontSize: 11, fontWeight: 700 }}>
+              Go
+            </button>
           </div>
-          <h2 className="text-xl font-bold text-stone-900 mb-2">No results found</h2>
-          <p className="text-stone-500 max-w-md">
-            We couldn't find anything matching "{query}". Try checking for spelling errors or using more general terms.
-          </p>
-          <Link href="/shop/all" className="mt-6 bg-stone-900 text-white px-6 py-3 rounded-lg font-medium hover:bg-stone-800 transition">
-            Browse All Sofas
-          </Link>
-        </div>
-      )}
-    </main>
+        </form>
+
+        {!query && (
+          <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+            <Search style={{ width: 40, height: 40, color: '#d6d3d1', margin: '0 auto 14px' }} />
+            <p style={{ fontSize: 14, color: '#78716c' }}>Type something above to search our collection.</p>
+          </div>
+        )}
+
+        {query && products.length === 0 && (
+          <div style={{ textAlign: 'center', padding: '60px 20px', background: '#fff', borderRadius: 12, border: '1px solid #f0ede8' }}>
+            <PackageSearch style={{ width: 40, height: 40, color: '#d6d3d1', margin: '0 auto 14px' }} />
+            <h2 style={{ fontSize: 18, fontWeight: 700, color: '#1c1917', marginBottom: 8 }}>No results for "{query}"</h2>
+            <p style={{ fontSize: 13, color: '#78716c', maxWidth: 300, margin: '0 auto 20px', lineHeight: 1.6 }}>
+              Try a different spelling or browse our full collection.
+            </p>
+            <Link href="/shop/all" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: ACCENT, color: '#fff', padding: '10px 20px', borderRadius: 7, fontSize: 11, fontWeight: 700, textDecoration: 'none', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+              Browse All Sofas <ArrowRight style={{ width: 12, height: 12 }} />
+            </Link>
+          </div>
+        )}
+
+        {products.length > 0 && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(180px,1fr))', gap: 16 }}>
+            {products.map((product) => {
+              const img     = product.product_variants?.[0]?.image_url ?? null
+              const catSlug = product.product_categories?.[0]?.categories?.slug ?? 'all'
+              return (
+                <Link key={product.id} href={`/shop/${catSlug}/${product.slug}`} className="group block" style={{ textDecoration: 'none' }}>
+                  <div style={{ position: 'relative', aspectRatio: '3/4', borderRadius: 10, overflow: 'hidden', background: '#ede8df', marginBottom: 10 }}>
+                    {img
+                      ? <Image src={img} alt={product.title} fill sizes="200px" style={{ objectFit: 'cover', transition: 'transform 0.5s ease' }} className="group-hover:scale-105" />
+                      : <div style={{ position: 'absolute', inset: 0, background: '#e7e5e4' }} />
+                    }
+                    <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0)', transition: 'background 0.3s' }} className="group-hover:bg-black/8" />
+                  </div>
+                  <h3 style={{ fontSize: 13, fontWeight: 700, color: '#1c1917', lineHeight: 1.3, marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', transition: 'color 0.2s' }}
+                    className="group-hover:text-[#d4871a]">{product.title}</h3>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: 14, fontWeight: 800, color: '#1c1917' }}>£{product.base_price.toFixed(0)}</span>
+                    {(product.review_count ?? 0) > 0 && (
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: '#78716c' }}>
+                        <Star style={{ width: 10, height: 10, fill: ACCENT, color: ACCENT }} />
+                        {(product.average_rating ?? 0).toFixed(1)}
+                      </span>
+                    )}
+                  </div>
+                </Link>
+              )
+            })}
+          </div>
+        )}
+      </div>
+    </div>
   )
 }

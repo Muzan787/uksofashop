@@ -1,78 +1,69 @@
-// src/app/faq/page.tsx
-import { HelpCircle } from 'lucide-react';
+// ─── FAQ PAGE  →  src/app/faq/page.tsx ────────────────────────────────────────
+'use client'
+import { useState } from 'react'
+import { HelpCircle, ChevronDown, ArrowRight, Phone } from 'lucide-react'
+import Link from 'next/link'
+
+const ACCENT = '#d4871a'
 
 const faqs = [
-  {
-    question: "Do you offer Cash on Delivery?",
-    answer: "Yes! We understand buying furniture is a big investment. You can choose to pay our delivery drivers securely via cash or a mobile card terminal upon arrival."
-  },
-  {
-    question: "Do you deliver outside of the UK?",
-    answer: "Currently, we only operate within the United Kingdom. We offer free delivery to all UK Mainland addresses on orders over £500."
-  },
-  {
-    question: "What does the 10-Year Guarantee cover?",
-    answer: "Our 10-year guarantee covers all structural faults, including the wooden frame and springs. It does not cover general wear and tear, fabric fading, or accidental damage."
-  },
-  {
-    question: "Can I cancel my order?",
-    answer: "You can cancel your order free of charge at any time before it is dispatched. If the item has already left our warehouse, a return collection fee may apply."
-  },
-  {
-    question: "How do I know if the sofa will fit through my door?",
-    answer: "Please check the dimensions listed on the product page carefully. If you are unsure, contact our customer service team with your door frame measurements, and we can advise you."
-  }
-];
+  { q: 'Do you offer Cash on Delivery?',               a: 'Yes! Pay our delivery driver securely via cash or mobile card terminal only once your sofa has arrived and you are happy with it. Zero upfront payment required.' },
+  { q: 'Do you deliver outside of the UK?',            a: 'We currently operate within the United Kingdom only. Free delivery applies to all Mainland UK addresses on orders over £500.' },
+  { q: 'What does the 10-Year Guarantee cover?',       a: 'Our guarantee covers all structural faults including the wooden frame and springs. It does not cover general wear and tear, fabric fading, or accidental damage.' },
+  { q: 'Can I cancel my order?',                       a: 'You can cancel free of charge any time before dispatch. If your sofa has already left our warehouse, a return collection fee may apply.' },
+  { q: 'Will my sofa fit through my door?',            a: 'Check the dimensions listed on the product page. If unsure, contact our team with your door frame measurements and we\'ll advise you directly.' },
+  { q: 'How long does delivery take?',                 a: 'In-stock items typically deliver within 3–7 working days. Made-to-order items take 4–6 weeks. We\'ll contact you 48 hours before to arrange a 3-hour delivery window.' },
+  { q: 'Can I customise the fabric or colour?',        a: 'Yes — many of our sofas are available in a range of fabrics and colours. Use the variant selector on the product page, or contact us to discuss bespoke options.' },
+  { q: 'What happens if my sofa arrives damaged?',     a: 'Please photograph any damage before signing and contact us immediately. We will arrange a replacement or repair at no cost to you.' },
+]
 
-export default function FAQPage() {
+function FAQ({ q, a }: { q: string; a: string }) {
+  const [open, setOpen] = useState(false)
   return (
-    <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16 min-h-screen">
-      <div className="text-center mb-12">
-        <div className="w-16 h-16 bg-stone-100 rounded-full flex items-center justify-center mx-auto mb-4">
-          <HelpCircle className="w-8 h-8 text-stone-400" />
+    <div style={{ background: '#fff', borderRadius: 10, border: '1px solid #f0ede8', overflow: 'hidden', transition: 'box-shadow 0.2s', boxShadow: open ? '0 4px 16px rgba(0,0,0,0.06)' : 'none' }}>
+      <button onClick={() => setOpen(o => !o)}
+        style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, padding: '16px 18px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}>
+        <span style={{ fontSize: 13, fontWeight: 700, color: open ? ACCENT : '#1c1917', transition: 'color 0.2s', lineHeight: 1.3 }}>{q}</span>
+        <ChevronDown style={{ width: 16, height: 16, color: ACCENT, flexShrink: 0, transform: open ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.3s ease' }} />
+      </button>
+      <div style={{ maxHeight: open ? 300 : 0, overflow: 'hidden', transition: 'max-height 0.4s cubic-bezier(.16,1,.3,1)' }}>
+        <div style={{ padding: '0 18px 16px', fontSize: 12, color: '#57534e', lineHeight: 1.75, borderTop: '1px solid #f5f5f4', paddingTop: 12 }}>
+          {a}
         </div>
-        <h1 className="text-4xl font-bold text-stone-900 mb-4">Frequently Asked Questions</h1>
-        <p className="text-stone-600">Find answers to our most common queries below.</p>
       </div>
-
-      <div className="space-y-4">
-        {faqs.map((faq, index) => (
-          <details 
-            key={index} 
-            className="group bg-white border border-stone-200 rounded-xl shadow-sm [&_summary::-webkit-details-marker]:hidden"
-          >
-            <summary className="flex cursor-pointer items-center justify-between gap-1.5 p-6 text-stone-900 font-medium">
-              <h2 className="text-lg">{faq.question}</h2>
-              <span className="relative size-5 shrink-0">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="absolute inset-0 size-5 opacity-100 group-open:opacity-0 transition-opacity"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-                </svg>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="absolute inset-0 size-5 opacity-0 group-open:opacity-100 transition-opacity"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M20 12H4" />
-                </svg>
-              </span>
-            </summary>
-
-            <div className="px-6 pb-6 text-stone-600 leading-relaxed border-t border-stone-100 pt-4">
-              {faq.answer}
-            </div>
-          </details>
-        ))}
-      </div>
-    </main>
-  );
+    </div>
+  )
 }
+
+export function FAQPage() {
+  return (
+    <div style={{ minHeight: '100vh', background: '#f8f6f2' }}>
+      <div style={{ background: '#0c0c0b', borderBottom: `2px solid ${ACCENT}` }}>
+        <div style={{ maxWidth: 720, margin: '0 auto', padding: '40px 16px 32px', textAlign: 'center' }}>
+          <div style={{ width: 48, height: 48, borderRadius: 12, background: `${ACCENT}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px' }}>
+            <HelpCircle style={{ width: 22, height: 22, color: ACCENT }} />
+          </div>
+          <div style={{ fontSize: 9, color: ACCENT, textTransform: 'uppercase', letterSpacing: '0.22em', fontWeight: 700, marginBottom: 8 }}>Help Centre</div>
+          <h1 className="font-playfair" style={{ fontSize: 'clamp(26px,4vw,40px)', fontWeight: 700, color: '#fff', marginBottom: 10 }}>Frequently Asked Questions</h1>
+          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)' }}>Can't find the answer? Contact our team and we'll help.</p>
+        </div>
+      </div>
+      <div style={{ maxWidth: 720, margin: '0 auto', padding: '28px 16px 60px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {faqs.map(f => <FAQ key={f.q} q={f.q} a={f.a} />)}
+        <div style={{ background: '#0c0c0b', borderRadius: 12, padding: '20px', display: 'flex', alignItems: 'center', gap: 14, marginTop: 8, border: '1px solid rgba(255,255,255,0.06)' }}>
+          <div style={{ width: 40, height: 40, borderRadius: 10, background: `${ACCENT}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <Phone style={{ width: 18, height: 18, color: ACCENT }} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>Still have questions?</div>
+            <div style={{ fontSize: 11, color: '#57534e', marginTop: 2 }}>Our team is available Mon–Fri 9am–6pm</div>
+          </div>
+          <Link href="/contact" style={{ display: 'flex', alignItems: 'center', gap: 5, background: ACCENT, color: '#fff', padding: '9px 16px', borderRadius: 7, fontSize: 11, fontWeight: 700, textDecoration: 'none', flexShrink: 0 }}>
+            Contact Us <ArrowRight style={{ width: 11, height: 11 }} />
+          </Link>
+        </div>
+      </div>
+    </div>
+  )
+}
+export default FAQPage

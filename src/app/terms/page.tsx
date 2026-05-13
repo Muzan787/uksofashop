@@ -1,55 +1,58 @@
-// src/app/terms/page.tsx
-export default function TermsPage() {
+
+
+// ─── TERMS PAGE  →  src/app/terms/page.tsx ────────────────────────────────────
+import { FileText, Link } from 'lucide-react'
+
+const ACCENT = '#d18b41'
+
+const termsSections = [
+  { num: '1.', title: 'Introduction', body: 'These Terms and Conditions govern your use of uksofashop.co.uk and the purchase of goods from UK Sofa Shop (Vantage Group LTD). By placing an order you confirm that you have read, understood, and agree to these terms.' },
+  { num: '2.', title: 'Placing an Order', body: 'When you submit an order, you are making an offer to purchase. We will send an acknowledgement email upon receipt. This is not an acceptance. The contract is formed when we dispatch the goods.' },
+  { num: '3.', title: 'Pricing and Payment', body: 'All prices are inclusive of VAT at the current rate. We offer Cash on Delivery — payment is due in full to the delivery driver upon arrival, via cash or mobile card terminal.' },
+  { num: '4.', title: 'Delivery', body: 'Free delivery applies to Mainland UK orders over £500. Delivery dates are estimates. Delays may occasionally occur due to unforeseen factors. We will notify you of any significant delays.' },
+  { num: '5.', title: 'Returns and Cancellations', body: 'You may cancel before dispatch free of charge. After delivery, you have 30 days to return items in original condition. A £50 collection fee applies, deducted from your refund. Faulty items are collected free of charge.' },
+  { num: '6.', title: 'Guarantees', body: 'All sofas include a 10-year structural guarantee covering the frame and springs. This excludes wear and tear, accidental damage, and fabric fading.' },
+  { num: '7.', title: 'Limitation of Liability', body: 'We are not liable for indirect or consequential losses arising from use of our products or services. Our liability is limited to the purchase price of the affected goods.' },
+  { num: '8.', title: 'Governing Law', body: 'These terms are governed by the laws of England and Wales. Any disputes will be subject to the exclusive jurisdiction of the courts of England and Wales.' },
+]
+
+export function TermsPage() {
   return (
-    <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-      <div className="mb-12">
-        <h1 className="text-4xl font-bold text-stone-900 mb-4">Terms and Conditions</h1>
-        <p className="text-stone-500">Last updated: {new Date().toLocaleDateString('en-GB')}</p>
+    <div style={{ minHeight: '100vh', background: '#f8f6f2' }}>
+      <div style={{ background: '#0c0c0b', borderBottom: `2px solid ${ACCENT}` }}>
+        <div style={{ maxWidth: 800, margin: '0 auto', padding: '36px 16px 28px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+            <div style={{ width: 40, height: 40, borderRadius: 10, background: `${ACCENT}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <FileText style={{ width: 18, height: 18, color: ACCENT }} />
+            </div>
+            <div>
+              <div style={{ fontSize: 9, color: ACCENT, textTransform: 'uppercase', letterSpacing: '0.22em', fontWeight: 700, marginBottom: 4 }}>Legal</div>
+              <h1 className="font-playfair" style={{ fontSize: 'clamp(22px,4vw,36px)', fontWeight: 700, color: '#fff' }}>Terms &amp; Conditions</h1>
+            </div>
+          </div>
+          <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginLeft: 52 }}>Last updated: {new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+        </div>
       </div>
 
-      <div className="prose prose-stone max-w-none space-y-8 text-stone-700">
-        <section>
-          <h2 className="text-2xl font-bold text-stone-900 mb-3">1. Introduction</h2>
-          <p>
-            Welcome to UK Sofa Shop. These Terms and Conditions govern your use of our website and the purchase of goods from us. By accessing our website and placing an order, you agree to be bound by these terms.
-          </p>
-        </section>
+      <div style={{ maxWidth: 800, margin: '0 auto', padding: '32px 16px 60px' }}>
+        <div style={{ background: '#fff', borderRadius: 14, padding: '28px 24px', border: '1px solid #f0ede8', boxShadow: '0 2px 12px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column', gap: 0 }}>
+          {termsSections.map(({ num, title, body }, i) => (
+            <div key={num} style={{ paddingBottom: i < termsSections.length - 1 ? 24 : 0, marginBottom: i < termsSections.length - 1 ? 24 : 0, borderBottom: i < termsSections.length - 1 ? '1px solid #f5f5f4' : 'none' }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 8 }}>
+                <span style={{ fontSize: 10, color: ACCENT, fontWeight: 700, letterSpacing: '0.1em', flexShrink: 0 }}>{num}</span>
+                <h2 style={{ fontSize: 15, fontWeight: 700, color: '#1c1917' }}>{title}</h2>
+              </div>
+              <p style={{ paddingLeft: 28, fontSize: 13, color: '#57534e', lineHeight: 1.8, margin: 0 }}>{body}</p>
+            </div>
+          ))}
 
-        <section>
-          <h2 className="text-2xl font-bold text-stone-900 mb-3">2. Placing an Order</h2>
-          <p>
-            When you place an order on our website, you are making an offer to buy goods. We will send you an order acknowledgement email confirming receipt of your order. This email is not an acceptance of your order. Order acceptance and the completion of the contract between you and us will take place upon the dispatch of the products ordered.
-          </p>
-        </section>
-
-        <section>
-          <h2 className="text-2xl font-bold text-stone-900 mb-3">3. Pricing and Payment</h2>
-          <p>
-            All prices on our website are inclusive of VAT at the current rates. We offer a "Cash on Delivery" service. Payment must be made in full to the delivery driver upon the arrival of your items. Acceptable payment methods at the door include cash and major credit/debit cards via a mobile terminal.
-          </p>
-        </section>
-
-        <section>
-          <h2 className="text-2xl font-bold text-stone-900 mb-3">4. Delivery</h2>
-          <p>
-            We offer free delivery to UK Mainland addresses on orders over £500. Delivery dates are estimates and are not guaranteed. We will make every effort to deliver goods within the estimated timeframes; however, delays are occasionally inevitable due to unforeseen factors.
-          </p>
-        </section>
-
-        <section>
-          <h2 className="text-2xl font-bold text-stone-900 mb-3">5. Returns and Cancellations</h2>
-          <p>
-            You have the right to cancel your order within 30 days without giving any reason. The cancellation period will expire after 30 days from the day on which you acquire physical possession of the goods. Goods must be returned in their original condition. Please note that collection charges may apply for returned items.
-          </p>
-        </section>
-
-        <section>
-          <h2 className="text-2xl font-bold text-stone-900 mb-3">6. Guarantees</h2>
-          <p>
-            All our sofas come with a standard 10-year structural guarantee, covering the frame and springs. This guarantee does not cover wear and tear, accidental damage, or misuse of the product.
-          </p>
-        </section>
+          <div style={{ paddingTop: 20, borderTop: '1px solid #f5f5f4', marginTop: 4, display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 11, color: '#a8a29e' }}>Questions about these terms?</span>
+            <Link href="/contact" style={{ fontSize: 11, color: ACCENT, fontWeight: 700, textDecoration: 'none' }}>Contact our team →</Link>
+          </div>
+        </div>
       </div>
-    </main>
-  );
+    </div>
+  )
 }
+export default TermsPage
