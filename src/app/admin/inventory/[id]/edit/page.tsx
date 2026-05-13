@@ -15,7 +15,7 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
   // 2. Fetch the specific Product and its variants
   const { data: product, error } = await supabase
     .from('products')
-    .select('*, product_variants(*)')
+    .select('*, product_variants(*), product_categories(category_id)')
     .eq('id', id)
     .single()
 

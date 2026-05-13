@@ -58,7 +58,7 @@ export default async function InventoryPage() {
 
             {products?.map((product) => {
               // Calculate total stock across all color variants
-              const totalStock = product.product_variants.reduce((acc, variant) => acc + (variant.stock_quantity || 0), 0)
+              const totalStock = (product.product_variants || []).reduce((acc, variant) => acc + (variant.stock_quantity || 0), 0)
               
               return (
                 <tr 

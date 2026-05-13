@@ -11,7 +11,8 @@ import { Database } from '@/types/supabase'
 type Category = Pick<Database['public']['Tables']['categories']['Row'], 'id' | 'name'>
 type DBVariant = Database['public']['Tables']['product_variants']['Row']
 type Product = Database['public']['Tables']['products']['Row'] & {
-  product_variants: DBVariant[]
+  product_variants: DBVariant[];
+  product_categories?: { category_id: string }[];
 }
 
 interface VariantState extends VariantInput {
@@ -111,11 +112,23 @@ export default function EditProductForm({ product, categories }: { product: Prod
           <label className="block text-sm font-medium text-stone-700 mb-1">URL Slug</label>
           <input type="text" name="slug" defaultValue={product.slug} required className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-amber-600 outline-none" />
         </div>
+        {/* Replace the Category <select> block with Checkboxes */}
         <div>
-          <label className="block text-sm font-medium text-stone-700 mb-1">Category</label>
-          <select name="categoryId" defaultValue={product.category_id || ''} required className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-amber-600 outline-none bg-white">
-            {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
+          <label className="block text-sm font-medium text-stone-700 mb-1">Categories</label>
+          <div className="w-full p-3 border rounded-lg bg-white max-h-40 overflow-y-auto space-y-2">
+            {categories.map(c => (
+              <label key={c.id} className="flex items-center gap-2 cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  name="categoryIds" 
+                  value={c.id} 
+                  defaultChecked={product.product_categories?.some(pc => pc.category_id === c.id)}
+                  className="rounded text-stone-900 focus:ring-stone-900" 
+                />
+                <span className="text-sm">{c.name}</span>
+              </label>
+            ))}
+          </div>
         </div>
         <div>
           <label className="block text-sm font-medium text-stone-700 mb-1">Base Price (£)</label>
@@ -134,10 +147,6 @@ export default function EditProductForm({ product, categories }: { product: Prod
           <input type="text" name="style" defaultValue={specs.style || ''} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-amber-600 outline-none" />
         </div>
         <div>
-          <label className="block text-sm font-medium text-stone-700 mb-1">Material (For Filters)</label>
-          <input type="text" name="material" defaultValue={specs.material || ''} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-amber-600 outline-none" />
-        </div>
-        <div>
           <label className="block text-sm font-medium text-stone-700 mb-1">Dimensions</label>
           <input type="text" name="dimensions" defaultValue={specs.dimensions || ''} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-amber-600 outline-none" />
         </div>
@@ -154,13 +163,22 @@ export default function EditProductForm({ product, categories }: { product: Prod
         <div className="space-y-4">
           {variants.map((variant: any, index: number) => (
             <div key={index} className="flex flex-col gap-4 p-4 bg-stone-50 rounded-xl border border-stone-200">
+              {/* Replace the current Text Inputs block inside variants.map with this: */}
               <div className="flex flex-wrap md:flex-nowrap items-center gap-3">
                 <input type="text" placeholder="SKU" value={variant.sku} onChange={(e) => updateVariant(index, 'sku', e.target.value)} required className="flex-1 p-2 border rounded-md text-sm outline-none focus:ring-2 focus:ring-amber-600" />
-                <input type="text" placeholder="Color" value={variant.color} onChange={(e) => updateVariant(index, 'color', e.target.value)} required className="flex-1 p-2 border rounded-md text-sm outline-none focus:ring-2 focus:ring-amber-600" />
-                <input type="number" placeholder="Stock" value={variant.stock} onChange={(e) => updateVariant(index, 'stock', e.target.value)} required className="w-24 p-2 border rounded-md text-sm outline-none focus:ring-2 focus:ring-amber-600" title="Set to 0 to mark out of stock" />
+                
+                {/* Missing material added here */}
+                <input type="text" placeholder="Material (e.g. Velvet)" value={variant.material} onChange={(e) => updateVariant(index, 'material', e.target.value)} required className="flex-1 p-2 border rounded-md text-sm outline-none focus:ring-2 focus:ring-amber-600" />
+                
+                <div className="flex items-center gap-2 flex-1">
+                  {/* Missing color_hex added here */}
+                  <input type="color" value={variant.color_hex || '#000000'} onChange={(e) => updateVariant(index, 'color_hex', e.target.value)} className="w-8 h-8 rounded cursor-pointer border-0 p-0" title="Pick exact color" />
+                  <input type="text" placeholder="Color" value={variant.color} onChange={(e) => updateVariant(index, 'color', e.target.value)} required className="w-full p-2 border rounded-md text-sm outline-none focus:ring-2 focus:ring-amber-600" />
+                </div>
+
+                <input type="number" placeholder="Stock" value={variant.stock} onChange={(e) => updateVariant(index, 'stock', e.target.value)} required className="w-20 p-2 border rounded-md text-sm outline-none focus:ring-2 focus:ring-amber-600" title="Set to 0 to mark out of stock" />
                 <input type="number" step="0.01" placeholder="+£ Price" value={variant.priceAdjustment} onChange={(e) => updateVariant(index, 'priceAdjustment', e.target.value)} className="w-24 p-2 border rounded-md text-sm outline-none focus:ring-2 focus:ring-amber-600" />
                 
-                {/* Only allow deleting NEW variants. Existing variants must have stock set to 0. */}
                 {!variant.id && (
                   <button type="button" onClick={() => removeVariant(index)} className="p-2 text-red-500 hover:bg-red-100 rounded-md transition" title="Remove unsaved variant">
                     <Trash2 className="w-4 h-4" />

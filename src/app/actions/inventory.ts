@@ -119,22 +119,20 @@ export async function updateProduct(formData: FormData, variants: VariantInput[]
 
   const title = formData.get('title') as string
   const slug = formData.get('slug') as string
-  const categoryId = formData.get('categoryId') as string
+  const categoryIds = formData.getAll('categoryIds') as string[] // Get multiple categories
   const basePrice = parseFloat(formData.get('basePrice') as string)
   const description = formData.get('description') as string
   const style = formData.get('style') as string
   const dimensions = formData.get('dimensions') as string
-  const material = formData.get('material') as string
 
   const { error: productError } = await supabase
     .from('products')
     .update({
       title,
       slug,
-      category_id: categoryId,
       base_price: basePrice,
       description,
-      specifications: { style, dimensions, material }
+      specifications: { style, dimensions } // Removed global material
     })
     .eq('id', productId)
 
@@ -142,12 +140,25 @@ export async function updateProduct(formData: FormData, variants: VariantInput[]
     return { error: `Failed to update product: ${productError.message}` }
   }
 
+  // Sync Categories via Junction Table
+  if (categoryIds.length > 0) {
+    await supabase.from('product_categories').delete().eq('product_id', productId)
+    const productCategoryData = categoryIds.map(id => ({
+      product_id: productId,
+      category_id: id
+    }))
+    await supabase.from('product_categories').insert(productCategoryData)
+  }
+
+  // Sync Variants (adding missing color_hex and material)
   if (variants.length > 0) {
     const variantData = variants.map(v => ({
       ...(v.id ? { id: v.id } : {}), 
       product_id: productId,
       sku: v.sku,
       color: v.color,
+      color_hex: v.color_hex || null,
+      material: v.material || null,
       stock_quantity: parseInt(v.stock),
       price_adjustment: parseFloat(v.priceAdjustment || '0'),
       image_url: v.image_url || null
@@ -162,7 +173,8 @@ export async function updateProduct(formData: FormData, variants: VariantInput[]
     }
   }
 
+
   revalidatePath('/admin/inventory')
-  revalidatePath(`/shop/${categoryId}/${slug}`) 
+  revalidatePath(`/shop/${categoryIds}/${slug}`) 
   return { success: true }
 }

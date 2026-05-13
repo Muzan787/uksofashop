@@ -523,7 +523,7 @@ function SuccessStep({ orderId }: { orderId: string }) {
         background: `${ACCENT}15`, border: `2px solid ${ACCENT}30`,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         margin: '0 auto 20px',
-        animation: 'entered ? pulseRing 2s ease infinite : none',
+        animation: entered ? `pulseRing 2s ease infinite` : 'none',
       }}>
         <CheckCircle style={{ width: 36, height: 36, color: ACCENT }} />
       </div>
