@@ -28,7 +28,7 @@ export default async function ConfirmOrderPage({ params }: { params: Promise<{ i
   }
 
   // 3. Set up the WhatsApp URL
-  const whatsappNumber = "447123456789" // <-- CHANGE THIS TO YOUR ACTUAL BUSINESS WHATSAPP NUMBER!
+  const whatsappNumber = "447476616022" // <-- CHANGE THIS TO YOUR ACTUAL BUSINESS WHATSAPP NUMBER!
   const whatsappMessage = encodeURIComponent(`I have a query regarding my order! (Order Ref: #${shortCode})`)
   const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${whatsappMessage}`
 
