@@ -5,6 +5,7 @@ import "./globals.css";
 import { CartProvider } from "@/context/CartContext";
 import Header from "@/components/Layout/Header"; 
 import Footer from "@/components/Layout/Footer";
+import MobileNav from "@/components/Layout/Mobilenav";
 import { Toaster } from "react-hot-toast";
 
 const geistSans = Geist({
@@ -32,6 +33,14 @@ export const metadata: Metadata = {
     description: "Luxury sofas crafted for comfort, built to last. Free UK delivery over £500.",
     images: ["/og-image.jpg"],
   },
+};
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
+  viewportFit: 'cover',
 };
 
 // Enhanced schema with more detailed information
@@ -106,10 +115,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             }} 
           />
           <Header />
-          <main className="flex-grow">
+          <main className="flex-grow pb-bottom-nav lg:pb-0">
             {children}
           </main>
           <Footer categories={[]} />
+          <MobileNav />
         </CartProvider>
       </body>
     </html>

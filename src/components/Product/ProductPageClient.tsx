@@ -453,7 +453,6 @@ export default function ProductPageClient({ product, initialWishlistState, varia
     </div>
   );
 
-
   return (
     <>
       <style>{`

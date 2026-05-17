@@ -324,7 +324,7 @@ export default function HomeClient({ categories, products }: Props) {
       {/* ══════════════════════════════════════════
           HERO
       ══════════════════════════════════════════ */}
-      <section className="relative overflow-hidden" style={{ minHeight: '88vh', background: '#0c0c0b' }}>
+      <section className="relative overflow-hidden" style={{ minHeight: 'min(88vh, 100svh)', background: '#0c0c0b' }}>
 
         {/* Background photo */}
         <div className="absolute inset-0" style={{ opacity: 0.55 }}>
@@ -351,8 +351,8 @@ export default function HomeClient({ categories, products }: Props) {
         <div className="absolute top-0 left-0 right-0 h-0.5" style={{ background: '#d4871a' }} />
 
         {/* Content */}
-        <div className="relative top-4 max-w-6xl mx-auto px-4 sm:px-2 flex flex-col justify-end"
-          style={{ minHeight: '8vh', paddingBottom: '2vw' }}>
+        <div className="relative max-w-5xl mx-auto px-4 sm:px-6 flex flex-col justify-end"
+          style={{ minHeight: 'min(88vh, 100svh)', paddingBottom: 'clamp(52px,10vw,80px)' }}>
 
           {/* Eyebrow */}
           <div
@@ -650,7 +650,17 @@ export default function HomeClient({ categories, products }: Props) {
             </div>
           </Reveal>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
+          {/* Mobile: horizontal snap scroll | Desktop: 3-col grid */}
+          <div className="sm:hidden flex gap-3 overflow-x-auto snap-x-mandatory scroll-momentum no-scrollbar -mx-4 px-4">
+            {products.map((p, i) => (
+              <div key={p.id} className="snap-start flex-shrink-0" style={{ width: 180 }}>
+                <Reveal delay={i * 50}>
+                  <ProductCard product={p} />
+                </Reveal>
+              </div>
+            ))}
+          </div>
+          <div className="hidden sm:grid sm:grid-cols-3 gap-3 sm:gap-4">
             {products.map((p, i) => (
               <Reveal key={p.id} delay={i * 50}>
                 <ProductCard product={p} />

@@ -152,30 +152,25 @@ export default function Header() {
       {annoVisible && (
         <div
           className="relative overflow-hidden"
-          style={{ background: '#0c0c0b', height: 34 }}
+          style={{ background: '#0c0c0b', height: 30 }}
         >
-          {/* Shimmer */}
-          <div
-            className="absolute inset-0 pointer-events-none"
-            style={{
-              background: 'linear-gradient(90deg, transparent 0%, rgba(212,135,26,0.06) 50%, transparent 100%)',
-              animation: 'shimmer 3s linear infinite',
-              backgroundSize: '200% 100%',
-            }}
-          />
-
           {/* Message */}
-          <div className="flex items-center justify-center h-full gap-2 px-10">
+          <div className="flex items-center justify-center h-full gap-2 px-8">
             <div
               style={{
-                display: 'flex', alignItems: 'center', gap: 7,
+                display: 'flex', alignItems: 'center', gap: 6,
                 opacity: annoExiting ? 0 : 1,
-                transform: annoExiting ? 'translateY(-8px)' : 'translateY(0)',
+                transform: annoExiting ? 'translateY(-6px)' : 'translateY(0)',
                 transition: 'opacity 0.3s ease, transform 0.3s ease',
               }}
             >
-              <AnnoIcon style={{ width: 12, height: 12, color: '#d4871a', flexShrink: 0 }} />
-              <span style={{ fontSize: 10, letterSpacing: '0.16em', color: '#a8a29e', textTransform: 'uppercase', fontWeight: 500 }}>
+              <AnnoIcon style={{ width: 11, height: 11, color: '#d4871a', flexShrink: 0 }} />
+              <span style={{
+                fontSize: 9, letterSpacing: '0.14em',
+                color: '#a8a29e', textTransform: 'uppercase', fontWeight: 500,
+                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                maxWidth: 'min(260px, 70vw)',
+              }}>
                 {announcements[annoIdx].text}
               </span>
             </div>
@@ -184,15 +179,15 @@ export default function Header() {
           {/* Dismiss */}
           <button
             onClick={() => setAnnoVisible(false)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-600 hover:text-stone-300 transition-colors"
-            style={{ lineHeight: 1 }}
+            className="absolute right-2 top-1/2 -translate-y-1/2 touch-target"
+            style={{ color: '#4f4640' }}
             aria-label="Dismiss"
           >
             <X style={{ width: 11, height: 11 }} />
           </button>
 
-          {/* Dot indicators */}
-          <div className="absolute left-3 top-1/2 -translate-y-1/2 flex gap-1">
+          {/* Dot indicators — desktop only */}
+          <div className="absolute left-2 top-1/2 -translate-y-1/2 hidden sm:flex gap-1">
             {announcements.map((_, i) => (
               <button
                 key={i}
@@ -235,29 +230,30 @@ export default function Header() {
           }}
         />
 
-        <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 54 }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 48 }}>
 
-            {/* ── Hamburger (mobile) ── */}
+            {/* ── Hamburger (mobile) — only visible on mobile, categories menu ── */}
             <button
               onClick={() => setMenuOpen(true)}
-              className="lg:hidden flex flex-col justify-center items-center gap-1"
-              style={{ width: 36, height: 36 }}
+              className="lg:hidden touch-target btn-press"
               aria-label="Open menu"
             >
-              {[0, 1, 2].map(i => (
-                <span
-                  key={i}
-                  style={{
-                    display: 'block',
-                    width: i === 1 ? 16 : 22,
-                    height: 1.5,
-                    background: isTransparent ? '#fff' : '#1c1917',
-                    borderRadius: 2,
-                    transition: 'width 0.3s ease',
-                  }}
-                />
-              ))}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4.5, width: 20 }}>
+                {[0, 1, 2].map(i => (
+                  <span
+                    key={i}
+                    style={{
+                      display: 'block',
+                      width: i === 1 ? 14 : 20,
+                      height: 1.5,
+                      background: isTransparent ? '#fff' : '#1c1917',
+                      borderRadius: 2,
+                      transition: 'width 0.3s ease',
+                    }}
+                  />
+                ))}
+              </div>
             </button>
 
             {/* ── Logo ── */}
@@ -460,79 +456,77 @@ export default function Header() {
             </nav>
 
             {/* ── Right icons ── */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
 
-              {/* Search */}
+              {/* Search — visible on all sizes */}
               <button
                 onClick={() => setSearchOpen(true)}
                 aria-label="Search"
-                className="hidden lg:flex items-center justify-center transition-all duration-200 hover:scale-110"
+                className="touch-target btn-press"
                 style={{
-                  width: 34, height: 34, borderRadius: 7,
-                  background: isTransparent ? 'rgba(255,255,255,0.1)' : '#f5f5f4',
+                  width: 40, height: 40, borderRadius: 8,
+                  background: isTransparent ? 'rgba(255,255,255,0.12)' : '#f5f5f4',
                   border: 'none', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
                   color: isTransparent ? '#fff' : '#57534e',
                 }}
               >
-                <Search style={{ width: 14, height: 14 }} />
+                <Search style={{ width: 16, height: 16 }} />
               </button>
 
-              {/* Wishlist */}
+              {/* Wishlist + Account — desktop only (in bottom nav on mobile) */}
               <Link
                 href="/wishlist"
                 aria-label="Wishlist"
-                className="hidden md:flex items-center justify-center transition-all duration-200 hover:scale-110"
+                className="hidden lg:flex touch-target"
                 style={{
-                  width: 34, height: 34, borderRadius: 7,
-                  background: isTransparent ? 'rgba(255,255,255,0.1)' : '#f5f5f4',
+                  width: 40, height: 40, borderRadius: 8,
+                  background: isTransparent ? 'rgba(255,255,255,0.12)' : '#f5f5f4',
+                  alignItems: 'center', justifyContent: 'center',
                   color: isTransparent ? '#fff' : '#57534e',
                 }}
               >
-                <Heart style={{ width: 14, height: 14 }} />
+                <Heart style={{ width: 15, height: 15 }} />
               </Link>
 
-              {/* Account */}
               <Link
                 href="/account"
                 aria-label="Account"
-                className="hidden md:flex items-center justify-center transition-all duration-200 hover:scale-110"
+                className="hidden lg:flex touch-target"
                 style={{
-                  width: 34, height: 34, borderRadius: 7,
-                  background: isTransparent ? 'rgba(255,255,255,0.1)' : '#f5f5f4',
+                  width: 40, height: 40, borderRadius: 8,
+                  background: isTransparent ? 'rgba(255,255,255,0.12)' : '#f5f5f4',
+                  alignItems: 'center', justifyContent: 'center',
                   color: isTransparent ? '#fff' : '#57534e',
                 }}
               >
-                <User style={{ width: 14, height: 14 }} />
+                <User style={{ width: 15, height: 15 }} />
               </Link>
 
-              {/* Cart */}
+              {/* Cart — desktop only (in bottom nav on mobile) */}
               <Link
                 href="/checkout"
                 aria-label="Cart"
+                className="hidden lg:flex"
                 style={{
                   position: 'relative',
-                  width: 34, height: 34, borderRadius: 7,
+                  width: 40, height: 40, borderRadius: 8,
                   background: '#d4871a',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  alignItems: 'center', justifyContent: 'center',
                   transition: 'background 0.2s ease, transform 0.2s ease',
                   transform: cartBounce ? 'scale(1.18)' : 'scale(1)',
                 }}
-                className="hover:bg-[#b8721a]"
               >
-                <ShoppingBag style={{ width: 14, height: 14, color: '#fff' }} />
+                <ShoppingBag style={{ width: 15, height: 15, color: '#fff' }} />
                 {itemCount > 0 && (
-                  <span
-                    style={{
-                      position: 'absolute', top: -5, right: -5,
-                      width: 16, height: 16, borderRadius: '50%',
-                      background: '#0c0c0b',
-                      color: '#fff',
-                      fontSize: 9, fontWeight: 700,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      border: '2px solid #fff',
-                      animation: cartBounce ? 'none' : undefined,
-                    }}
-                  >
+                  <span style={{
+                    position: 'absolute', top: -5, right: -5,
+                    width: 17, height: 17, borderRadius: '50%',
+                    background: '#0c0c0b', color: '#fff',
+                    fontSize: 9, fontWeight: 800,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    border: '2px solid #fff',
+                  }}>
                     {itemCount > 9 ? '9+' : itemCount}
                   </span>
                 )}
@@ -655,27 +649,48 @@ export default function Header() {
         </div>
 
         {/* Links — staggered */}
-        <nav style={{ flex: 1, overflow: 'auto', padding: '24px 18px' }}>
-          {mobileLinks.map(({ href, label, icon }, i) => (
+        <nav style={{ flex: 1, overflow: 'auto', padding: '16px 18px' }}>
+
+          {/* Search inside mobile menu */}
+          <div style={{ marginBottom: 20 }}>
+            <form
+              onSubmit={e => { e.preventDefault(); setMenuOpen(false); window.location.href = `/search?q=${encodeURIComponent(query)}`; }}
+              style={{ position: 'relative' }}
+            >
+              <Search style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', width: 14, height: 14, color: '#57534e', pointerEvents: 'none' }} />
+              <input
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+                placeholder="Search sofas…"
+                style={{
+                  width: '100%', padding: '10px 12px 10px 36px',
+                  background: 'rgba(255,255,255,0.07)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: 8, color: '#fff', fontSize: 14, outline: 'none',
+                  boxSizing: 'border-box',
+                }}
+              />
+            </form>
+          </div>
+
+          {mobileLinks.map(({ href, label }, i) => (
             <Link
               key={href}
               href={href}
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '14px 0',
+                padding: '13px 0',
                 borderBottom: '1px solid rgba(255,255,255,0.05)',
                 textDecoration: 'none',
                 opacity: menuOpen ? 1 : 0,
-                transform: menuOpen ? 'translateX(0)' : 'translateX(-20px)',
-                transition: `opacity 0.4s ease ${i * 60 + 100}ms, transform 0.4s cubic-bezier(.16,1,.3,1) ${i * 60 + 100}ms`,
+                transform: menuOpen ? 'translateX(0)' : 'translateX(-16px)',
+                transition: `opacity 0.35s ease ${i * 50 + 80}ms, transform 0.35s cubic-bezier(.16,1,.3,1) ${i * 50 + 80}ms`,
+                minHeight: 44,
               }}
             >
               <span
                 className="font-playfair font-bold"
-                style={{
-                  fontSize: 24,
-                  color: pathname === href ? '#d4871a' : '#fff',
-                }}
+                style={{ fontSize: 22, color: pathname === href ? '#d4871a' : '#fff' }}
               >
                 {label}
               </span>
