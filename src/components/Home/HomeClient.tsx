@@ -320,11 +320,12 @@ export default function HomeClient({ categories, products }: Props) {
 
   return (
     <div style={{ fontFamily: 'var(--font-geist-sans), system-ui, sans-serif' }}>
-
+      
       {/* ══════════════════════════════════════════
           HERO
       ══════════════════════════════════════════ */}
-      <section className="relative overflow-hidden" style={{ minHeight: '88vh', background: '#0c0c0b' }}>
+      
+      <section className="relative overflow-hidden pb-2 lg:pb-0 lg:min-h-[10vh]" style={{ background: '#0c0c0b' }}>
 
         {/* Background photo */}
         <div className="absolute inset-0" style={{ opacity: 0.55 }}>
@@ -351,8 +352,8 @@ export default function HomeClient({ categories, products }: Props) {
         <div className="absolute top-0 left-0 right-0 h-0.5" style={{ background: '#d4871a' }} />
 
         {/* Content */}
-        <div className="relative top-4 max-w-6xl mx-auto px-4 sm:px-2 flex flex-col justify-end"
-          style={{ minHeight: '8vh', paddingBottom: '2vw' }}>
+        <div className="relative top-4 max-w-6xl mx-auto px-4 sm:px-2 flex flex-col justify-end pt-2 lg:pt-0"
+          style={{ minHeight: '8vh', paddingBottom: '32px' }}>
 
           {/* Eyebrow */}
           <div
@@ -427,7 +428,7 @@ export default function HomeClient({ categories, products }: Props) {
           {/* Stats */}
           <div
             ref={statsRef}
-            className="grid grid-cols-3 gap-4 mt-8 pt-6"
+            className="grid grid-cols-3 gap-4 mt-2 pt-2"
             style={{
               borderTop: '1px solid rgba(255,255,255,0.08)',
               maxWidth: 320,
@@ -490,7 +491,7 @@ export default function HomeClient({ categories, products }: Props) {
       {/* ══════════════════════════════════════════
           CATEGORIES
       ══════════════════════════════════════════ */}
-      <section className="py-10" style={{ background: '#f5f0e8' }}>
+      <section className="pt-2 pb-10 sm:py-10" style={{ background: '#f5f0e8' }}>
         <div className="max-w-5xl mx-auto px-4 sm:px-6">
 
           <Reveal>

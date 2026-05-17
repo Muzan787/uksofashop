@@ -247,7 +247,7 @@ export default function Header() {
                       display: 'block',
                       width: i === 1 ? 14 : 20,
                       height: 1.5,
-                      background: isTransparent ? '#fff' : '#1c1917',
+                      background: '#1c1917',
                       borderRadius: 2,
                       transition: 'width 0.3s ease',
                     }}
@@ -285,7 +285,7 @@ export default function Header() {
                   className="font-playfair font-bold leading-none"
                   style={{
                     fontSize: 18,
-                    color: isTransparent ? '#fff' : '#1c1917',
+                    color: '#1c1917',
                     transition: 'color 0.4s ease',
                   }}
                 >
@@ -295,7 +295,7 @@ export default function Header() {
                   style={{
                     fontSize: 8,
                     letterSpacing: '0.2em',
-                    color: isTransparent ? 'rgba(255,255,255,0.45)' : '#a8a29e',
+                    color: '#a8a29e',
                     textTransform: 'uppercase',
                     transition: 'color 0.4s ease',
                   }}
@@ -321,8 +321,8 @@ export default function Header() {
                         display: 'flex', alignItems: 'center', gap: 4,
                         padding: '6px 12px',
                         fontSize: 12, fontWeight: 500, letterSpacing: '0.03em',
-                        color: isTransparent ? 'rgba(255,255,255,0.8)' : '#44403c',
-                        background: megaOpen ? (isTransparent ? 'rgba(255,255,255,0.08)' : '#fef9f0') : 'transparent',
+                        color: '#44403c',
+                        background: megaOpen ? '#fef9f0' : 'transparent',
                         border: 'none', cursor: 'pointer', borderRadius: 6,
                         transition: 'all 0.2s ease',
                       }}
@@ -432,7 +432,7 @@ export default function Header() {
                       fontSize: 12, fontWeight: 500, letterSpacing: '0.03em',
                       color: pathname === href
                         ? '#d4871a'
-                        : (isTransparent ? 'rgba(255,255,255,0.8)' : '#44403c'),
+                        : '#44403c',
                       textDecoration: 'none',
                       borderRadius: 6,
                       transition: 'color 0.2s ease',
@@ -465,10 +465,10 @@ export default function Header() {
                 className="touch-target btn-press"
                 style={{
                   width: 40, height: 40, borderRadius: 8,
-                  background: isTransparent ? 'rgba(255,255,255,0.12)' : '#f5f5f4',
+                  background: '#f5f5f4',
                   border: 'none', cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: isTransparent ? '#fff' : '#57534e',
+                  color: '#57534e',
                 }}
               >
                 <Search style={{ width: 16, height: 16 }} />
@@ -481,9 +481,9 @@ export default function Header() {
                 className="hidden lg:flex touch-target"
                 style={{
                   width: 40, height: 40, borderRadius: 8,
-                  background: isTransparent ? 'rgba(255,255,255,0.12)' : '#f5f5f4',
+                  background: '#f5f5f4',
                   alignItems: 'center', justifyContent: 'center',
-                  color: isTransparent ? '#fff' : '#57534e',
+                  color: '#57534e',
                 }}
               >
                 <Heart style={{ width: 15, height: 15 }} />
@@ -495,9 +495,9 @@ export default function Header() {
                 className="hidden lg:flex touch-target"
                 style={{
                   width: 40, height: 40, borderRadius: 8,
-                  background: isTransparent ? 'rgba(255,255,255,0.12)' : '#f5f5f4',
+                  background: '#f5f5f4',
                   alignItems: 'center', justifyContent: 'center',
-                  color: isTransparent ? '#fff' : '#57534e',
+                  color: '#57534e',
                 }}
               >
                 <User style={{ width: 15, height: 15 }} />
