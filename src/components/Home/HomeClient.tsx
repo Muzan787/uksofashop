@@ -830,10 +830,10 @@ export default function HomeClient({ categories, products }: Props) {
           WHATSAPP FAB
       ══════════════════════════════════════════ */}
       <a
-        href="https://wa.me/447476616022"
+        href="https://wa.me/447476616022?text=I%20have%20a%20question%20about%20your%20sofas"
         target="_blank" rel="noopener noreferrer"
         aria-label="Chat on WhatsApp"
-        className="fixed bottom-5 right-4 z-50 flex items-center justify-center shadow-xl hover:scale-110 active:scale-95 transition-transform duration-200"
+        className="fixed bottom-[80px] lg:bottom-5 right-4 z-50 flex items-center justify-center shadow-xl hover:scale-110 active:scale-95 transition-transform duration-200"
         style={{ width: 46, height: 46, borderRadius: '50%', background: '#25D366' }}
       >
         {/* Ping ring */}

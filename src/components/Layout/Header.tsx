@@ -48,7 +48,7 @@ export default function Header() {
   // State
   const [scrolled, setScrolled]         = useState(false);
   const [scrollDir, setScrollDir]       = useState<'up'|'down'>('up');
-  const [prevY, setPrevY]               = useState(0);
+  const prevY                           = useRef(0); // Changed to useRef!
   const [menuOpen, setMenuOpen]         = useState(false);
   const [searchOpen, setSearchOpen]     = useState(false);
   const [megaOpen, setMegaOpen]         = useState(false);
@@ -64,7 +64,7 @@ export default function Header() {
   const megaRef   = useRef<HTMLDivElement>(null);
   const megaTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
-  // Scroll behaviour
+  // Scroll behaviour// Scroll behaviour
   useEffect(() => {
     let ticking = false;
     const onScroll = () => {
@@ -72,8 +72,13 @@ export default function Header() {
         requestAnimationFrame(() => {
           const y = window.scrollY;
           setScrolled(y > 40);
-          setScrollDir(y > prevY ? 'down' : 'up');
-          setPrevY(y);
+          
+          // Added a small threshold (> 2px) to prevent trackpad/mobile bounce flickering
+          if (Math.abs(y - prevY.current) > 2) {
+            setScrollDir(y > prevY.current ? 'down' : 'up');
+          }
+          
+          prevY.current = y;
           ticking = false;
         });
         ticking = true;
@@ -81,7 +86,7 @@ export default function Header() {
     };
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
-  }, [prevY]);
+  }, []); // <-- Empty dependency array stops the constant re-attaching!
 
   // Fetch categories
   useEffect(() => {
@@ -273,18 +278,17 @@ export default function Header() {
                 }}
                 className="hover:scale-110"
               >
-                <div className="absolute inset-0 bg-white/20 animate-shimmer" 
-                     style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)', backgroundSize: '200% 100%' }} />
+                {/* <div className="absolute inset-0 bg-white/20 animate-shimmer" 
+                     style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)', backgroundSize: '200% 100%' }} /> */}
                 <div className="relative h-full flex items-center justify-center">
                   <Sofa className="w-6 h-6 text-white" />
                 </div>
               </div>
               {/* Wordmark */}
-              <div className="hidden sm:block">
+              <div className="sm:block">
                 <div
-                  className="font-playfair font-bold leading-none"
+                  className="font-playfair font-bold leading-none text-[15px] sm:text-[18px]"
                   style={{
-                    fontSize: 18,
                     color: '#1c1917',
                     transition: 'color 0.4s ease',
                   }}
@@ -292,8 +296,8 @@ export default function Header() {
                   UK Sofa<span style={{ color: '#d4871a' }}>Shop</span>
                 </div>
                 <div
+                  className="text-[6.5px] sm:text-[8px]"
                   style={{
-                    fontSize: 8,
                     letterSpacing: '0.2em',
                     color: '#a8a29e',
                     textTransform: 'uppercase',
