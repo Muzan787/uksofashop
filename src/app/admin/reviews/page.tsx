@@ -1,4 +1,6 @@
 // src/app/admin/reviews/page.tsx
+export const dynamic = 'force-dynamic';
+
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { approveReview, deleteReview } from '@/app/actions/reviews'
 import { CheckCircle, Trash2, Star, MessageSquare, Image as ImageIcon } from 'lucide-react'
