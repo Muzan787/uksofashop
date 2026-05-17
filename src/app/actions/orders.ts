@@ -3,7 +3,8 @@
 
 import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
-import { sendOrderStatusUpdate } from '@/utils/email'
+import { sendOrderStatusUpdate, sendAdminOrderStatusNotification } from '@/utils/email'
+
 export async function updateOrderStatus(formData: FormData) {
   const supabase = await createClient()
   
@@ -14,10 +15,10 @@ export async function updateOrderStatus(formData: FormData) {
     return { error: 'Missing order ID or status' }
   }
 
-  // Fetch the order details first to get the customer email
+  // Fetch the order details, INCLUDING customer_phone
   const { data: order } = await supabase
     .from('orders')
-    .select('customer_email, customer_name')
+    .select('customer_email, customer_name, customer_phone') 
     .eq('id', orderId)
     .single()
 
@@ -30,12 +31,25 @@ export async function updateOrderStatus(formData: FormData) {
     return { error: 'Failed to update order status.' }
   }
 
-  // --- ADD THIS EMAIL TRIGGER ---
+  // --- TRIGGER EMAILS ---
   if (order && order.customer_email) {
     try {
+      const shortCode = orderId.substring(0, 8).toUpperCase();
+
+      // 1. Send the automated generic update to the customer
       await sendOrderStatusUpdate(order.customer_email, order.customer_name, orderId, newStatus)
+      
+      // 2. Send the highly-personalized WhatsApp prompt to the Admin
+      if (order.customer_phone) {
+        await sendAdminOrderStatusNotification(
+          order.customer_name, 
+          order.customer_phone, 
+          shortCode, 
+          newStatus
+        )
+      }
     } catch (err) {
-      console.error('Failed to send status update email', err)
+      console.error('Failed to send status update emails', err)
     }
   }
 

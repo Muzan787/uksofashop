@@ -1,7 +1,7 @@
 'use server'
 
 import { createClient } from '@/utils/supabase/server'
-import { sendOrderConfirmation } from '@/utils/email'
+import { sendOrderConfirmation, sendAdminOrderNotification } from '@/utils/email'
 import { z } from 'zod'
 
 export interface CartItem {
@@ -76,10 +76,23 @@ export async function placeOrder(formData: FormData, cartItems: CartItem[], tota
 
   // --- ADD THIS EMAIL TRIGGER ---
   try {
-    // Pass shortCode AND order.id
+    // 1. Send email to customer to confirm
     await sendOrderConfirmation(customerEmail, customerName, shortCode, order.id, totalAmount)
+    
+    // 2. Extract phone number from form data to pass to the admin email
+    const customerPhone = formData.get('phone') as string || ''; 
+
+    // 3. Send email to admin with the WhatsApp Link
+    await sendAdminOrderNotification(
+      customerName, 
+      customerEmail, 
+      customerPhone, // <-- newly added
+      shortCode, 
+      order.id,      // <-- newly added
+      totalAmount
+    )
   } catch (err) {
-    console.error("Failed to send confirmation email", err)
+    console.error("Failed to send confirmation emails", err)
   }
 
   return { success: true, orderId: shortCode }

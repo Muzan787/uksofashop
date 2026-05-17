@@ -1,13 +1,16 @@
 // src/app/admin/reviews/page.tsx
-import { createClient } from '@/utils/supabase/server'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { approveReview, deleteReview } from '@/app/actions/reviews'
 import { CheckCircle, Trash2, Star, MessageSquare, Image as ImageIcon } from 'lucide-react'
 
 export default async function AdminReviewsPage() {
-  const supabase = await createClient()
+  // Use the Service Role Key to bypass RLS and fetch ALL reviews (pending & approved)
+  const supabaseAdmin = createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
 
-  // Fetch all reviews, including the product title they belong to
-  const { data: reviews } = await supabase
+  const { data: reviews } = await supabaseAdmin
     .from('reviews')
     .select(`
       id, rating, comment, image_url, is_approved, created_at,

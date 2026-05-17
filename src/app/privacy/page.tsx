@@ -81,7 +81,7 @@ export function PrivacyPage() {
                 'Portability of your data in a machine-readable format',
               ].map(i => <li key={i} style={{ listStyleType: 'disc', listStylePosition: 'outside' }}>{i}</li>)}
             </ul>
-            <p style={{ marginTop: 10 }}>To exercise any of these rights, contact us at <a href="mailto:support@uksofashop.co.uk" style={{ color: ACCENT }}>support@uksofashop.co.uk</a>.</p>
+            <p style={{ marginTop: 10 }}>To exercise any of these rights, contact us at <a href="mailto:uksofashop.co.uk@gmail.com" style={{ color: ACCENT }}>uksofashop.co.uk@gmail.com</a>.</p>
           </ProseSection>
 
           <div style={{ paddingTop: 20, borderTop: '1px solid #f5f5f4', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>

@@ -15,7 +15,7 @@ const returnItems = [
   { title: '30-Day Home Trial',     body: 'Not delighted? Return any standard item within 30 days of delivery — no awkward questions asked.' },
   { title: 'Condition of Goods',    body: 'Items must be returned in original condition. We cannot accept goods that have been damaged or structurally altered.' },
   { title: 'Collection Fee',        body: 'A £50 collection fee is deducted from your refund to cover logistics. Faulty items are collected free of charge.' },
-  { title: 'How to Initiate',       body: 'Email support@uksofashop.co.uk with your order number. We\'ll arrange a collection date within 48 hours.' },
+  { title: 'How to Initiate',       body: 'Email uksofashop.co.uk@gmail.com with your order number. We\'ll arrange a collection date within 48 hours.' },
 ]
 
 function Section({ icon: Icon, title, colour, items }: { icon: React.ElementType; title: string; colour: string; items: { title: string; body: string }[] }) {

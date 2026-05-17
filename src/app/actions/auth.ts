@@ -29,7 +29,7 @@ export async function login(formData: FormData) {
   } else {
     redirect('/account');
   }
-}
+} 
 
 export async function signUp(formData: FormData) {
   const supabase = await createClient()

@@ -1,183 +1,93 @@
 // src/app/confirm-order/[id]/page.tsx
 import { createClient } from '@/utils/supabase/server'
-import { confirmCustomerOrder } from '@/app/actions/orders'
 import { notFound } from 'next/navigation'
-import {
-  CheckCircle, AlertTriangle, Package,
-  Truck, Wallet, ShieldCheck, MapPin,
-} from 'lucide-react'
+import { CheckCircle, MessageCircle, Package, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
-import Image from 'next/image'
 
-type Params = Promise<{ id: string }>
-
-const ACCENT = '#d4871a'
-
-export default async function ConfirmOrderPage(props: { params: Params }) {
-  const { id } = await props.params
+export default async function ConfirmOrderPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const supabase = await createClient()
 
+  // 1. Fetch the order
   const { data: order, error } = await supabase
     .from('orders')
-    .select(`*, order_items(quantity, price_at_time_of_purchase, product_variants(color, image_url, products(title)))`)
+    .select('*')
     .eq('id', id)
     .single()
 
-  if (error || !order) notFound()
+  if (error || !order) return notFound()
 
   const shortCode = order.id.substring(0, 8).toUpperCase()
 
-  // Already confirmed
-  if (order.status !== 'pending_cod') {
-    return (
-      <div style={{ minHeight: '100vh', background: '#f8f6f2', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-        <div style={{ background: '#fff', borderRadius: 14, padding: '32px 24px', maxWidth: 440, width: '100%', textAlign: 'center', border: '1px solid #f0ede8', boxShadow: '0 4px 20px rgba(0,0,0,0.06)' }}>
-          <div style={{ width: 60, height: 60, borderRadius: '50%', background: `${ACCENT}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-            <CheckCircle style={{ width: 30, height: 30, color: ACCENT }} />
-          </div>
-          <div style={{ fontSize: 9, color: ACCENT, textTransform: 'uppercase', letterSpacing: '0.22em', fontWeight: 700, marginBottom: 8 }}>Already Confirmed</div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, color: '#1c1917', marginBottom: 10, fontFamily: 'Playfair Display, serif' }}>
-            Order Is in Progress
-          </h1>
-          <p style={{ fontSize: 13, color: '#78716c', lineHeight: 1.65, marginBottom: 24 }}>
-            This order has already been confirmed and is being processed by our team.
-          </p>
-          <Link href={`/track-order?code=${shortCode}`} style={{
-            display: 'inline-flex', alignItems: 'center', gap: 8,
-            background: ACCENT, color: '#fff', padding: '12px 24px', borderRadius: 8,
-            fontSize: 12, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase',
-            textDecoration: 'none',
-          }}>
-            <Package style={{ width: 13, height: 13 }} /> Track My Order
-          </Link>
-        </div>
-      </div>
-    )
+  // 2. Automatically update the status from 'pending_cod' to 'confirmed'
+  if (order.status === 'pending_cod') {
+    await supabase
+      .from('orders')
+      .update({ status: 'confirmed' })
+      .eq('id', id)
   }
 
-  async function handleConfirm() {
-    'use server'
-    await confirmCustomerOrder(id)
-  }
+  // 3. Set up the WhatsApp URL
+  const whatsappNumber = "447123456789" // <-- CHANGE THIS TO YOUR ACTUAL BUSINESS WHATSAPP NUMBER!
+  const whatsappMessage = encodeURIComponent(`I have a query regarding my order! (Order Ref: #${shortCode})`)
+  const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${whatsappMessage}`
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f8f6f2' }}>
-
-      {/* Top bar */}
-      <div style={{ background: '#0c0c0b', borderBottom: `2px solid ${ACCENT}` }}>
-        <div style={{ maxWidth: 680, margin: '0 auto', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Link href="/" style={{ textDecoration: 'none' }}>
-            <span style={{ fontSize: 18, fontWeight: 700, color: '#fff', fontFamily: 'Playfair Display, serif' }}>
-              UK Sofa<span style={{ color: ACCENT }}>Shop</span>
-            </span>
-          </Link>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#57534e' }}>
-            <ShieldCheck style={{ width: 13, height: 13, color: ACCENT }} />
-            Secure Confirmation
-          </div>
-        </div>
-      </div>
-
-      <div style={{ maxWidth: 640, margin: '0 auto', padding: '28px 16px 60px' }}>
-
-        {/* Action required banner */}
-        <div style={{
-          display: 'flex', gap: 14, alignItems: 'flex-start',
-          padding: '16px', borderRadius: 10, marginBottom: 20,
-          background: '#fffbeb', border: '1px solid #fde68a',
-        }}>
-          <AlertTriangle style={{ width: 20, height: 20, color: '#d97706', flexShrink: 0, marginTop: 1 }} />
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#92400e', marginBottom: 4 }}>Action Required</div>
-            <p style={{ fontSize: 12, color: '#b45309', lineHeight: 1.6, margin: 0 }}>
-              Please review your order below and confirm it so we can begin preparing your sofa for delivery. This step is required to process your Cash on Delivery order.
-            </p>
-          </div>
+    <div className="min-h-screen bg-[#f8f6f2] flex items-center justify-center p-4">
+      <div className="max-w-xl w-full bg-white rounded-2xl shadow-xl border border-[#f0ede8] overflow-hidden">
+        
+        {/* Header Header */}
+        <div className="bg-[#1c1917] p-8 text-center relative overflow-hidden">
+          <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white to-transparent" />
+          <CheckCircle className="w-16 h-16 text-[#d4871a] mx-auto mb-4 relative z-10" />
+          <h1 className="text-3xl font-playfair font-bold text-white relative z-10">Order Confirmed!</h1>
+          <p className="text-gray-400 mt-2 relative z-10">Thank you for verifying your details, {order.customer_name}.</p>
         </div>
 
-        <div style={{ background: '#fff', borderRadius: 14, overflow: 'hidden', border: '1px solid #f0ede8', boxShadow: '0 2px 16px rgba(0,0,0,0.05)' }}>
-
-          {/* Order header */}
-          <div style={{ padding: '20px 20px', borderBottom: `3px solid ${ACCENT}`, background: `${ACCENT}08`, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
-            <div>
-              <div style={{ fontSize: 9, color: ACCENT, textTransform: 'uppercase', letterSpacing: '0.2em', fontWeight: 700, marginBottom: 6 }}>Order Reference</div>
-              <div style={{ fontFamily: 'monospace', fontSize: 22, fontWeight: 900, color: '#1c1917', letterSpacing: '0.18em' }}>{shortCode}</div>
-            </div>
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: 9, color: '#a8a29e', textTransform: 'uppercase', letterSpacing: '0.15em', fontWeight: 700, marginBottom: 6 }}>Total on Delivery</div>
-              <div style={{ fontSize: 24, fontWeight: 800, color: ACCENT }}>£{order.total_amount.toFixed(2)}</div>
+        {/* Order Details */}
+        <div className="p-8">
+          <div className="bg-[#fef9f0] border border-[#d4871a]/20 rounded-xl p-6 mb-8 text-center">
+            <p className="text-xs font-bold text-[#a8a29e] uppercase tracking-widest mb-1">Order Reference</p>
+            <p className="font-mono text-3xl font-bold text-[#1c1917] tracking-wider mb-4">#{shortCode}</p>
+            
+            <div className="flex items-center justify-center gap-2 text-sm text-[#57534e]">
+              <Package className="w-4 h-4 text-[#d4871a]" />
+              Status: <span className="font-bold text-[#16a34a] uppercase tracking-wider">Confirmed</span>
             </div>
           </div>
 
-          {/* Items */}
-          <div style={{ padding: '20px' }}>
-            <div style={{ fontSize: 10, color: '#a8a29e', textTransform: 'uppercase', letterSpacing: '0.16em', fontWeight: 700, marginBottom: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Package style={{ width: 12, height: 12 }} /> Your Items
+          <div className="space-y-4 mb-8">
+            <div className="flex justify-between border-b border-[#f0ede8] pb-4">
+              <span className="text-[#78716c]">Total Amount (COD)</span>
+              <span className="font-bold text-[#1c1917]">£{order.total_amount.toFixed(2)}</span>
             </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
-              {order.order_items.map((item: any, i: number) => (
-                <div key={i} style={{ display: 'flex', gap: 14, alignItems: 'center', padding: '12px', background: '#fafaf9', borderRadius: 9, border: '1px solid #f0ede8' }}>
-                  <div style={{ position: 'relative', width: 60, height: 60, borderRadius: 7, overflow: 'hidden', flexShrink: 0, background: '#f5f5f4' }}>
-                    <Image src={item.product_variants?.image_url || '/placeholder.svg'} alt="Product" fill style={{ objectFit: 'cover' }} sizes="60px" />
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: '#1c1917', marginBottom: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {item.product_variants?.products?.title}
-                    </div>
-                    <div style={{ fontSize: 11, color: '#78716c' }}>Colour: {item.product_variants?.color}</div>
-                  </div>
-                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                    <div style={{ fontSize: 12, color: '#a8a29e', marginBottom: 2 }}>Qty: {item.quantity}</div>
-                    <div style={{ fontSize: 14, fontWeight: 800, color: '#1c1917' }}>£{item.price_at_time_of_purchase.toFixed(2)}</div>
-                  </div>
-                </div>
-              ))}
+            <div className="flex justify-between border-b border-[#f0ede8] pb-4">
+              <span className="text-[#78716c]">Shipping Address</span>
+              <span className="font-medium text-[#1c1917] text-right max-w-[200px] truncate">{order.shipping_address}</span>
             </div>
-
-            {/* Delivery address */}
-            <div style={{ padding: '14px', background: '#fafaf9', borderRadius: 9, border: '1px solid #f0ede8', marginBottom: 20 }}>
-              <div style={{ fontSize: 10, color: '#a8a29e', textTransform: 'uppercase', letterSpacing: '0.15em', fontWeight: 700, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-                <MapPin style={{ width: 11, height: 11 }} /> Shipping To
-              </div>
-              <div style={{ fontSize: 12, color: '#57534e', lineHeight: 1.7 }}>
-                <strong style={{ color: '#1c1917' }}>{order.customer_name}</strong><br />
-                {order.shipping_address}
-              </div>
-            </div>
-
-            {/* Trust row */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginBottom: 20 }}>
-              {[
-                [Wallet,     'Pay on delivery',   'Cash or card'],
-                [Truck,      'White-glove setup',  'We do everything'],
-                [ShieldCheck,'10-yr guarantee',    'Full structure'],
-              ].map(([Icon, title, sub]) => (
-                <div key={title as string} style={{ padding: '10px 8px', background: `${ACCENT}08`, borderRadius: 8, textAlign: 'center', border: `1px solid ${ACCENT}18` }}>
-                  {/* @ts-ignore */}
-                  <Icon style={{ width: 14, height: 14, color: ACCENT, margin: '0 auto 5px' }} />
-                  <div style={{ fontSize: 10, fontWeight: 700, color: '#1c1917' }}>{title as string}</div>
-                  <div style={{ fontSize: 9, color: '#a8a29e', marginTop: 2 }}>{sub as string}</div>
-                </div>
-              ))}
-            </div>
-
-            {/* Confirm button */}
-            <form action={handleConfirm}>
-              <button type="submit" style={{
-                width: '100%', padding: '15px 0', borderRadius: 10, border: 'none',
-                background: ACCENT, color: '#fff',
-                fontSize: 13, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase',
-                cursor: 'pointer',
-                boxShadow: `0 8px 28px ${ACCENT}44`,
-              }}>
-                ✓ Yes, Confirm My Order
-              </button>
-            </form>
-            <p style={{ fontSize: 10, color: '#a8a29e', textAlign: 'center', marginTop: 10, lineHeight: 1.6 }}>
-              By confirming, you commit to paying <strong>£{order.total_amount.toFixed(2)}</strong> to our delivery driver via cash or card on arrival.
-            </p>
           </div>
+
+          {/* Action Buttons */}
+          <div className="flex flex-col gap-4">
+            <a 
+              href={whatsappUrl} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="w-full flex items-center justify-center gap-3 bg-[#25D366] text-white py-4 rounded-xl font-bold tracking-wide hover:bg-[#1fb355] transition-colors shadow-lg shadow-[#25D366]/20"
+            >
+              <MessageCircle className="w-5 h-5" />
+              Any Queries? (WhatsApp Us)
+            </a>
+
+            <Link 
+              href="/account"
+              className="w-full flex items-center justify-center gap-2 bg-[#f5f5f4] text-[#1c1917] py-4 rounded-xl font-bold tracking-wide hover:bg-[#e7e5e4] transition-colors"
+            >
+              View Dashboard
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+
         </div>
       </div>
     </div>

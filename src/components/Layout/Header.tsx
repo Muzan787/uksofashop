@@ -732,7 +732,7 @@ export default function Header() {
             <a href="tel:08001234567"
               style={{ display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none', color: '#78716c', fontSize: 11 }}>
               <Phone style={{ width: 12, height: 12, color: '#d4871a' }} />
-              0800 123 4567
+              07476 616022
             </a>
             <Link href="/track-order"
               style={{ display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none', color: '#78716c', fontSize: 11 }}>
