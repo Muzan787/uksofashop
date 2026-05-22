@@ -7,10 +7,8 @@ import { addProduct, VariantInput } from '@/app/actions/inventory'
 import { Plus, Trash2, Loader2, ImagePlus } from 'lucide-react'
 import { Database } from '@/types/supabase'
 
-// 1. Define strict types based on your database
 type Category = Pick<Database['public']['Tables']['categories']['Row'], 'id' | 'name'>
 
-// We extend the Action input type to include our local UI state (isUploading)
 interface VariantState extends VariantInput {
   isUploading: boolean;
 }
@@ -20,9 +18,14 @@ export default function AddProductForm({ categories }: { categories: Category[] 
   const [isPending, setIsPending] = useState(false)
   const [error, setError] = useState('')
   
-  // 1. Update the initial variant state
   const [variants, setVariants] = useState<VariantState[]>([
     { sku: '', color: '', color_hex: '#000000', material: '', stock: '10', priceAdjustment: '0', image_url: '', isUploading: false }
+  ])
+
+  // NEW: Specifications state with defaults
+  const [specs, setSpecs] = useState<{ key: string; value: string }[]>([
+    { key: 'Style', value: '' },
+    { key: 'Dimensions', value: '' }
   ])
 
   const addVariantRow = () => {
@@ -31,11 +34,10 @@ export default function AddProductForm({ categories }: { categories: Category[] 
     }])
   }
 
-  // 3. Strongly type the field update function
   const updateVariant = (index: number, field: keyof VariantState, value: string | boolean) => {
     setVariants((prevVariants) => {
       const newVariants = [...prevVariants]
-      // @ts-ignore - Dynamic key assignment can sometimes confuse TS, but we know it's safe here
+      // @ts-ignore
       newVariants[index] = { ...newVariants[index], [field]: value }
       return newVariants
     })
@@ -45,39 +47,54 @@ export default function AddProductForm({ categories }: { categories: Category[] 
     setVariants(variants.filter((_, i) => i !== index))
   }
 
+  // Specifications helpers
+  const handleAddSpec = () => setSpecs([...specs, { key: '', value: '' }])
+  const handleRemoveSpec = (index: number) => setSpecs(specs.filter((_, i) => i !== index))
+  const handleSpecChange = (index: number, field: 'key' | 'value', val: string) => {
+    const newSpecs = [...specs]
+    newSpecs[index][field] = val
+    setSpecs(newSpecs)
+  }
+
   const handleImageUpload = async (index: number, file: File) => {
     if (!file) return;
-    
     updateVariant(index, 'isUploading', true);
-
     const formData = new FormData();
     formData.append('file', file);
     formData.append('upload_preset', process.env.NEXT_PUBLIC_CLOUDINARY_PRODUCT_UPLOAD_PRESET!);
 
     try {
       const res = await fetch(`https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`, {
-        method: 'POST',
-        body: formData,
+        method: 'POST', body: formData,
       });
-      
       const data = await res.json();
-      
       if (data.secure_url) {
         updateVariant(index, 'image_url', data.secure_url);
       } else {
         throw new Error('Upload failed');
       }
     } catch (err) {
-      console.error("Cloudinary upload error:", err);
-      alert("Failed to upload image. Check your Cloudinary details in .env.local");
+      alert("Failed to upload image.");
     } finally {
       updateVariant(index, 'isUploading', false);
     }
   };
 
-  async function handleSubmit(formData: FormData) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
     setIsPending(true)
     setError('')
+
+    const formData = new FormData(e.currentTarget)
+    
+    // Reduce specs array into an object
+    const specificationsObject = specs.reduce((acc, curr) => {
+      const trimmedKey = curr.key.trim()
+      if (trimmedKey) acc[trimmedKey] = curr.value.trim()
+      return acc
+    }, {} as Record<string, string>)
+    
+    formData.append('specifications', JSON.stringify(specificationsObject))
 
     const result = await addProduct(formData, variants)
 
@@ -91,10 +108,9 @@ export default function AddProductForm({ categories }: { categories: Category[] 
   }
 
   return (
-    <form action={handleSubmit} className="space-y-8 bg-white p-8 rounded-xl shadow-sm border border-gray-200">
+    <form onSubmit={handleSubmit} className="space-y-8 bg-white p-8 rounded-xl shadow-sm border border-gray-200">
       {error && <div className="p-4 bg-red-50 text-red-600 rounded-lg">{error}</div>}
 
-      {/* --- Main Product Details --- */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1">Product Title</label>
@@ -126,26 +142,50 @@ export default function AddProductForm({ categories }: { categories: Category[] 
         <textarea name="description" rows={3} required className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-slate-900 outline-none" placeholder="Product description..."></textarea>
       </div>
 
-      {/* Style sits alone or with other small inputs now */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Style (For Filters)</label>
-          <input type="text" name="style" className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-slate-900 outline-none" placeholder="e.g. Modern" />
+      {/* --- Dynamic Specifications Editor --- */}
+      <div className="pt-4 pb-2">
+        <div className="flex items-center justify-between mb-4">
+          <label className="block text-sm font-medium text-slate-700">Product Specifications</label>
+          <button type="button" onClick={handleAddSpec} className="flex items-center gap-2 text-sm bg-slate-100 hover:bg-slate-200 text-slate-900 px-3 py-1.5 rounded-lg transition">
+            <Plus className="w-4 h-4" /> Add Spec
+          </button>
+        </div>
+
+        <div className="flex flex-col gap-3">
+          {specs.map((spec, index) => (
+            <div key={index} className="flex items-start gap-3">
+              <div className="flex-1">
+                <input
+                  type="text" placeholder="Spec Name (e.g. Dimensions)" value={spec.key} onChange={(e) => handleSpecChange(index, 'key', e.target.value)}
+                  className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-slate-900 outline-none text-sm"
+                />
+              </div>
+              <div className="flex-[2]">
+                {spec.key.toLowerCase() === 'dimensions' ? (
+                  <textarea
+                    placeholder="Value (e.g. Width: 200cm...)" rows={3} value={spec.value} onChange={(e) => handleSpecChange(index, 'value', e.target.value)}
+                    className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-slate-900 outline-none text-sm"
+                  />
+                ) : (
+                  <input
+                    type="text" placeholder="Value (e.g. Modern)" value={spec.value} onChange={(e) => handleSpecChange(index, 'value', e.target.value)}
+                    className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-slate-900 outline-none text-sm"
+                  />
+                )}
+              </div>
+              <button type="button" onClick={() => handleRemoveSpec(index)} className="p-2 text-red-500 hover:bg-red-100 rounded-lg transition mt-0.5">
+                <Trash2 className="w-5 h-5" />
+              </button>
+            </div>
+          ))}
+          {specs.length === 0 && (
+            <div className="text-center py-6 border border-dashed border-slate-300 rounded-lg text-slate-500 text-sm">
+              No specifications added. Click "Add Spec" to start.
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Dimensions is now a full-width textarea */}
-      <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">Dimensions</label>
-        <textarea 
-          name="dimensions" 
-          rows={4} 
-          className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-slate-900 outline-none" 
-          placeholder="Width: 200cm&#10;Depth: 90cm&#10;Height: 85cm&#10;Seat Height: 45cm"
-        ></textarea>
-      </div>
-
-      {/* --- Dynamic Variants Section --- */}
       <div className="pt-6 border-t border-gray-200">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-bold text-slate-900">Color Variants & Images</h3>
@@ -157,19 +197,13 @@ export default function AddProductForm({ categories }: { categories: Category[] 
         <div className="space-y-4">
           {variants.map((variant, index) => (
             <div key={index} className="flex flex-col gap-4 p-4 bg-slate-50 rounded-xl border border-slate-200">
-              
-              {/* Text Inputs */}
               <div className="flex flex-wrap md:flex-nowrap items-center gap-3">
                 <input type="text" placeholder="SKU" value={variant.sku} onChange={(e) => updateVariant(index, 'sku', e.target.value)} required className="flex-1 p-2 border rounded-md text-sm outline-none" />
-                
-                {/* NEW MATERIAL INPUT */}
                 <input type="text" placeholder="Material (e.g. Velvet)" value={variant.material} onChange={(e) => updateVariant(index, 'material', e.target.value)} required className="flex-1 p-2 border rounded-md text-sm outline-none" />
-
                 <div className="flex items-center gap-2 flex-1">
                   <input type="color" value={variant.color_hex || '#000000'} onChange={(e) => updateVariant(index, 'color_hex', e.target.value)} className="w-8 h-8 rounded cursor-pointer border-0 p-0" title="Pick exact color" />
                   <input type="text" placeholder="Color Name" value={variant.color} onChange={(e) => updateVariant(index, 'color', e.target.value)} required className="w-full p-2 border rounded-md text-sm outline-none" />
                 </div>
-
                 <input type="number" placeholder="Stock" value={variant.stock} onChange={(e) => updateVariant(index, 'stock', e.target.value)} required className="w-20 p-2 border rounded-md text-sm outline-none" />
                 <input type="number" step="0.01" placeholder="+£ Price" value={variant.priceAdjustment} onChange={(e) => updateVariant(index, 'priceAdjustment', e.target.value)} className="w-24 p-2 border rounded-md text-sm outline-none" />
                 
@@ -180,31 +214,17 @@ export default function AddProductForm({ categories }: { categories: Category[] 
                 )}
               </div>
 
-              {/* Image Upload Input */}
               <div className="flex items-center gap-4 bg-white p-3 rounded-lg border border-slate-200">
                 <div className="relative">
-                  <input 
-                    type="file" 
-                    accept="image/*" 
-                    onChange={(e) => {
-                      if (e.target.files && e.target.files[0]) {
-                        handleImageUpload(index, e.target.files[0])
-                      }
-                    }}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                  />
+                  <input type="file" accept="image/*" onChange={(e) => { if (e.target.files && e.target.files[0]) handleImageUpload(index, e.target.files[0]) }} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
                   <div className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 font-medium rounded-md hover:bg-slate-200 transition pointer-events-none">
                     <ImagePlus className="w-4 h-4" />
                     <span className="text-sm">Upload Image</span>
                   </div>
                 </div>
-
                 {variant.isUploading && (
-                  <div className="flex items-center gap-2 text-sm text-slate-500">
-                    <Loader2 className="w-4 h-4 animate-spin" /> Uploading...
-                  </div>
+                  <div className="flex items-center gap-2 text-sm text-slate-500"><Loader2 className="w-4 h-4 animate-spin" /> Uploading...</div>
                 )}
-
                 {variant.image_url && !variant.isUploading && (
                   <div className="flex items-center gap-3">
                     <img src={variant.image_url} alt="Variant preview" className="w-10 h-10 object-cover rounded shadow-sm border border-gray-200" />
@@ -212,7 +232,6 @@ export default function AddProductForm({ categories }: { categories: Category[] 
                   </div>
                 )}
               </div>
-
             </div>
           ))}
         </div>

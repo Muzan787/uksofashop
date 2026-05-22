@@ -15,24 +15,50 @@ const ITEMS_PER_PAGE = 9
 
 export async function generateMetadata(props: { params: Params }): Promise<Metadata> {
   const { category } = await props.params
+  
+  // Next.js turns '+' into spaces. This puts the '+' back just in case!
+  const decodedCategory = decodeURIComponent(category)
+  const slugWithPlus = decodedCategory.replace(/ /g, '+') 
+
   const supabase = await createClient()
-  const { data } = await supabase.from('categories').select('name').eq('slug', category).single()
+  
+  // Check for both versions in the database
+  const { data } = await supabase
+    .from('categories')
+    .select('name')
+    .in('slug', [decodedCategory, slugWithPlus])
+    .limit(1)
+    .maybeSingle()
+
   const name = data?.name ?? 'All Products'
   return {
     title: `${name} | UK Sofa Shop`,
     description: `Shop our premium ${name.toLowerCase()} collection. Free UK delivery over £500. Cash on Delivery.`,
-    alternates: { canonical: `/shop/${category}` },
+    alternates: { canonical: `/shop/${decodedCategory}` },
   }
 }
 
 export default async function CategoryPage(props: { params: Params; searchParams: SearchParams }) {
   const { category } = await props.params
+  
+  // Next.js turns '+' into spaces. This puts the '+' back just in case!
+  const decodedCategory = decodeURIComponent(category)
+  const slugWithPlus = decodedCategory.replace(/ /g, '+') 
+  
   const sp          = await props.searchParams
   const supabase    = await createClient()
 
   let categoryData: { id: string; name: string; image_url?: string | null } | null = null
-  if (category !== 'all') {
-    const { data } = await supabase.from('categories').select('id, name, image_url').eq('slug', category).single()
+  
+  if (decodedCategory !== 'all') {
+    // Check for both versions in the database
+    const { data } = await supabase
+      .from('categories')
+      .select('id, name, image_url')
+      .in('slug', [decodedCategory, slugWithPlus])
+      .limit(1)
+      .maybeSingle()
+      
     if (!data) return (
       <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <p style={{ fontSize: 18, color: '#78716c' }}>Category not found</p>

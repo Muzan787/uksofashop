@@ -7,7 +7,6 @@ import { updateProduct, VariantInput } from '@/app/actions/inventory'
 import { Plus, Trash2, Loader2, ImagePlus } from 'lucide-react'
 import { Database } from '@/types/supabase'
 
-// 1. Map our types to the Supabase Schema
 type Category = Pick<Database['public']['Tables']['categories']['Row'], 'id' | 'name'>
 type DBVariant = Database['public']['Tables']['product_variants']['Row']
 type Product = Database['public']['Tables']['products']['Row'] & {
@@ -24,25 +23,28 @@ export default function EditProductForm({ product, categories }: { product: Prod
   const [isPending, setIsPending] = useState(false)
   const [error, setError] = useState('')
   
-  // 2. Pre-load variants, strictly mapping DB values to UI state strings
   const [variants, setVariants] = useState<VariantState[]>(
     product.product_variants.map((v) => ({
-      id: v.id,
-      sku: v.sku,
-      color: v.color || '',
-      color_hex: v.color_hex || '',
-      material: v.material || '',
-      stock: (v.stock_quantity || 0).toString(),
-      priceAdjustment: (v.price_adjustment || 0).toString(),
-      image_url: v.image_url || '',
-      isUploading: false
+      id: v.id, sku: v.sku, color: v.color || '', color_hex: v.color_hex || '', material: v.material || '', stock: (v.stock_quantity || 0).toString(), priceAdjustment: (v.price_adjustment || 0).toString(), image_url: v.image_url || '', isUploading: false
     }))
   )
 
+  // 1. Pre-load specs into dynamic array
+  const existingSpecs = typeof product.specifications === 'object' && product.specifications !== null 
+    ? (product.specifications as Record<string, string>) 
+    : {};
+  
+  const initialSpecs = Object.keys(existingSpecs).length > 0 
+    ? Object.entries(existingSpecs).map(([k, v]) => ({ key: k, value: String(v) }))
+    : [
+        { key: 'Style', value: '' },
+        { key: 'Dimensions', value: '' }
+      ];
+
+  const [specs, setSpecs] = useState<{ key: string; value: string }[]>(initialSpecs);
+
   const addVariantRow = () => {
-    setVariants([...variants, {
-      sku: '', color: '',color_hex: '', material: '' , stock: '10', priceAdjustment: '0', image_url: '', isUploading: false
-    }])
+    setVariants([...variants, { sku: '', color: '',color_hex: '', material: '' , stock: '10', priceAdjustment: '0', image_url: '', isUploading: false }])
   }
 
   const updateVariant = (index: number, field: keyof VariantState, value: string | boolean) => {
@@ -54,14 +56,20 @@ export default function EditProductForm({ product, categories }: { product: Prod
     })
   }
 
-  const removeVariant = (index: number) => {
-    setVariants(variants.filter((_, i) => i !== index))
+  const removeVariant = (index: number) => setVariants(variants.filter((_, i) => i !== index))
+
+  // Specifications helpers
+  const handleAddSpec = () => setSpecs([...specs, { key: '', value: '' }])
+  const handleRemoveSpec = (index: number) => setSpecs(specs.filter((_, i) => i !== index))
+  const handleSpecChange = (index: number, field: 'key' | 'value', val: string) => {
+    const newSpecs = [...specs]
+    newSpecs[index][field] = val
+    setSpecs(newSpecs)
   }
 
   const handleImageUpload = async (index: number, file: File) => {
     if (!file) return;
     updateVariant(index, 'isUploading', true);
-
     const formData = new FormData();
     formData.append('file', file);
     formData.append('upload_preset', process.env.NEXT_PUBLIC_CLOUDINARY_PRODUCT_UPLOAD_PRESET!);
@@ -79,9 +87,22 @@ export default function EditProductForm({ product, categories }: { product: Prod
     }
   };
 
-  async function handleSubmit(formData: FormData) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
     setIsPending(true)
     setError('')
+
+    const formData = new FormData(e.currentTarget)
+    
+    // Reduce specs array into an object
+    const specificationsObject = specs.reduce((acc, curr) => {
+      const trimmedKey = curr.key.trim()
+      if (trimmedKey) acc[trimmedKey] = curr.value.trim()
+      return acc
+    }, {} as Record<string, string>)
+    
+    formData.append('specifications', JSON.stringify(specificationsObject))
+
     const result = await updateProduct(formData, variants, product.id)
     if (result?.error) {
       setError(result.error)
@@ -92,15 +113,8 @@ export default function EditProductForm({ product, categories }: { product: Prod
     }
   }
 
-  // 3. Strongly type the JSONB JSON parsing
-  const specs = typeof product.specifications === 'object' && product.specifications !== null 
-    ? (product.specifications as Record<string, string>) 
-    : {};
-
-// ... (keep the rest of the return statement identical)
-
   return (
-    <form action={handleSubmit} className="space-y-8 bg-white p-8 rounded-xl shadow-sm border border-stone-200">
+    <form onSubmit={handleSubmit} className="space-y-8 bg-white p-8 rounded-xl shadow-sm border border-stone-200">
       {error && <div className="p-4 bg-red-50 text-red-600 rounded-lg">{error}</div>}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -112,19 +126,12 @@ export default function EditProductForm({ product, categories }: { product: Prod
           <label className="block text-sm font-medium text-stone-700 mb-1">URL Slug</label>
           <input type="text" name="slug" defaultValue={product.slug} required className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-amber-600 outline-none" />
         </div>
-        {/* Replace the Category <select> block with Checkboxes */}
         <div>
           <label className="block text-sm font-medium text-stone-700 mb-1">Categories</label>
           <div className="w-full p-3 border rounded-lg bg-white max-h-40 overflow-y-auto space-y-2">
             {categories.map(c => (
               <label key={c.id} className="flex items-center gap-2 cursor-pointer">
-                <input 
-                  type="checkbox" 
-                  name="categoryIds" 
-                  value={c.id} 
-                  defaultChecked={product.product_categories?.some(pc => pc.category_id === c.id)}
-                  className="rounded text-stone-900 focus:ring-stone-900" 
-                />
+                <input type="checkbox" name="categoryIds" value={c.id} defaultChecked={product.product_categories?.some(pc => pc.category_id === c.id)} className="rounded text-stone-900 focus:ring-stone-900" />
                 <span className="text-sm">{c.name}</span>
               </label>
             ))}
@@ -141,14 +148,47 @@ export default function EditProductForm({ product, categories }: { product: Prod
         <textarea name="description" rows={3} defaultValue={product.description || ''} required className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-amber-600 outline-none"></textarea>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <label className="block text-sm font-medium text-stone-700 mb-1">Style</label>
-          <input type="text" name="style" defaultValue={specs.style || ''} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-amber-600 outline-none" />
+      {/* --- Dynamic Specifications Editor --- */}
+      <div className="pt-4 pb-2">
+        <div className="flex items-center justify-between mb-4">
+          <label className="block text-sm font-medium text-slate-700">Product Specifications</label>
+          <button type="button" onClick={handleAddSpec} className="flex items-center gap-2 text-sm bg-stone-100 hover:bg-stone-200 text-stone-900 px-3 py-1.5 rounded-lg transition">
+            <Plus className="w-4 h-4" /> Add Spec
+          </button>
         </div>
-        <div>
-          <label className="block text-sm font-medium text-stone-700 mb-1">Dimensions</label>
-          <input type="text" name="dimensions" defaultValue={specs.dimensions || ''} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-amber-600 outline-none" />
+
+        <div className="flex flex-col gap-3">
+          {specs.map((spec, index) => (
+            <div key={index} className="flex items-start gap-3">
+              <div className="flex-1">
+                <input
+                  type="text" placeholder="Spec Name (e.g. Dimensions)" value={spec.key} onChange={(e) => handleSpecChange(index, 'key', e.target.value)}
+                  className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-amber-600 outline-none text-sm"
+                />
+              </div>
+              <div className="flex-[2]">
+                {spec.key.toLowerCase() === 'dimensions' ? (
+                  <textarea
+                    placeholder="Value (e.g. Width: 200cm...)" rows={3} value={spec.value} onChange={(e) => handleSpecChange(index, 'value', e.target.value)}
+                    className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-amber-600 outline-none text-sm"
+                  />
+                ) : (
+                  <input
+                    type="text" placeholder="Value (e.g. Modern)" value={spec.value} onChange={(e) => handleSpecChange(index, 'value', e.target.value)}
+                    className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-amber-600 outline-none text-sm"
+                  />
+                )}
+              </div>
+              <button type="button" onClick={() => handleRemoveSpec(index)} className="p-2 text-red-500 hover:bg-red-100 rounded-lg transition mt-0.5">
+                <Trash2 className="w-5 h-5" />
+              </button>
+            </div>
+          ))}
+          {specs.length === 0 && (
+            <div className="text-center py-6 border border-dashed border-stone-300 rounded-lg text-stone-500 text-sm">
+              No specifications added. Click "Add Spec" to start.
+            </div>
+          )}
         </div>
       </div>
 
@@ -163,22 +203,15 @@ export default function EditProductForm({ product, categories }: { product: Prod
         <div className="space-y-4">
           {variants.map((variant: any, index: number) => (
             <div key={index} className="flex flex-col gap-4 p-4 bg-stone-50 rounded-xl border border-stone-200">
-              {/* Replace the current Text Inputs block inside variants.map with this: */}
               <div className="flex flex-wrap md:flex-nowrap items-center gap-3">
                 <input type="text" placeholder="SKU" value={variant.sku} onChange={(e) => updateVariant(index, 'sku', e.target.value)} required className="flex-1 p-2 border rounded-md text-sm outline-none focus:ring-2 focus:ring-amber-600" />
-                
-                {/* Missing material added here */}
                 <input type="text" placeholder="Material (e.g. Velvet)" value={variant.material} onChange={(e) => updateVariant(index, 'material', e.target.value)} required className="flex-1 p-2 border rounded-md text-sm outline-none focus:ring-2 focus:ring-amber-600" />
-                
                 <div className="flex items-center gap-2 flex-1">
-                  {/* Missing color_hex added here */}
                   <input type="color" value={variant.color_hex || '#000000'} onChange={(e) => updateVariant(index, 'color_hex', e.target.value)} className="w-8 h-8 rounded cursor-pointer border-0 p-0" title="Pick exact color" />
                   <input type="text" placeholder="Color" value={variant.color} onChange={(e) => updateVariant(index, 'color', e.target.value)} required className="w-full p-2 border rounded-md text-sm outline-none focus:ring-2 focus:ring-amber-600" />
                 </div>
-
                 <input type="number" placeholder="Stock" value={variant.stock} onChange={(e) => updateVariant(index, 'stock', e.target.value)} required className="w-20 p-2 border rounded-md text-sm outline-none focus:ring-2 focus:ring-amber-600" title="Set to 0 to mark out of stock" />
                 <input type="number" step="0.01" placeholder="+£ Price" value={variant.priceAdjustment} onChange={(e) => updateVariant(index, 'priceAdjustment', e.target.value)} className="w-24 p-2 border rounded-md text-sm outline-none focus:ring-2 focus:ring-amber-600" />
-                
                 {!variant.id && (
                   <button type="button" onClick={() => removeVariant(index)} className="p-2 text-red-500 hover:bg-red-100 rounded-md transition" title="Remove unsaved variant">
                     <Trash2 className="w-4 h-4" />

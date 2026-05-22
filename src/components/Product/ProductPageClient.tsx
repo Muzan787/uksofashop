@@ -380,7 +380,7 @@ export default function ProductPageClient({ product, initialWishlistState, varia
     }
     return product.specifications as Record<string, string>;
   }, [product.specifications]);
-  const dimensions = specs?.dimensions?.trim() || '';
+  const dimensions = specs?.dimensions?.trim() || specs?.Dimensions?.trim() || '';
   const description = product.description || '';
 
   // Price
@@ -454,7 +454,7 @@ export default function ProductPageClient({ product, initialWishlistState, varia
   );
 
   // ── WhatsApp Component ──
-  const whatsappNumber = "447000000000"; // ⚠️ REPLACE WITH YOUR ACTUAL UK WHATSAPP NUMBER
+  const whatsappNumber = "447476616022"; // ⚠️ REPLACE WITH YOUR ACTUAL UK WHATSAPP NUMBER
   const whatsappText = encodeURIComponent(`Hi, I have a query about your product: ${product.title}`);
   
   const WhatsAppCard = () => (
@@ -565,7 +565,7 @@ export default function ProductPageClient({ product, initialWishlistState, varia
             {renderTitleBlock('hidden md:block')}
 
             {/* ── Material selector ── */}
-            {uniqueMaterials.length > 1 && (
+            {uniqueMaterials.length > 0 && (
               <div style={{ marginBottom: 18 }}>
                 <div style={{ fontSize: 10, color: '#78716c', textTransform: 'uppercase', letterSpacing: '0.18em', fontWeight: 600, marginBottom: 8 }}>
                   Material — <span style={{ color: '#1c1917', fontWeight: 700 }}>{selMat}</span>
