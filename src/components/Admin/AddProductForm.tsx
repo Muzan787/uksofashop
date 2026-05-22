@@ -1,228 +1,215 @@
 // src/components/Admin/AddProductForm.tsx
-'use client'
-
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { addProduct, VariantInput } from '@/app/actions/inventory'
-import { Plus, Trash2, Loader2, ImagePlus } from 'lucide-react'
+import { Plus, Trash2, Loader2, ImagePlus, CheckCircle, ChevronDown } from 'lucide-react'
 import { Database } from '@/types/supabase'
 
-// 1. Define strict types based on your database
 type Category = Pick<Database['public']['Tables']['categories']['Row'], 'id' | 'name'>
+interface VariantState extends VariantInput { isUploading: boolean }
 
-// We extend the Action input type to include our local UI state (isUploading)
-interface VariantState extends VariantInput {
-  isUploading: boolean;
+const ACCENT = '#d4871a'
+const DARK = '#0c0c0b'
+
+const input = (focused: boolean) => ({
+  width: '100%', padding: '9px 12px', fontSize: 13,
+  border: `1.5px solid ${focused ? ACCENT : '#e8e2da'}`,
+  borderRadius: 8, outline: 'none', background: '#fafaf9',
+  color: '#1c1917', fontFamily: 'inherit', boxSizing: 'border-box' as const,
+  transition: 'border-color 0.2s ease',
+})
+
+function Field({ label, name, type = 'text', placeholder, required = true, hint, textarea }: {
+  label: string; name: string; type?: string; placeholder: string; required?: boolean; hint?: string; textarea?: boolean
+}) {
+  const [focused, setFocused] = useState(false)
+  return (
+    <div>
+      <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: '#78716c', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 6 }}>
+        {label} {required && <span style={{ color: ACCENT }}>*</span>}
+      </label>
+      {textarea ? (
+        <textarea name={name} required={required} rows={3} placeholder={placeholder}
+          onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
+          style={{ ...input(focused), resize: 'vertical' }} />
+      ) : (
+        <input type={type} name={name} required={required} placeholder={placeholder}
+          onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
+          style={input(focused)} />
+      )}
+      {hint && <p style={{ fontSize: 10, color: '#a8a29e', marginTop: 4 }}>{hint}</p>}
+    </div>
+  )
 }
 
 export default function AddProductForm({ categories }: { categories: Category[] }) {
   const router = useRouter()
   const [isPending, setIsPending] = useState(false)
-  const [error, setError] = useState('')
-  
-  // 1. Update the initial variant state
-  const [variants, setVariants] = useState<VariantState[]>([
-    { sku: '', color: '', color_hex: '#000000', material: '', stock: '10', priceAdjustment: '0', image_url: '', isUploading: false }
+  const [error, setError]         = useState('')
+  const [variants, setVariants]   = useState<VariantState[]>([
+    { sku: '', color: '', color_hex: '#8B7355', material: '', stock: '10', priceAdjustment: '0', image_url: '', isUploading: false }
   ])
 
-  const addVariantRow = () => {
-    setVariants([...variants, {
-      sku: '', color: '',color_hex: '', material: '', stock: '10', priceAdjustment: '0', image_url: '', isUploading: false
-    }])
-  }
-
-  // 3. Strongly type the field update function
+  const addVariantRow = () => setVariants(v => [...v, { sku: '', color: '', color_hex: '#8B7355', material: '', stock: '10', priceAdjustment: '0', image_url: '', isUploading: false }])
+  const removeVariant = (i: number) => setVariants(v => v.filter((_, idx) => idx !== i))
   const updateVariant = (index: number, field: keyof VariantState, value: string | boolean) => {
-    setVariants((prevVariants) => {
-      const newVariants = [...prevVariants]
-      // @ts-ignore - Dynamic key assignment can sometimes confuse TS, but we know it's safe here
-      newVariants[index] = { ...newVariants[index], [field]: value }
-      return newVariants
-    })
-  }
-
-  const removeVariant = (index: number) => {
-    setVariants(variants.filter((_, i) => i !== index))
+    setVariants(prev => { const n = [...prev]; (n[index] as any)[field] = value; return n })
   }
 
   const handleImageUpload = async (index: number, file: File) => {
-    if (!file) return;
-    
-    updateVariant(index, 'isUploading', true);
-
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('upload_preset', process.env.NEXT_PUBLIC_CLOUDINARY_PRODUCT_UPLOAD_PRESET!);
-
+    updateVariant(index, 'isUploading', true)
+    const fd = new FormData()
+    fd.append('file', file)
+    fd.append('upload_preset', process.env.NEXT_PUBLIC_CLOUDINARY_PRODUCT_UPLOAD_PRESET!)
     try {
-      const res = await fetch(`https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`, {
-        method: 'POST',
-        body: formData,
-      });
-      
-      const data = await res.json();
-      
-      if (data.secure_url) {
-        updateVariant(index, 'image_url', data.secure_url);
-      } else {
-        throw new Error('Upload failed');
-      }
-    } catch (err) {
-      console.error("Cloudinary upload error:", err);
-      alert("Failed to upload image. Check your Cloudinary details in .env.local");
-    } finally {
-      updateVariant(index, 'isUploading', false);
-    }
-  };
+      const res  = await fetch(`https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`, { method: 'POST', body: fd })
+      const data = await res.json()
+      if (data.secure_url) updateVariant(index, 'image_url', data.secure_url)
+      else throw new Error('Upload failed')
+    } catch { alert('Image upload failed.') }
+    finally { updateVariant(index, 'isUploading', false) }
+  }
 
-  async function handleSubmit(formData: FormData) {
-    setIsPending(true)
-    setError('')
-
-    const result = await addProduct(formData, variants)
-
-    if (result?.error) {
-      setError(result.error)
-      setIsPending(false)
-    } else {
-      router.push('/admin/inventory')
-      router.refresh()
-    }
+  async function handleSubmit(fd: FormData) {
+    setIsPending(true); setError('')
+    const result = await addProduct(fd, variants)
+    if (result?.error) { setError(result.error); setIsPending(false) }
+    else { router.push('/admin/inventory'); router.refresh() }
   }
 
   return (
-    <form action={handleSubmit} className="space-y-8 bg-white p-8 rounded-xl shadow-sm border border-gray-200">
-      {error && <div className="p-4 bg-red-50 text-red-600 rounded-lg">{error}</div>}
+    <form action={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-      {/* --- Main Product Details --- */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Product Title</label>
-          <input type="text" name="title" required className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-slate-900 outline-none" placeholder="e.g. The Cloud Sofa" />
+      {error && <div style={{ padding: '10px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, fontSize: 12, color: '#dc2626' }}>{error}</div>}
+
+      {/* Product details card */}
+      <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e8e2da', overflow: 'hidden' }}>
+        <div style={{ padding: '14px 20px', borderBottom: '1px solid #f0ede8', fontSize: 12, fontWeight: 700, color: '#1c1917' }}>
+          Product Details
         </div>
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">URL Slug (Unique)</label>
-          <input type="text" name="slug" required className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-slate-900 outline-none" placeholder="e.g. the-cloud-sofa" />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Categories</label>
-          <div className="w-full p-3 border rounded-lg bg-white max-h-40 overflow-y-auto space-y-2">
-            {categories.map(c => (
-              <label key={c.id} className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" name="categoryIds" value={c.id} className="rounded text-slate-900 focus:ring-slate-900" />
-                <span className="text-sm">{c.name}</span>
-              </label>
-            ))}
+        <div style={{ padding: '20px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
+          <Field label="Product Title"  name="title"     placeholder="e.g. The Harrington Sofa" />
+          <Field label="URL Slug"       name="slug"      placeholder="e.g. harrington-sofa" hint="Unique. Lowercase + hyphens only." />
+          <Field label="Base Price (£)" name="basePrice" type="number" placeholder="799.00" />
+          <Field label="Style (filter)" name="style"     placeholder="e.g. Modern" required={false} />
+
+          {/* Categories */}
+          <div>
+            <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: '#78716c', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 6 }}>
+              Categories <span style={{ color: ACCENT }}>*</span>
+            </label>
+            <div style={{ maxHeight: 120, overflowY: 'auto', border: '1.5px solid #e8e2da', borderRadius: 8, background: '#fafaf9', padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {categories.map(c => (
+                <label key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 12, color: '#57534e' }}>
+                  <input type="checkbox" name="categoryIds" value={c.id}
+                    style={{ width: 14, height: 14, accentColor: ACCENT }} />
+                  {c.name}
+                </label>
+              ))}
+            </div>
           </div>
         </div>
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Base Price (£)</label>
-          <input type="number" step="0.01" name="basePrice" required className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-slate-900 outline-none" placeholder="499.99" />
+
+        {/* Description + Dimensions */}
+        <div style={{ padding: '0 20px 20px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
+          <Field label="Description" name="description" placeholder="Describe this sofa…" textarea />
+          <Field label="Dimensions" name="dimensions" placeholder={`Width: 220cm\nDepth: 95cm\nHeight: 88cm\nSeat Height: 45cm`} textarea required={false} />
         </div>
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
-        <textarea name="description" rows={3} required className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-slate-900 outline-none" placeholder="Product description..."></textarea>
-      </div>
-
-      {/* Style sits alone or with other small inputs now */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Style (For Filters)</label>
-          <input type="text" name="style" className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-slate-900 outline-none" placeholder="e.g. Modern" />
-        </div>
-      </div>
-
-      {/* Dimensions is now a full-width textarea */}
-      <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">Dimensions</label>
-        <textarea 
-          name="dimensions" 
-          rows={4} 
-          className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-slate-900 outline-none" 
-          placeholder="Width: 200cm&#10;Depth: 90cm&#10;Height: 85cm&#10;Seat Height: 45cm"
-        ></textarea>
-      </div>
-
-      {/* --- Dynamic Variants Section --- */}
-      <div className="pt-6 border-t border-gray-200">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-bold text-slate-900">Color Variants & Images</h3>
-          <button type="button" onClick={addVariantRow} className="text-sm bg-slate-100 hover:bg-slate-200 text-slate-900 px-3 py-1.5 rounded-lg flex items-center gap-1 transition">
-            <Plus className="w-4 h-4" /> Add Variant
+      {/* Variants card */}
+      <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e8e2da', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderBottom: '1px solid #f0ede8' }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: '#1c1917' }}>Colour Variants ({variants.length})</span>
+          <button type="button" onClick={addVariantRow}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 12px', background: '#f5f0e8', border: 'none', borderRadius: 7, cursor: 'pointer', fontSize: 11, fontWeight: 700, color: '#57534e', transition: 'all 0.15s' }}
+            onMouseEnter={e => { (e.currentTarget.style.background = `${ACCENT}18`); (e.currentTarget.style.color = ACCENT); }}
+            onMouseLeave={e => { (e.currentTarget.style.background = '#f5f0e8'); (e.currentTarget.style.color = '#57534e'); }}>
+            <Plus style={{ width: 13, height: 13 }} /> Add Variant
           </button>
         </div>
 
-        <div className="space-y-4">
+        <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
           {variants.map((variant, index) => (
-            <div key={index} className="flex flex-col gap-4 p-4 bg-slate-50 rounded-xl border border-slate-200">
-              
-              {/* Text Inputs */}
-              <div className="flex flex-wrap md:flex-nowrap items-center gap-3">
-                <input type="text" placeholder="SKU" value={variant.sku} onChange={(e) => updateVariant(index, 'sku', e.target.value)} required className="flex-1 p-2 border rounded-md text-sm outline-none" />
-                
-                {/* NEW MATERIAL INPUT */}
-                <input type="text" placeholder="Material (e.g. Velvet)" value={variant.material} onChange={(e) => updateVariant(index, 'material', e.target.value)} required className="flex-1 p-2 border rounded-md text-sm outline-none" />
+            <div key={index} style={{ background: '#fafaf9', borderRadius: 10, border: '1px solid #f0ede8', padding: '14px', position: 'relative' }}>
 
-                <div className="flex items-center gap-2 flex-1">
-                  <input type="color" value={variant.color_hex || '#000000'} onChange={(e) => updateVariant(index, 'color_hex', e.target.value)} className="w-8 h-8 rounded cursor-pointer border-0 p-0" title="Pick exact color" />
-                  <input type="text" placeholder="Color Name" value={variant.color} onChange={(e) => updateVariant(index, 'color', e.target.value)} required className="w-full p-2 border rounded-md text-sm outline-none" />
+              {/* Colour indicator strip */}
+              <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: 3, borderRadius: '10px 0 0 10px', background: variant.color_hex || '#e7e5e4' }} />
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: 10, marginBottom: 10 }}>
+                {/* SKU */}
+                <VariantField label="SKU" placeholder="VR-001" value={variant.sku} onChange={v => updateVariant(index, 'sku', v)} />
+                {/* Material */}
+                <VariantField label="Material" placeholder="Velvet" value={variant.material} onChange={v => updateVariant(index, 'material', v)} />
+                {/* Color swatch + name */}
+                <div>
+                  <label style={{ display: 'block', fontSize: 9, fontWeight: 700, color: '#a8a29e', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 5 }}>Colour</label>
+                  <div style={{ display: 'flex', gap: 7, alignItems: 'center' }}>
+                    <input type="color" value={variant.color_hex || '#8B7355'} onChange={e => updateVariant(index, 'color_hex', e.target.value)}
+                      style={{ width: 34, height: 34, borderRadius: 6, border: '1.5px solid #e8e2da', padding: 2, cursor: 'pointer', background: '#fff', flexShrink: 0 }} />
+                    <input type="text" placeholder="Pearl White" value={variant.color} onChange={e => updateVariant(index, 'color', e.target.value)} required
+                      style={{ flex: 1, padding: '8px 10px', fontSize: 12, border: '1.5px solid #e8e2da', borderRadius: 7, outline: 'none', background: '#fff', color: '#1c1917', fontFamily: 'inherit', minWidth: 0 }} />
+                  </div>
                 </div>
-
-                <input type="number" placeholder="Stock" value={variant.stock} onChange={(e) => updateVariant(index, 'stock', e.target.value)} required className="w-20 p-2 border rounded-md text-sm outline-none" />
-                <input type="number" step="0.01" placeholder="+£ Price" value={variant.priceAdjustment} onChange={(e) => updateVariant(index, 'priceAdjustment', e.target.value)} className="w-24 p-2 border rounded-md text-sm outline-none" />
-                
-                {!variant.id && (
-                  <button type="button" onClick={() => removeVariant(index)} className="p-2 text-red-500 hover:bg-red-100 rounded-md transition">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                )}
+                {/* Stock */}
+                <VariantField label="Stock" type="number" placeholder="10" value={variant.stock} onChange={v => updateVariant(index, 'stock', v)} />
+                {/* Price adj */}
+                <VariantField label="+£ Adjust" type="number" placeholder="0" value={variant.priceAdjustment} onChange={v => updateVariant(index, 'priceAdjustment', v)} />
               </div>
 
-              {/* Image Upload Input */}
-              <div className="flex items-center gap-4 bg-white p-3 rounded-lg border border-slate-200">
-                <div className="relative">
-                  <input 
-                    type="file" 
-                    accept="image/*" 
-                    onChange={(e) => {
-                      if (e.target.files && e.target.files[0]) {
-                        handleImageUpload(index, e.target.files[0])
-                      }
-                    }}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                  />
-                  <div className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 font-medium rounded-md hover:bg-slate-200 transition pointer-events-none">
-                    <ImagePlus className="w-4 h-4" />
-                    <span className="text-sm">Upload Image</span>
-                  </div>
-                </div>
-
-                {variant.isUploading && (
-                  <div className="flex items-center gap-2 text-sm text-slate-500">
-                    <Loader2 className="w-4 h-4 animate-spin" /> Uploading...
-                  </div>
-                )}
-
+              {/* Image upload row */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px', background: '#fff', borderRadius: 8, border: '1px solid #f0ede8' }}>
+                <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', background: '#f5f0e8', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 11, fontWeight: 600, color: '#57534e', flexShrink: 0 }}>
+                  <ImagePlus style={{ width: 13, height: 13 }} />
+                  Upload Image
+                  <input type="file" accept="image/*" style={{ display: 'none' }}
+                    onChange={e => { if (e.target.files?.[0]) handleImageUpload(index, e.target.files[0]) }} />
+                </label>
+                {variant.isUploading && <Loader2 style={{ width: 14, height: 14, color: ACCENT, animation: 'spin 0.8s linear infinite', flexShrink: 0 }} />}
                 {variant.image_url && !variant.isUploading && (
-                  <div className="flex items-center gap-3">
-                    <img src={variant.image_url} alt="Variant preview" className="w-10 h-10 object-cover rounded shadow-sm border border-gray-200" />
-                    <span className="text-xs text-green-600 font-medium">Uploaded Successfully</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <img src={variant.image_url} alt="Preview" style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: 6, border: '1px solid #e8e2da', flexShrink: 0 }} />
+                    <CheckCircle style={{ width: 14, height: 14, color: '#16a34a', flexShrink: 0 }} />
+                    <span style={{ fontSize: 10, color: '#16a34a', fontWeight: 600 }}>Uploaded</span>
                   </div>
                 )}
-              </div>
+                {!variant.image_url && !variant.isUploading && <span style={{ fontSize: 11, color: '#d6d3d1' }}>No image</span>}
 
+                {/* Remove variant */}
+                <button type="button" onClick={() => removeVariant(index)} disabled={variants.length === 1}
+                  style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', padding: '6px 8px', background: 'transparent', border: '1px solid #e8e2da', borderRadius: 7, cursor: variants.length === 1 ? 'not-allowed' : 'pointer', color: '#d6d3d1', opacity: variants.length === 1 ? 0.4 : 1, transition: 'all 0.15s', flexShrink: 0 }}
+                  onMouseEnter={e => { if (variants.length > 1) { (e.currentTarget.style.background = '#fef2f2'); (e.currentTarget.style.color = '#dc2626'); } }}
+                  onMouseLeave={e => { (e.currentTarget.style.background = 'transparent'); (e.currentTarget.style.color = '#d6d3d1'); }}
+                >
+                  <Trash2 style={{ width: 13, height: 13 }} />
+                </button>
+              </div>
             </div>
           ))}
         </div>
       </div>
 
-      <div className="pt-6">
-        <button type="submit" disabled={isPending || variants.some(v => v.isUploading)} className="w-full bg-slate-900 text-white py-3 rounded-xl font-bold hover:bg-slate-800 transition disabled:opacity-70 flex justify-center items-center gap-2">
-          {isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Save Product & Variants'}
-        </button>
-      </div>
+      {/* Submit */}
+      <button type="submit" disabled={isPending || variants.some(v => v.isUploading)}
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '14px 0', borderRadius: 10, border: 'none', background: isPending ? '#a8a29e' : DARK, color: '#fff', fontSize: 13, fontWeight: 700, letterSpacing: '0.06em', cursor: isPending ? 'wait' : 'pointer', transition: 'background 0.2s', boxShadow: isPending ? 'none' : '0 4px 16px rgba(0,0,0,0.12)' }}>
+        {isPending ? <Loader2 style={{ width: 15, height: 15, animation: 'spin 0.8s linear infinite' }} /> : null}
+        {isPending ? 'Saving Product…' : 'Save Product & Variants'}
+      </button>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </form>
+  )
+}
+
+function VariantField({ label, type = 'text', placeholder, value, onChange }: {
+  label: string; type?: string; placeholder: string; value: string; onChange: (v: string) => void
+}) {
+  const [focused, setFocused] = useState(false)
+  return (
+    <div>
+      <label style={{ display: 'block', fontSize: 9, fontWeight: 700, color: '#a8a29e', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 5 }}>{label}</label>
+      <input type={type} placeholder={placeholder} value={value} onChange={e => onChange(e.target.value)} required
+        onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
+        style={{ width: '100%', padding: '8px 10px', fontSize: 12, border: `1.5px solid ${focused ? '#d4871a' : '#e8e2da'}`, borderRadius: 7, outline: 'none', background: '#fff', color: '#1c1917', fontFamily: 'inherit', boxSizing: 'border-box', transition: 'border-color 0.2s' }} />
+    </div>
   )
 }

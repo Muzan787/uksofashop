@@ -1,106 +1,102 @@
 // src/components/Admin/AddCategoryForm.tsx
-'use client'
-
-import { useState } from 'react'
+import { useState } from 'react' 
 import { useRouter } from 'next/navigation'
 import { addCategory } from '@/app/actions/categories'
-import { Loader2, ImagePlus } from 'lucide-react'
+import { Loader2, ImagePlus, CheckCircle } from 'lucide-react'
+
+const ACCENT = '#d4871a'
+
+const fieldStyle = (focused: boolean) => ({
+  width: '100%', padding: '9px 12px', fontSize: 13,
+  border: `1.5px solid ${focused ? ACCENT : '#e8e2da'}`,
+  borderRadius: 8, outline: 'none', background: '#fafaf9',
+  color: '#1c1917', fontFamily: 'inherit', boxSizing: 'border-box' as const,
+  transition: 'border-color 0.2s ease',
+})
+
+function Field({ label, name, placeholder, hint }: { label: string; name: string; placeholder: string; hint?: string }) {
+  const [focused, setFocused] = useState(false)
+  return (
+    <div>
+      <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: '#78716c', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 6 }}>
+        {label} <span style={{ color: ACCENT }}>*</span>
+      </label>
+      <input type="text" name={name} required placeholder={placeholder}
+        onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
+        style={fieldStyle(focused)} />
+      {hint && <p style={{ fontSize: 10, color: '#a8a29e', marginTop: 4 }}>{hint}</p>}
+    </div>
+  )
+}
 
 export default function AddCategoryForm() {
-  const router = useRouter()
-  const [isPending, setIsPending] = useState(false)
-  const [isUploading, setIsUploading] = useState(false)
-  const [error, setError] = useState('')
-  const [imageUrl, setImageUrl] = useState('')
+  const router     = useRouter()
+  const [pending,   setPending]   = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [error,     setError]     = useState('')
+  const [imageUrl,  setImageUrl]  = useState('')
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    
-    setIsUploading(true)
-
-    const formData = new FormData()
-    formData.append('file', file)
-    formData.append('upload_preset', process.env.NEXT_PUBLIC_CLOUDINARY_PRODUCT_UPLOAD_PRESET!)
-
+    setUploading(true)
+    const fd = new FormData()
+    fd.append('file', file)
+    fd.append('upload_preset', process.env.NEXT_PUBLIC_CLOUDINARY_PRODUCT_UPLOAD_PRESET!)
     try {
-      const res = await fetch(`https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`, {
-        method: 'POST',
-        body: formData,
-      })
+      const res  = await fetch(`https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`, { method: 'POST', body: fd })
       const data = await res.json()
-      if (data.secure_url) {
-        setImageUrl(data.secure_url)
-      } else {
-        throw new Error('Upload failed')
-      }
-    } catch (err) {
-      alert("Failed to upload image.")
-    } finally {
-      setIsUploading(false)
-    }
+      if (data.secure_url) setImageUrl(data.secure_url)
+      else throw new Error('Upload failed')
+    } catch { alert('Image upload failed. Check Cloudinary settings.') }
+    finally { setUploading(false) }
   }
 
-  async function handleSubmit(formData: FormData) {
-    setIsPending(true)
-    setError('')
-
-    const result = await addCategory(formData, imageUrl)
-
-    if (result?.error) {
-      setError(result.error)
-      setIsPending(false)
-    } else {
-      // Reset form on success
-      const form = document.getElementById('category-form') as HTMLFormElement
-      form.reset()
-      setImageUrl('')
-      setIsPending(false)
-      router.refresh()
+  async function handleSubmit(fd: FormData) {
+    setPending(true); setError('')
+    const result = await addCategory(fd, imageUrl)
+    if (result?.error) { setError(result.error); setPending(false) }
+    else {
+      const form = document.getElementById('cat-form') as HTMLFormElement
+      form?.reset(); setImageUrl(''); setPending(false); router.refresh()
     }
   }
 
   return (
-    <form id="category-form" action={handleSubmit} className="space-y-6 bg-white p-6 rounded-xl shadow-sm border border-stone-200">
-      <h2 className="text-xl font-bold text-stone-900">Add New Category</h2>
-      
-      {error && <div className="p-3 bg-red-50 text-red-600 rounded-lg text-sm">{error}</div>}
+    <form id="cat-form" action={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {error && <div style={{ padding: '9px 12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 7, fontSize: 12, color: '#dc2626' }}>{error}</div>}
 
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-stone-700 mb-1">Category Name</label>
-          <input type="text" name="name" required className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-amber-600 outline-none" placeholder="e.g. Dining Tables" />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-stone-700 mb-1">URL Slug</label>
-          <input type="text" name="slug" required className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-amber-600 outline-none" placeholder="e.g. dining-tables" />
-        </div>
-        
-        {/* Image Upload */}
-        <div>
-          <label className="block text-sm font-medium text-stone-700 mb-1">Category Image (Required for Homepage)</label>
-          <div className="flex items-center gap-4 bg-stone-50 p-3 rounded-lg border border-stone-200">
-            <div className="relative">
-              <input 
-                type="file" accept="image/*" onChange={handleImageUpload}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-              />
-              <div className="flex items-center gap-2 px-4 py-2 bg-white border border-stone-300 text-stone-700 font-medium rounded-md hover:bg-stone-50 transition pointer-events-none">
-                <ImagePlus className="w-4 h-4" />
-                <span className="text-sm">Choose Image</span>
-              </div>
+      <Field label="Category Name" name="name" placeholder="e.g. Corner Sofas" />
+      <Field label="URL Slug" name="slug" placeholder="e.g. corner-sofas" hint="Lowercase letters and hyphens only" />
+
+      {/* Image upload */}
+      <div>
+        <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: '#78716c', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 6 }}>
+          Category Image
+        </label>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: '#fafaf9', border: '1.5px solid #e8e2da', borderRadius: 8 }}>
+          <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', background: '#fff', border: '1px solid #e8e2da', borderRadius: 6, cursor: 'pointer', fontSize: 11, fontWeight: 600, color: '#57534e', flexShrink: 0 }}>
+            <ImagePlus style={{ width: 13, height: 13 }} />
+            {uploading ? 'Uploading…' : 'Choose'}
+            <input type="file" accept="image/*" onChange={handleImageUpload} style={{ display: 'none' }} />
+          </label>
+          {uploading && <Loader2 style={{ width: 14, height: 14, color: ACCENT, animation: 'spin 0.8s linear infinite', flexShrink: 0 }} />}
+          {imageUrl && !uploading && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <img src={imageUrl} alt="Preview" style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: 6, border: '1px solid #e8e2da' }} />
+              <CheckCircle style={{ width: 14, height: 14, color: '#16a34a' }} />
             </div>
-            {isUploading && <Loader2 className="w-4 h-4 animate-spin text-stone-500" />}
-            {imageUrl && !isUploading && (
-              <img src={imageUrl} alt="Preview" className="w-12 h-12 object-cover rounded shadow-sm border border-stone-200" />
-            )}
-          </div>
+          )}
+          {!imageUrl && !uploading && <span style={{ fontSize: 11, color: '#d6d3d1' }}>No image selected</span>}
         </div>
       </div>
 
-      <button type="submit" disabled={isPending || isUploading} className="w-full bg-stone-900 text-white py-2.5 rounded-lg font-bold hover:bg-stone-800 transition disabled:opacity-70 flex justify-center items-center gap-2">
-        {isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Create Category'}
+      <button type="submit" disabled={pending || uploading}
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '11px 0', borderRadius: 8, border: 'none', background: pending ? '#a8a29e' : '#0c0c0b', color: '#fff', fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', cursor: pending ? 'wait' : 'pointer', transition: 'background 0.2s' }}>
+        {pending ? <Loader2 style={{ width: 14, height: 14, animation: 'spin 0.8s linear infinite' }} /> : null}
+        {pending ? 'Creating…' : 'Create Category'}
       </button>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </form>
   )
 }
