@@ -2,24 +2,27 @@ import { MetadataRoute } from 'next'
 import { createClient } from '@/utils/supabase/server'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  // Uses environment variable if available, fallback to the live domain
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://uksofashop.co.uk'
+  // Uses environment variable if available, fallback to the live UK domain
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.uksofashop.co.uk'
   const supabase = await createClient()
 
-  // 1. Static Base Routes
+  // 1. Static Base Routes (Including your Reviews and Track Order pages)
   const routes: MetadataRoute.Sitemap = [
     { url: `${baseUrl}`, lastModified: new Date(), changeFrequency: 'daily', priority: 1.0 },
     { url: `${baseUrl}/shop/all`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.9 },
     { url: `${baseUrl}/about`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.8 },
     { url: `${baseUrl}/contact`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${baseUrl}/reviews`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.8 },
     { url: `${baseUrl}/delivery-returns`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.7 },
     { url: `${baseUrl}/faq`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.7 },
+    { url: `${baseUrl}/track-order`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.6 },
     { url: `${baseUrl}/search`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.6 },
     { url: `${baseUrl}/privacy`, lastModified: new Date(), changeFrequency: 'yearly', priority: 0.3 },
     { url: `${baseUrl}/terms`, lastModified: new Date(), changeFrequency: 'yearly', priority: 0.3 },
   ]
 
   // 2. Dynamic Category Routes
+  // Fetches all categories from Supabase
   const { data: categories } = await supabase.from('categories').select('slug, created_at')
   
   if (categories) {
@@ -34,6 +37,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }
 
   // 3. Dynamic Product Routes
+  // Fetches all active products and their associated category slug
   const { data: products } = await supabase
     .from('products')
     .select('slug, created_at, categories(slug)')
