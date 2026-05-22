@@ -2,6 +2,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Playfair_Display } from "next/font/google";
 import "./globals.css";
+import EntryAnimation from "@/components/Entryanimation";
 import { CartProvider } from "@/context/CartContext";
 import Header from "@/components/Layout/Header"; 
 import Footer from "@/components/Layout/Footer";
@@ -114,6 +115,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               },
             }} 
           />
+          <EntryAnimation />
           <Header />
           <main className="flex-grow pb-bottom-nav lg:pb-0">
             {children}

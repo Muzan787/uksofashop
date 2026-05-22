@@ -19,6 +19,8 @@ export default function MobileNav() {
   const pathname  = usePathname();
   const { itemCount } = useCart();
 
+  
+
   // Hide on admin pages
   if (pathname.startsWith('/admin')) return null;
 

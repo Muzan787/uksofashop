@@ -107,14 +107,17 @@ export default async function CategoryPage(props: { params: Params; searchParams
 
       {/* Main content */}
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 16px 60px' }}>
-        <div style={{ display: 'flex', gap: 0, alignItems: 'flex-start' }}>
+        
+        {/* Tailwind Flex wrapper for layout: Stack on mobile (Filter on top), row on desktop (Filter on side) */}
+        <div className="flex flex-col lg:flex-row gap-0 items-start">
 
           <FilterSidebar availableStyles={uniqueStyles} availableMaterials={uniqueMaterials} />
 
-          <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ flex: 1, minWidth: 0, width: '100%' }}>
             {products && products.length > 0 ? (
               <>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(200px,1fr))', gap: 16, marginBottom: 8 }}>
+                {/* Responsive Product Grid */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-3 md:gap-4 lg:gap-6 mb-8">
                   {products.map((product, i) => {
                     const img = product.product_variants?.[0]?.image_url ?? null
                     return (
@@ -125,10 +128,10 @@ export default async function CategoryPage(props: { params: Params; searchParams
                           opacity: 0, animation: `fadeUp 0.4s ease ${i * 40}ms forwards`,
                         }}
                       >
-                        {/* Image */}
-                        <div style={{ position: 'relative', aspectRatio: '3/4', borderRadius: 10, overflow: 'hidden', background: '#ede8df', marginBottom: 10 }}>
+                        {/* Image Container: Square on Mobile, 3/4 aspect on Desktop */}
+                        <div className="aspect-square md:aspect-[3/4] relative rounded-[10px] overflow-hidden bg-[#ede8df] mb-[10px]">
                           {img
-                            ? <Image src={img} alt={product.title} fill sizes="(max-width:640px) 50vw, 25vw"
+                            ? <Image src={img} alt={product.title} fill sizes="(max-width:640px) 50vw, 33vw"
                                 style={{ objectFit: 'cover', transition: 'transform 0.6s ease' }}
                                 className="group-hover:scale-105" />
                             : <div style={{ position: 'absolute', inset: 0, background: '#e7e5e4' }} />
@@ -136,7 +139,8 @@ export default async function CategoryPage(props: { params: Params; searchParams
                           {/* Hover overlay */}
                           <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0)', transition: 'background 0.3s' }}
                             className="group-hover:bg-black/10" />
-                          {/* Quick view */}
+                          
+                          {/* Quick view - Hidden on mobile so it doesn't get stuck on touch devices */}
                           <div style={{
                             position: 'absolute', bottom: 8, left: 8, right: 8,
                             background: 'rgba(255,255,255,0.95)', borderRadius: 6, padding: '7px 0',
@@ -144,10 +148,11 @@ export default async function CategoryPage(props: { params: Params; searchParams
                             letterSpacing: '0.1em', textTransform: 'uppercase', color: '#1c1917',
                             opacity: 0, transform: 'translateY(6px)',
                             transition: 'all 0.25s ease',
-                          }} className="group-hover:opacity-100 group-hover:translate-y-0">
+                          }} className="group-hover:opacity-100 group-hover:translate-y-0 hidden md:block">
                             Quick View
                           </div>
                         </div>
+                        
                         {/* Info */}
                         <div>
                           <h3 style={{ fontSize: 13, fontWeight: 700, color: '#1c1917', lineHeight: 1.3, marginBottom: 4,
