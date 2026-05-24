@@ -5,16 +5,16 @@ export default function manifest(): MetadataRoute.Manifest {
     name: 'UK Sofa Shop',
     short_name: 'USS',
     description: 'Discover luxury British sofas with 10-year guarantee. Free UK delivery, cash on delivery available. Shop corner sofas, fabric sofas, and more.',
-    start_url: '/',
+    start_url: '/admin',
     display: 'standalone',
-    background_color: '#80808080',
+    background_color: '#1c1917',
     theme_color: '#F97316', // Updated to match your new orange branding
     icons: [
-      // {
-      //   src: '/icon.svg', // Points to your new SVG
-      //   sizes: 'any',
-      //   type: 'image/svg+xml',
-      // },
+      {
+        src: '/icon.svg', // Points to your new SVG
+        sizes: 'any',
+        type: 'image/svg+xml',
+      },
       // Keep these PNG references for PWA compatibility! 
       // (You should eventually save a 192x192 and 512x512 PNG version of your orange 'U' into the /public folder, as some older Android devices still require PNGs to trigger the install prompt).
       {
