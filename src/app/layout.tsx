@@ -1,5 +1,5 @@
 // src/app/layout.tsx
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import EntryAnimation from "@/components/Entryanimation";
@@ -28,21 +28,27 @@ const playfair = Playfair_Display({
 export const metadata: Metadata = {
   title: "UK Sofa Shop | Luxury Furniture | Premium Sofas & Corner Sofas",
   description: "Discover luxury British sofas with 10-year guarantee. Free UK delivery over £500, cash on delivery available. Shop corner sofas, fabric sofas, and more.",
+  manifest: '/manifest.json',
   keywords: "sofa UK, corner sofa, fabric sofa, luxury furniture, British sofas, cash on delivery sofas",
   openGraph: {
     title: "UK Sofa Shop | Premium British Furniture",
     description: "Luxury sofas crafted for comfort, built to last. Free UK delivery over £500.",
     images: ["/og-image.jpg"],
   },
+  appleWebApp: {
+    capable: true,
+    title: 'UK Sofa Shop Admin',
+    statusBarStyle: 'black-translucent', // Makes the iOS status bar blend in
+  },
 };
 
-export const viewport = {
+export const viewport: Viewport = {
+  themeColor: '#F97316', // Matches the manifest theme color
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 5,
-  userScalable: true,
-  viewportFit: 'cover',
-};
+  maximumScale: 1, // Prevents zooming on mobile inputs for a native feel
+  userScalable: false,
+}
 
 // Enhanced schema with more detailed information
 const localBusinessSchema = {
