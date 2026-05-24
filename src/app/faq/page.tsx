@@ -35,7 +35,8 @@ function FAQ({ q, a }: { q: string; a: string }) {
   )
 }
 
-export function FAQPage() {
+// FIX: Removed 'export' from this function declaration
+function FAQPage() {
   return (
     <div style={{ minHeight: '100vh', background: '#f8f6f2' }}>
       <div style={{ background: '#0c0c0b', borderBottom: `2px solid ${ACCENT}` }}>
@@ -66,4 +67,6 @@ export function FAQPage() {
     </div>
   )
 }
+
+// Next.js recognizes this valid default export
 export default FAQPage
