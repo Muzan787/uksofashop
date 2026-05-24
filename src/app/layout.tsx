@@ -5,6 +5,7 @@ import "./globals.css";
 import { CartProvider } from "@/context/CartContext";
 import MainLayoutWrapper from "@/components/Layout/MainLayoutWrapper";
 import { Toaster } from "react-hot-toast";
+import PWAPromptManager from '@/components/Admin/PWAPromptManager';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -101,6 +102,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} ${playfair.variable} antialiased bg-white flex flex-col min-h-screen`}>
+        <PWAPromptManager /> {/* <-- Add this here! */}
         <CartProvider>
           <Toaster 
             position="bottom-right" 
