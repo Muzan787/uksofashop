@@ -382,7 +382,7 @@ export default function HomeClient({ categories, products }: Props) {
               transition: 'all 0.7s ease 0.2s',
             }}
           >
-            Whereeeee <em className="not-italic" style={{ color: '#d4871a' }}>Comfort</em><br />
+            Where <em className="not-italic" style={{ color: '#d4871a' }}>Comfort</em><br />
             Meets Art.
           </h1>
 
