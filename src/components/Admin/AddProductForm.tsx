@@ -9,7 +9,7 @@ import { Database } from '@/types/supabase'
 
 type Category = Pick<Database['public']['Tables']['categories']['Row'], 'id' | 'name'>
 
-interface VariantState extends VariantInput {
+interface VariantState extends Omit<VariantInput, 'stock'> {
   isUploading: boolean;
 }
 
@@ -18,36 +18,31 @@ export default function AddProductForm({ categories }: { categories: Category[] 
   const [isPending, setIsPending] = useState(false)
   const [error, setError] = useState('')
   
+  // Stock is removed.
   const [variants, setVariants] = useState<VariantState[]>([
-    { sku: '', color: '', color_hex: '#000000', material: '', stock: '10', priceAdjustment: '0', image_url: '', isUploading: false }
+    { sku: '', color: '', color_hex: '#000000', material: '', priceAdjustment: '0', image_url: '', isUploading: false }
   ])
 
-  // NEW: Specifications state with defaults
   const [specs, setSpecs] = useState<{ key: string; value: string }[]>([
     { key: 'Style', value: '' },
     { key: 'Dimensions', value: '' }
   ])
 
   const addVariantRow = () => {
-    setVariants([...variants, {
-      sku: '', color: '',color_hex: '', material: '', stock: '10', priceAdjustment: '0', image_url: '', isUploading: false
-    }])
+    setVariants([...variants, { sku: '', color: '', color_hex: '#000000', material: '', priceAdjustment: '0', image_url: '', isUploading: false }])
   }
 
   const updateVariant = (index: number, field: keyof VariantState, value: string | boolean) => {
-    setVariants((prevVariants) => {
-      const newVariants = [...prevVariants]
+    setVariants(prev => {
+      const newVariants = [...prev]
       // @ts-ignore
       newVariants[index] = { ...newVariants[index], [field]: value }
       return newVariants
     })
   }
 
-  const removeVariant = (index: number) => {
-    setVariants(variants.filter((_, i) => i !== index))
-  }
+  const removeVariant = (index: number) => setVariants(variants.filter((_, i) => i !== index))
 
-  // Specifications helpers
   const handleAddSpec = () => setSpecs([...specs, { key: '', value: '' }])
   const handleRemoveSpec = (index: number) => setSpecs(specs.filter((_, i) => i !== index))
   const handleSpecChange = (index: number, field: 'key' | 'value', val: string) => {
@@ -70,9 +65,7 @@ export default function AddProductForm({ categories }: { categories: Category[] 
       const data = await res.json();
       if (data.secure_url) {
         updateVariant(index, 'image_url', data.secure_url);
-      } else {
-        throw new Error('Upload failed');
-      }
+      } else throw new Error('Upload failed');
     } catch (err) {
       alert("Failed to upload image.");
     } finally {
@@ -86,17 +79,17 @@ export default function AddProductForm({ categories }: { categories: Category[] 
     setError('')
 
     const formData = new FormData(e.currentTarget)
-    
-    // Reduce specs array into an object
     const specificationsObject = specs.reduce((acc, curr) => {
       const trimmedKey = curr.key.trim()
       if (trimmedKey) acc[trimmedKey] = curr.value.trim()
       return acc
     }, {} as Record<string, string>)
-    
     formData.append('specifications', JSON.stringify(specificationsObject))
 
-    const result = await addProduct(formData, variants)
+    // Automatically assign a dummy stock value so the backend action doesn't fail
+    const variantsWithDummyStock = variants.map(v => ({ ...v, stock: '999' }))
+
+    const result = await addProduct(formData, variantsWithDummyStock)
 
     if (result?.error) {
       setError(result.error)
@@ -108,138 +101,135 @@ export default function AddProductForm({ categories }: { categories: Category[] 
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-8 bg-white p-8 rounded-xl shadow-sm border border-gray-200">
-      {error && <div className="p-4 bg-red-50 text-red-600 rounded-lg">{error}</div>}
+    <form onSubmit={handleSubmit} className="space-y-8 bg-white p-5 lg:p-8 rounded-2xl shadow-sm border border-stone-200">
+      {error && <div className="p-4 bg-red-50 text-red-600 font-medium rounded-xl">{error}</div>}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="space-y-5">
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Product Title</label>
-          <input type="text" name="title" required className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-slate-900 outline-none" placeholder="e.g. The Cloud Sofa" />
+          <label className="block text-xs font-bold text-stone-500 uppercase tracking-wider mb-2">Product Title</label>
+          <input type="text" name="title" required className="w-full p-3.5 bg-stone-50 border border-stone-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none font-medium" placeholder="e.g. The Cloud Sofa" />
         </div>
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">URL Slug (Unique)</label>
-          <input type="text" name="slug" required className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-slate-900 outline-none" placeholder="e.g. the-cloud-sofa" />
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div>
+            <label className="block text-xs font-bold text-stone-500 uppercase tracking-wider mb-2">URL Slug</label>
+            <input type="text" name="slug" required className="w-full p-3.5 bg-stone-50 border border-stone-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none font-medium" placeholder="the-cloud-sofa" />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-stone-500 uppercase tracking-wider mb-2">Base Price (£)</label>
+            <input type="number" step="0.01" inputMode="decimal" name="basePrice" required className="w-full p-3.5 bg-stone-50 border border-stone-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none font-bold text-lg" placeholder="499.99" />
+          </div>
         </div>
+
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Categories</label>
-          <div className="w-full p-3 border rounded-lg bg-white max-h-40 overflow-y-auto space-y-2">
+          <label className="block text-xs font-bold text-stone-500 uppercase tracking-wider mb-2">Categories</label>
+          <div className="w-full p-3 bg-stone-50 border border-stone-200 rounded-xl max-h-48 overflow-y-auto space-y-3">
             {categories.map(c => (
-              <label key={c.id} className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" name="categoryIds" value={c.id} className="rounded text-slate-900 focus:ring-slate-900" />
-                <span className="text-sm">{c.name}</span>
+              <label key={c.id} className="flex items-center gap-3 cursor-pointer p-2 hover:bg-stone-100 rounded-lg transition">
+                <input type="checkbox" name="categoryIds" value={c.id} className="w-5 h-5 rounded border-stone-300 text-orange-500 focus:ring-orange-500" />
+                <span className="font-medium text-stone-700">{c.name}</span>
               </label>
             ))}
           </div>
         </div>
+
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Base Price (£)</label>
-          <input type="number" step="0.01" name="basePrice" required className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-slate-900 outline-none" placeholder="499.99" />
+          <label className="block text-xs font-bold text-stone-500 uppercase tracking-wider mb-2">Description</label>
+          <textarea name="description" rows={4} required className="w-full p-3.5 bg-stone-50 border border-stone-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none font-medium" placeholder="Detailed product description..."></textarea>
         </div>
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
-        <textarea name="description" rows={3} required className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-slate-900 outline-none" placeholder="Product description..."></textarea>
-      </div>
-
-      {/* --- Dynamic Specifications Editor --- */}
-      <div className="pt-4 pb-2">
+      {/* Specifications */}
+      <div className="pt-6 border-t border-stone-100">
         <div className="flex items-center justify-between mb-4">
-          <label className="block text-sm font-medium text-slate-700">Product Specifications</label>
-          <button type="button" onClick={handleAddSpec} className="flex items-center gap-2 text-sm bg-slate-100 hover:bg-slate-200 text-slate-900 px-3 py-1.5 rounded-lg transition">
+          <label className="block text-xs font-bold text-stone-500 uppercase tracking-wider">Specifications</label>
+          <button type="button" onClick={handleAddSpec} className="flex items-center gap-2 text-sm bg-orange-50 text-orange-600 font-bold px-4 py-2 rounded-xl transition hover:bg-orange-100">
             <Plus className="w-4 h-4" /> Add Spec
           </button>
         </div>
 
         <div className="flex flex-col gap-3">
           {specs.map((spec, index) => (
-            <div key={index} className="flex items-start gap-3">
-              <div className="flex-1">
-                <input
-                  type="text" placeholder="Spec Name (e.g. Dimensions)" value={spec.key} onChange={(e) => handleSpecChange(index, 'key', e.target.value)}
-                  className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-slate-900 outline-none text-sm"
-                />
+            <div key={index} className="flex flex-col sm:flex-row items-start gap-2 sm:gap-3 bg-stone-50 p-3 rounded-xl border border-stone-200">
+              <input type="text" placeholder="Name (e.g. Dimensions)" value={spec.key} onChange={(e) => handleSpecChange(index, 'key', e.target.value)} className="w-full sm:flex-1 p-3 bg-white border border-stone-200 rounded-lg outline-none font-medium text-sm focus:border-orange-500" />
+              <div className="flex w-full sm:flex-[2] gap-2">
+                <input type="text" placeholder="Value" value={spec.value} onChange={(e) => handleSpecChange(index, 'value', e.target.value)} className="w-full p-3 bg-white border border-stone-200 rounded-lg outline-none font-medium text-sm focus:border-orange-500" />
+                <button type="button" onClick={() => handleRemoveSpec(index)} className="p-3 text-red-500 bg-white border border-stone-200 hover:bg-red-50 rounded-lg transition shrink-0">
+                  <Trash2 className="w-5 h-5" />
+                </button>
               </div>
-              <div className="flex-[2]">
-                {spec.key.toLowerCase() === 'dimensions' ? (
-                  <textarea
-                    placeholder="Value (e.g. Width: 200cm...)" rows={3} value={spec.value} onChange={(e) => handleSpecChange(index, 'value', e.target.value)}
-                    className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-slate-900 outline-none text-sm"
-                  />
-                ) : (
-                  <input
-                    type="text" placeholder="Value (e.g. Modern)" value={spec.value} onChange={(e) => handleSpecChange(index, 'value', e.target.value)}
-                    className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-slate-900 outline-none text-sm"
-                  />
-                )}
-              </div>
-              <button type="button" onClick={() => handleRemoveSpec(index)} className="p-2 text-red-500 hover:bg-red-100 rounded-lg transition mt-0.5">
-                <Trash2 className="w-5 h-5" />
-              </button>
             </div>
           ))}
-          {specs.length === 0 && (
-            <div className="text-center py-6 border border-dashed border-slate-300 rounded-lg text-slate-500 text-sm">
-              No specifications added. Click "Add Spec" to start.
-            </div>
-          )}
         </div>
       </div>
 
-      <div className="pt-6 border-t border-gray-200">
+      {/* Variants */}
+      <div className="pt-6 border-t border-stone-100">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-bold text-slate-900">Color Variants & Images</h3>
-          <button type="button" onClick={addVariantRow} className="text-sm bg-slate-100 hover:bg-slate-200 text-slate-900 px-3 py-1.5 rounded-lg flex items-center gap-1 transition">
-            <Plus className="w-4 h-4" /> Add Variant
+          <label className="block text-xs font-bold text-stone-500 uppercase tracking-wider">Color Variants</label>
+          <button type="button" onClick={addVariantRow} className="text-sm bg-stone-900 text-white font-bold px-4 py-2 rounded-xl flex items-center gap-2 transition hover:bg-stone-800">
+            <Plus className="w-4 h-4" /> Add Color
           </button>
         </div>
 
         <div className="space-y-4">
           {variants.map((variant, index) => (
-            <div key={index} className="flex flex-col gap-4 p-4 bg-slate-50 rounded-xl border border-slate-200">
-              <div className="flex flex-wrap md:flex-nowrap items-center gap-3">
-                <input type="text" placeholder="SKU" value={variant.sku} onChange={(e) => updateVariant(index, 'sku', e.target.value)} required className="flex-1 p-2 border rounded-md text-sm outline-none" />
-                <input type="text" placeholder="Material (e.g. Velvet)" value={variant.material} onChange={(e) => updateVariant(index, 'material', e.target.value)} required className="flex-1 p-2 border rounded-md text-sm outline-none" />
-                <div className="flex items-center gap-2 flex-1">
-                  <input type="color" value={variant.color_hex || '#000000'} onChange={(e) => updateVariant(index, 'color_hex', e.target.value)} className="w-8 h-8 rounded cursor-pointer border-0 p-0" title="Pick exact color" />
-                  <input type="text" placeholder="Color Name" value={variant.color} onChange={(e) => updateVariant(index, 'color', e.target.value)} required className="w-full p-2 border rounded-md text-sm outline-none" />
+            <div key={index} className="flex flex-col gap-4 p-5 bg-stone-50 rounded-2xl border border-stone-200 relative">
+              {variants.length > 1 && (
+                <button type="button" onClick={() => removeVariant(index)} className="absolute top-4 right-4 p-2 text-red-500 hover:bg-red-100 rounded-lg transition">
+                  <Trash2 className="w-5 h-5" />
+                </button>
+              )}
+              
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pr-10 sm:pr-0">
+                <div className="col-span-2">
+                  <label className="block text-[10px] font-bold text-stone-400 uppercase mb-1">Color Name</label>
+                  <div className="flex items-center gap-2 bg-white border border-stone-200 rounded-xl p-1.5 focus-within:border-orange-500">
+                    <input type="color" value={variant.color_hex} onChange={(e) => updateVariant(index, 'color_hex', e.target.value)} className="w-8 h-8 rounded cursor-pointer border-0 p-0 shrink-0" />
+                    <input type="text" placeholder="e.g. Royal Blue" value={variant.color} onChange={(e) => updateVariant(index, 'color', e.target.value)} required className="w-full p-2 text-sm outline-none font-medium" />
+                  </div>
                 </div>
-                <input type="number" placeholder="Stock" value={variant.stock} onChange={(e) => updateVariant(index, 'stock', e.target.value)} required className="w-20 p-2 border rounded-md text-sm outline-none" />
-                <input type="number" step="0.01" placeholder="+£ Price" value={variant.priceAdjustment} onChange={(e) => updateVariant(index, 'priceAdjustment', e.target.value)} className="w-24 p-2 border rounded-md text-sm outline-none" />
-                
-                {!variant.id && (
-                  <button type="button" onClick={() => removeVariant(index)} className="p-2 text-red-500 hover:bg-red-100 rounded-md transition">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                )}
+                <div className="col-span-2 sm:col-span-1">
+                  <label className="block text-[10px] font-bold text-stone-400 uppercase mb-1">Material</label>
+                  <input type="text" placeholder="e.g. Velvet" value={variant.material} onChange={(e) => updateVariant(index, 'material', e.target.value)} required className="w-full p-3 bg-white border border-stone-200 rounded-xl text-sm font-medium outline-none focus:border-orange-500" />
+                </div>
+                <div className="col-span-1">
+                  <label className="block text-[10px] font-bold text-stone-400 uppercase mb-1">SKU</label>
+                  <input type="text" placeholder="SOFA-BLU" value={variant.sku} onChange={(e) => updateVariant(index, 'sku', e.target.value)} required className="w-full p-3 bg-white border border-stone-200 rounded-xl text-sm font-medium outline-none focus:border-orange-500" />
+                </div>
+                <div className="col-span-1">
+                  <label className="block text-[10px] font-bold text-stone-400 uppercase mb-1">+ Price (£)</label>
+                  <input type="number" step="0.01" inputMode="decimal" placeholder="0.00" value={variant.priceAdjustment} onChange={(e) => updateVariant(index, 'priceAdjustment', e.target.value)} className="w-full p-3 bg-white border border-stone-200 rounded-xl text-sm font-bold outline-none focus:border-orange-500" />
+                </div>
               </div>
 
-              <div className="flex items-center gap-4 bg-white p-3 rounded-lg border border-slate-200">
-                <div className="relative">
-                  <input type="file" accept="image/*" onChange={(e) => { if (e.target.files && e.target.files[0]) handleImageUpload(index, e.target.files[0]) }} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
-                  <div className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 font-medium rounded-md hover:bg-slate-200 transition pointer-events-none">
-                    <ImagePlus className="w-4 h-4" />
-                    <span className="text-sm">Upload Image</span>
-                  </div>
+              {/* Thumb-friendly Image Upload */}
+              <div className="relative mt-2">
+                <input type="file" accept="image/*" onChange={(e) => { if (e.target.files && e.target.files[0]) handleImageUpload(index, e.target.files[0]) }} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+                <div className={`flex items-center justify-center gap-3 p-4 rounded-xl border-2 border-dashed transition ${variant.image_url ? 'border-green-500 bg-green-50' : 'border-stone-300 bg-white hover:border-orange-500'}`}>
+                  {variant.isUploading ? (
+                    <div className="flex items-center gap-2 text-stone-500 font-medium"><Loader2 className="w-5 h-5 animate-spin" /> Uploading...</div>
+                  ) : variant.image_url ? (
+                    <>
+                      <img src={variant.image_url} alt="Variant" className="w-12 h-12 object-cover rounded-lg shadow-sm" />
+                      <span className="text-green-700 font-bold text-sm">Image Uploaded (Tap to change)</span>
+                    </>
+                  ) : (
+                    <>
+                      <ImagePlus className="w-6 h-6 text-stone-400" />
+                      <span className="font-bold text-stone-600 text-sm">Tap to Upload Photo</span>
+                    </>
+                  )}
                 </div>
-                {variant.isUploading && (
-                  <div className="flex items-center gap-2 text-sm text-slate-500"><Loader2 className="w-4 h-4 animate-spin" /> Uploading...</div>
-                )}
-                {variant.image_url && !variant.isUploading && (
-                  <div className="flex items-center gap-3">
-                    <img src={variant.image_url} alt="Variant preview" className="w-10 h-10 object-cover rounded shadow-sm border border-gray-200" />
-                    <span className="text-xs text-green-600 font-medium">Uploaded Successfully</span>
-                  </div>
-                )}
               </div>
             </div>
           ))}
         </div>
       </div>
 
-      <div className="pt-6">
-        <button type="submit" disabled={isPending || variants.some(v => v.isUploading)} className="w-full bg-slate-900 text-white py-3 rounded-xl font-bold hover:bg-slate-800 transition disabled:opacity-70 flex justify-center items-center gap-2">
-          {isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Save Product & Variants'}
+      <div className="pt-8">
+        <button type="submit" disabled={isPending || variants.some(v => v.isUploading)} className="w-full bg-orange-500 text-white py-4 rounded-2xl font-black text-lg hover:bg-orange-600 transition shadow-lg disabled:opacity-70 flex justify-center items-center gap-2 active:scale-[0.98]">
+          {isPending ? <Loader2 className="w-6 h-6 animate-spin" /> : 'Create Product'}
         </button>
       </div>
     </form>

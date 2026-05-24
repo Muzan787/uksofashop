@@ -2,11 +2,8 @@
 import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono, Playfair_Display } from "next/font/google";
 import "./globals.css";
-import EntryAnimation from "@/components/Entryanimation";
 import { CartProvider } from "@/context/CartContext";
-import Header from "@/components/Layout/Header"; 
-import Footer from "@/components/Layout/Footer";
-import MobileNav from "@/components/Layout/Mobilenav";
+import MainLayoutWrapper from "@/components/Layout/MainLayoutWrapper";
 import { Toaster } from "react-hot-toast";
 
 const geistSans = Geist({
@@ -94,7 +91,6 @@ const localBusinessSchema = {
     }
   }
 };
-
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
@@ -121,13 +117,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               },
             }} 
           />
-          <EntryAnimation />
-          <Header />
-          <main className="flex-grow pb-bottom-nav lg:pb-0">
+          
+          {/* Use the wrapper here instead of hardcoding Header/Footer */}
+          <MainLayoutWrapper>
             {children}
-          </main>
-          <Footer categories={[]} />
-          <MobileNav />
+          </MainLayoutWrapper>
+
         </CartProvider>
       </body>
     </html>

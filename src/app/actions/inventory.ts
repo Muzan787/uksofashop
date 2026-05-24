@@ -108,6 +108,24 @@ export async function deleteProduct(formData: FormData) {
   revalidatePath('/shop/[category]', 'layout')
 }
 
+export async function activateProduct(formData: FormData) {
+  const productId = formData.get('productId') as string
+  if (!productId) return
+
+  const supabase = await createClient()
+
+  // Toggle the product back to active
+  await supabase
+    .from('products')
+    .update({ is_active: true })
+    .eq('id', productId)
+
+  // Refresh the UI instantly
+  revalidatePath('/admin/inventory')
+  revalidatePath('/admin')
+  revalidatePath('/')
+}
+
 export async function updateProduct(formData: FormData, variants: VariantInput[], productId: string) {
   const supabase = await createClient()
 

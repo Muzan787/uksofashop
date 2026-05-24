@@ -43,3 +43,11 @@ yarn-error.log*
 next-env.d.ts
 
 *.txt
+
+# PWA auto-generated files
+**/public/sw.js
+**/public/sw.js.map
+**/public/workbox-*.js
+**/public/worker-*.js
+**/public/fallback-*.js
+**/public/swe-worker-*.js

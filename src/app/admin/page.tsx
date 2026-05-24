@@ -1,91 +1,73 @@
 // src/app/admin/page.tsx
 import { createClient } from '@/utils/supabase/server'
-import { DollarSign, ShoppingCart, Package, MessageSquare } from 'lucide-react'
+import { DollarSign, ShoppingBag, PackagePlus, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
 
 export default async function AdminDashboardPage() {
   const supabase = await createClient()
 
-  // 1. Fetch Total Orders & Revenue
-  const { data: orders } = await supabase.from('orders').select('total_amount')
-  const totalOrders = orders?.length || 0
+  // Fetch metrics silently and rapidly
+  const { data: orders } = await supabase.from('orders').select('total_amount, status')
   const totalRevenue = orders?.reduce((sum, order) => sum + Number(order.total_amount), 0) || 0
+  const pendingOrders = orders?.filter(o => o.status === 'pending').length || 0
 
-  // 2. Fetch Total Products
   const { count: productCount } = await supabase
     .from('products')
     .select('*', { count: 'exact', head: true })
 
-  // 3. Fetch Pending Reviews Count
-  const { count: pendingReviews } = await supabase
-    .from('reviews')
-    .select('*', { count: 'exact', head: true })
-    .eq('status', 'pending')
-
   return (
-    <div className="max-w-6xl mx-auto space-y-8">
-      <h1 className="text-3xl font-bold text-slate-900">Dashboard Overview</h1>
+    <div className="space-y-6 lg:space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      
+      <header className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl lg:text-4xl font-bold text-zinc-900 tracking-tight">Overview</h1>
+          <p className="text-sm text-zinc-500 mt-1">Manage your storefront and orders.</p>
+        </div>
+      </header>
 
-      {/* Stat Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* Cinematic Mobile-First Stat Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6">
         
-        {/* Revenue Card */}
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 flex flex-col">
-          <div className="flex justify-between items-start mb-4">
-            <h3 className="text-slate-500 font-medium">Total Revenue</h3>
-            <div className="p-2 bg-green-50 text-green-600 rounded-lg">
-              <DollarSign className="w-5 h-5" />
-            </div>
+        {/* Primary Metric: Revenue */}
+        <div className="col-span-2 lg:col-span-1 bg-zinc-900 p-5 lg:p-6 rounded-2xl lg:rounded-3xl shadow-lg relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-4 opacity-10">
           </div>
-          <p className="text-3xl font-bold text-slate-900">£{totalRevenue.toFixed(2)}</p>
+          <h3 className="text-zinc-400 text-xs lg:text-sm font-semibold tracking-wider uppercase mb-2">Total Revenue</h3>
+          <p className="text-3xl lg:text-4xl font-bold text-white">£{totalRevenue.toLocaleString()}</p>
         </div>
 
-        {/* Orders Card */}
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 flex flex-col">
-          <div className="flex justify-between items-start mb-4">
-            <h3 className="text-slate-500 font-medium">Total Orders</h3>
-            <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
-              <ShoppingCart className="w-5 h-5" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold text-slate-900">{totalOrders}</p>
+        <div className="bg-white p-5 lg:p-6 rounded-2xl lg:rounded-3xl border border-zinc-200 shadow-sm">
+          <h3 className="text-zinc-500 text-xs lg:text-sm font-semibold tracking-wider uppercase mb-2">Pending Orders</h3>
+          <p className="text-2xl lg:text-3xl font-bold text-orange-500">{pendingOrders}</p>
         </div>
 
-        {/* Inventory Card */}
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 flex flex-col">
-          <div className="flex justify-between items-start mb-4">
-            <h3 className="text-slate-500 font-medium">Products</h3>
-            <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
-              <Package className="w-5 h-5" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold text-slate-900">{productCount || 0}</p>
-        </div>
-
-        {/* Reviews Card */}
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 flex flex-col">
-          <div className="flex justify-between items-start mb-4">
-            <h3 className="text-slate-500 font-medium">Pending Reviews</h3>
-            <div className="p-2 bg-amber-50 text-amber-600 rounded-lg">
-              <MessageSquare className="w-5 h-5" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold text-slate-900">{pendingReviews || 0}</p>
+        <div className="bg-white p-5 lg:p-6 rounded-2xl lg:rounded-3xl border border-zinc-200 shadow-sm">
+          <h3 className="text-zinc-500 text-xs lg:text-sm font-semibold tracking-wider uppercase mb-2">Active Products</h3>
+          <p className="text-2xl lg:text-3xl font-bold text-zinc-900">{productCount || 0}</p>
         </div>
       </div>
 
-      {/* Quick Actions */}
-      <div className="mt-8">
-        <h2 className="text-xl font-bold text-slate-900 mb-4">Quick Actions</h2>
-        <div className="flex flex-wrap gap-4">
-          <Link href="/admin/inventory" className="bg-slate-900 text-white px-6 py-3 rounded-lg font-medium hover:bg-slate-800 transition">
+      {/* Quick Actions - Ergonomic touch targets for mobile */}
+      <div>
+        <h2 className="text-sm font-bold text-zinc-400 uppercase tracking-wider mb-4">Quick Actions</h2>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <Link href="/admin/inventory/new" 
+            className="flex items-center justify-center gap-2 bg-orange-500 text-white px-5 py-4 rounded-xl font-medium hover:bg-orange-600 active:scale-[0.98] transition-all shadow-sm">
+            <PackagePlus className="w-5 h-5" />
             Add New Product
           </Link>
-          <Link href="/admin/orders" className="bg-white text-slate-900 border border-gray-300 px-6 py-3 rounded-lg font-medium hover:bg-gray-50 transition">
-            View Orders
+          
+          <Link href="/admin/orders" 
+            className="flex items-center justify-between sm:justify-center gap-2 bg-white text-zinc-900 border border-zinc-200 px-5 py-4 rounded-xl font-medium hover:bg-zinc-50 active:scale-[0.98] transition-all">
+            <div className="flex items-center gap-2">
+              <ShoppingBag className="w-5 h-5 text-zinc-400" />
+              <span>Process Orders</span>
+            </div>
+            <ArrowRight className="w-4 h-4 text-zinc-400 sm:hidden" />
           </Link>
         </div>
       </div>
+      
     </div>
   )
 }
