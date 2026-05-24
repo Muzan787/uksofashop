@@ -16,7 +16,7 @@ function ProseSection({ num, title, children }: { num: string; title: string; ch
   )
 }
 
-export function PrivacyPage() {
+function PrivacyPage() {
   return (
     <div style={{ minHeight: '100vh', background: '#f8f6f2' }}>
       <div style={{ background: '#0c0c0b', borderBottom: `2px solid ${ACCENT}` }}>

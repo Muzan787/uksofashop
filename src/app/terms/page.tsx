@@ -16,7 +16,7 @@ const termsSections = [
   { num: '8.', title: 'Governing Law', body: 'These terms are governed by the laws of England and Wales. Any disputes will be subject to the exclusive jurisdiction of the courts of England and Wales.' },
 ]
 
-export function TermsPage() {
+function TermsPage() {
   return (
     <div style={{ minHeight: '100vh', background: '#f8f6f2' }}>
       <div style={{ background: '#0c0c0b', borderBottom: `2px solid ${ACCENT}` }}>
