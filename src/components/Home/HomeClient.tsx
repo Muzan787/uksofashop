@@ -164,8 +164,8 @@ function ProductCard({ product }: { product: Product }) {
     >
       {/* Image */}
       <div
-        className="relative overflow-hidden bg-stone-100"
-        style={{ aspectRatio: '3/4', borderRadius: 10 }}
+        className="relative overflow-hidden bg-stone-100 aspect-[4/3] sm:aspect-[3/4]"
+        style={{ borderRadius: 10 }}
       >
         {image ? (
           <Image
@@ -651,7 +651,7 @@ export default function HomeClient({ categories, products }: Props) {
             </div>
           </Reveal>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 sm:gap-4">
             {products.map((p, i) => (
               <Reveal key={p.id} delay={i * 50}>
                 <ProductCard product={p} />

@@ -1,8 +1,8 @@
 'use client'
 // src/app/track-order/page.tsx
 import { useState, useEffect, Suspense } from 'react'
-import { Package, Search, Clock, Truck, CheckCircle, XCircle, Loader2, ArrowRight } from 'lucide-react'
-import { trackOrderByShortCode } from '@/app/actions/orders'
+import { Package, Search, Clock, Truck, CheckCircle, XCircle, Loader2, ArrowRight, ChevronDown, ChevronUp, MapPin } from 'lucide-react'
+import { trackOrdersByPostcode } from '@/app/actions/orders'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
@@ -35,7 +35,6 @@ function StatusBadge({ status }: { status: string }) {
         </div>
       </div>
 
-      {/* Progress bar — only for active orders */}
       {cfg.step > 0 && status !== 'cancelled' && (
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
@@ -58,7 +57,6 @@ function StatusBadge({ status }: { status: string }) {
               </div>
             ))}
           </div>
-          {/* Connector line */}
           <div style={{ position: 'relative', height: 2, background: '#e7e5e4', borderRadius: 2, margin: '-42px 11px 22px', zIndex: 0 }}>
             <div style={{ height: '100%', borderRadius: 2, background: cfg.color, width: `${Math.max(0, (cfg.step - 1) / (STEPS.length - 1)) * 100}%`, transition: 'width 0.6s ease' }} />
           </div>
@@ -70,48 +68,58 @@ function StatusBadge({ status }: { status: string }) {
 
 function TrackInterface() {
   const sp = useSearchParams()
-  const [code, setCode]           = useState(sp.get('code') || '')
+  const [postcode, setPostcode]   = useState(sp.get('postcode') || '')
   const [searching, setSearching] = useState(false)
   const [error, setError]         = useState('')
-  const [order, setOrder]         = useState<any>(null)
+  const [orders, setOrders]       = useState<any[]>([])
+  const [expandedId, setExpandedId] = useState<string | null>(null)
   const [focused, setFocused]     = useState(false)
 
   const track = async (val: string) => {
     if (!val.trim()) return
-    setSearching(true); setError(''); setOrder(null)
-    const res = await trackOrderByShortCode(val.trim())
-    res.error ? setError(res.error) : setOrder(res.order)
+    setSearching(true); setError(''); setOrders([])
+    
+    const res = await trackOrdersByPostcode(val)
+    if (res.error) {
+      setError(res.error)
+    } else if (res.orders && res.orders.length > 0) {
+      setOrders(res.orders)
+      // Automatically expand the most recent order
+      setExpandedId(res.orders[0].id)
+    }
     setSearching(false)
   }
 
-  useEffect(() => { if (sp.get('code')) track(sp.get('code')!) }, [])
+  // Auto-search if postcode is passed in the URL (e.g. from checkout success page)
+  useEffect(() => { 
+    if (sp.get('postcode')) track(sp.get('postcode')!) 
+  }, [])
 
   return (
-    <div style={{ maxWidth: 560, width: '100%' }}>
+    <div style={{ maxWidth: 640, width: '100%' }}>
 
       {/* Search card */}
-      <div style={{ background: '#fff', borderRadius: 14, padding: '24px', border: '1px solid #f0ede8', boxShadow: '0 2px 16px rgba(0,0,0,0.05)', marginBottom: order || error ? 16 : 0 }}>
+      <div style={{ background: '#fff', borderRadius: 14, padding: '24px', border: '1px solid #f0ede8', boxShadow: '0 2px 16px rgba(0,0,0,0.05)', marginBottom: orders.length > 0 || error ? 16 : 0 }}>
         <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start', marginBottom: 20 }}>
           <div style={{ width: 42, height: 42, borderRadius: 10, background: `${ACCENT}14`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <Package style={{ width: 20, height: 20, color: ACCENT }} />
+            <MapPin style={{ width: 20, height: 20, color: ACCENT }} />
           </div>
           <div>
-            <h1 className="font-playfair" style={{ fontSize: 22, fontWeight: 700, color: '#1c1917', lineHeight: 1.1 }}>Track Your Order</h1>
-            <p style={{ fontSize: 12, color: '#78716c', marginTop: 4 }}>Enter your 8-character order reference</p>
+            <h1 className="font-playfair" style={{ fontSize: 24, fontWeight: 700, color: '#1c1917', lineHeight: 1.1 }}>Track Your Orders</h1>
+            <p style={{ fontSize: 12, color: '#78716c', marginTop: 4 }}>Enter your delivery postcode to view all your orders.</p>
           </div>
         </div>
 
         <div style={{ position: 'relative', marginBottom: 12 }}>
           <input
-            value={code}
-            onChange={e => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8))}
+            value={postcode}
+            onChange={e => setPostcode(e.target.value.toUpperCase())}
             onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
-            onKeyDown={e => e.key === 'Enter' && track(code)}
-            placeholder="e.g. A1B2C3D4"
-            maxLength={8}
+            onKeyDown={e => e.key === 'Enter' && track(postcode)}
+            placeholder="e.g. SW1A 1AA"
             style={{
               width: '100%', padding: '12px 50px 12px 16px',
-              fontSize: 16, fontFamily: 'monospace', fontWeight: 700, letterSpacing: '0.22em', textTransform: 'uppercase',
+              fontSize: 16, fontFamily: 'monospace', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase',
               border: `1.5px solid ${focused ? ACCENT : '#e7e5e4'}`, borderRadius: 8, outline: 'none',
               background: '#fafaf9', color: '#1c1917', boxSizing: 'border-box',
               transition: 'border-color 0.2s ease',
@@ -120,71 +128,104 @@ function TrackInterface() {
           {searching && <Loader2 style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', width: 16, height: 16, color: ACCENT, animation: 'spin 0.8s linear infinite' }} />}
         </div>
 
-        <button onClick={() => track(code)} disabled={searching || code.length < 8}
+        <button onClick={() => track(postcode)} disabled={searching || postcode.length < 4}
           style={{
             width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             padding: '12px 0', borderRadius: 8, border: 'none',
-            background: code.length < 8 ? '#e7e5e4' : ACCENT,
-            color: code.length < 8 ? '#a8a29e' : '#fff',
+            background: postcode.length < 4 ? '#e7e5e4' : ACCENT,
+            color: postcode.length < 4 ? '#a8a29e' : '#fff',
             fontSize: 12, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase',
-            cursor: code.length < 8 ? 'not-allowed' : 'pointer',
+            cursor: postcode.length < 4 ? 'not-allowed' : 'pointer',
             transition: 'all 0.2s ease',
           }}
         >
           <Search style={{ width: 14, height: 14 }} />
-          {searching ? 'Searching…' : 'Track Order'}
+          {searching ? 'Searching…' : 'Find My Orders'}
         </button>
       </div>
 
       {/* Error */}
       {error && (
         <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, padding: '14px 16px', fontSize: 12, color: '#dc2626', marginBottom: 16 }}>
-          {error} — Please double-check your reference code.
+          {error}
         </div>
       )}
 
-      {/* Order result */}
-      {order && (
-        <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #f0ede8', overflow: 'hidden', boxShadow: '0 2px 16px rgba(0,0,0,0.05)' }}>
-          {/* Header */}
-          <div style={{ padding: '16px 20px', borderBottom: `3px solid ${ACCENT}`, background: `${ACCENT}08`, display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
-            <div>
-              <div style={{ fontSize: 9, color: ACCENT, textTransform: 'uppercase', letterSpacing: '0.2em', fontWeight: 700, marginBottom: 4 }}>Order Reference</div>
-              <div style={{ fontFamily: 'monospace', fontSize: 18, fontWeight: 900, color: '#1c1917', letterSpacing: '0.18em' }}>{code}</div>
-            </div>
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: 9, color: '#a8a29e', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: 4 }}>Placed</div>
-              <div style={{ fontSize: 12, fontWeight: 600, color: '#1c1917' }}>{new Date(order.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
-            </div>
+      {/* Orders List Accordion */}
+      {orders.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#78716c', textTransform: 'uppercase', letterSpacing: '0.15em', marginLeft: 4, marginBottom: 4 }}>
+            Found {orders.length} {orders.length === 1 ? 'Order' : 'Orders'}
           </div>
 
-          <div style={{ padding: '20px' }}>
-            <StatusBadge status={order.status} />
+          {orders.map((order) => {
+            const isExpanded = expandedId === order.id;
+            const shortId = `#${order.id.split('-')[0].toUpperCase()}`;
+            const statusCfg = STATUS_MAP[order.status] ?? STATUS_MAP.pending_cod;
+            
+            return (
+              <div key={order.id} style={{ background: '#fff', borderRadius: 14, border: '1px solid #f0ede8', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.03)', transition: 'all 0.3s ease' }}>
+                
+                {/* Accordion Header (Always visible) */}
+                <button 
+                  onClick={() => setExpandedId(isExpanded ? null : order.id)}
+                  style={{ width: '100%', padding: '16px 20px', background: isExpanded ? `${ACCENT}08` : 'transparent', border: 'none', borderBottom: isExpanded ? `2px solid ${ACCENT}` : 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', textAlign: 'left', transition: 'background 0.2s ease' }}
+                >
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                      <span style={{ fontFamily: 'monospace', fontSize: 16, fontWeight: 900, color: '#1c1917', letterSpacing: '0.1em' }}>{shortId}</span>
+                      <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: `${statusCfg.color}20`, color: statusCfg.color }}>
+                        {statusCfg.label}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: 11, color: '#78716c' }}>
+                      Placed {new Date(order.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </div>
+                  </div>
+                  
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: '#1c1917' }}>£{order.total_amount.toFixed(0)}</div>
+                    {isExpanded ? <ChevronUp style={{ width: 18, height: 18, color: '#a8a29e' }} /> : <ChevronDown style={{ width: 18, height: 18, color: '#a8a29e' }} />}
+                  </div>
+                </button>
 
-            {/* Items */}
-            <div style={{ fontSize: 10, color: '#a8a29e', textTransform: 'uppercase', letterSpacing: '0.16em', fontWeight: 700, marginBottom: 10 }}>Items</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
-              {order.order_items?.map((item: any, i: number) => (
-                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: '#fafaf9', borderRadius: 7, fontSize: 12 }}>
-                  <span style={{ color: '#57534e' }}>
-                    {item.quantity}× {item.product_variants?.products?.title ?? 'Product'}
-                    {item.product_variants?.color && <span style={{ color: '#a8a29e' }}> · {item.product_variants.color}</span>}
-                  </span>
-                  <span style={{ fontWeight: 700, color: '#1c1917' }}>£{item.price_at_time_of_purchase.toFixed(2)}</span>
-                </div>
-              ))}
-            </div>
+                {/* Accordion Body (Only visible if expanded) */}
+                {isExpanded && (
+                  <div style={{ padding: '20px', animation: 'fadeIn 0.3s ease' }}>
+                    <StatusBadge status={order.status} />
 
-            {/* Total */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 12px', background: '#0c0c0b', borderRadius: 8 }}>
-              <span style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.6)' }}>Total (COD)</span>
-              <span style={{ fontSize: 15, fontWeight: 800, color: ACCENT }}>£{order.total_amount.toFixed(2)}</span>
-            </div>
-          </div>
+                    {/* Items */}
+                    <div style={{ fontSize: 10, color: '#a8a29e', textTransform: 'uppercase', letterSpacing: '0.16em', fontWeight: 700, marginBottom: 10 }}>Items</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+                      {order.order_items?.map((item: any, i: number) => (
+                        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: '#fafaf9', borderRadius: 7, fontSize: 12 }}>
+                          <span style={{ color: '#57534e' }}>
+                            <span style={{ fontWeight: 700, color: '#1c1917', marginRight: 6 }}>{item.quantity}×</span> 
+                            {item.product_variants?.products?.title ?? 'Product'}
+                            {item.product_variants?.color && <span style={{ color: '#a8a29e' }}> · {item.product_variants.color}</span>}
+                          </span>
+                          <span style={{ fontWeight: 700, color: '#1c1917' }}>£{item.price_at_time_of_purchase.toFixed(2)}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Total Summary */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '14px 16px', background: '#0c0c0b', borderRadius: 8 }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.6)' }}>Total (COD)</span>
+                      <span style={{ fontSize: 15, fontWeight: 800, color: ACCENT }}>£{order.total_amount.toFixed(2)}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </div>
       )}
 
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+      `}</style>
     </div>
   )
 }
@@ -194,10 +235,10 @@ export default function TrackOrderPage() {
     <div style={{ minHeight: '100vh', background: '#f8f6f2' }}>
       {/* Dark header */}
       <div style={{ background: '#0c0c0b', borderBottom: `2px solid ${ACCENT}`, padding: '14px 16px' }}>
-        <div style={{ maxWidth: 560, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ maxWidth: 640, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Link href="/" style={{ textDecoration: 'none' }}>
             <span className="font-playfair" style={{ fontSize: 18, fontWeight: 700, color: '#fff' }}>
-              UK Sofa<span style={{ color: ACCENT }}>Shop</span>
+              Vantage<span style={{ color: ACCENT }}>Group</span>
             </span>
           </Link>
           <Link href="/shop/all" style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'rgba(255,255,255,0.4)', textDecoration: 'none' }}
@@ -206,7 +247,7 @@ export default function TrackOrderPage() {
           </Link>
         </div>
       </div>
-      <div style={{ maxWidth: 560, margin: '0 auto', padding: '28px 16px 60px', display: 'flex', justifyContent: 'center' }}>
+      <div style={{ maxWidth: 640, margin: '0 auto', padding: '28px 16px 60px', display: 'flex', justifyContent: 'center' }}>
         <Suspense fallback={<div style={{ width: '100%', height: 300, background: '#fff', borderRadius: 14, animation: 'pulse 1.5s ease infinite' }} />}>
           <TrackInterface />
         </Suspense>

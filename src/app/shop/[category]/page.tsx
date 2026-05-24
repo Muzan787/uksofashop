@@ -16,13 +16,10 @@ const ITEMS_PER_PAGE = 9
 export async function generateMetadata(props: { params: Params }): Promise<Metadata> {
   const { category } = await props.params
   
-  // Next.js turns '+' into spaces. This puts the '+' back just in case!
   const decodedCategory = decodeURIComponent(category)
   const slugWithPlus = decodedCategory.replace(/ /g, '+') 
 
   const supabase = await createClient()
-  
-  // Check for both versions in the database
   const { data } = await supabase
     .from('categories')
     .select('name')
@@ -40,8 +37,6 @@ export async function generateMetadata(props: { params: Params }): Promise<Metad
 
 export default async function CategoryPage(props: { params: Params; searchParams: SearchParams }) {
   const { category } = await props.params
-  
-  // Next.js turns '+' into spaces. This puts the '+' back just in case!
   const decodedCategory = decodeURIComponent(category)
   const slugWithPlus = decodedCategory.replace(/ /g, '+') 
   
@@ -51,7 +46,6 @@ export default async function CategoryPage(props: { params: Params; searchParams
   let categoryData: { id: string; name: string; image_url?: string | null } | null = null
   
   if (decodedCategory !== 'all') {
-    // Check for both versions in the database
     const { data } = await supabase
       .from('categories')
       .select('id, name, image_url')
@@ -71,25 +65,36 @@ export default async function CategoryPage(props: { params: Params; searchParams
   const from = (currentPage - 1) * ITEMS_PER_PAGE
   const to   = from + ITEMS_PER_PAGE - 1
 
+  // Added color and price_adjustment to the select query
   let query = supabase
     .from('products')
-    .select('id, title, slug, base_price, average_rating, review_count, product_variants!inner(image_url, material), product_categories!inner(category_id)', { count: 'exact' })
+    .select('id, title, slug, base_price, average_rating, review_count, product_variants!inner(image_url, material, color, price_adjustment), product_categories!inner(category_id)', { count: 'exact' })
     .eq('is_active', true)
 
   if (categoryData) query = query.eq('product_categories.category_id', categoryData.id)
+  
+  // Apply URL Filters
   if (typeof sp.style === 'string')    query = query.filter('specifications->>style', 'ilike', sp.style)
   if (typeof sp.material === 'string') query = query.filter('product_variants.material', 'ilike', sp.material)
+  if (typeof sp.color === 'string')    query = query.filter('product_variants.color', 'ilike', sp.color)
 
   const { data: products, count } = await query.order('created_at', { ascending: false }).range(from, to)
   const totalPages  = count ? Math.ceil(count / ITEMS_PER_PAGE) : 0
   const pageTitle   = categoryData ? categoryData.name : 'All Sofas'
 
-  // Fetch specs for filter options
-  let specsQ = supabase.from('products').select('specifications, product_categories!inner(category_id)').eq('is_active', true)
+  // Fetch specs for filter options globally for this category
+  let specsQ = supabase
+    .from('products')
+    .select('specifications, product_variants(material, color), product_categories!inner(category_id)')
+    .eq('is_active', true)
+    
   if (categoryData) specsQ = specsQ.eq('product_categories.category_id', categoryData.id)
   const { data: allSpecs } = await specsQ
-  const uniqueStyles    = [...new Set(allSpecs?.map(p => (p.specifications as any)?.style).filter(Boolean) as string[])]
-  const uniqueMaterials = [...new Set(allSpecs?.map(p => (p.specifications as any)?.material).filter(Boolean) as string[])]
+  
+  // Extract unique filter options
+  const uniqueStyles = [...new Set(allSpecs?.map(p => (p.specifications as any)?.style).filter(Boolean) as string[])]
+  const uniqueMaterials = [...new Set(allSpecs?.flatMap(p => p.product_variants.map((v: any) => v.material)).filter(Boolean) as string[])]
+  const uniqueColors = [...new Set(allSpecs?.flatMap(p => p.product_variants.map((v: any) => v.color)).filter(Boolean) as string[])]
 
   return (
     <div style={{ minHeight: '100vh', background: '#f8f6f2' }}>
@@ -100,7 +105,6 @@ export default async function CategoryPage(props: { params: Params; searchParams
           <Image src={categoryData.image_url} alt={pageTitle} fill style={{ objectFit: 'cover', opacity: 0.3 }} sizes="100vw" />
         )}
         <div style={{ position: 'relative', maxWidth: 1100, margin: '0 auto', padding: '40px 16px 32px' }}>
-          {/* Breadcrumb */}
           <nav style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 14, flexWrap: 'wrap' }}>
             {[['/', 'Home'], ['/shop/all', 'Shop']].map(([href, label]) => (
               <span key={href} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -111,7 +115,6 @@ export default async function CategoryPage(props: { params: Params; searchParams
             ))}
             <span style={{ fontSize: 11, color: ACCENT, fontWeight: 600 }}>{pageTitle}</span>
           </nav>
-          {/* Title */}
           <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
             <div>
               <div style={{ fontSize: 9, color: ACCENT, textTransform: 'uppercase', letterSpacing: '0.22em', fontWeight: 700, marginBottom: 6 }}>
@@ -133,19 +136,36 @@ export default async function CategoryPage(props: { params: Params; searchParams
 
       {/* Main content */}
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 16px 60px' }}>
-        
-        {/* Tailwind Flex wrapper for layout: Stack on mobile (Filter on top), row on desktop (Filter on side) */}
         <div className="flex flex-col lg:flex-row gap-0 items-start">
 
-          <FilterSidebar availableStyles={uniqueStyles} availableMaterials={uniqueMaterials} />
+          <FilterSidebar 
+            availableStyles={uniqueStyles} 
+            availableMaterials={uniqueMaterials} 
+            availableColors={uniqueColors} 
+          />
 
           <div style={{ flex: 1, minWidth: 0, width: '100%' }}>
             {products && products.length > 0 ? (
               <>
-                {/* Responsive Product Grid */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-3 md:gap-4 lg:gap-6 mb-8">
                   {products.map((product, i) => {
-                    const img = product.product_variants?.[0]?.image_url ?? null
+                    
+                    // Logic to find the variant that matches the user's active filters
+                    let targetVariant = product.product_variants?.[0]
+                    
+                    if (typeof sp.color === 'string' || typeof sp.material === 'string') {
+                      const match = product.product_variants?.find(v => {
+                        const colorMatch = typeof sp.color === 'string' ? v.color?.toLowerCase() === sp.color.toLowerCase() : true;
+                        const matMatch = typeof sp.material === 'string' ? v.material?.toLowerCase() === sp.material.toLowerCase() : true;
+                        return colorMatch && matMatch;
+                      })
+                      if (match) targetVariant = match;
+                    }
+
+                    const img = targetVariant?.image_url ?? null
+                    // Include variant price adjustment if applicable
+                    const displayPrice = product.base_price + (targetVariant?.price_adjustment || 0)
+
                     return (
                       <Link key={product.id} href={`/shop/${category}/${product.slug}`}
                         className="group block"
@@ -154,7 +174,6 @@ export default async function CategoryPage(props: { params: Params; searchParams
                           opacity: 0, animation: `fadeUp 0.4s ease ${i * 40}ms forwards`,
                         }}
                       >
-                        {/* Image Container: Square on Mobile, 3/4 aspect on Desktop */}
                         <div className="aspect-square md:aspect-[3/4] relative rounded-[10px] overflow-hidden bg-[#ede8df] mb-[10px]">
                           {img
                             ? <Image src={img} alt={product.title} fill sizes="(max-width:640px) 50vw, 33vw"
@@ -162,11 +181,9 @@ export default async function CategoryPage(props: { params: Params; searchParams
                                 className="group-hover:scale-105" />
                             : <div style={{ position: 'absolute', inset: 0, background: '#e7e5e4' }} />
                           }
-                          {/* Hover overlay */}
                           <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0)', transition: 'background 0.3s' }}
                             className="group-hover:bg-black/10" />
                           
-                          {/* Quick view - Hidden on mobile so it doesn't get stuck on touch devices */}
                           <div style={{
                             position: 'absolute', bottom: 8, left: 8, right: 8,
                             background: 'rgba(255,255,255,0.95)', borderRadius: 6, padding: '7px 0',
@@ -179,7 +196,6 @@ export default async function CategoryPage(props: { params: Params; searchParams
                           </div>
                         </div>
                         
-                        {/* Info */}
                         <div>
                           <h3 style={{ fontSize: 13, fontWeight: 700, color: '#1c1917', lineHeight: 1.3, marginBottom: 4,
                             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
@@ -188,7 +204,7 @@ export default async function CategoryPage(props: { params: Params; searchParams
                           >{product.title}</h3>
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                             <span style={{ fontSize: 15, fontWeight: 800, color: '#1c1917' }}>
-                              £{product.base_price.toFixed(0)}
+                              £{displayPrice.toFixed(0)}
                             </span>
                             {(product.review_count ?? 0) > 0 && (
                               <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>

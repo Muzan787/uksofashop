@@ -6,9 +6,13 @@ import { SlidersHorizontal, X } from 'lucide-react'
 
 const ACCENT = '#d4871a'
 
-interface Props { availableStyles: string[]; availableMaterials: string[] }
+interface Props { 
+  availableStyles: string[]; 
+  availableMaterials: string[];
+  availableColors: string[];
+}
 
-export default function FilterSidebar({ availableStyles, availableMaterials }: Props) {
+export default function FilterSidebar({ availableStyles, availableMaterials, availableColors }: Props) {
   const router   = useRouter()
   const pathname = usePathname()
   const sp       = useSearchParams()
@@ -21,16 +25,17 @@ export default function FilterSidebar({ availableStyles, availableMaterials }: P
     router.push(params.toString() ? `${pathname}?${params.toString()}` : pathname, { scroll: false })
   }, [sp, router, pathname])
 
-  const hasFilters = sp.get('style') || sp.get('material')
+  const hasFilters = sp.get('style') || sp.get('material') || sp.get('color')
 
   const clearAll = () => {
-    const params = new URLSearchParams()
     router.push(pathname, { scroll: false })
   }
 
+  // Added 'color' to the filter groups
   const groups = [
     { key: 'style',    label: 'Style',    options: availableStyles    },
     { key: 'material', label: 'Material', options: availableMaterials },
+    { key: 'color',    label: 'Colour',   options: availableColors    },
   ].filter(g => g.options.length > 0)
 
   const inner = (
@@ -91,13 +96,13 @@ export default function FilterSidebar({ availableStyles, availableMaterials }: P
       {/* Mobile toggle */}
       <button
         onClick={() => setOpen(true)}
-        className="lg:hidden"
+        className="w-full lg:hidden"
         style={{
-          display: 'flex', alignItems: 'center', gap: 7,
-          padding: '9px 16px', borderRadius: 8,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+          padding: '11px 16px', borderRadius: 8,
           border: `1.5px solid ${hasFilters ? ACCENT : '#e7e5e4'}`,
           background: hasFilters ? `${ACCENT}10` : '#fff',
-          fontSize: 12, fontWeight: 600,
+          fontSize: 13, fontWeight: 600,
           color: hasFilters ? ACCENT : '#57534e',
           cursor: 'pointer', marginBottom: 16,
         }}
@@ -111,20 +116,25 @@ export default function FilterSidebar({ availableStyles, availableMaterials }: P
         <div style={{ position: 'fixed', inset: 0, zIndex: 80, display: 'flex' }}>
           <div style={{ flex: 1, background: 'rgba(0,0,0,0.4)' }} onClick={() => setOpen(false)} />
           <div style={{
-            width: 280, background: '#fff', padding: '24px 20px',
-            overflowY: 'auto', animation: 'slideInRight 0.3s ease',
+            width: 290, background: '#fff', 
+            display: 'flex', flexDirection: 'column', height: '100%',
+            animation: 'slideInRight 0.3s ease',
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 20px 14px', borderBottom: '1px solid #f5f5f4' }}>
               <span style={{ fontSize: 14, fontWeight: 700, color: '#1c1917' }}>Filters</span>
               <button onClick={() => setOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
                 <X style={{ width: 16, height: 16, color: '#78716c' }} />
               </button>
             </div>
-            {inner}
-            <button onClick={() => setOpen(false)}
-              style={{ width: '100%', marginTop: 16, padding: '11px 0', borderRadius: 8, border: 'none', background: ACCENT, color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
-              Apply Filters
-            </button>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px 24px' }}>
+              {inner}
+            </div>
+            <div style={{ padding: '14px 20px', borderTop: '1px solid #f5f5f4', background: '#fff' }}>
+              <button onClick={() => setOpen(false)}
+                style={{ width: '100%', padding: '12px 0', borderRadius: 8, border: 'none', background: ACCENT, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', boxShadow: '0 -4px 12px rgba(0,0,0,0.02)' }}>
+                Apply Filters
+              </button>
+            </div>
           </div>
         </div>
       )}

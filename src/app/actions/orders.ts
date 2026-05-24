@@ -115,3 +115,39 @@ export async function confirmCustomerOrder(orderId: string) {
   revalidatePath('/admin/orders')
   return { success: true }
 }
+
+export async function trackOrdersByPostcode(postcode: string) {
+  const supabase = await createClient()
+
+  const cleanPostcode = postcode.trim().toUpperCase();
+  
+  if (cleanPostcode.length < 4) {
+    return { error: "Please enter a valid UK postcode." }
+  }
+
+  // Search the shipping address for the postcode (case-insensitive)
+  // and order the results so the newest order is first.
+  const { data, error } = await supabase
+    .from('orders')
+    .select(`
+      id, status, created_at, total_amount, shipping_address,
+      order_items (
+        quantity,
+        price_at_time_of_purchase,
+        product_variants ( color, products (title) )
+      )
+    `)
+    .ilike('shipping_address', `%${cleanPostcode}%`)
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    console.error("Supabase Tracking Error:", error.message); 
+    return { error: "We encountered an issue fetching your orders. Please try again." }
+  }
+
+  if (!data || data.length === 0) {
+    return { error: "We couldn't find any orders matching that postcode." }
+  }
+
+  return { success: true, orders: data }
+}
