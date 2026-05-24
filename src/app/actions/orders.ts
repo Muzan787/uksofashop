@@ -119,14 +119,20 @@ export async function confirmCustomerOrder(orderId: string) {
 export async function trackOrdersByPostcode(postcode: string) {
   const supabase = await createClient()
 
-  const cleanPostcode = postcode.trim().toUpperCase();
+  // 1. Remove all spaces from whatever the user typed and make it uppercase
+  const noSpace = postcode.replace(/\s+/g, '').toUpperCase();
   
-  if (cleanPostcode.length < 4) {
+  // Basic validation (shortest UK postcode without spaces is 5 chars, e.g. M11AA, but checking 4 is a safe baseline)
+  if (noSpace.length < 4) {
     return { error: "Please enter a valid UK postcode." }
   }
 
-  // Search the shipping address for the postcode (case-insensitive)
-  // and order the results so the newest order is first.
+  // 2. Reconstruct the standard spaced format mathematically.
+  // The inward code (end) is ALWAYS exactly 3 characters.
+  // e.g., "SW1A1AA" becomes "SW1A 1AA"
+  const withSpace = `${noSpace.slice(0, -3)} ${noSpace.slice(-3)}`;
+
+  // 3. Search the database for EITHER the spaceless version OR the spaced version
   const { data, error } = await supabase
     .from('orders')
     .select(`
@@ -137,7 +143,7 @@ export async function trackOrdersByPostcode(postcode: string) {
         product_variants ( color, products (title) )
       )
     `)
-    .ilike('shipping_address', `%${cleanPostcode}%`)
+    .or(`shipping_address.ilike.%${noSpace}%,shipping_address.ilike.%${withSpace}%`)
     .order('created_at', { ascending: false })
 
   if (error) {
