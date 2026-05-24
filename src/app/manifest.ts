@@ -7,7 +7,7 @@ export default function manifest(): MetadataRoute.Manifest {
     description: 'Discover luxury British sofas with 10-year guarantee. Free UK delivery, cash on delivery available. Shop corner sofas, fabric sofas, and more.',
     start_url: '/',
     display: 'standalone',
-    background_color: '#ffffff',
+    background_color: '#80808080',
     theme_color: '#F97316', // Updated to match your new orange branding
     icons: [
       // {
