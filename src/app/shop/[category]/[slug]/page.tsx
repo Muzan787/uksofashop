@@ -27,10 +27,8 @@ export default async function ProductPage(props: { params: Params }) {
   const { slug, category } = await props.params;
   const supabase = await createClient();
 
-  // 1. Get the current user session
   const { data: { user } } = await supabase.auth.getUser();
 
-  // 2. Fetch the product and related data
   const { data: product, error } = await supabase
     .from('products')
     .select('*, product_variants(*), reviews(*)')
@@ -39,7 +37,6 @@ export default async function ProductPage(props: { params: Params }) {
 
   if (error || !product) notFound();
 
-  // 3. Check if the product is in the user's wishlist
   let initialWishlistState = false;
   if (user) {
     const { data: wishlistItem } = await supabase
@@ -47,14 +44,64 @@ export default async function ProductPage(props: { params: Params }) {
       .select('id')
       .eq('user_id', user.id)
       .eq('product_id', product.id)
-      .maybeSingle(); // Use maybeSingle to prevent throw errors if no match is found
+      .maybeSingle(); 
 
     if (wishlistItem) {
       initialWishlistState = true;
     }
   }
 
-  // 4. Explicitly map product to match the component's Product interface
+  // --- NEW: Fetch and Sort Similar Products ---
+  const { data: categoryData } = await supabase
+    .from('categories')
+    .select('id')
+    .eq('slug', category)
+    .single();
+
+  let safeSimilarProducts: any[] = [];
+  if (categoryData) {
+    const { data: related } = await supabase
+      .from('product_categories')
+      .select(`
+        products (
+          id, title, slug, base_price, is_active,
+          product_variants ( image_url )
+        )
+      `)
+      .eq('category_id', categoryData.id);
+
+    if (related) {
+      const currentFirstWord = product.title.trim().split(' ')[0].toLowerCase();
+      
+      // Extract products from the join table and filter out the current product & inactive ones
+      let relatedProducts = related
+        .map((r: any) => r.products)
+        .flat()
+        .filter((p: any) => p && p.id !== product.id && p.is_active !== false);
+
+      // Sort: Products matching the first word of the title come first
+      relatedProducts.sort((a: any, b: any) => {
+        const aFirstWord = a.title.trim().split(' ')[0].toLowerCase();
+        const bFirstWord = b.title.trim().split(' ')[0].toLowerCase();
+        
+        const matchA = aFirstWord === currentFirstWord ? 1 : 0;
+        const matchB = bFirstWord === currentFirstWord ? 1 : 0;
+        
+        return matchB - matchA; // High score (1) comes before low score (0)
+      });
+
+      // Take the top 4 and map to a safe format for the client
+      safeSimilarProducts = relatedProducts.slice(0, 4).map((p: any) => ({
+        id: p.id,
+        title: p.title,
+        slug: p.slug,
+        base_price: p.base_price,
+        image_url: p.product_variants?.[0]?.image_url || '/placeholder.svg'
+      }));
+    }
+  }
+  // --------------------------------------------
+
   const safeProduct = {
     id: product.id,
     title: product.title,
@@ -64,8 +111,7 @@ export default async function ProductPage(props: { params: Params }) {
     specifications: product.specifications as Record<string, string> | string | null,
   };
 
-  // 5. Explicitly map variants to match the component's Variant interface
-  const safeVariants = (product.product_variants ?? []).map((v) => ({
+  const safeVariants = (product.product_variants ?? []).map((v: any) => ({
     id: v.id,
     color: v.color,
     color_hex: v.color_hex,
@@ -75,8 +121,6 @@ export default async function ProductPage(props: { params: Params }) {
     stock_quantity: v.stock_quantity ?? 0,
   }));
 
-  // 6. Explicitly map reviews to match the component's Review interface
-  // (Supporting both 'status' and 'is_approved' depending on which database schema is active)
   const approvedReviews = (product.reviews ?? [])
     .filter((r: any) => r.status === 'approved' || r.is_approved === true)
     .map((r: any) => ({
@@ -93,6 +137,7 @@ export default async function ProductPage(props: { params: Params }) {
       product={safeProduct}
       variants={safeVariants}
       approvedReviews={approvedReviews}
+      similarProducts={safeSimilarProducts} // Pass the new data down
       categorySlug={category}
       initialWishlistState={initialWishlistState}
       isLoggedIn={!!user}

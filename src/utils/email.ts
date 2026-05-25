@@ -99,9 +99,14 @@ export async function sendAdminOrderNotification(
   const confirmLink = `${siteUrl}/confirm-order/${fullOrderId}`;
   
   // Clean phone number (removes spaces/dashes) so WhatsApp API can read it
-  const cleanPhone = customerPhone.replace(/[^0-9+]/g, '');
+  let cleaned = customerPhone.replace(/[^0-9+]/g, '');
+  if (cleaned.startsWith('0')) {
+    cleaned = '44' + cleaned.substring(1) // Replace leading 0 with UK code
+  } else if (!cleaned.startsWith('44')) {
+    cleaned = '44' + cleaned // Prepend UK code if missing
+  }
   const waMessage = encodeURIComponent(`Please confirm your order: ${confirmLink}`);
-  const waUrl = `https://wa.me/${cleanPhone}?text=${waMessage}`;
+  const waUrl = `https://wa.me/${cleaned}?text=${waMessage}`;
 
   const content = `
     <div style="text-align: left;">
@@ -282,8 +287,12 @@ export async function sendAdminOrderStatusNotification(
   const adminEmail = process.env.ADMIN_EMAIL;
   if (!adminEmail) return;
 
-  // Clean phone number (removes spaces/dashes) so WhatsApp API can read it
-  const cleanPhone = customerPhone.replace(/[^0-9+]/g, '');
+  let cleaned = customerPhone.replace(/[^0-9+]/g, '');
+  if (cleaned.startsWith('0')) {
+    cleaned = '44' + cleaned.substring(1) // Replace leading 0 with UK code
+  } else if (!cleaned.startsWith('44')) {
+    cleaned = '44' + cleaned // Prepend UK code if missing
+  }
 
   // Generate a dynamic WhatsApp message based on the status
   let waMessageText = '';
@@ -312,7 +321,7 @@ export async function sendAdminOrderStatusNotification(
   }
 
   const waMessage = encodeURIComponent(waMessageText);
-  const waUrl = `https://wa.me/${cleanPhone}?text=${waMessage}`;
+  const waUrl = `https://wa.me/${cleaned}?text=${waMessage}`;
 
   const content = `
     <div style="text-align: left;">

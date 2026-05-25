@@ -87,7 +87,7 @@ export default async function AdminOrdersPage() {
 
             {/* Quick Actions (WhatsApp & Print) */}
             <div className="flex gap-2 mb-4">
-              <a 
+              <a  
                 href={getWhatsAppLink(order.customer_phone)} 
                 target="_blank" 
                 rel="noopener noreferrer"

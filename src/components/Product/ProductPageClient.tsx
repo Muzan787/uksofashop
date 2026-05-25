@@ -42,10 +42,18 @@ interface Product {
   product_variants?: Variant[];
   reviews?: Review[];
 }
+interface SimilarProduct {
+  id: string;
+  title: string;
+  slug: string;
+  base_price: number;
+  image_url: string;
+}
 interface Props {
   product: Product;
   variants: Variant[];
   approvedReviews: Review[];
+  similarProducts: SimilarProduct[];
   categorySlug: string;
   initialWishlistState: boolean;
   isLoggedIn: boolean; // Added this prop!
@@ -314,7 +322,7 @@ function ReviewForm({ productId, accent, accentTint, isLoggedIn }: {
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
-export default function ProductPageClient({ product, initialWishlistState, variants, approvedReviews, categorySlug, isLoggedIn }: Props) {
+export default function ProductPageClient({ product, initialWishlistState, variants, approvedReviews, similarProducts, categorySlug, isLoggedIn }: Props) {
   const { addToCart } = useCart();
 
   // ── Variant selection ──
@@ -807,7 +815,42 @@ export default function ProductPageClient({ product, initialWishlistState, varia
             </div>
           </div>
         </div>
-      </main>
+
+        {/* ════ SIMILAR PRODUCTS SECTION ════ */}
+        {similarProducts && similarProducts.length > 0 && (
+          <div style={{ maxWidth: 1100, margin: '0 auto', padding: '20px 16px 80px' }}>
+            <h2 className="font-playfair" style={{ fontSize: 24, fontWeight: 700, color: '#1c1917', marginBottom: 24, borderBottom: `2px solid ${accent}30`, paddingBottom: 12 }}>
+              Similar Products
+            </h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+              {similarProducts.map((sp) => (
+                <Link key={sp.id} href={`/shop/${categorySlug}/${sp.slug}`} className="group" style={{ textDecoration: 'none' }}>
+                  <div style={{ background: '#fff', borderRadius: 12, overflow: 'hidden', border: '1px solid #e7e5e4', transition: 'all 0.3s ease' }} className="hover:shadow-lg hover:border-stone-300">
+                    <div style={{ position: 'relative', width: '100%', aspectRatio: '1', background: '#f5f5f4', overflow: 'hidden' }}>
+                      <Image 
+                        src={sp.image_url} 
+                        alt={sp.title} 
+                        fill 
+                        className="object-cover group-hover:scale-105 transition-transform duration-500" 
+                        sizes="(max-width: 768px) 50vw, 25vw" 
+                      />
+                    </div>
+                    <div style={{ padding: 12 }}>
+                      <h3 style={{ fontSize: 13, fontWeight: 700, color: '#1c1917', lineHeight: 1.3, marginBottom: 4 }} className="line-clamp-2">
+                        {sp.title}
+                      </h3>
+                      <p className="font-playfair" style={{ fontSize: 15, fontWeight: 700, color: accent }}>
+                        £{sp.base_price.toFixed(0)}
+                      </p>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
+      </main> {/* <-- This is the existing closing main tag */}
 
       {zoomed && <ZoomModal src={displayImage} alt={product.title} onClose={() => setZoomed(false)} />}
 
