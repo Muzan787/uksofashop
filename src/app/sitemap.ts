@@ -1,12 +1,13 @@
+export const dynamic = 'force-dynamic'
+
 import { MetadataRoute } from 'next'
 import { createClient } from '@/utils/supabase/server'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  // Uses environment variable if available, fallback to the live UK domain
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.uksofashop.co.uk'
   const supabase = await createClient()
 
-  // 1. Static Base Routes (Including your Reviews and Track Order pages)
+  // 1. Static Routes
   const routes: MetadataRoute.Sitemap = [
     { url: `${baseUrl}`, lastModified: new Date(), changeFrequency: 'daily', priority: 1.0 },
     { url: `${baseUrl}/shop/all`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.9 },
@@ -17,12 +18,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${baseUrl}/faq`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.7 },
     { url: `${baseUrl}/track-order`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.6 },
     { url: `${baseUrl}/search`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.6 },
-    { url: `${baseUrl}/privacy`, lastModified: new Date(), changeFrequency: 'yearly', priority: 0.3 },
-    { url: `${baseUrl}/terms`, lastModified: new Date(), changeFrequency: 'yearly', priority: 0.3 },
   ]
 
-  // 2. Dynamic Category Routes
-  // Fetches all categories from Supabase
+  // 2. Fetch Categories
   const { data: categories } = await supabase.from('categories').select('slug, created_at')
   
   if (categories) {
@@ -36,19 +34,27 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })
   }
 
-  // 3. Dynamic Product Routes
-  // Fetches all active products and their associated category slug
-  const { data: products } = await supabase
+  // 3. Fetch Products (FIXED: Explicitly telling Supabase which relationship to use)
+  const { data: products, error } = await supabase
     .from('products')
-    .select('slug, created_at, categories(slug)')
-    .eq('is_active', true)
+    .select(`
+      slug, 
+      created_at, 
+      categories!products_category_id_fkey ( slug )
+    `)
+    .eq('is_active', true) // Added the active check back in!
   
+  if (error) {
+    console.error("🚨 SITEMAP SUPABASE ERROR:", error.message, error.details)
+  }
+
   if (products) {
     products.forEach((product) => {
-      // Safely extract the category slug for the canonical URL structure
-      const categorySlug = product.categories && !Array.isArray(product.categories) 
-        ? product.categories.slug 
-        : 'all'
+      // Safely extract the nested category slug
+      let categorySlug = 'all'
+      if (product.categories && !Array.isArray(product.categories) && product.categories.slug) {
+        categorySlug = product.categories.slug
+      }
         
       routes.push({
         url: `${baseUrl}/shop/${categorySlug}/${product.slug}`,
