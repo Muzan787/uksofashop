@@ -5,6 +5,7 @@ import "./globals.css";
 import { CartProvider } from "@/context/CartContext";
 import MainLayoutWrapper from "@/components/Layout/MainLayoutWrapper";
 import { Toaster } from "react-hot-toast";
+import { Analytics } from "@vercel/analytics/next"
 import PWAPromptManager from '@/components/Admin/PWAPromptManager';
 
 const geistSans = Geist({
