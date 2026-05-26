@@ -1,6 +1,7 @@
 // src/app/page.tsx
 import { createClient } from '@/utils/supabase/server';
 import HomeClient from '@/components/Home/HomeClient';
+import { Analytics } from '@vercel/analytics/next';
 
 export default async function HomePage() {
   const supabase = await createClient();
@@ -28,9 +29,8 @@ export default async function HomePage() {
   }));
 
   return (
-    <HomeClient
+    <><HomeClient
       categories={categoriesData}
-      products={productsData}
-    />
+      products={productsData} /><Analytics /></>
   );
 }
