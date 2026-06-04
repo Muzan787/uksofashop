@@ -29,7 +29,7 @@ export default async function ReviewsPage() {
             <h1 className="text-4xl font-playfair font-bold text-[#1c1917] mb-2">
               Customer Reviews
             </h1>
-            <p className="text-[#57534e]">See what our customers are saying about Vantage Group LTD.</p>
+            <p className="text-[#57534e]">See what our customers are saying about UK Sofashop LTD.</p>
           </div>
           
           <ReviewFormModal isLoggedIn={!!user} />

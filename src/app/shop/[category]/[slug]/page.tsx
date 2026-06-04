@@ -18,8 +18,8 @@ export async function generateMetadata(props: { params: Params }): Promise<Metad
   if (!product) return { title: 'Product Not Found' };
 
   return {
-    title: `${product.title} | Vantage Group LTD`,
-    description: product.description || `Buy ${product.title} at Vantage Group LTD. British handcrafted luxury sofas.`,
+    title: `${product.title} | UK Sofashop LTD`,
+    description: product.description || `Buy ${product.title} at UK Sofashop LTD. British handcrafted luxury sofas.`,
   };
 }
 

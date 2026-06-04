@@ -2,9 +2,53 @@
 // src/app/admin/orders/DirectPrintButton.tsx
 import { Printer } from 'lucide-react'
 
+/*
+// ==========================================
+// DUMMY CUSTOM ORDER TEMPLATE
+// Uncomment this block and change the details 
+// when you need to print a custom receipt.
+// ==========================================
+const DUMMY_CUSTOM_ORDER = {
+  id: "CUSTOM-001",
+  created_at: new Date().toISOString(),
+  customer_name: "Jane Doe",
+  customer_email: "jane.doe@example.com",
+  customer_phone: "07700 900077",
+  shipping_address: "10 Downing Street\nLondon\nSW1A 2AA",
+  total_amount: 1199.98,
+  order_items: [
+    {
+      quantity: 1,
+      price_at_time_of_purchase: 899.99,
+      product_variants: {
+        color: "Emerald Green",
+        sku: "SOFA-EMR-3SEAT",
+        products: {
+          title: "Premium Velvet Chesterfield Sofa"
+        }
+      }
+    },
+    {
+      quantity: 1,
+      price_at_time_of_purchase: 299.99,
+      product_variants: {
+        color: "Emerald Green",
+        sku: "CHAIR-EMR-1SEAT",
+        products: {
+          title: "Matching Accent Chair"
+        }
+      }
+    }
+  ]
+};
+*/
+
 export default function DirectPrintButton({ order }: { order: any }) {
   
   const handlePrint = () => {
+    // TOGGLE THIS: Change `order` to `DUMMY_CUSTOM_ORDER` when you want to use the custom data
+    const activeOrder = order;
+
     const iframe = document.createElement('iframe')
     iframe.style.position = 'fixed'
     iframe.style.right = '0'
@@ -20,7 +64,7 @@ export default function DirectPrintButton({ order }: { order: any }) {
     const htmlContent = `
       <html>
         <head>
-          <title>Invoice #${order.id.split('-')[0].toUpperCase()}</title>
+          <title>Invoice #${activeOrder.id.split('-')[0].toUpperCase()}</title>
           <link rel="preconnect" href="https://fonts.googleapis.com">
           <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
           <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;0,800;1,600&display=swap" rel="stylesheet">
@@ -245,28 +289,28 @@ export default function DirectPrintButton({ order }: { order: any }) {
             
             <div class="header">
               <div>
-                <div class="brand">UK Sofa<span style={{ color: '#d4871a' }}>Shop</span></div>
+                <div class="brand">UK Sofa<span style="color: #d4871a;">Shop</span></div>
                 <div class="brand-subtitle">Official Order Invoice</div>
               </div>
               <div class="invoice-details">
                 <div class="invoice-label">Invoice No.</div>
-                <div class="invoice-number">#${order.id.split('-')[0].toUpperCase()}</div>
-                <div class="invoice-date">${new Date(order.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
+                <div class="invoice-number">#${activeOrder.id.split('-')[0].toUpperCase()}</div>
+                <div class="invoice-date">${new Date(activeOrder.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
               </div>
             </div>
 
             <div class="grid">
               <div class="col">
                 <div class="section-title">Billed To</div>
-                <div class="customer-name">${order.customer_name}</div>
+                <div class="customer-name">${activeOrder.customer_name}</div>
                 <div class="customer-info">
-                  ${order.customer_email}<br/>
-                  ${order.customer_phone}
+                  ${activeOrder.customer_email}<br/>
+                  ${activeOrder.customer_phone}
                 </div>
               </div>
               <div class="col">
                 <div class="section-title">Shipping Address</div>
-                <div class="customer-info" style="white-space: pre-wrap;">${order.shipping_address}</div>
+                <div class="customer-info" style="white-space: pre-wrap;">${activeOrder.shipping_address}</div>
               </div>
             </div>
 
@@ -279,7 +323,7 @@ export default function DirectPrintButton({ order }: { order: any }) {
                 </tr>
               </thead>
               <tbody>
-                ${order.order_items.map((item: any) => `
+                ${activeOrder.order_items.map((item: any) => `
                   <tr>
                     <td>
                       <div class="item-title">${item.product_variants?.products?.title}</div>
@@ -300,7 +344,7 @@ export default function DirectPrintButton({ order }: { order: any }) {
               <div class="summary-box">
                 <div class="summary-row">
                   <span>Subtotal</span>
-                  <span style="font-weight: 600; color: #1c1917;">£${order.total_amount.toFixed(2)}</span>
+                  <span style="font-weight: 600; color: #1c1917;">£${activeOrder.total_amount.toFixed(2)}</span>
                 </div>
                 <div class="summary-row">
                   <span>Delivery</span>
@@ -308,7 +352,7 @@ export default function DirectPrintButton({ order }: { order: any }) {
                 </div>
                 <div class="summary-total">
                   <span class="summary-total-label">Total Due</span>
-                  <span class="summary-total-value">£${order.total_amount.toFixed(2)}</span>
+                  <span class="summary-total-value">£${activeOrder.total_amount.toFixed(2)}</span>
                 </div>
               </div>
             </div>
@@ -333,7 +377,7 @@ export default function DirectPrintButton({ order }: { order: any }) {
       iframe.contentWindow?.focus()
       iframe.contentWindow?.print()
       setTimeout(() => document.body.removeChild(iframe), 1000)
-    }, 400) // Slightly increased timeout to ensure external Google fonts load before the print dialog takes the snapshot
+    }, 400)
   }
 
   return (

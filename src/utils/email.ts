@@ -32,7 +32,7 @@ const generateEmailHTML = (content: string) => `
     
     <div style="background-color: #fafaf9; padding: 24px; text-align: center; border-top: 1px solid #e7e5e4;">
       <p style="margin: 0; color: #78716c; font-size: 12px;">Need help? Reply to this email directly.</p>
-      <p style="margin: 8px 0 0 0; color: #a8a29e; font-size: 11px;">© ${new Date().getFullYear()} Vantage Group LTD. All rights reserved.</p>
+      <p style="margin: 8px 0 0 0; color: #a8a29e; font-size: 11px;">© ${new Date().getFullYear()} UK SofaShop. All rights reserved.</p>
     </div>
   </div>
 </body>
@@ -76,7 +76,7 @@ export async function sendOrderConfirmation(
   `;
 
   await transporter.sendMail({
-    from: `"Vantage Group LTD" <${process.env.EMAIL_USER}>`,
+    from: `"UK SofaShop" <${process.env.EMAIL_USER}>`,
     to: email,
     subject: `Action Required: Confirm Your Order - (#${shortCode})`,
     html: generateEmailHTML(content),
@@ -143,7 +143,7 @@ export async function sendAdminOrderNotification(
   `;
 
   await transporter.sendMail({
-    from: `"Vantage Group LTD" <${process.env.EMAIL_USER}>`,
+    from: `"UK SofaShop" <${process.env.EMAIL_USER}>`,
     to: adminEmail,
     subject: `Action Required: New Order Received (#${shortCode})`,
     html: generateEmailHTML(content),
@@ -187,7 +187,7 @@ export async function sendAdminReviewNotification(
   `;
 
   await transporter.sendMail({
-    from: `"Vantage Group LTD" <${process.env.EMAIL_USER}>`,
+    from: `"UK SofaShop" <${process.env.EMAIL_USER}>`,
     to: adminEmail,
     subject: `New Review Requires Approval (${rating} Stars)`,
     html: generateEmailHTML(content),
@@ -270,7 +270,7 @@ export async function sendOrderStatusUpdate(
   `;
 
   await transporter.sendMail({
-    from: `"Vantage Group LTD" <${process.env.EMAIL_USER}>`,
+    from: `"UK SofaShop" <${process.env.EMAIL_USER}>`,
     to: email,
     subject: `Update: ${currentConfig.title} (#${shortCode})`,
     html: generateEmailHTML(content),
@@ -350,7 +350,7 @@ export async function sendAdminOrderStatusNotification(
   `;
 
   await transporter.sendMail({
-    from: `"Vantage Group LTD" <${process.env.EMAIL_USER}>`,
+    from: `"UK SofaShop" <${process.env.EMAIL_USER}>`,
     to: adminEmail,
     subject: `Notify Customer: Order ${title} (#${shortCode})`,
     html: generateEmailHTML(content),

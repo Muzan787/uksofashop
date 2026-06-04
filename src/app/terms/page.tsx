@@ -6,7 +6,7 @@ import { FileText, Link } from 'lucide-react'
 const ACCENT = '#d18b41'
 
 const termsSections = [
-  { num: '1.', title: 'Introduction', body: 'These Terms and Conditions govern your use of uksofashop.co.uk and the purchase of goods from UK Sofa Shop (Vantage Group LTD). By placing an order you confirm that you have read, understood, and agree to these terms.' },
+  { num: '1.', title: 'Introduction', body: 'These Terms and Conditions govern your use of uksofashop.co.uk and the purchase of goods from UK Sofa Shop (UK Sofashop LTD). By placing an order you confirm that you have read, understood, and agree to these terms.' },
   { num: '2.', title: 'Placing an Order', body: 'When you submit an order, you are making an offer to purchase. We will send an acknowledgement email upon receipt. This is not an acceptance. The contract is formed when we dispatch the goods.' },
   { num: '3.', title: 'Pricing and Payment', body: 'All prices are inclusive of VAT at the current rate. We offer Cash on Delivery — payment is due in full to the delivery driver upon arrival, via cash or mobile card terminal.' },
   { num: '4.', title: 'Delivery', body: 'Free delivery applies to Mainland UK orders over £500. Delivery dates are estimates. Delays may occasionally occur due to unforeseen factors. We will notify you of any significant delays.' },

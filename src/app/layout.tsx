@@ -54,7 +54,7 @@ const localBusinessSchema = {
   "@context": "https://schema.org",
   "@type": "FurnitureStore",
   "name": "UK Sofa Shop",
-  "alternateName": "Vantage Group LTD",
+  "alternateName": "UK Sofashop LTD",
   "url": "https://uksofashop.co.uk",
   "logo": "https://uksofashop.co.uk/logo.png",
   "image": "https://uksofashop.co.uk/store-front.jpg",

@@ -443,7 +443,7 @@ export default function FooterClient({ categories }: Props) {
           }}
         >
           <p style={{ fontSize: 10, color: '#3f3f3f', margin: 0 }}>
-            © {new Date().getFullYear()} UK Sofa Shop (Vantage Group LTD). All rights reserved.
+            © {new Date().getFullYear()} UK Sofa Shop (UK Sofashop LTD). All rights reserved.
           </p>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
