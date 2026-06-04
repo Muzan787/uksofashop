@@ -24,7 +24,7 @@ export default function AdminSidebarClient() {
       <aside className="hidden lg:flex flex-col fixed inset-y-0 left-0 w-64 bg-[#0a0a0a] border-r border-white/10 z-40">
         <div className="p-6 border-b border-white/10">
           <div className="font-serif text-xl font-bold text-white tracking-tight">
-            Vantage <span className="text-orange-500">Admin</span>
+            Uk Sofashop <span className="text-orange-500">Admin</span>
           </div>
         </div>
 

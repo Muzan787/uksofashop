@@ -22,10 +22,17 @@ export async function submitGlobalReview(formData: FormData, imageUrl: string | 
     return { error: 'Please provide a valid rating between 1 and 5.' }
   }
 
+  // Extract the name from auth metadata, fallback to email prefix, or finally 'Verified Buyer'
+  const customerName = 
+    user.user_metadata?.full_name || 
+    user.user_metadata?.name || 
+    (user.email ? user.email.split('@')[0] : 'Verified Buyerrr');
+
   const { error } = await supabase
     .from('reviews')
     .insert({
       user_id: user.id,
+      customer_name: customerName, // <-- Now actively saving the name!
       product_id: productId || null,
       rating,
       comment,

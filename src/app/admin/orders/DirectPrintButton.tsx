@@ -360,7 +360,7 @@ export default function DirectPrintButton({ order }: { order: any }) {
             <div class="footer">
                <div class="thank-you">Thank you for your business.</div>
                <div class="company-details">
-                 Vantage Group LTD &nbsp;&bull;&nbsp; 123 Furniture Way, London &nbsp;&bull;&nbsp; 0747 661 6022
+                 Uk Sofashop Group LTD &nbsp;&bull;&nbsp; 123 Furniture Way, London &nbsp;&bull;&nbsp; 0747 661 6022
                </div>
                <div class="guarantee-badge">10-Year Frame Guarantee</div>
             </div>

@@ -22,7 +22,7 @@ const generateEmailHTML = (content: string) => `
     
     <div style="background-color: #ffffff; padding: 24px; text-align: center; border-bottom: 3px solid #d4871a;">
       <h1 style="margin: 0; font-size: 26px; font-weight: 700; color: #1c1917;">
-        Vantage<span style="color: #d4871a;"> Group LTD</span>
+        Uk Sofashop<span style="color: #d4871a;"> Group LTD</span>
       </h1>
     </div>
     

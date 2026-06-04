@@ -238,7 +238,7 @@ export default function TrackOrderPage() {
         <div style={{ maxWidth: 640, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Link href="/" style={{ textDecoration: 'none' }}>
             <span className="font-playfair" style={{ fontSize: 18, fontWeight: 700, color: '#fff' }}>
-              Vantage<span style={{ color: ACCENT }}>Group</span>
+              Uk Sofashop<span style={{ color: ACCENT }}>Group</span>
             </span>
           </Link>
           <Link href="/shop/all" style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'rgba(255,255,255,0.4)', textDecoration: 'none' }}

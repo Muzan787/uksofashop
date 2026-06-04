@@ -31,7 +31,7 @@ const marqueeItems = [
 ];
 const guarantees = [
   { icon: Truck,     label: 'Free Delivery',    sub: 'Orders over £500'     },
-  { icon: Shield,    label: '10-Yr Guarantee',  sub: 'Lifetime frame'       },
+  { icon: Shield,    label: '1-Yr Guarantee',  sub: 'Lifetime frame'       },
   { icon: RotateCcw, label: '30-Day Trial',     sub: 'Love it or return it' },
   { icon: Gem,       label: 'British Made',     sub: 'Handmade Yorkshire'   },
 ];
@@ -756,7 +756,7 @@ export default function HomeClient({ categories, products }: Props) {
                 </div>
               </div>
               <div className="flex flex-wrap gap-4">
-                {[[Shield,'10-Yr Guarantee'],[Truck,'Free Delivery'],[RotateCcw,'30-Day Returns']].map(([Icon, lbl]) => (
+                {[[Shield,'1-Yr Guarantee'],[Truck,'Free Delivery'],[RotateCcw,'30-Day Returns']].map(([Icon, lbl]) => (
                   <div key={lbl as string} className="flex items-center gap-1.5 text-stone-400" style={{ fontSize: 11 }}>
                     {/* @ts-ignore */}
                     <Icon className="w-3.5 h-3.5 text-[#d4871a]" />

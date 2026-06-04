@@ -798,7 +798,7 @@ export default function CheckoutClient() {
           <div style={{ maxWidth: 960, margin: '0 auto', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <Link href="/" style={{ textDecoration: 'none' }}>
               <span className="font-playfair" style={{ fontSize: 18, fontWeight: 700, color: '#fff' }}>
-                Vantage<span style={{ color: ACCENT }}>Group</span>
+                Uk Sofashop<span style={{ color: ACCENT }}>Group</span>
               </span>
             </Link>
             {step !== 'success' && (

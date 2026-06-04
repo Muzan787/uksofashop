@@ -753,7 +753,7 @@ export default function ProductPageClient({ product, initialWishlistState, varia
 
               {/* Trust row */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 1, marginTop: 12, border: `1px solid ${accent}20`, borderRadius: 10, overflow: 'hidden' }}>
-                {[{ icon: Truck, label: 'Free Delivery' }, { icon: Gem, label: 'COD Available' }, { icon: ShieldCheck, label: '10-Yr Guarantee' }].map(({ icon: Icon, label }) => (
+                {[{ icon: Truck, label: 'Free Delivery' }, { icon: Gem, label: 'COD Available' }, { icon: ShieldCheck, label: '1-Yr Guarantee' }].map(({ icon: Icon, label }) => (
                   <div key={label} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, padding: '10px 8px', background: accentTint, transition: 'background 0.7s ease' }}>
                     <Icon style={{ width: 14, height: 14, color: accent }} />
                     <span style={{ fontSize: 9, color: '#78716c', fontWeight: 600, textAlign: 'center', letterSpacing: '0.06em' }}>{label}</span>
@@ -789,17 +789,38 @@ export default function ProductPageClient({ product, initialWishlistState, varia
                 <div key={r.id} style={{ background: '#fff', borderRadius: 10, padding: 16, borderLeft: `3px solid ${accent}`, boxShadow: '0 1px 6px rgba(0,0,0,0.05)', animation: `slideUp 0.4s ease ${i * 60}ms both` }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
                     <div style={{ width: 34, height: 34, borderRadius: '50%', background: accent, color: textOnAccent, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, flexShrink: 0, transition: 'background 0.7s ease' }}>
-                      {r.customer_name.charAt(0).toUpperCase()}
+                      {r.customer_name ? r.customer_name.charAt(0).toUpperCase() : 'V'}
                     </div>
                     <div>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: '#1c1917' }}>{r.customer_name}</div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: '#1c1917' }}>{r.customer_name || 'Verified Buyer'}</div>
                       <StarRow rating={r.rating} size={11} accent={accent} />
                     </div>
                     <span style={{ marginLeft: 'auto', fontSize: 10, color: '#a8a29e', flexShrink: 0 }}>
                       {new Date(r.created_at).toLocaleDateString('en-GB')}
                     </span>
                   </div>
+                  
                   <p style={{ fontSize: 12, color: '#57534e', lineHeight: 1.7, margin: 0 }}>{r.comment}</p>
+                  
+                  {/* --- NEW: Small Review Picture --- */}
+                  {r.image_url && (
+                    <div style={{ marginTop: 12 }}>
+                      <img 
+                        src={r.image_url} 
+                        alt="Customer photo" 
+                        style={{ 
+                          width: 80, 
+                          height: 80, 
+                          objectFit: 'cover', 
+                          borderRadius: 8, 
+                          border: `1px solid ${accent}30`,
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+                        }} 
+                      />
+                    </div>
+                  )}
+                  {/* --------------------------------- */}
+
                 </div>
               )) : (
                 <div style={{ background: accentTint, border: `1px dashed ${accent}44`, borderRadius: 10, padding: '28px 20px', textAlign: 'center' }}>
@@ -815,6 +836,7 @@ export default function ProductPageClient({ product, initialWishlistState, varia
             </div>
           </div>
         </div>
+        
 
         {/* ════ SIMILAR PRODUCTS SECTION ════ */}
         {similarProducts && similarProducts.length > 0 && (

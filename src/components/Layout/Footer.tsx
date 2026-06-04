@@ -41,7 +41,7 @@ const socials = [
 
 const trust = [
   { icon: Truck,     label: 'Free Delivery',   sub: 'Over £500'         },
-  { icon: Shield,    label: '10-Yr Guarantee', sub: 'Frame warranty'    },
+  { icon: Shield,    label: '1-Yr Guarantee', sub: 'Frame warranty'    },
   { icon: RotateCcw, label: '30-Day Returns',  sub: 'No questions asked'},
   { icon: Gem,       label: 'British Made',    sub: 'Since 1995'        },
 ];

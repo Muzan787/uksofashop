@@ -125,7 +125,9 @@ export default async function ProductPage(props: { params: Params }) {
     .filter((r: any) => r.status === 'approved' || r.is_approved === true)
     .map((r: any) => ({
       id: r.id,
-      customer_name: r.customer_name || 'Verified Buyer',
+      // FIX: Stop forcing 'Verified Buyer' as the name! Pass the real name or leave it blank.
+      customer_name: r.customer_name || '', 
+      image_url: r.image_url || null,
       rating: r.rating,
       comment: r.comment ?? '',                             
       created_at: r.created_at ?? new Date().toISOString(), 
