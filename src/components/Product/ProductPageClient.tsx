@@ -27,6 +27,7 @@ interface Variant {
 interface Review {
   id: string;
   customer_name: string;
+  image_url: string | null;
   rating: number;
   comment: string;
   created_at: string;
