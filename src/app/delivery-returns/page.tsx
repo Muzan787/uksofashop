@@ -12,10 +12,10 @@ const deliveryItems = [
 ]
 
 const returnItems = [
-  { title: '30-Day Home Trial',     body: 'Not delighted? Return any standard item within 30 days of delivery — no awkward questions asked.' },
-  { title: 'Condition of Goods',    body: 'Items must be returned in original condition. We cannot accept goods that have been damaged or structurally altered.' },
-  { title: 'Collection Fee',        body: 'A £50 collection fee is deducted from your refund to cover logistics. Faulty items are collected free of charge.' },
-  { title: 'How to Initiate',       body: 'Email uksofashop.co.uk@gmail.com with your order number. We\'ll arrange a collection date within 48 hours.' },
+  { title: 'Defective Returns Only', body: 'We currently only accept returns for products that arrive defective or faulty. Please inspect your item upon delivery and notify the driver or contact us immediately.' },
+  { title: 'Exchanges Available',    body: 'Want a different style or color? We gladly accept exchanges. A standard £50 logistics fee applies to cover the collection of the original item and redelivery of your new sofa.' },
+  { title: 'Condition of Goods',     body: 'For exchanges, items must be returned in their original condition. We cannot accept exchanges for goods that have been damaged or structurally altered after delivery.' },
+  { title: 'How to Initiate',        body: 'Email uksofashop.co.uk@gmail.com with your order number. If reporting a defect, please include photos. We\'ll arrange a collection or exchange date within 48 hours.' },
 ]
 
 function Section({ icon: Icon, title, colour, items }: { icon: React.ElementType; title: string; colour: string; items: { title: string; body: string }[] }) {
@@ -50,7 +50,7 @@ export default function DeliveryReturnsPage() {
             Delivery &amp; Returns
           </h1>
           <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', maxWidth: 400, lineHeight: 1.7 }}>
-            Everything you need to know about getting your sofa delivered and our no-fuss return process.
+            Everything you need to know about getting your sofa delivered and our exchange and defective return process.
           </p>
         </div>
       </div>
@@ -62,7 +62,7 @@ export default function DeliveryReturnsPage() {
           {[
             [Truck,        'Free Delivery Over £500'],
             [Clock,        '3–7 Day Delivery'],
-            [RotateCcw,    '30-Day Returns'],
+            [RotateCcw,    'Easy Exchanges'],
             [Wallet,       'Pay on Delivery'],
             [ShieldCheck,  '1-year Guarantee'],
           ].map(([Icon, label]) => (
@@ -77,14 +77,14 @@ export default function DeliveryReturnsPage() {
         {/* Sections */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: 20, marginBottom: 24 }}>
           <Section icon={Truck}     title="Delivery" colour={ACCENT}     items={deliveryItems} />
-          <Section icon={RotateCcw} title="Returns"  colour="#7c3aed"    items={returnItems}   />
+          <Section icon={RotateCcw} title="Returns & Exchanges"  colour="#7c3aed"    items={returnItems}   />
         </div>
 
         {/* CTA */}
         <div style={{ background: '#0c0c0b', borderRadius: 12, padding: '20px', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', border: '1px solid rgba(255,255,255,0.06)' }}>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: '#fff', marginBottom: 4 }}>Have a specific question?</div>
-            <div style={{ fontSize: 12, color: '#57534e' }}>Our team can advise on delivery slots, access requirements, and returns.</div>
+            <div style={{ fontSize: 12, color: '#57534e' }}>Our team can advise on delivery slots, access requirements, and exchanges.</div>
           </div>
           <Link href="/contact" style={{ display: 'flex', alignItems: 'center', gap: 6, background: ACCENT, color: '#fff', padding: '11px 20px', borderRadius: 8, fontSize: 11, fontWeight: 700, textDecoration: 'none', flexShrink: 0, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
             Contact Us <ArrowRight style={{ width: 12, height: 12 }} />
