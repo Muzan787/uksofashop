@@ -9,7 +9,7 @@ const ACCENT = '#d4871a'
 const faqs = [
   { q: 'Do you offer Cash on Delivery?',               a: 'Yes! Pay our delivery driver securely via cash or mobile card terminal only once your sofa has arrived and you are happy with it. Zero upfront payment required.' },
   { q: 'Do you deliver outside of the UK?',            a: 'We currently operate within the United Kingdom only. Free delivery applies to all Mainland UK addresses on orders over £500.' },
-  { q: 'What does the 10-Year Guarantee cover?',       a: 'Our guarantee covers all structural faults including the wooden frame and springs. It does not cover general wear and tear, fabric fading, or accidental damage.' },
+  { q: 'What does the 1-year Guarantee cover?',       a: 'Our guarantee covers all structural faults including the wooden frame and springs. It does not cover general wear and tear, fabric fading, or accidental damage.' },
   { q: 'Can I cancel my order?',                       a: 'You can cancel free of charge any time before dispatch. If your sofa has already left our warehouse, a return collection fee may apply.' },
   { q: 'Will my sofa fit through my door?',            a: 'Check the dimensions listed on the product page. If unsure, contact our team with your door frame measurements and we\'ll advise you directly.' },
   { q: 'How long does delivery take?',                 a: 'In-stock items typically deliver within 3–7 working days. Made-to-order items take 4–6 weeks. We\'ll contact you 48 hours before to arrange a 3-hour delivery window.' },

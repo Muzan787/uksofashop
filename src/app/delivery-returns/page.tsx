@@ -64,7 +64,7 @@ export default function DeliveryReturnsPage() {
             [Clock,        '3–7 Day Delivery'],
             [RotateCcw,    '30-Day Returns'],
             [Wallet,       'Pay on Delivery'],
-            [ShieldCheck,  '10-Year Guarantee'],
+            [ShieldCheck,  '1-year Guarantee'],
           ].map(([Icon, label]) => (
             <div key={label as string} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '7px 14px', background: '#fff', borderRadius: 20, border: '1px solid #f0ede8', fontSize: 11, color: '#57534e', fontWeight: 600 }}>
               {/* @ts-ignore */}

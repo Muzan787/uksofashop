@@ -661,7 +661,7 @@ export default function ProductPageClient({ product, initialWishlistState, varia
                     { icon: Truck,     title: 'Free White-Glove Delivery', sub: 'On orders over £500. We set up everything and remove all packaging.' },
                     { icon: Wallet,    title: 'Cash on Delivery',          sub: 'Pay only when your sofa arrives — no upfront payment required.'       },
                     { icon: RotateCcw, title: '30-Day Home Trial',         sub: 'Not happy? Return it within 30 days, no questions asked.'             },
-                    { icon: ShieldCheck, title: '10-Year Frame Guarantee', sub: 'Every sofa comes with a full structural guarantee.'                   },
+                    { icon: ShieldCheck, title: '1-year Frame Guarantee', sub: 'Every sofa comes with a full structural guarantee.'                   },
                   ].map(({ icon: Icon, title, sub }) => (
                     <div key={title} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                       <div style={{ width: 32, height: 32, borderRadius: 7, flexShrink: 0, background: accentTint, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

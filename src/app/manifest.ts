@@ -4,7 +4,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: 'UK Sofa Shop',
     short_name: 'USS',
-    description: 'Discover luxury British sofas with 10-year guarantee. Free UK delivery, cash on delivery available. Shop corner sofas, fabric sofas, and more.',
+    description: 'Discover luxury British sofas with 1-year guarantee. Free UK delivery, cash on delivery available. Shop corner sofas, fabric sofas, and more.',
     start_url: '/admin',
     display: 'standalone',
     background_color: '#1c1917',

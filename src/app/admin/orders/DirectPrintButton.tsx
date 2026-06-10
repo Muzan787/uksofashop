@@ -362,7 +362,7 @@ export default function DirectPrintButton({ order }: { order: any }) {
                <div class="company-details">
                  Uk Sofashop Group LTD &nbsp;&bull;&nbsp; 123 Furniture Way, London &nbsp;&bull;&nbsp; 0747 661 6022
                </div>
-               <div class="guarantee-badge">10-Year Frame Guarantee</div>
+               <div class="guarantee-badge">1-year Frame Guarantee</div>
             </div>
           </div>
         </body>

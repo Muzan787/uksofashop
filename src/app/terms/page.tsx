@@ -11,7 +11,7 @@ const termsSections = [
   { num: '3.', title: 'Pricing and Payment', body: 'All prices are inclusive of VAT at the current rate. We offer Cash on Delivery — payment is due in full to the delivery driver upon arrival, via cash or mobile card terminal.' },
   { num: '4.', title: 'Delivery', body: 'Free delivery applies to Mainland UK orders over £500. Delivery dates are estimates. Delays may occasionally occur due to unforeseen factors. We will notify you of any significant delays.' },
   { num: '5.', title: 'Returns and Cancellations', body: 'You may cancel before dispatch free of charge. After delivery, you have 30 days to return items in original condition. A £50 collection fee applies, deducted from your refund. Faulty items are collected free of charge.' },
-  { num: '6.', title: 'Guarantees', body: 'All sofas include a 10-year structural guarantee covering the frame and springs. This excludes wear and tear, accidental damage, and fabric fading.' },
+  { num: '6.', title: 'Guarantees', body: 'All sofas include a 1-year structural guarantee covering the frame and springs. This excludes wear and tear, accidental damage, and fabric fading.' },
   { num: '7.', title: 'Limitation of Liability', body: 'We are not liable for indirect or consequential losses arising from use of our products or services. Our liability is limited to the purchase price of the affected goods.' },
   { num: '8.', title: 'Governing Law', body: 'These terms are governed by the laws of England and Wales. Any disputes will be subject to the exclusive jurisdiction of the courts of England and Wales.' },
 ]

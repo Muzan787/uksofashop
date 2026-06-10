@@ -18,7 +18,7 @@ interface Category { id: string; name: string; slug: string; }
 // ─── Announcement messages ────────────────────────────────────────────────────
 const announcements = [
   { icon: Truck,     text: 'Free White-Glove Delivery on Orders Over £500' },
-  { icon: Shield,    text: '10-Year Frame Guarantee on Every Sofa'         },
+  { icon: Shield,    text: '1-year Frame Guarantee on Every Sofa'         },
   { icon: Sparkles,  text: 'Cash on Delivery Available Nationwide'          },
   { icon: Clock,     text: 'Next-Day Delivery Available — Order Before 2pm' },
 ];

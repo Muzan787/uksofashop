@@ -40,7 +40,7 @@ export default function AboutPage() {
               </div>
               <div>
                 <Shield className="w-8 h-8 text-amber-600 mb-3" />
-                <h4 className="font-bold text-stone-900">10-Year Guarantee</h4>
+                <h4 className="font-bold text-stone-900">1-year Guarantee</h4>
                 <p className="text-sm text-stone-500 mt-1">Peace of mind on all frames.</p>
               </div>
               <div>

@@ -26,7 +26,7 @@ const marqueeItems = [
   'Free White-Glove Delivery Over £500',
   '30-Day Home Trial',
   'Cash on Delivery Available',
-  '10-Year Frame Guarantee',
+  '1-year Frame Guarantee',
   'Handmade in Yorkshire',
 ];
 const guarantees = [

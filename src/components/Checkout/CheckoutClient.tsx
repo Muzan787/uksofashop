@@ -210,7 +210,7 @@ function OrderSummary({ compact = false }: { compact?: boolean }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 16, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
           {[
             [Wallet,     'Pay only when your sofa arrives'],
-            [ShieldCheck,'10-year structural guarantee'],
+            [ShieldCheck,'1-year structural guarantee'],
             [RotateCcw,  '30-day home trial'],
           ].map(([Icon, text]) => (
             <div key={text as string} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
