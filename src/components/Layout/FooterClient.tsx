@@ -28,7 +28,6 @@ const companyLinks = [
   { href: '/showroom',  label: 'Showroom'     },
   { href: '/blog',      label: 'Journal'      },
   { href: '/careers',   label: 'Careers'      },
-  { href: '/press',     label: 'Press'        },
   { href: '/sitemap',   label: 'Sitemap'      },
 ];
 
@@ -313,7 +312,7 @@ export default function FooterClient({ categories }: Props) {
             {/* Contact */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
               {[
-                { icon: Phone, text: '07476 616022', href: 'tel:08001234567' },
+                { icon: Phone, text: '07476 616022', href: 'tel:07476616022' },
                 { icon: Mail,  text: 'uksofashop.co.uk@gmail.com', href: 'mailto:uksofashop.co.uk@gmail.com' },
                 { icon: Clock, text: 'Mon–Fri 9am–6pm · Sat 10am–4pm', href: null },
               ].map(({ icon: Icon, text, href }) => (
@@ -417,7 +416,7 @@ export default function FooterClient({ categories }: Props) {
           <div style={{ padding: '16px 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {[
-                { icon: Phone, text: '07476 616022', href: 'tel:08001234567' },
+                { icon: Phone, text: '07476 616022', href: 'tel:07476616022' },
                 { icon: Mail,  text: 'uksofashop.co.uk@gmail.com', href: 'mailto:uksofashop.co.uk@gmail.com' },
                 { icon: MapPin, text: 'London, United Kingdom', href: null },
               ].map(({ icon: Icon, text, href }) => (

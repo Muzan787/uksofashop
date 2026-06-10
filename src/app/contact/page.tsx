@@ -8,7 +8,7 @@ import Link from 'next/link'
 const ACCENT = '#d4871a'
 
 const CONTACT_INFO = [
-  { icon: Phone,  label: 'Phone',    value: '07476 616022',              sub: 'Mon–Fri 9am–6pm, Sat 10am–4pm', href: 'tel:08001234567' },
+  { icon: Phone,  label: 'Phone',    value: '07476 616022',              sub: 'Mon–Fri 9am–6pm, Sat 10am–4pm', href: 'tel:07476616022' },
   { icon: Mail,   label: 'Email',    value: 'uksofashop.co.uk@gmail.com',     sub: 'We reply within 24 hours',       href: 'mailto:uksofashop.co.uk@gmail.com' },
   { icon: MapPin, label: 'Showroom', value: 'London, United Kingdom',     sub: 'Visit us by appointment',        href: null },
   { icon: Clock,  label: 'Hours',    value: 'Mon–Fri 9am–6pm',            sub: 'Saturday 10am–4pm',              href: null },
