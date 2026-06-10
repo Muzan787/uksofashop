@@ -25,7 +25,7 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: "UK Sofa Shop | Luxury Furniture | Premium Sofas & Corner Sofas",
+  title: "UK Sofa Shop | Luxury Furniture & Sofas",
   description: "Discover luxury British sofas with 1-year guarantee. Free UK delivery over £500, cash on delivery available. Shop corner sofas, fabric sofas, and more.",
   manifest: '/manifest.json',
   keywords: "sofa UK, corner sofa, fabric sofa, luxury furniture, British sofas, cash on delivery sofas",
