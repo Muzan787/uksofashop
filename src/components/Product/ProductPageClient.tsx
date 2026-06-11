@@ -50,6 +50,11 @@ interface SimilarProduct {
   base_price: number;
   image_url: string;
 }
+interface SizeVariant {
+  id: string;
+  slug: string;
+  size_label: string;
+}
 interface Props {
   product: Product;
   variants: Variant[];
@@ -57,7 +62,8 @@ interface Props {
   similarProducts: SimilarProduct[];
   categorySlug: string;
   initialWishlistState: boolean;
-  isLoggedIn: boolean; // Added this prop!
+  isLoggedIn: boolean;
+  sizeVariants?: SizeVariant[]; // Added Size Variants
 }
 
 // ─── Color utilities ──────────────────────────────────────────────────────────
@@ -253,7 +259,6 @@ function ReviewForm({ productId, accent, accentTint, isLoggedIn }: {
       </div>
       {error && <div style={{ padding: '8px 12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, fontSize: 11, color: '#dc2626' }}>{error}</div>}
 
-      {/* Star picker */}
       <div>
         <div style={{ fontSize: 10, color: '#78716c', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: 8, fontWeight: 600 }}>Rating</div>
         <div style={{ display: 'flex', gap: 4 }}>
@@ -289,7 +294,6 @@ function ReviewForm({ productId, accent, accentTint, isLoggedIn }: {
         />
       </div>
 
-      {/* Image Upload */}
       <div>
         <label style={{ display: 'block', fontSize: 10, color: '#78716c', textTransform: 'uppercase', letterSpacing: '0.15em', fontWeight: 600, marginBottom: 6 }}>
           Add a Photo (Optional)
@@ -323,7 +327,7 @@ function ReviewForm({ productId, accent, accentTint, isLoggedIn }: {
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
-export default function ProductPageClient({ product, initialWishlistState, variants, approvedReviews, similarProducts, categorySlug, isLoggedIn }: Props) {
+export default function ProductPageClient({ product, initialWishlistState, variants, approvedReviews, similarProducts, categorySlug, isLoggedIn, sizeVariants }: Props) {
   const { addToCart } = useCart();
 
   // ── Variant selection ──
@@ -438,7 +442,6 @@ export default function ProductPageClient({ product, initialWishlistState, varia
         {product.title}
       </h1>
 
-      {/* Rating row */}
       {approvedReviews.length > 0 && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
           <StarRow rating={Math.round(approvedReviews.reduce((s, r) => s + r.rating, 0) / approvedReviews.length)} accent={accent} />
@@ -448,7 +451,6 @@ export default function ProductPageClient({ product, initialWishlistState, varia
         </div>
       )}
 
-      {/* Price */}
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginTop: 8 }}>
         <span className="font-playfair" style={{ fontSize: 30, fontWeight: 700, color: '#1c1917', lineHeight: 1 }}>
           £{price.toFixed(0)}
@@ -463,7 +465,7 @@ export default function ProductPageClient({ product, initialWishlistState, varia
   );
 
   // ── WhatsApp Component ──
-  const whatsappNumber = "447476616022"; // ⚠️ REPLACE WITH YOUR ACTUAL UK WHATSAPP NUMBER
+  const whatsappNumber = "447476616022";
   const whatsappText = encodeURIComponent(`Hi, I have a query about your product: ${product.title}`);
   
   const WhatsAppCard = () => (
@@ -474,22 +476,20 @@ export default function ProductPageClient({ product, initialWishlistState, varia
       className="group hover:bg-stone-800"
       style={{
         display: 'flex', alignItems: 'center', gap: 10, 
-        background: '#1c1917', padding: '8px 12px', // Compact padding
+        background: '#1c1917', padding: '8px 12px',
         borderRadius: 8, textDecoration: 'none', 
-        marginTop: 10, // Margin to push it below the buttons
+        marginTop: 10, 
         boxShadow: '0 4px 12px rgba(0,0,0,0.1)', 
         transition: 'background 0.2s ease', 
         width: '100%', cursor: 'pointer'
       }}
     >
-      {/* Green circle with White WhatsApp Icon */}
       <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#25D366', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
           <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
         </svg>
       </div>
       
-      {/* Typography block */}
       <div style={{ display: 'flex', flexDirection: 'column' }}>
         <span style={{ fontSize: 11, fontWeight: 700, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
           Talk to an agent instead
@@ -572,6 +572,43 @@ export default function ProductPageClient({ product, initialWishlistState, varia
           {/* ════ RIGHT: PRODUCT INFO ════ */}
           <div style={{ animation: 'slideUp 0.55s ease 0.1s both' }}>
             {renderTitleBlock('hidden md:block')}
+
+            {/* ── NEW: Size / Configuration Group Selector ── */}
+            {sizeVariants && sizeVariants.length > 0 && (
+              <div style={{ marginBottom: 18 }}>
+                <div style={{ fontSize: 10, color: '#78716c', textTransform: 'uppercase', letterSpacing: '0.18em', fontWeight: 600, marginBottom: 8 }}>
+                  Size / Configuration
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+                  {sizeVariants.map(sv => {
+                    const isActive = sv.slug === product.slug;
+                    return (
+                      <Link
+                        key={sv.id}
+                        href={`/shop/${categorySlug}/${sv.slug}`}
+                        style={{
+                          padding: '7px 14px',
+                          borderRadius: 6,
+                          fontSize: 11,
+                          fontWeight: 600,
+                          textDecoration: 'none',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                          background: isActive ? accent : 'white',
+                          color: isActive ? textOnAccent : '#57534e',
+                          border: `1.5px solid ${isActive ? accent : '#e7e5e4'}`,
+                          transform: isActive ? 'scale(1.03)' : 'scale(1)',
+                          display: 'inline-block'
+                        }}
+                      >
+                        {sv.size_label}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+            {/* ────────────────────────────────────────── */}
 
             {/* ── Material selector ── */}
             {uniqueMaterials.length > 0 && (
@@ -680,9 +717,6 @@ export default function ProductPageClient({ product, initialWishlistState, varia
             {dimensions && (
               <button 
                 onClick={() => setShowDims(true)} 
-                /* Use Tailwind for responsive margin: 
-                  mb-24 (96px) on mobile so it clears the sticky bars, 
-                  md:mb-4 (16px) on desktop */
                 className="group mb-24 md:mb-4" 
                 style={{ 
                   display: 'inline-flex', 
@@ -716,8 +750,6 @@ export default function ProductPageClient({ product, initialWishlistState, varia
                 padding: '10px 16px' 
               }}
             >
-              
-              {/* Top Row: Price, Wishlist, Add to Cart */}
               <div style={{ display: 'flex', width: '100%', gap: 10, alignItems: 'center' }}>
                 <div>
                   <div className="font-playfair" style={{ fontSize: 17, fontWeight: 700, color: '#1c1917' }}>£{price.toFixed(0)}</div>
@@ -732,8 +764,6 @@ export default function ProductPageClient({ product, initialWishlistState, varia
                   {added ? <><Check style={{ width: 14, height: 14 }} /> Added!</> : outOfStock ? 'Out of Stock' : <><ShoppingBag style={{ width: 14, height: 14 }} /> Add to Cart</>}
                 </button>
               </div>
-
-              {/* Bottom Row: WhatsApp Button */}
               <WhatsAppCard />
             </div>
 
@@ -749,10 +779,8 @@ export default function ProductPageClient({ product, initialWishlistState, varia
                 </button>
               </div>
 
-              {/* WhatsApp Button immediately below desktop Add to Cart */}
               <WhatsAppCard />
 
-              {/* Trust row */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 1, marginTop: 12, border: `1px solid ${accent}20`, borderRadius: 10, overflow: 'hidden' }}>
                 {[{ icon: Truck, label: 'Free Delivery' }, { icon: Gem, label: 'COD Available' }, { icon: ShieldCheck, label: '1-Yr Guarantee' }].map(({ icon: Icon, label }) => (
                   <div key={label} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, padding: '10px 8px', background: accentTint, transition: 'background 0.7s ease' }}>
@@ -763,8 +791,6 @@ export default function ProductPageClient({ product, initialWishlistState, varia
               </div>
             </div>
           </div>
-
-          
         </div>
 
         {/* ════ REVIEWS SECTION ════ */}
@@ -803,7 +829,6 @@ export default function ProductPageClient({ product, initialWishlistState, varia
                   
                   <p style={{ fontSize: 12, color: '#57534e', lineHeight: 1.7, margin: 0 }}>{r.comment}</p>
                   
-                  {/* --- NEW: Small Review Picture --- */}
                   {r.image_url && (
                     <div style={{ marginTop: 12 }}>
                       <img 
@@ -820,8 +845,6 @@ export default function ProductPageClient({ product, initialWishlistState, varia
                       />
                     </div>
                   )}
-                  {/* --------------------------------- */}
-
                 </div>
               )) : (
                 <div style={{ background: accentTint, border: `1px dashed ${accent}44`, borderRadius: 10, padding: '28px 20px', textAlign: 'center' }}>
@@ -838,7 +861,6 @@ export default function ProductPageClient({ product, initialWishlistState, varia
           </div>
         </div>
         
-
         {/* ════ SIMILAR PRODUCTS SECTION ════ */}
         {similarProducts && similarProducts.length > 0 && (
           <div style={{ maxWidth: 1100, margin: '0 auto', padding: '20px 16px 80px' }}>
@@ -872,8 +894,7 @@ export default function ProductPageClient({ product, initialWishlistState, varia
             </div>
           </div>
         )}
-
-      </main> {/* <-- This is the existing closing main tag */}
+      </main>
 
       {zoomed && <ZoomModal src={displayImage} alt={product.title} onClose={() => setZoomed(false)} />}
 

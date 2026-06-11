@@ -1,11 +1,12 @@
 // src/components/Admin/AddProductForm.tsx
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { addProduct, VariantInput } from '@/app/actions/inventory'
 import { Plus, Trash2, Loader2, ImagePlus } from 'lucide-react'
 import { Database } from '@/types/supabase'
+import { createClient } from '@/utils/supabase/client'
 
 type Category = Pick<Database['public']['Tables']['categories']['Row'], 'id' | 'name'>
 
@@ -15,10 +16,19 @@ interface VariantState extends Omit<VariantInput, 'stock'> {
 
 export default function AddProductForm({ categories }: { categories: Category[] }) {
   const router = useRouter()
+  const supabase = createClient()
+  
   const [isPending, setIsPending] = useState(false)
   const [error, setError] = useState('')
   
-  // Stock is removed.
+  // New State for Variant Groups
+  const [variantGroups, setVariantGroups] = useState<{ id: string; name: string }[]>([])
+  const [selectedGroupId, setSelectedGroupId] = useState('')
+  const [sizeLabel, setSizeLabel] = useState('')
+  const [isCreatingGroup, setIsCreatingGroup] = useState(false)
+  const [newGroupName, setNewGroupName] = useState('')
+  const [isSavingGroup, setIsSavingGroup] = useState(false)
+  
   const [variants, setVariants] = useState<VariantState[]>([
     { sku: '', color: '', color_hex: '#000000', material: '', priceAdjustment: '0', image_url: '', isUploading: false }
   ])
@@ -27,6 +37,35 @@ export default function AddProductForm({ categories }: { categories: Category[] 
     { key: 'Style', value: '' },
     { key: 'Dimensions', value: '' }
   ])
+
+  // Fetch variant groups on mount
+  useEffect(() => {
+    const fetchGroups = async () => {
+      const { data } = await supabase.from('variant_groups').select('id, name').order('name')
+      if (data) setVariantGroups(data)
+    }
+    fetchGroups()
+  }, [supabase])
+
+  const handleCreateGroup = async () => {
+    if (!newGroupName.trim()) return
+    setIsSavingGroup(true)
+    const { data, error } = await supabase
+      .from('variant_groups')
+      .insert({ name: newGroupName.trim() })
+      .select('id, name')
+      .single()
+
+    if (data) {
+      setVariantGroups(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)))
+      setSelectedGroupId(data.id)
+      setIsCreatingGroup(false)
+      setNewGroupName('')
+    } else {
+      alert('Failed to create group: ' + error?.message)
+    }
+    setIsSavingGroup(false)
+  }
 
   const addVariantRow = () => {
     setVariants([...variants, { sku: '', color: '', color_hex: '#000000', material: '', priceAdjustment: '0', image_url: '', isUploading: false }])
@@ -79,6 +118,13 @@ export default function AddProductForm({ categories }: { categories: Category[] 
     setError('')
 
     const formData = new FormData(e.currentTarget)
+    
+    // Append the dynamic variant group fields if active
+    if (selectedGroupId) {
+      formData.append('variantGroupId', selectedGroupId)
+      if (sizeLabel.trim()) formData.append('sizeLabel', sizeLabel.trim())
+    }
+
     const specificationsObject = specs.reduce((acc, curr) => {
       const trimmedKey = curr.key.trim()
       if (trimmedKey) acc[trimmedKey] = curr.value.trim()
@@ -86,7 +132,6 @@ export default function AddProductForm({ categories }: { categories: Category[] 
     }, {} as Record<string, string>)
     formData.append('specifications', JSON.stringify(specificationsObject))
 
-    // Automatically assign a dummy stock value so the backend action doesn't fail
     const variantsWithDummyStock = variants.map(v => ({ ...v, stock: '999' }))
 
     const result = await addProduct(formData, variantsWithDummyStock)
@@ -120,6 +165,87 @@ export default function AddProductForm({ categories }: { categories: Category[] 
             <input type="number" step="0.01" inputMode="decimal" name="basePrice" required className="w-full p-3.5 bg-stone-50 border border-stone-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none font-bold text-lg" placeholder="499.99" />
           </div>
         </div>
+
+        {/* --- NEW: Variant Grouping Section --- */}
+        <div className="pt-6 border-t border-stone-100">
+          <label className="block text-xs font-bold text-stone-500 uppercase tracking-wider mb-4">Size & Variant Grouping (Optional)</label>
+          <div className="p-5 bg-stone-50 border border-stone-200 rounded-xl space-y-4">
+            
+            {!isCreatingGroup ? (
+              <div className="flex flex-col sm:flex-row items-end gap-3">
+                <div className="flex-1 w-full">
+                  <label className="block text-[10px] font-bold text-stone-400 uppercase mb-1">Variant Group</label>
+                  <select 
+                    value={selectedGroupId} 
+                    onChange={(e) => {
+                      setSelectedGroupId(e.target.value)
+                      if (!e.target.value) setSizeLabel('')
+                    }}
+                    className="w-full p-3 bg-white border border-stone-200 rounded-lg outline-none font-medium text-sm focus:border-orange-500"
+                  >
+                    <option value="">-- No Group (Standalone Product) --</option>
+                    {variantGroups.map(g => (
+                      <option key={g.id} value={g.id}>{g.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <button 
+                  type="button" 
+                  onClick={() => setIsCreatingGroup(true)}
+                  className="px-4 py-3 bg-white border border-stone-200 text-stone-600 font-bold text-sm rounded-lg hover:border-orange-500 transition whitespace-nowrap w-full sm:w-auto"
+                >
+                  Create New
+                </button>
+              </div>
+            ) : (
+              <div className="flex flex-col sm:flex-row items-end gap-3 p-3 bg-white border border-stone-200 rounded-lg">
+                <div className="flex-1 w-full">
+                  <label className="block text-[10px] font-bold text-stone-400 uppercase mb-1">New Group Name</label>
+                  <input 
+                    type="text" 
+                    value={newGroupName} 
+                    onChange={(e) => setNewGroupName(e.target.value)}
+                    placeholder="e.g. Havana Sofa Set"
+                    className="w-full p-2.5 bg-stone-50 border border-stone-200 rounded outline-none font-medium text-sm focus:border-orange-500"
+                  />
+                </div>
+                <div className="flex gap-2 w-full sm:w-auto">
+                  <button 
+                    type="button"
+                    onClick={handleCreateGroup}
+                    disabled={isSavingGroup}
+                    className="flex-1 sm:flex-none px-4 py-2.5 bg-stone-900 text-white font-bold text-sm rounded hover:bg-stone-800 transition disabled:opacity-50"
+                  >
+                    {isSavingGroup ? 'Saving...' : 'Save'}
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={() => setIsCreatingGroup(false)}
+                    className="flex-1 sm:flex-none px-4 py-2.5 bg-stone-100 text-stone-600 font-bold text-sm rounded hover:bg-stone-200 transition"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {selectedGroupId && (
+              <div className="pt-4 border-t border-stone-200 mt-4">
+                <label className="block text-[10px] font-bold text-stone-400 uppercase mb-1">Size Label (Appears on Button)</label>
+                <input 
+                  type="text" 
+                  value={sizeLabel}
+                  onChange={(e) => setSizeLabel(e.target.value)}
+                  placeholder="e.g. 2 Seater, Corner, King Size"
+                  className="w-full p-3 bg-white border border-stone-200 rounded-lg outline-none font-medium text-sm focus:border-orange-500"
+                  required={!!selectedGroupId}
+                />
+                <p className="text-[11px] text-stone-500 mt-1.5 font-medium">This text becomes the button label for this specific size on the product page.</p>
+              </div>
+            )}
+          </div>
+        </div>
+        {/* --- END Variant Grouping --- */}
 
         <div>
           <label className="block text-xs font-bold text-stone-500 uppercase tracking-wider mb-2">Categories</label>

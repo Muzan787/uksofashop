@@ -51,7 +51,27 @@ export default async function ProductPage(props: { params: Params }) {
     }
   }
 
-  // --- NEW: Fetch and Sort Similar Products ---
+  // --- NEW: Fetch Size Variants within the same Group ---
+  let sizeVariants: any[] = [];
+  if (product.variant_group_id) {
+    const { data: groupProducts } = await supabase
+      .from('products')
+      .select('id, slug, size_label, base_price')
+      .eq('variant_group_id', product.variant_group_id)
+      .eq('is_active', true)
+      .order('base_price', { ascending: true }); // Natural sort by price (e.g. 2 Seater -> 3 Seater)
+
+    if (groupProducts) {
+      sizeVariants = groupProducts.filter(p => p.size_label).map(p => ({
+        id: p.id,
+        slug: p.slug,
+        size_label: p.size_label
+      }));
+    }
+  }
+  // ------------------------------------------------------
+
+  // --- Fetch and Sort Similar Products ---
   const { data: categoryData } = await supabase
     .from('categories')
     .select('id')
@@ -73,13 +93,11 @@ export default async function ProductPage(props: { params: Params }) {
     if (related) {
       const currentFirstWord = product.title.trim().split(' ')[0].toLowerCase();
       
-      // Extract products from the join table and filter out the current product & inactive ones
       let relatedProducts = related
         .map((r: any) => r.products)
         .flat()
         .filter((p: any) => p && p.id !== product.id && p.is_active !== false);
 
-      // Sort: Products matching the first word of the title come first
       relatedProducts.sort((a: any, b: any) => {
         const aFirstWord = a.title.trim().split(' ')[0].toLowerCase();
         const bFirstWord = b.title.trim().split(' ')[0].toLowerCase();
@@ -87,10 +105,9 @@ export default async function ProductPage(props: { params: Params }) {
         const matchA = aFirstWord === currentFirstWord ? 1 : 0;
         const matchB = bFirstWord === currentFirstWord ? 1 : 0;
         
-        return matchB - matchA; // High score (1) comes before low score (0)
+        return matchB - matchA; 
       });
 
-      // Take the top 4 and map to a safe format for the client
       safeSimilarProducts = relatedProducts.slice(0, 4).map((p: any) => ({
         id: p.id,
         title: p.title,
@@ -125,7 +142,6 @@ export default async function ProductPage(props: { params: Params }) {
     .filter((r: any) => r.status === 'approved' || r.is_approved === true)
     .map((r: any) => ({
       id: r.id,
-      // FIX: Stop forcing 'Verified Buyer' as the name! Pass the real name or leave it blank.
       customer_name: r.customer_name || '', 
       image_url: r.image_url || null,
       rating: r.rating,
@@ -139,10 +155,11 @@ export default async function ProductPage(props: { params: Params }) {
       product={safeProduct}
       variants={safeVariants}
       approvedReviews={approvedReviews}
-      similarProducts={safeSimilarProducts} // Pass the new data down
+      similarProducts={safeSimilarProducts} 
       categorySlug={category}
       initialWishlistState={initialWishlistState}
       isLoggedIn={!!user}
+      sizeVariants={sizeVariants} // Pass the new size variants down
     />
   );
 }

@@ -16,14 +16,16 @@ export interface VariantInput {
   image_url: string;
 }
 
-// 1. Update Product Schema to accept the JSON stringified specifications
+// Updated Schema to accept variantGroupId and sizeLabel
 const productSchema = z.object({
   title: z.string().min(3, 'Product title must be at least 3 characters.'),
   slug: z.string().regex(/^[a-z0-9-]+$/, 'Slug can only contain lowercase letters, numbers, and hyphens.'),
   categoryIds: z.array(z.string().uuid()).min(1, 'Select at least one category.'),
   basePrice: z.number().positive('Base price must be greater than 0.'),
   description: z.string().min(10, 'Description must be at least 10 characters.'),
-  specifications: z.string().optional(), // <-- NEW: Accepts stringified JSON
+  specifications: z.string().optional(),
+  variantGroupId: z.string().uuid().optional().nullable().or(z.literal('')),
+  sizeLabel: z.string().optional().nullable().or(z.literal('')),
 })
 
 export async function addProduct(formData: FormData, variants: VariantInput[]) {
@@ -36,7 +38,9 @@ export async function addProduct(formData: FormData, variants: VariantInput[]) {
     categoryIds: formCategoryIds,
     basePrice: parseFloat(formData.get('basePrice') as string),
     description: formData.get('description'),
-    specifications: formData.get('specifications') as string || '{}', // <-- NEW
+    specifications: formData.get('specifications') as string || '{}',
+    variantGroupId: formData.get('variantGroupId') || null,
+    sizeLabel: formData.get('sizeLabel') || null,
   }
 
   const validatedData = productSchema.safeParse(rawData)
@@ -45,7 +49,7 @@ export async function addProduct(formData: FormData, variants: VariantInput[]) {
     return { error: validatedData.error.issues[0].message }
   }
 
-  const { title, slug, categoryIds, basePrice, description, specifications } = validatedData.data
+  const { title, slug, categoryIds, basePrice, description, specifications, variantGroupId, sizeLabel } = validatedData.data
 
   let parsedSpecs = {};
   try { parsedSpecs = JSON.parse(specifications || '{}'); } catch { }
@@ -57,7 +61,9 @@ export async function addProduct(formData: FormData, variants: VariantInput[]) {
       slug,
       base_price: basePrice,
       description,
-      specifications: parsedSpecs // <-- NEW
+      specifications: parsedSpecs,
+      variant_group_id: variantGroupId || null,
+      size_label: sizeLabel || null
     })
     .select('id')
     .single()
@@ -114,13 +120,11 @@ export async function activateProduct(formData: FormData) {
 
   const supabase = await createClient()
 
-  // Toggle the product back to active
   await supabase
     .from('products')
     .update({ is_active: true })
     .eq('id', productId)
 
-  // Refresh the UI instantly
   revalidatePath('/admin/inventory')
   revalidatePath('/admin')
   revalidatePath('/')
@@ -134,7 +138,9 @@ export async function updateProduct(formData: FormData, variants: VariantInput[]
   const categoryIds = formData.getAll('categoryIds') as string[]
   const basePrice = parseFloat(formData.get('basePrice') as string)
   const description = formData.get('description') as string
-  const specifications = formData.get('specifications') as string || '{}' // <-- NEW
+  const specifications = formData.get('specifications') as string || '{}'
+  const variantGroupId = formData.get('variantGroupId') as string || null
+  const sizeLabel = formData.get('sizeLabel') as string || null
 
   let parsedSpecs = {};
   try { parsedSpecs = JSON.parse(specifications); } catch { }
@@ -146,7 +152,9 @@ export async function updateProduct(formData: FormData, variants: VariantInput[]
       slug,
       base_price: basePrice,
       description,
-      specifications: parsedSpecs // <-- NEW
+      specifications: parsedSpecs,
+      variant_group_id: variantGroupId,
+      size_label: sizeLabel
     })
     .eq('id', productId)
 
