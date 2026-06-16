@@ -16,7 +16,6 @@ export interface VariantInput {
   image_url: string;
 }
 
-// Updated Schema to accept variantGroupId and sizeLabel
 const productSchema = z.object({
   title: z.string().min(3, 'Product title must be at least 3 characters.'),
   slug: z.string().regex(/^[a-z0-9-]+$/, 'Slug can only contain lowercase letters, numbers, and hyphens.'),
@@ -26,6 +25,7 @@ const productSchema = z.object({
   specifications: z.string().optional(),
   variantGroupId: z.string().uuid().optional().nullable().or(z.literal('')),
   sizeLabel: z.string().optional().nullable().or(z.literal('')),
+  gallery_images: z.string().optional(), // <-- NEW: Accepts stringified array of URLs
 })
 
 export async function addProduct(formData: FormData, variants: VariantInput[]) {
@@ -41,6 +41,7 @@ export async function addProduct(formData: FormData, variants: VariantInput[]) {
     specifications: formData.get('specifications') as string || '{}',
     variantGroupId: formData.get('variantGroupId') || null,
     sizeLabel: formData.get('sizeLabel') || null,
+    gallery_images: formData.get('gallery_images') as string || '[]',
   }
 
   const validatedData = productSchema.safeParse(rawData)
@@ -49,10 +50,13 @@ export async function addProduct(formData: FormData, variants: VariantInput[]) {
     return { error: validatedData.error.issues[0].message }
   }
 
-  const { title, slug, categoryIds, basePrice, description, specifications, variantGroupId, sizeLabel } = validatedData.data
+  const { title, slug, categoryIds, basePrice, description, specifications, variantGroupId, sizeLabel, gallery_images } = validatedData.data
 
   let parsedSpecs = {};
   try { parsedSpecs = JSON.parse(specifications || '{}'); } catch { }
+  
+  let parsedGallery: string[] = [];
+  try { parsedGallery = JSON.parse(gallery_images || '[]'); } catch { }
 
   const { data: product, error: productError } = await supabase
     .from('products')
@@ -63,7 +67,8 @@ export async function addProduct(formData: FormData, variants: VariantInput[]) {
       description,
       specifications: parsedSpecs,
       variant_group_id: variantGroupId || null,
-      size_label: sizeLabel || null
+      size_label: sizeLabel || null,
+      gallery_images: parsedGallery
     })
     .select('id')
     .single()
@@ -105,9 +110,7 @@ export async function deleteProduct(formData: FormData) {
     .update({ is_active: false })
     .eq('id', productId)
 
-  if (error) {
-    return { error: 'Failed to delete product.' }
-  }
+  if (error) return { error: 'Failed to delete product.' }
 
   revalidatePath('/admin/inventory')
   revalidatePath('/')
@@ -117,13 +120,9 @@ export async function deleteProduct(formData: FormData) {
 export async function activateProduct(formData: FormData) {
   const productId = formData.get('productId') as string
   if (!productId) return
-
   const supabase = await createClient()
 
-  await supabase
-    .from('products')
-    .update({ is_active: true })
-    .eq('id', productId)
+  await supabase.from('products').update({ is_active: true }).eq('id', productId)
 
   revalidatePath('/admin/inventory')
   revalidatePath('/admin')
@@ -141,9 +140,13 @@ export async function updateProduct(formData: FormData, variants: VariantInput[]
   const specifications = formData.get('specifications') as string || '{}'
   const variantGroupId = formData.get('variantGroupId') as string || null
   const sizeLabel = formData.get('sizeLabel') as string || null
+  const gallery_images = formData.get('gallery_images') as string || '[]'
 
   let parsedSpecs = {};
   try { parsedSpecs = JSON.parse(specifications); } catch { }
+  
+  let parsedGallery: string[] = [];
+  try { parsedGallery = JSON.parse(gallery_images); } catch { }
 
   const { error: productError } = await supabase
     .from('products')
@@ -154,7 +157,8 @@ export async function updateProduct(formData: FormData, variants: VariantInput[]
       description,
       specifications: parsedSpecs,
       variant_group_id: variantGroupId,
-      size_label: sizeLabel
+      size_label: sizeLabel,
+      gallery_images: parsedGallery
     })
     .eq('id', productId)
 
@@ -164,10 +168,7 @@ export async function updateProduct(formData: FormData, variants: VariantInput[]
 
   if (categoryIds.length > 0) {
     await supabase.from('product_categories').delete().eq('product_id', productId)
-    const productCategoryData = categoryIds.map(id => ({
-      product_id: productId,
-      category_id: id
-    }))
+    const productCategoryData = categoryIds.map(id => ({ product_id: productId, category_id: id }))
     await supabase.from('product_categories').insert(productCategoryData)
   }
 
@@ -184,13 +185,8 @@ export async function updateProduct(formData: FormData, variants: VariantInput[]
       image_url: v.image_url || null
     }))
 
-    const { error: variantError } = await supabase
-      .from('product_variants')
-      .upsert(variantData)
-
-    if (variantError) {
-      return { error: 'Product updated, but failed to sync variants.' }
-    }
+    const { error: variantError } = await supabase.from('product_variants').upsert(variantData)
+    if (variantError) return { error: 'Product updated, but failed to sync variants.' }
   }
 
   revalidatePath('/admin/inventory')

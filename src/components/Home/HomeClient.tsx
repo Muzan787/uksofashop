@@ -162,14 +162,14 @@ function ProductCard({ product }: { product: Product }) {
         willChange: 'transform',
       }}
     >
-      {/* Image */}
+      {/* FIXED: Removed the desktop-only vertical aspect ratio. It is now strictly horizontal (4/3) on all screens */}
       <div
-        className="relative overflow-hidden bg-stone-100 aspect-[4/3] sm:aspect-[3/4]"
+        className="relative overflow-hidden bg-stone-100 aspect-[4/3]"
         style={{ borderRadius: 10 }}
       >
         {image ? (
           <Image
-            src={image} alt={product.title} fill sizes="(max-width:640px) 50vw, 25vw"
+            src={image} alt={product.title} fill sizes="(max-width:640px) 80vw, 50vw"
             className="object-cover group-hover:scale-110 transition-transform duration-700"
           />
         ) : (
@@ -651,9 +651,13 @@ export default function HomeClient({ categories, products }: Props) {
             </div>
           </Reveal>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 sm:gap-4">
+          <div className="flex overflow-x-auto snap-x snap-mandatory gap-4 pb-8 -mx-4 px-4 sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
             {products.map((p, i) => (
-              <Reveal key={p.id} delay={i * 50}>
+              <Reveal 
+                key={p.id} 
+                delay={i * 50} 
+                className="shrink-0 snap-start w-[80vw] sm:w-[calc(50%-8px)]"
+              >
                 <ProductCard product={p} />
               </Reveal>
             ))}

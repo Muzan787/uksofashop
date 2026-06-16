@@ -6,7 +6,7 @@ import Link from 'next/link';
 import {
   ShoppingBag, Check, Truck, Wallet, ShieldCheck,
   Ruler, X, ChevronDown, ChevronUp, Star, ZoomIn,
-  Loader2, CheckCircle, ChevronRight, RotateCcw, Gem, Heart, ImagePlus
+  Loader2, CheckCircle, ChevronRight, RotateCcw, Gem, Heart, ImagePlus, ChevronLeft
 } from 'lucide-react';
 import { toggleWishlist } from '@/app/actions/wishlist';
 import { useCart } from '@/context/CartContext';
@@ -40,6 +40,7 @@ interface Product {
   description: string | null;
   base_price: number;
   specifications: Record<string, string> | string | null;
+  gallery_images?: string[] | null; 
   product_variants?: Variant[];
   reviews?: Review[];
 }
@@ -50,11 +51,6 @@ interface SimilarProduct {
   base_price: number;
   image_url: string;
 }
-interface SizeVariant {
-  id: string;
-  slug: string;
-  size_label: string;
-}
 interface Props {
   product: Product;
   variants: Variant[];
@@ -62,8 +58,7 @@ interface Props {
   similarProducts: SimilarProduct[];
   categorySlug: string;
   initialWishlistState: boolean;
-  isLoggedIn: boolean;
-  sizeVariants?: SizeVariant[]; // Added Size Variants
+  isLoggedIn: boolean; 
 }
 
 // ─── Color utilities ──────────────────────────────────────────────────────────
@@ -327,7 +322,7 @@ function ReviewForm({ productId, accent, accentTint, isLoggedIn }: {
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
-export default function ProductPageClient({ product, initialWishlistState, variants, approvedReviews, similarProducts, categorySlug, isLoggedIn, sizeVariants }: Props) {
+export default function ProductPageClient({ product, initialWishlistState, variants, approvedReviews, similarProducts, categorySlug, isLoggedIn }: Props) {
   const { addToCart } = useCart();
 
   // ── Variant selection ──
@@ -345,7 +340,7 @@ export default function ProductPageClient({ product, initialWishlistState, varia
   const textOnAccent = getTextColor(accent);
 
   // ── UI state ──
-  const [zoomed, setZoomed]             = useState(false);
+  const [zoomImage, setZoomImage]       = useState<string | null>(null);
   const [showDims, setShowDims]         = useState(false);
   const [descExpanded, setDescExpanded] = useState(false);
   const [added, setAdded]               = useState(false);
@@ -368,22 +363,104 @@ export default function ProductPageClient({ product, initialWishlistState, varia
     setWishlistLoading(false);
   };
 
-  // Gallery — all variant images as thumbnails
-  const gallery = useMemo(() => {
+  // ── NEW: SPLIT GALLERY LOGIC ──
+  
+  // 1. Variant Thumbnails (Displayed below main image)
+  const variantThumbnails = useMemo(() => {
+    const items: { src: string; variantId: string; color: string }[] = [];
     const seen = new Set<string>();
-    return filtered
-      .filter(v => v.image_url && !seen.has(v.image_url) && seen.add(v.image_url))
-      .map(v => ({ src: v.image_url!, variantId: v.id, color: v.color_hex || accent }));
-  }, [filtered, accent]);
-  const [activeGallery, setActiveGallery] = useState(0);
-  const displayImage = selVariant?.image_url ?? gallery[0]?.src ?? '/placeholder.svg';
+    filtered.forEach(v => {
+      if (v.image_url && !seen.has(v.image_url)) {
+        items.push({ src: v.image_url, variantId: v.id, color: v.color ?? '' });
+        seen.add(v.image_url);
+      }
+    });
+    return items;
+  }, [filtered]);
 
-  // Switch gallery when variant changes
+  // 2. Main Slider Images (Active Variant + Extra Gallery Images)
+  const mainSliderImages = useMemo(() => {
+    const items: { src: string }[] = [];
+    const seen = new Set<string>();
+
+    // Active variant goes FIRST
+    const activeImg = selVariant?.image_url || filtered[0]?.image_url;
+    if (activeImg && !seen.has(activeImg)) {
+      items.push({ src: activeImg });
+      seen.add(activeImg);
+    }
+
+    // Extra gallery images follow
+    if (product.gallery_images && Array.isArray(product.gallery_images)) {
+      product.gallery_images.forEach(url => {
+        if (!seen.has(url)) {
+          items.push({ src: url });
+          seen.add(url);
+        }
+      });
+    }
+
+    return items;
+  }, [selVariant?.image_url, filtered, product.gallery_images]);
+
+  // ── MAIN IMAGE SCROLLING LOGIC ──
+  const mainSliderRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const checkScroll = useCallback(() => {
+    if (mainSliderRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = mainSliderRef.current;
+      setCanScrollLeft(scrollLeft > 2);
+      setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 2);
+    }
+  }, []);
+
   useEffect(() => {
-    const idx = gallery.findIndex(g => g.src === selVariant?.image_url);
-    if (idx >= 0) setActiveGallery(idx);
+    checkScroll();
+    window.addEventListener('resize', checkScroll);
+    return () => window.removeEventListener('resize', checkScroll);
+  }, [mainSliderImages, checkScroll]);
+
+  // Automatically reset main slider to beginning when color variant changes
+  useEffect(() => {
+    mainSliderRef.current?.scrollTo({ left: 0, behavior: 'smooth' });
     setImgLoaded(false);
-  }, [selVariant, gallery]);
+  }, [selVariant?.image_url]);
+
+  // "Peek" Animation Effect on the MAIN slider
+  useEffect(() => {
+    if (mainSliderImages.length > 1 && mainSliderRef.current) {
+      const timer1 = setTimeout(() => {
+        mainSliderRef.current?.scrollBy({ left: 75, behavior: 'smooth' });
+      }, 800);
+      const timer2 = setTimeout(() => {
+        mainSliderRef.current?.scrollBy({ left: -75, behavior: 'smooth' });
+      }, 1500);
+      return () => { clearTimeout(timer1); clearTimeout(timer2); };
+    }
+  }, [mainSliderImages.length]);
+
+  // Mouse Drag to Scroll
+  const [isDown, setIsDown] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [scrollLeft, setScrollLeft] = useState(0);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setIsDown(true);
+    if (!mainSliderRef.current) return;
+    setStartX(e.pageX - mainSliderRef.current.offsetLeft);
+    setScrollLeft(mainSliderRef.current.scrollLeft);
+  };
+  const handleMouseLeave = () => setIsDown(false);
+  const handleMouseUp = () => setIsDown(false);
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDown || !mainSliderRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - mainSliderRef.current.offsetLeft;
+    const walk = (x - startX) * 2; 
+    mainSliderRef.current.scrollLeft = scrollLeft - walk;
+  };
 
   // Specs
   const specs = useMemo(() => {
@@ -408,12 +485,12 @@ export default function ProductPageClient({ product, initialWishlistState, varia
       price,
       title: product.title,
       color: `${selVariant.color ?? ''} ${selVariant.material ?? ''}`.trim(),
-      image_url: displayImage,
+      image_url: mainSliderImages[0]?.src || '/placeholder.svg',
     });
     setAdded(true);
     toast.success(`${product.title} added to cart!`, { icon: '🛋️', position: "top-center" });
     setTimeout(() => setAdded(false), 2000);
-  }, [selVariant, price, product.title, displayImage, addToCart]);
+  }, [selVariant, price, product.title, mainSliderImages, addToCart]);
 
   const handleMatChange = (mat: string) => {
     setSelMat(mat);
@@ -442,6 +519,7 @@ export default function ProductPageClient({ product, initialWishlistState, varia
         {product.title}
       </h1>
 
+      {/* Rating row */}
       {approvedReviews.length > 0 && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
           <StarRow rating={Math.round(approvedReviews.reduce((s, r) => s + r.rating, 0) / approvedReviews.length)} accent={accent} />
@@ -451,6 +529,7 @@ export default function ProductPageClient({ product, initialWishlistState, varia
         </div>
       )}
 
+      {/* Price */}
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginTop: 8 }}>
         <span className="font-playfair" style={{ fontSize: 30, fontWeight: 700, color: '#1c1917', lineHeight: 1 }}>
           £{price.toFixed(0)}
@@ -465,7 +544,7 @@ export default function ProductPageClient({ product, initialWishlistState, varia
   );
 
   // ── WhatsApp Component ──
-  const whatsappNumber = "447476616022";
+  const whatsappNumber = "447476616022"; 
   const whatsappText = encodeURIComponent(`Hi, I have a query about your product: ${product.title}`);
   
   const WhatsAppCard = () => (
@@ -478,7 +557,7 @@ export default function ProductPageClient({ product, initialWishlistState, varia
         display: 'flex', alignItems: 'center', gap: 10, 
         background: '#1c1917', padding: '8px 12px',
         borderRadius: 8, textDecoration: 'none', 
-        marginTop: 10, 
+        marginTop: 10,
         boxShadow: '0 4px 12px rgba(0,0,0,0.1)', 
         transition: 'background 0.2s ease', 
         width: '100%', cursor: 'pointer'
@@ -489,7 +568,6 @@ export default function ProductPageClient({ product, initialWishlistState, varia
           <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
         </svg>
       </div>
-      
       <div style={{ display: 'flex', flexDirection: 'column' }}>
         <span style={{ fontSize: 11, fontWeight: 700, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
           Talk to an agent instead
@@ -539,30 +617,98 @@ export default function ProductPageClient({ product, initialWishlistState, varia
           <div className="relative md:sticky md:top-[70px]" style={{ animation: 'slideUp 0.55s ease 0.05s both' }}>
             {renderTitleBlock('md:hidden')}
             
-            <div className="aspect-square md:aspect-[4/5]" style={{ position: 'relative', borderRadius: 14, overflow: 'hidden', background: accentTint, boxShadow: `0 24px 60px ${accent}22, 0 4px 16px rgba(0,0,0,0.06)`, transition: 'box-shadow 0.7s ease', cursor: 'zoom-in' }} onClick={() => setZoomed(true)}>
-              <Image key={displayImage} src={displayImage} alt={product.title} fill priority sizes="(max-width:768px) 100vw, 50vw" style={{ objectFit: 'cover', animation: imgLoaded ? 'imgFade 0.5s ease' : 'none' }} onLoad={() => setImgLoaded(true)} />
-              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: accent, transition: 'background 0.7s ease' }} />
-              <div style={{ position: 'absolute', bottom: 12, right: 12, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(6px)', borderRadius: 6, padding: '5px 8px', display: 'flex', alignItems: 'center', gap: 5, color: '#fff', fontSize: 10, letterSpacing: '0.06em' }}>
+            {/* MAIN IMAGE SLIDER */}
+            <div className="relative group/main-slider" onMouseEnter={checkScroll}>
+              
+              {/* Translucent Arrows */}
+              {mainSliderImages.length > 1 && (
+                <>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); mainSliderRef.current?.scrollBy({ left: -300, behavior: 'smooth' }); }}
+                    className={`absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/70 backdrop-blur shadow-md border border-stone-200 flex items-center justify-center text-stone-700 hover:bg-white z-20 transition-all duration-300 ${canScrollLeft ? 'opacity-0 group-hover/main-slider:opacity-100' : 'opacity-0 pointer-events-none'}`}
+                  >
+                    <ChevronLeft className="w-6 h-6" />
+                  </button>
+                  
+                  <button
+                    onClick={(e) => { e.stopPropagation(); mainSliderRef.current?.scrollBy({ left: 300, behavior: 'smooth' }); }}
+                    className={`absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/70 backdrop-blur shadow-md border border-stone-200 flex items-center justify-center text-stone-700 hover:bg-white z-20 transition-all duration-300 ${canScrollRight ? 'opacity-80 group-hover/main-slider:opacity-100' : 'opacity-0 pointer-events-none'}`}
+                  >
+                    <ChevronRight className="w-6 h-6" />
+                  </button>
+                </>
+              )}
+
+              {/* The Sliding Container */}
+              <div
+                ref={mainSliderRef}
+                onMouseDown={handleMouseDown}
+                onMouseLeave={handleMouseLeave}
+                onMouseUp={handleMouseUp}
+                onMouseMove={handleMouseMove}
+                onScroll={checkScroll}
+                className={`flex flex-nowrap overflow-x-auto snap-x snap-mandatory scroll-smooth [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] ${mainSliderImages.length > 1 ? 'cursor-grab active:cursor-grabbing' : ''}`}
+                style={{ borderRadius: 14, background: accentTint, boxShadow: `0 24px 60px ${accent}22, 0 4px 16px rgba(0,0,0,0.06)` }}
+              >
+                {mainSliderImages.map((img, i) => (
+                  <div 
+                    key={`${img.src}-${i}`} 
+                    className="relative flex-shrink-0 w-full aspect-square md:aspect-[4/5] snap-start overflow-hidden"
+                    onClick={() => setZoomImage(img.src)}
+                    style={{ cursor: 'zoom-in' }}
+                  >
+                    <Image 
+                      src={img.src} 
+                      alt={product.title} 
+                      fill 
+                      priority={i === 0} 
+                      sizes="(max-width:768px) 100vw, 50vw" 
+                      style={{ objectFit: 'cover', pointerEvents: 'none', animation: i === 0 && imgLoaded ? 'imgFade 0.5s ease' : 'none' }} 
+                      onLoad={() => i === 0 && setImgLoaded(true)} 
+                    />
+                    
+                    {/* Status Overlays (Only show on the first image) */}
+                    {i === 0 && (
+                      <>
+                        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: accent, transition: 'background 0.7s ease' }} />
+                        {outOfStock && (
+                          <div style={{ position: 'absolute', top: 12, left: 12, background: 'rgba(239,68,68,0.9)', color: '#fff', fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', padding: '4px 10px', borderRadius: 4 }}>
+                            Out of Stock
+                          </div>
+                        )}
+                        {!outOfStock && selVariant?.stock_quantity && selVariant.stock_quantity <= 3 && (
+                          <div style={{ position: 'absolute', top: 12, left: 12, background: accent, color: textOnAccent, fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', padding: '4px 10px', borderRadius: 4, display: 'flex', alignItems: 'center', gap: 5 }}>
+                            <span style={{ width: 5, height: 5, borderRadius: '50%', background: textOnAccent, animation: 'pulseDot 1.5s infinite' }} />
+                            Only {selVariant.stock_quantity} left
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
+              
+              {/* Zoom overlay floating on top */}
+              <div className="pointer-events-none" style={{ position: 'absolute', bottom: 12, right: 12, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(6px)', borderRadius: 6, padding: '5px 8px', display: 'flex', alignItems: 'center', gap: 5, color: '#fff', fontSize: 10, letterSpacing: '0.06em' }}>
                 <ZoomIn style={{ width: 11, height: 11 }} /> Zoom
               </div>
-              {outOfStock && (
-                <div style={{ position: 'absolute', top: 12, left: 12, background: 'rgba(239,68,68,0.9)', color: '#fff', fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', padding: '4px 10px', borderRadius: 4 }}>
-                  Out of Stock
-                </div>
-              )}
-              {!outOfStock && selVariant?.stock_quantity && selVariant.stock_quantity <= 3 && (
-                <div style={{ position: 'absolute', top: 12, left: 12, background: accent, color: textOnAccent, fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', padding: '4px 10px', borderRadius: 4, display: 'flex', alignItems: 'center', gap: 5 }}>
-                  <span style={{ width: 5, height: 5, borderRadius: '50%', background: textOnAccent, animation: 'pulseDot 1.5s infinite' }} />
-                  Only {selVariant.stock_quantity} left
-                </div>
-              )}
             </div>
 
-            {gallery.length > 1 && (
-              <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
-                {gallery.map((g, i) => (
-                  <button key={g.src} onClick={() => { setActiveGallery(i); setSelColor(filtered.find(v => v.image_url === g.src)?.color ?? selColor); }} style={{ position: 'relative', width: 60, aspectRatio: '1', borderRadius: 8, overflow: 'hidden', cursor: 'pointer', border: `2px solid ${activeGallery === i ? accent : 'transparent'}`, outline: 'none', padding: 0, transition: 'border-color 0.3s ease, transform 0.2s ease', transform: activeGallery === i ? 'scale(1.05)' : 'scale(1)', flexShrink: 0 }}>
-                    <Image src={g.src} alt="" fill style={{ objectFit: 'cover' }} sizes="60px" />
+            {/* COLOR VARIANT THUMBNAILS (Displayed underneath) */}
+            {variantThumbnails.length > 1 && (
+              <div className="flex gap-2.5 mt-3 flex-wrap">
+                {variantThumbnails.map((v) => (
+                  <button
+                    key={v.variantId}
+                    onClick={() => setSelColor(v.color)}
+                    className={`relative w-[60px] h-[60px] shrink-0 rounded-lg overflow-hidden transition-all duration-200 border-2 ${
+                      selColor === v.color 
+                        ? 'scale-[1.05] shadow-[0_4px_12px_rgba(0,0,0,0.1)] z-10' 
+                        : 'border-transparent opacity-70 hover:opacity-100 hover:scale-[1.02]'
+                    }`}
+                    style={{ borderColor: selColor === v.color ? accent : 'transparent' }}
+                  >
+                    <Image src={v.src} alt={v.color} fill className="object-cover" sizes="60px" />
                   </button>
                 ))}
               </div>
@@ -572,43 +718,6 @@ export default function ProductPageClient({ product, initialWishlistState, varia
           {/* ════ RIGHT: PRODUCT INFO ════ */}
           <div style={{ animation: 'slideUp 0.55s ease 0.1s both' }}>
             {renderTitleBlock('hidden md:block')}
-
-            {/* ── NEW: Size / Configuration Group Selector ── */}
-            {sizeVariants && sizeVariants.length > 0 && (
-              <div style={{ marginBottom: 18 }}>
-                <div style={{ fontSize: 10, color: '#78716c', textTransform: 'uppercase', letterSpacing: '0.18em', fontWeight: 600, marginBottom: 8 }}>
-                  Size / Configuration
-                </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
-                  {sizeVariants.map(sv => {
-                    const isActive = sv.slug === product.slug;
-                    return (
-                      <Link
-                        key={sv.id}
-                        href={`/shop/${categorySlug}/${sv.slug}`}
-                        style={{
-                          padding: '7px 14px',
-                          borderRadius: 6,
-                          fontSize: 11,
-                          fontWeight: 600,
-                          textDecoration: 'none',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s ease',
-                          background: isActive ? accent : 'white',
-                          color: isActive ? textOnAccent : '#57534e',
-                          border: `1.5px solid ${isActive ? accent : '#e7e5e4'}`,
-                          transform: isActive ? 'scale(1.03)' : 'scale(1)',
-                          display: 'inline-block'
-                        }}
-                      >
-                        {sv.size_label}
-                      </Link>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-            {/* ────────────────────────────────────────── */}
 
             {/* ── Material selector ── */}
             {uniqueMaterials.length > 0 && (
@@ -750,6 +859,8 @@ export default function ProductPageClient({ product, initialWishlistState, varia
                 padding: '10px 16px' 
               }}
             >
+              
+              {/* Top Row: Price, Wishlist, Add to Cart */}
               <div style={{ display: 'flex', width: '100%', gap: 10, alignItems: 'center' }}>
                 <div>
                   <div className="font-playfair" style={{ fontSize: 17, fontWeight: 700, color: '#1c1917' }}>£{price.toFixed(0)}</div>
@@ -764,6 +875,8 @@ export default function ProductPageClient({ product, initialWishlistState, varia
                   {added ? <><Check style={{ width: 14, height: 14 }} /> Added!</> : outOfStock ? 'Out of Stock' : <><ShoppingBag style={{ width: 14, height: 14 }} /> Add to Cart</>}
                 </button>
               </div>
+
+              {/* Bottom Row: WhatsApp Button */}
               <WhatsAppCard />
             </div>
 
@@ -781,6 +894,7 @@ export default function ProductPageClient({ product, initialWishlistState, varia
 
               <WhatsAppCard />
 
+              {/* Trust row */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 1, marginTop: 12, border: `1px solid ${accent}20`, borderRadius: 10, overflow: 'hidden' }}>
                 {[{ icon: Truck, label: 'Free Delivery' }, { icon: Gem, label: 'COD Available' }, { icon: ShieldCheck, label: '1-Yr Guarantee' }].map(({ icon: Icon, label }) => (
                   <div key={label} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, padding: '10px 8px', background: accentTint, transition: 'background 0.7s ease' }}>
@@ -791,6 +905,8 @@ export default function ProductPageClient({ product, initialWishlistState, varia
               </div>
             </div>
           </div>
+
+          
         </div>
 
         {/* ════ REVIEWS SECTION ════ */}
@@ -861,6 +977,7 @@ export default function ProductPageClient({ product, initialWishlistState, varia
           </div>
         </div>
         
+
         {/* ════ SIMILAR PRODUCTS SECTION ════ */}
         {similarProducts && similarProducts.length > 0 && (
           <div style={{ maxWidth: 1100, margin: '0 auto', padding: '20px 16px 80px' }}>
@@ -894,9 +1011,10 @@ export default function ProductPageClient({ product, initialWishlistState, varia
             </div>
           </div>
         )}
+
       </main>
 
-      {zoomed && <ZoomModal src={displayImage} alt={product.title} onClose={() => setZoomed(false)} />}
+      {zoomImage && <ZoomModal src={zoomImage} alt={product.title} onClose={() => setZoomImage(null)} />}
 
       {showDims && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, animation: 'fadeIn 0.2s ease' }} onClick={() => setShowDims(false)}>

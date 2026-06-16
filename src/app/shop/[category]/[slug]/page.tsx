@@ -126,6 +126,8 @@ export default async function ProductPage(props: { params: Params }) {
     description: product.description,
     base_price: product.base_price,
     specifications: product.specifications as Record<string, string> | string | null,
+    // Add this new line:
+    gallery_images: product.gallery_images as string[] | null,
   };
 
   const safeVariants = (product.product_variants ?? []).map((v: any) => ({
