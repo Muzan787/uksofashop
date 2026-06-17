@@ -4,6 +4,8 @@ import { notFound } from 'next/navigation';
 import { createClient } from '@/utils/supabase/server';
 import ProductPageClient from '../../../../components/Product/ProductPageClient';
 
+const ProductPageClientAny = ProductPageClient as any;
+
 type Params = Promise<{ slug: string; category: string }>;
 
 export async function generateMetadata(props: { params: Params }): Promise<Metadata> {
@@ -153,7 +155,7 @@ export default async function ProductPage(props: { params: Params }) {
     }));
 
   return (
-    <ProductPageClient
+    <ProductPageClientAny
       product={safeProduct}
       variants={safeVariants}
       approvedReviews={approvedReviews}
