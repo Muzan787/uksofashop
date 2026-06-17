@@ -50,7 +50,8 @@ export default function EditProductForm({ product, categories }: { product: Prod
   const handleCreateGroup = async () => {
     if (!newGroupName.trim()) return
     setIsSavingGroup(true)
-    const { data, error } = await supabase.from('variant_groups').insert({ name: newGroupName.trim() }).select('id, name').single()
+    const slug = newGroupName.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+    const { data, error } = await supabase.from('variant_groups').insert({ name: newGroupName.trim(), slug }).select('id, name').single()
     if (data) {
       setVariantGroups(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)))
       setSelectedGroupId(data.id)
