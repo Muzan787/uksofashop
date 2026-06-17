@@ -242,6 +242,7 @@ function BackToTop() {
 export default function FooterClient({ categories }: Props) {
   const shopLinks = [
     { href: '/shop/all', label: 'All Sofas' },
+    { href: '/collection', label: 'Collections' }, // <-- NEW
     ...categories.map(c => ({ href: `/shop/${c.slug}`, label: c.name })),
     { href: '/new-arrivals', label: 'New Arrivals' },
   ];

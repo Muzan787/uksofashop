@@ -27,6 +27,7 @@ const announcements = [
 const navLinks = [
   { href: '/',              label: 'Home'     },
   { href: '/shop/all',      label: 'Shop',  hasMenu: true },
+  { href: '/collection',   label: 'Collections' }, // <-- NEW
   { href: '/reviews',       label: 'Reviews' },
   { href: '/track-order',   label: 'Track'    },
   { href: '/contact',       label: 'Contact'  },
@@ -35,6 +36,7 @@ const navLinks = [
 const mobileLinks = [
   { href: '/',            label: 'Home',          icon: '⌂'  },
   { href: '/shop/all',    label: 'All Sofas',     icon: '🛋'  },
+  { href: '/collection', label: 'Collections',   icon: '⊞'  }, // <-- NEW
   { href: '/reviews',     label: 'Reviews',       icon: '★'  },
   { href: '/track-order', label: 'Track Order',   icon: '◎'  },
   { href: '/contact',     label: 'Contact Us',    icon: '✉'  },

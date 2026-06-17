@@ -51,6 +51,11 @@ interface SimilarProduct {
   base_price: number;
   image_url: string;
 }
+interface SizeVariant {
+  id: string;
+  slug: string;
+  size_label: string;
+}
 interface Props {
   product: Product;
   variants: Variant[];
@@ -59,6 +64,7 @@ interface Props {
   categorySlug: string;
   initialWishlistState: boolean;
   isLoggedIn: boolean; 
+  sizeVariants?: SizeVariant[]; // <-- RESTORED: Size variants prop
 }
 
 // ─── Color utilities ──────────────────────────────────────────────────────────
@@ -322,7 +328,7 @@ function ReviewForm({ productId, accent, accentTint, isLoggedIn }: {
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
-export default function ProductPageClient({ product, initialWishlistState, variants, approvedReviews, similarProducts, categorySlug, isLoggedIn }: Props) {
+export default function ProductPageClient({ product, initialWishlistState, variants, approvedReviews, similarProducts, categorySlug, isLoggedIn, sizeVariants }: Props) {
   const { addToCart } = useCart();
 
   // ── Variant selection ──
@@ -363,7 +369,7 @@ export default function ProductPageClient({ product, initialWishlistState, varia
     setWishlistLoading(false);
   };
 
-  // ── NEW: SPLIT GALLERY LOGIC ──
+  // ── SPLIT GALLERY LOGIC ──
   
   // 1. Variant Thumbnails (Displayed below main image)
   const variantThumbnails = useMemo(() => {
@@ -718,6 +724,42 @@ export default function ProductPageClient({ product, initialWishlistState, varia
           {/* ════ RIGHT: PRODUCT INFO ════ */}
           <div style={{ animation: 'slideUp 0.55s ease 0.1s both' }}>
             {renderTitleBlock('hidden md:block')}
+
+            {/* ── RESTORED: SIZE VARIANTS ── */}
+            {sizeVariants && sizeVariants.length > 0 && (
+              <div style={{ marginBottom: 18 }}>
+                <div style={{ fontSize: 10, color: '#78716c', textTransform: 'uppercase', letterSpacing: '0.18em', fontWeight: 600, marginBottom: 8 }}>
+                  Size / Configuration
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+                  {sizeVariants.map(sv => {
+                    const isActive = sv.slug === product.slug;
+                    return (
+                      <Link
+                        key={sv.id}
+                        href={`/shop/${categorySlug}/${sv.slug}`}
+                        style={{
+                          padding: '7px 14px',
+                          borderRadius: 6,
+                          fontSize: 11,
+                          fontWeight: 600,
+                          textDecoration: 'none',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                          background: isActive ? accent : 'white',
+                          color: isActive ? textOnAccent : '#57534e',
+                          border: `1.5px solid ${isActive ? accent : '#e7e5e4'}`,
+                          transform: isActive ? 'scale(1.03)' : 'scale(1)',
+                          display: 'inline-block'
+                        }}
+                      >
+                        {sv.size_label}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* ── Material selector ── */}
             {uniqueMaterials.length > 0 && (
