@@ -667,7 +667,7 @@ export default function ProductPageClient({ product, initialWishlistState, varia
                   >
                     <Image 
                       src={img.src} 
-                      alt={product.title} 
+                      alt={`${product.title} in ${selColor || ''} ${selMat || ''} - View ${i + 1}`}
                       fill 
                       priority={i === 0} 
                       sizes="(max-width:768px) 100vw, 50vw" 
@@ -716,7 +716,7 @@ export default function ProductPageClient({ product, initialWishlistState, varia
                     }`}
                     style={{ borderColor: selColor === v.color ? accent : 'transparent' }}
                   >
-                    <Image src={v.src} alt={v.color} fill className="object-cover" sizes="60px" />
+                    <Image src={v.src} alt={`${product.title} - ${v.color} variant`} fill className="object-cover" sizes="60px" />
                   </button>
                 ))}
               </div>
@@ -1080,7 +1080,7 @@ export default function ProductPageClient({ product, initialWishlistState, varia
 
       </main>
 
-      {zoomImage && <ZoomModal src={zoomImage} alt={product.title} onClose={() => setZoomImage(null)} />}
+      {zoomImage && <ZoomModal src={zoomImage} alt={`${product.title} in ${selColor || ''} ${selMat || ''} - Zoomed View`} onClose={() => setZoomImage(null)} />}
 
       {/* ── DIMENSIONS MODAL ── */}
       {showDims && (
