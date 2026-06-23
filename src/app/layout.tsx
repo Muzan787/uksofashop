@@ -25,6 +25,11 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(
+    process.env.NODE_ENV === 'development' 
+      ? 'http://localhost:3000' 
+      : 'https://www.uksofashop.co.uk' // Replace with your actual production domain!
+  ),
   title: "UK Sofa Shop | Luxury Furniture & Sofas",
   description: "Discover luxury British sofas with 1-year guarantee. Free UK delivery over £500, cash on delivery available. Shop corner sofas, fabric sofas, and more.",
   manifest: '/manifest.json',

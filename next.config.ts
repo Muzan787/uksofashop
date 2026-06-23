@@ -10,6 +10,8 @@ const withPWA = withPWAInit({
 const nextConfig: NextConfig = {
   reactCompiler: true,
   images: {
+    loader: 'custom', // <-- Tell Next.js to use a custom loader
+    loaderFile: './cloudinaryLoader.js', // <-- Path to your custom loader
     remotePatterns: [
       {
         protocol: 'https',

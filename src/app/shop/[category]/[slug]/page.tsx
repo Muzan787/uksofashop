@@ -33,6 +33,8 @@ export default async function ProductPage(props: { params: Params }) {
     .from('products')
     .select('*, product_variants(*), reviews(*)')
     .eq('slug', slug)
+    // Sort the nested variants array before grabbing the single product
+    .order('priority', { referencedTable: 'product_variants', ascending: true })
     .single();
 
   if (error || !product) notFound();
@@ -85,10 +87,11 @@ export default async function ProductPage(props: { params: Params }) {
       .select(`
         products (
           id, title, slug, base_price, is_active,
-          product_variants ( image_url )
+          product_variants ( image_url, priority )
         )
       `)
-      .eq('category_id', categoryData.id);
+      .eq('category_id', categoryData.id)
+      .order('priority', { referencedTable: 'products.product_variants', ascending: true });
 
     if (related) {
       const currentFirstWord = product.title.trim().split(' ')[0].toLowerCase();

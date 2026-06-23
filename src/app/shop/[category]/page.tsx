@@ -67,7 +67,7 @@ export default async function CategoryPage(props: { params: Params; searchParams
 
   let query = supabase
     .from('products')
-    .select('id, title, slug, base_price, average_rating, review_count, product_variants!inner(image_url, material, color, price_adjustment), product_categories!inner(category_id)', { count: 'exact' })
+    .select('id, title, slug, base_price, average_rating, review_count, product_variants!inner(image_url, material, color, price_adjustment, priority), product_categories!inner(category_id)', { count: 'exact' })
     .eq('is_active', true)
 
   if (categoryData) query = query.eq('product_categories.category_id', categoryData.id)
@@ -77,7 +77,11 @@ export default async function CategoryPage(props: { params: Params; searchParams
   if (typeof sp.material === 'string') query = query.filter('product_variants.material', 'ilike', sp.material)
   if (typeof sp.color === 'string')    query = query.filter('product_variants.color', 'ilike', sp.color)
 
-  const { data: products, count } = await query.order('created_at', { ascending: false }).range(from, to)
+  const { data: products, count } = await query
+    .order('created_at', { ascending: false })
+    // Tell Supabase to sort the joined variants array by priority!
+    .order('priority', { referencedTable: 'product_variants', ascending: true }) 
+    .range(from, to)
   const totalPages  = count ? Math.ceil(count / ITEMS_PER_PAGE) : 0
   const pageTitle   = categoryData ? categoryData.name : 'All Sofas'
 

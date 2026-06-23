@@ -236,7 +236,7 @@ export default function HomeClient({ categories, products, collections }: Props)
       {/* ══════════════════════════════════════════ HERO ══════════════════════════════════════════ */}
       <section className="relative overflow-hidden pb-2 lg:pb-0 lg:min-h-[10vh]" style={{ background: '#0c0c0b' }}>
         <div className="absolute inset-0" style={{ opacity: 0.55 }}>
-          <Image src="https://images.pexels.com/photos/1571452/pexels-photo-1571452.jpeg" alt="Luxury living room" fill priority className="object-cover" style={{ objectPosition: 'center 30%' }} />
+          <Image src="https://res.cloudinary.com/dmlna04yk/image/upload/v1782255182/Main-Hero-Background-Image_bzpvmg.jpg" alt="Luxury living room" fill priority className="object-cover" style={{ objectPosition: 'center 30%' }} />
           <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, rgba(12,12,11,0.6) 0%, rgba(12,12,11,0.35) 50%, rgba(12,12,11,0.85) 100%)' }} />
         </div>
         <div className="absolute bottom-0 left-0 right-0 overflow-hidden pointer-events-none select-none">
@@ -388,7 +388,7 @@ export default function HomeClient({ categories, products, collections }: Props)
       <section className="overflow-hidden" style={{ background: '#0c0c0b' }}>
         <div className="grid grid-cols-1 sm:grid-cols-2">
           <div className="relative" style={{ minHeight: 220 }}>
-            <Image src="https://images.pexels.com/photos/1350789/pexels-photo-1350789.jpeg" alt="Yorkshire workshop craftsmanship" fill className="object-cover" />
+            <Image src="https://res.cloudinary.com/dmlna04yk/image/upload/v1782255171/Home-Page-Furniture-Background-Image-2_cgmd50.jpg" alt="Yorkshire workshop craftsmanship" fill className="object-cover" />
             <div className="absolute top-0 bottom-0 right-0 w-0.5" style={{ background: '#d4871a' }} />
           </div>
           <Reveal className="flex flex-col justify-center" delay={100}>
@@ -448,7 +448,7 @@ export default function HomeClient({ categories, products, collections }: Props)
       {/* ══════════════════════════════════════════ MOOD STRIP ══════════════════════════════════════════ */}
       <Reveal>
         <div className="relative overflow-hidden" style={{ height: 'clamp(140px,25vw,280px)' }}>
-          <Image src="https://images.pexels.com/photos/1571459/pexels-photo-1571459.jpeg" alt="UK Sofa Shop interior" fill className="object-cover" style={{ objectPosition: 'center 40%' }} />
+          <Image src="https://res.cloudinary.com/dmlna04yk/image/upload/v1782255172/Home-Page-Furniture-Background-Image-3_dxl0qo.avif" alt="UK Sofa Shop interior" fill className="object-cover" style={{ objectPosition: 'center 40%' }} />
           <div className="absolute inset-0 flex items-center justify-center" style={{ background: 'rgba(12,12,11,0.5)' }}>
             <div className="text-center px-6">
               <p className="font-playfair italic text-white" style={{ fontSize: 'clamp(13px,3vw,26px)', letterSpacing: '-0.01em' }}>
@@ -522,7 +522,7 @@ export default function HomeClient({ categories, products, collections }: Props)
       {/* ══════════════════════════════════════════ FINAL CTA ══════════════════════════════════════════ */}
       <section className="relative py-20 overflow-hidden" style={{ background: '#0c0c0b' }}>
         <div className="absolute inset-0">
-          <Image src="https://images.pexels.com/photos/276724/pexels-photo-276724.jpeg" alt="Luxury living room" fill className="object-cover" style={{ opacity: 0.12 }} />
+          <Image src="https://res.cloudinary.com/dmlna04yk/image/upload/v1782255178/Home-Page-Furniture-Background-Image-4_j5camh.jpg" alt="Luxury living room" fill className="object-cover" style={{ opacity: 0.12 }} />
         </div>
         <div className="absolute bottom-0 right-0 overflow-hidden pointer-events-none select-none">
           <span className="block font-playfair font-bold text-white leading-none tracking-tighter whitespace-nowrap" style={{ fontSize: 'clamp(70px,18vw,200px)', opacity: 0.03, paddingRight: 24 }}>LUXE</span>

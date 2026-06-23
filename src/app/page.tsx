@@ -18,9 +18,10 @@ export default async function HomePage() {
   // 2. Fetch Featured Products
   const { data: featuredProducts } = await supabase
     .from('products')
-    .select('*, product_variants(image_url), product_categories(categories(slug, name))')
+    .select('*, product_variants(image_url, priority), product_categories(categories(slug, name))')
     .eq('is_active', true)
     .order('created_at', { ascending: false })
+    .order('priority', { referencedTable: 'product_variants', ascending: true })
     .limit(6);
 
   const productsData = (featuredProducts ?? []).map(product => ({

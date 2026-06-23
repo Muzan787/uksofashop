@@ -47,12 +47,13 @@ export default async function CollectionPage(props: { params: Params }) {
     .from('products')
     .select(`
       id, title, slug, base_price, average_rating, review_count, size_label,
-      product_variants (image_url, price_adjustment),
+      product_variants (image_url, price_adjustment, priority),
       product_categories ( categories ( slug ) )
     `)
     .eq('variant_group_id', group.id)
     .eq('is_active', true)
     .order('base_price', { ascending: true }) // Natural sort by price (e.g., 1 Seater -> 2 Seater -> Corner)
+    .order('priority', { referencedTable: 'product_variants', ascending: true })
 
   return (
     <div className="min-h-screen bg-[#f8f6f2]">

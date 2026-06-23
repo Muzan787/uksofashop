@@ -25,10 +25,12 @@ export default async function CollectionsIndexPage() {
         base_price,
         is_active,
         gallery_images,
-        product_variants ( image_url )
+        product_variants ( image_url, priority )
       )
     `)
-    .order('name', { ascending: true });
+    .order('name', { ascending: true })
+    // Add this to sort the nested variants!
+    .order('priority', { referencedTable: 'products.product_variants', ascending: true });
 
   const collectionsData = (groupsData || [])
     .map((group: any) => {
