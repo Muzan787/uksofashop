@@ -37,7 +37,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "UK Sofa Shop | Premium British Furniture",
     description: "Luxury sofas crafted for comfort, built to last. Free UK delivery over £500.",
-    images: ["/og-image.jpg"],
+    images: ["/og-image.png"],
   },
   appleWebApp: {
     capable: true,
@@ -68,9 +68,9 @@ const localBusinessSchema = {
   "description": "Premium British furniture store specializing in luxury sofas with cash on delivery available.",
   "address": {
     "@type": "PostalAddress",
-    "streetAddress": "123 Furniture Way",
-    "addressLocality": "London",
-    "postalCode": "SW1A 1AA",
+    "streetAddress": "7 Blacker St",
+    "addressLocality": "Burnley",
+    "postalCode": "BB10 2AF",
     "addressCountry": "GB"
   },
   "geo": {

@@ -419,7 +419,7 @@ export default function FooterClient({ categories }: Props) {
               {[
                 { icon: Phone, text: '07476 616022', href: 'tel:07476616022' },
                 { icon: Mail,  text: 'uksofashop.co.uk@gmail.com', href: 'mailto:uksofashop.co.uk@gmail.com' },
-                { icon: MapPin, text: 'London, United Kingdom', href: null },
+                { icon: MapPin, text: '7 Blacker St, Burnley BB10 2AF, UK', href: null },
               ].map(({ icon: Icon, text, href }) => (
                 <div key={text} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <Icon style={{ width: 12, height: 12, color: '#d4871a', flexShrink: 0 }} />
