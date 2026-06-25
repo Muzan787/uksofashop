@@ -66,6 +66,7 @@ interface Props {
   initialWishlistState: boolean;
   isLoggedIn: boolean; 
   sizeVariants?: SizeVariant[]; 
+  initialVariantId?: string; // Add this line
 }
 
 // ─── Color utilities ──────────────────────────────────────────────────────────
@@ -329,15 +330,38 @@ function ReviewForm({ productId, accent, accentTint, isLoggedIn }: {
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
-export default function ProductPageClient({ product, initialWishlistState, variants, approvedReviews, similarProducts, categorySlug, isLoggedIn, sizeVariants }: Props) {
+export default function ProductPageClient({ product, initialWishlistState, variants, approvedReviews, similarProducts, categorySlug, isLoggedIn, sizeVariants, initialVariantId }: Props) {
   const { addToCart } = useCart();
 
   // ── Variant selection ──
   const uniqueMaterials = useMemo(() => [...new Set(variants.map(v => v.material || 'Standard'))], [variants]);
-  const [selMat, setSelMat]   = useState(uniqueMaterials[0] || 'Standard');
-  const filtered              = useMemo(() => variants.filter(v => (v.material || 'Standard') === selMat), [variants, selMat]);
-  const [selColor, setSelColor] = useState(filtered[0]?.color ?? '');
-  const selVariant              = variants.find(v => (v.material || 'Standard') === selMat && v.color === selColor) ?? filtered[0];
+  
+  // 1. Find the target variant for the initial page load
+  const startingVariant = useMemo(() => {
+    if (initialVariantId) {
+      return variants.find(v => v.id === initialVariantId) || variants[0];
+    }
+    return variants[0];
+  }, [variants, initialVariantId]);
+
+  // 2. Initialize state
+  const [selMat, setSelMat]   = useState(startingVariant?.material || 'Standard');
+  const [selColor, setSelColor] = useState(startingVariant?.color ?? '');
+
+  // 3. NEW: Force state updates if the URL parameter changes while the user is already on the page
+  useEffect(() => {
+    if (initialVariantId) {
+      const targetVariant = variants.find(v => v.id === initialVariantId);
+      if (targetVariant) {
+        setSelMat(targetVariant.material || 'Standard');
+        setSelColor(targetVariant.color || '');
+      }
+    }
+  }, [initialVariantId, variants]);
+
+  // 4. Derive the current selected variant
+  const filtered   = useMemo(() => variants.filter(v => (v.material || 'Standard') === selMat), [variants, selMat]);
+  const selVariant = variants.find(v => (v.material || 'Standard') === selMat && v.color === selColor) ?? filtered[0];
 
   // ── Theming ──
   const accent    = selVariant?.color_hex || '#d4871a';

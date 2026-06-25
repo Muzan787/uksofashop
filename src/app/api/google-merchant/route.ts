@@ -2,7 +2,6 @@ import { createClient } from '@supabase/supabase-js';
 
 export const revalidate = 3600;
 
-// 1. Define your TypeScript interfaces based on your schema
 interface ProductVariant {
   id: string;
   sku: string;
@@ -21,6 +20,7 @@ interface Product {
   base_price: number;
   size_label: string | null;
   gallery_images: string[] | null;
+  categories: { slug: string } | null; // Added to fetch the category slug
   product_variants: ProductVariant[] | null;
 }
 
@@ -34,6 +34,7 @@ export async function GET(): Promise<Response> {
 
   const supabase = createClient(supabaseUrl, supabaseKey);
 
+  // Updated query to disambiguate the categories relationship
   const { data, error } = await supabase
     .from('products')
     .select(`
@@ -44,6 +45,7 @@ export async function GET(): Promise<Response> {
       base_price, 
       size_label, 
       gallery_images,
+      categories!products_category_id_fkey ( slug ), 
       product_variants (
         id, 
         sku, 
@@ -66,6 +68,9 @@ export async function GET(): Promise<Response> {
   let itemsXml = '';
 
   products.forEach((product) => {
+    // Safely extract the category slug, fallback to 'uncategorized' if missing
+    const categorySlug = product.categories?.slug || 'uncategorized';
+
     if (product.product_variants && product.product_variants.length > 0) {
       product.product_variants.forEach((variant) => {
         const finalPrice = Number(product.base_price) + Number(variant.price_adjustment || 0);
@@ -83,7 +88,8 @@ export async function GET(): Promise<Response> {
             <g:item_group_id>${product.id}</g:item_group_id>
             <g:title><![CDATA[${variantTitle}]]></g:title>
             <g:description><![CDATA[${product.description || product.title}]]></g:description>
-            <g:link>${baseUrl}/product/${product.slug}?variant=${variant.id}</g:link>
+            <!-- Exact variant link structure -->
+            <g:link>${baseUrl}/shop/${categorySlug}/${product.slug}?variant=${variant.id}</g:link>
             <g:image_link>${imageUrl}</g:image_link>
             <g:condition>new</g:condition>
             <g:availability>${variant.stock_quantity > 0 ? 'in_stock' : 'out_of_stock'}</g:availability>
@@ -104,7 +110,8 @@ export async function GET(): Promise<Response> {
           <g:id>${product.id}</g:id>
           <g:title><![CDATA[${product.title}]]></g:title>
           <g:description><![CDATA[${product.description || product.title}]]></g:description>
-          <g:link>${baseUrl}/product/${product.slug}</g:link>
+          <!-- Base product link structure -->
+          <g:link>${baseUrl}/shop/${categorySlug}/${product.slug}</g:link>
           <g:image_link>${fallbackImageUrl}</g:image_link>
           <g:condition>new</g:condition>
           <g:availability>in_stock</g:availability>

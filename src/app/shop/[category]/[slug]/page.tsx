@@ -5,6 +5,8 @@ import { createClient } from '@/utils/supabase/server';
 import ProductPageClient from '../../../../components/Product/ProductPageClient';
 
 type Params = Promise<{ slug: string; category: string }>;
+// NEW: Define searchParams type to read the URL
+type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
 
 export async function generateMetadata(props: { params: Params }): Promise<Metadata> {
   const { slug } = await props.params;
@@ -23,17 +25,21 @@ export async function generateMetadata(props: { params: Params }): Promise<Metad
   };
 }
 
-export default async function ProductPage(props: { params: Params }) {
+// NEW: Accept searchParams in the component props
+export default async function ProductPage(props: { params: Params, searchParams: SearchParams }) {
   const { slug, category } = await props.params;
-  const supabase = await createClient();
+  const searchParams = await props.searchParams;
+  
+  // Extract the variant ID from the URL (e.g., ?variant=123-abc)
+  const initialVariantId = searchParams?.variant as string | undefined;
 
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   const { data: product, error } = await supabase
     .from('products')
     .select('*, product_variants(*), reviews(*)')
     .eq('slug', slug)
-    // Sort the nested variants array before grabbing the single product
     .order('priority', { referencedTable: 'product_variants', ascending: true })
     .single();
 
@@ -53,7 +59,6 @@ export default async function ProductPage(props: { params: Params }) {
     }
   }
 
-  // --- NEW: Fetch Size Variants within the same Group ---
   let sizeVariants: any[] = [];
   if (product.variant_group_id) {
     const { data: groupProducts } = await supabase
@@ -61,7 +66,7 @@ export default async function ProductPage(props: { params: Params }) {
       .select('id, slug, size_label, base_price')
       .eq('variant_group_id', product.variant_group_id)
       .eq('is_active', true)
-      .order('base_price', { ascending: true }); // Natural sort by price (e.g. 2 Seater -> 3 Seater)
+      .order('base_price', { ascending: true }); 
 
     if (groupProducts) {
       sizeVariants = groupProducts.filter(p => p.size_label).map(p => ({
@@ -71,9 +76,7 @@ export default async function ProductPage(props: { params: Params }) {
       }));
     }
   }
-  // ------------------------------------------------------
 
-  // --- Fetch and Sort Similar Products ---
   const { data: categoryData } = await supabase
     .from('categories')
     .select('id')
@@ -120,7 +123,6 @@ export default async function ProductPage(props: { params: Params }) {
       }));
     }
   }
-  // --------------------------------------------
 
   const safeProduct = {
     id: product.id,
@@ -129,7 +131,6 @@ export default async function ProductPage(props: { params: Params }) {
     description: product.description,
     base_price: product.base_price,
     specifications: product.specifications as Record<string, string> | string | null,
-    // Add this new line:
     gallery_images: product.gallery_images as string[] | null,
   };
 
@@ -164,7 +165,8 @@ export default async function ProductPage(props: { params: Params }) {
       categorySlug={category}
       initialWishlistState={initialWishlistState}
       isLoggedIn={!!user}
-      sizeVariants={sizeVariants} // Pass the new size variants down
+      sizeVariants={sizeVariants}
+      initialVariantId={initialVariantId} // NEW: Pass it down to the client
     />
   );
 }
