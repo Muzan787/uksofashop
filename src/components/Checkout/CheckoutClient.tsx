@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { useCart } from '@/context/CartContext'
 import { placeOrder } from '@/app/actions/checkout'
+import { trackPurchase } from '@/utils/tracking'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Step = 'cart' | 'details' | 'success'
@@ -473,7 +474,11 @@ function DetailsStep({
     const res = await placeOrder(fd, items, totalAmount)
     
     if (res?.error) { setServerError(res.error); setPending(false) }
-    else if (res?.success) { clearCart(); onSuccess(res.orderId || '', form.postcode.toUpperCase()) }
+    else if (res?.success) { 
+      trackPurchase(res.orderId || '', totalAmount);
+      clearCart(); 
+      onSuccess(res.orderId || '', form.postcode.toUpperCase()) 
+    }
   }
 
   return (

@@ -3,6 +3,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { CartItem } from '@/app/actions/checkout'
+import { trackAddToCart } from '@/utils/tracking';
 
 export interface DisplayCartItem extends CartItem {
   title: string
@@ -47,6 +48,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         )
       }
       return [...prev, newItem]
+      trackAddToCart(newItem.title, newItem.price)
     })
   }
 
