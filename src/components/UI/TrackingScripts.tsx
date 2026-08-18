@@ -52,7 +52,7 @@ export default function TrackingScripts() {
             s.parentNode.insertBefore(t,s)}(window, document,'script',
             'https://connect.facebook.net/en_US/fbevents.js');
             
-            fbq('init', '1816274592868340');
+            fbq('init', '1538990667462103');
             fbq('track', 'PageView');
           `,
         }}
