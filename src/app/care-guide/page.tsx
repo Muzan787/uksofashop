@@ -6,7 +6,7 @@ import { Sparkles, Droplets, Sun, Wind, Brush, Phone, ArrowRight, ShieldCheck } 
 const ACCENT = '#d4871a';
 
 export const metadata: Metadata = {
-  title: 'Sofa Care & Cleaning Guide | Vantage Group LTD',
+  title: 'Sofa Care & Cleaning Guide | UK Sofashop',
   description: 'Expert tips on how to maintain, clean, and protect your British handcrafted fabric or leather sofa for years to come.',
 };
 

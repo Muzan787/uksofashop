@@ -7,6 +7,8 @@ import MainLayoutWrapper from "@/components/Layout/MainLayoutWrapper";
 import { Toaster } from "react-hot-toast";
 import { Analytics } from "@vercel/analytics/next"
 import PWAPromptManager from '@/components/Admin/PWAPromptManager';
+import CookieConsent from '@/components/UI/CookieConsent';
+import TrackingScripts from '@/components/UI/TrackingScripts';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -59,7 +61,7 @@ const localBusinessSchema = {
   "@context": "https://schema.org",
   "@type": "FurnitureStore",
   "name": "UK Sofa Shop",
-  "alternateName": "UK Sofashop LTD",
+  "alternateName": "UK Sofashop",
   "url": "https://uksofashop.co.uk",
   "logo": "https://uksofashop.co.uk/logo.png",
   "image": "https://uksofashop.co.uk/store-front.jpg",
@@ -131,6 +133,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             {children}
           </MainLayoutWrapper>
 
+
+          <TrackingScripts />
+
+          <CookieConsent />
+          
         </CartProvider>
       </body>
     </html>

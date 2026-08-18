@@ -4,8 +4,8 @@ import Link from 'next/link';
 import { Store, ArrowLeft, MapPin } from 'lucide-react';
 
 export const metadata: Metadata = {
-  title: 'Our Showroom | Vantage Group LTD',
-  description: 'Information about the upcoming Vantage Group LTD physical showroom in the United Kingdom.',
+  title: 'Our Showroom | UK Sofashop',
+  description: 'Information about the upcoming UK Sofashop physical showroom in the United Kingdom.',
 };
 
 export default function ShowroomPage() {

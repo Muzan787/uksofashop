@@ -36,7 +36,7 @@ export default function LoginPage() {
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
           <Link href="/" style={{ textDecoration: 'none', display: 'inline-block' }}>
             <span className="font-playfair" style={{ fontSize: 24, fontWeight: 700, color: '#1c1917' }}>
-              Uk Sofashop<span style={{ color: ACCENT }}> Group LTD</span>
+              Uk <span style={{ color: ACCENT }}>Sofashop</span>
             </span>
           </Link>
         </div>

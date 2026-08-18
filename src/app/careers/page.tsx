@@ -4,8 +4,8 @@ import Link from 'next/link';
 import { Briefcase, ArrowLeft, Users } from 'lucide-react';
 
 export const metadata: Metadata = {
-  title: 'Careers | Vantage Group LTD',
-  description: 'Explore career opportunities and join the team at Vantage Group LTD.',
+  title: 'Careers | UK Sofashop',
+  description: 'Explore career opportunities and join the team at UK Sofashop.',
 };
 
 export default function CareersPage() {

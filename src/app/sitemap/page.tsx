@@ -7,8 +7,8 @@ import { createClient } from '@/utils/supabase/server';
 const ACCENT = '#d4871a';
 
 export const metadata: Metadata = {
-  title: 'Sitemap | Vantage Group LTD',
-  description: 'Navigate the complete directory of Vantage Group LTD, including all sofa collections, guides, and store policies.',
+  title: 'Sitemap | UK Sofashop',
+  description: 'Navigate the complete directory of UK Sofashop, including all sofa collections, guides, and store policies.',
 };
 
 export default async function HTMLSitemapPage() {

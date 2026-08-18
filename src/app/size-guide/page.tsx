@@ -5,7 +5,7 @@ import { Ruler, DoorOpen, Home, ArrowRight, ArrowDownToLine, Maximize } from 'lu
 const ACCENT = '#d4871a';
 
 export const metadata: Metadata = {
-  title: 'Sofa Size & Measurement Guide | Vantage Group LTD',
+  title: 'Sofa Size & Measurement Guide | UK Sofashop',
   description: 'Ensure your perfect sofa fits perfectly. Use our measurement guide or submit your home dimensions for a complimentary fit check.',
 };
 

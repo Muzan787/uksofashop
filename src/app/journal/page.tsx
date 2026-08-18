@@ -6,8 +6,8 @@ import { BookOpen, PenTool, ArrowRight, Calendar, Clock, Newspaper } from 'lucid
 const ACCENT = '#d4871a';
 
 export const metadata: Metadata = {
-  title: 'The Journal | Vantage Group LTD',
-  description: 'Interior design inspiration, sofa styling tips, and the latest news from Vantage Group LTD.',
+  title: 'The Journal | UK Sofashop',
+  description: 'Interior design inspiration, sofa styling tips, and the latest news from UK Sofashop.',
 };
 
 // Placeholder data for your initial blog posts
@@ -31,7 +31,7 @@ const articles = [
   {
     id: 3,
     title: 'The Anatomy of a Handcrafted British Sofa',
-    excerpt: 'Take a look inside the Vantage Group LTD workshop to see how hardwood frames and premium fillings create a sofa that lasts a lifetime.',
+    excerpt: 'Take a look inside the UK Sofashop workshop to see how hardwood frames and premium fillings create a sofa that lasts a lifetime.',
     category: 'Craftsmanship',
     date: 'September 15, 2026',
     readTime: '6 min read',

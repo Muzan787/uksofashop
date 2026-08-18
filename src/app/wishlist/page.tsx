@@ -4,7 +4,7 @@ import WishlistClient from './WishlistClient'
 import { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'My Wishlist | Vantage Group LTD',
+  title: 'My Wishlist | UK Sofashop',
   description: 'View and manage your saved luxury sofas and furniture.',
 }
 
