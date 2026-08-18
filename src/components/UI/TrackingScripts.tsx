@@ -34,7 +34,7 @@ export default function TrackingScripts() {
     <>
       {/* --- GOOGLE ADS & ANALYTICS --- */}
       {/* Replace G-XXXXXXXXXX with your actual GA4 / Google Tag ID */}
-      <GoogleAnalytics gaId="G-17WTVGF2PC" />
+      <GoogleAnalytics gaId="G-GTBKG6RSNF" />
 
       {/* --- META PIXEL --- */}
       {/* Replace YOUR_PIXEL_ID with your actual Meta Pixel ID */}
