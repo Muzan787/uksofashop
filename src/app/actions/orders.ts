@@ -69,25 +69,12 @@ export async function trackOrderByShortCode(shortCode: string) {
     return { error: "Please enter a valid 8-character order reference (letters A-F and numbers only)." }
   }
 
-  // 3. Create the absolute minimum and maximum possible UUIDs for this short code
-  const minUuid = `${hexCode}-0000-0000-0000-000000000000`;
-  const maxUuid = `${hexCode}-ffff-ffff-ffff-ffffffffffff`;
-
-  // 4. Use >= and <= operators. This avoids all casting issues and is 
-  // incredibly fast because it uses the native Primary Key index!
-  const { data, error } = await supabase
-    .from('orders')
-    .select(`
-      id, status, created_at, total_amount, shipping_address,
-      order_items (
-        quantity,
-        price_at_time_of_purchase,
-        product_variants ( color, products (title) )
-      )
-    `)
-    .gte('id', minUuid)
-    .lte('id', maxUuid)
-    .single()
+  // 3. Look up via a database function - it only ever returns the single order
+  // matching this exact short code, so the anon key can't be used to browse
+  // every order in the table.
+  const { data, error } = await supabase.rpc('track_order_by_shortcode', {
+    p_shortcode: hexCode,
+  })
 
   if (error || !data) {
     // Logging the error to your terminal so you can see if something else is wrong
@@ -101,10 +88,7 @@ export async function trackOrderByShortCode(shortCode: string) {
 export async function confirmCustomerOrder(orderId: string) {
   const supabase = await createClient()
 
-  const { error } = await supabase
-    .from('orders')
-    .update({ status: 'confirmed' })
-    .eq('id', orderId)
+  const { error } = await supabase.rpc('confirm_order', { p_order_id: orderId })
 
   if (error) {
     return { error: 'Failed to confirm order. Please contact support.' }
@@ -132,22 +116,17 @@ export async function trackOrdersByPostcode(postcode: string) {
   // e.g., "SW1A1AA" becomes "SW1A 1AA"
   const withSpace = `${noSpace.slice(0, -3)} ${noSpace.slice(-3)}`;
 
-  // 3. Search the database for EITHER the spaceless version OR the spaced version
-  const { data, error } = await supabase
-    .from('orders')
-    .select(`
-      id, status, created_at, total_amount, shipping_address,
-      order_items (
-        quantity,
-        price_at_time_of_purchase,
-        product_variants ( color, products (title) )
-      )
-    `)
-    .or(`shipping_address.ilike.%${noSpace}%,shipping_address.ilike.%${withSpace}%`)
-    .order('created_at', { ascending: false })
+  // 3. Search via a database function for EITHER the spaceless version OR the
+  // spaced version - it returns only curated order-progress fields, never the
+  // full table, so the anon key can't be used to browse every customer's orders.
+  const { data: rpcData, error } = await supabase.rpc('track_orders_by_postcode', {
+    p_nospace: noSpace,
+    p_spaced: withSpace,
+  })
+  const data = rpcData as unknown as any[] | null
 
   if (error) {
-    console.error("Supabase Tracking Error:", error.message); 
+    console.error("Supabase Tracking Error:", error.message);
     return { error: "We encountered an issue fetching your orders. Please try again." }
   }
 

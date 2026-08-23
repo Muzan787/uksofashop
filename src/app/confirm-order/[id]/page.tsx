@@ -8,24 +8,15 @@ export default async function ConfirmOrderPage({ params }: { params: Promise<{ i
   const { id } = await params
   const supabase = await createClient()
 
-  // 1. Fetch the order
-  const { data: order, error } = await supabase
-    .from('orders')
-    .select('*')
-    .eq('id', id)
-    .single()
+  // 1. Fetch the order, and flip pending_cod -> confirmed if needed, via a
+  // database function - the order's own uuid is the access token here (it's
+  // unguessable), so this doesn't need a broad "anyone can read orders" policy.
+  const { data: orders, error } = await supabase.rpc('confirm_order', { p_order_id: id })
+  const order = orders?.[0]
 
   if (error || !order) return notFound()
 
   const shortCode = order.id.substring(0, 8).toUpperCase()
-
-  // 2. Automatically update the status from 'pending_cod' to 'confirmed'
-  if (order.status === 'pending_cod') {
-    await supabase
-      .from('orders')
-      .update({ status: 'confirmed' })
-      .eq('id', id)
-  }
 
   // 3. Set up the WhatsApp URL
   const whatsappNumber = "447476616022" // <-- CHANGE THIS TO YOUR ACTUAL BUSINESS WHATSAPP NUMBER!

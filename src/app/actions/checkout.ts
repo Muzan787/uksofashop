@@ -37,39 +37,26 @@ export async function placeOrder(formData: FormData, cartItems: CartItem[], tota
 
   const { customerName, customerEmail, customerPhone, shippingAddress, specialInstructions } = validatedData.data
 
-  const { data: order, error: orderError } = await supabase
-    .from('orders')
-    .insert({
-      customer_name: customerName,
-      customer_email: customerEmail,
-      customer_phone: customerPhone,
-      shipping_address: shippingAddress,
-      special_instructions: specialInstructions || null,
-      total_amount: totalAmount,
-      status: 'pending_cod',
-    })
-    .select('id')
-    .single()
+  const { data: orderId, error: orderError } = await supabase.rpc('place_order', {
+    p_customer_name: customerName,
+    p_customer_email: customerEmail,
+    p_customer_phone: customerPhone,
+    p_shipping_address: shippingAddress,
+    p_special_instructions: specialInstructions || '',
+    p_total_amount: totalAmount,
+    p_items: cartItems.map((item) => ({
+      variant_id: item.variant_id,
+      quantity: item.quantity,
+      price: item.price,
+    })),
+  })
 
-  if (orderError || !order) {
+  if (orderError || !orderId) {
     console.error("Supabase Order Error:", orderError)
     return { error: 'Database Error: Could not insert order.' }
   }
 
-  const orderItemsData = cartItems.map((item) => ({
-    order_id: order.id,
-    variant_id: item.variant_id,
-    quantity: item.quantity,
-    price_at_time_of_purchase: item.price,
-  }))
-
-  const { error: itemsError } = await supabase
-    .from('order_items')
-    .insert(orderItemsData)
-
-  if (itemsError) {
-    return { error: 'Order created, but failed to save items.' }
-  }
+  const order = { id: orderId }
 
   // Return only the first 8 characters for the user-facing short code
   const shortCode = order.id.substring(0, 8).toUpperCase()

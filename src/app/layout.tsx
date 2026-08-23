@@ -10,6 +10,7 @@ import PWAPromptManager from '@/components/Admin/PWAPromptManager';
 import CookieConsent from '@/components/UI/CookieConsent';
 import TrackingScripts from '@/components/UI/TrackingScripts';
 
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
