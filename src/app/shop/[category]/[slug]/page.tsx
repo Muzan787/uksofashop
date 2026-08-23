@@ -60,19 +60,30 @@ export default async function ProductPage(props: { params: Params, searchParams:
   }
 
   let sizeVariants: any[] = [];
+  let subgroupTitle = 'Style';
   if (product.variant_group_id) {
-    const { data: groupProducts } = await supabase
-      .from('products')
-      .select('id, slug, size_label, base_price')
-      .eq('variant_group_id', product.variant_group_id)
-      .eq('is_active', true)
-      .order('base_price', { ascending: true }); 
+    const [{ data: groupProducts }, { data: groupInfo }] = await Promise.all([
+      supabase
+        .from('products')
+        .select('id, slug, size_label, subgroup_label, base_price')
+        .eq('variant_group_id', product.variant_group_id)
+        .eq('is_active', true)
+        .order('base_price', { ascending: true }),
+      supabase
+        .from('variant_groups')
+        .select('subgroup_title')
+        .eq('id', product.variant_group_id)
+        .single(),
+    ]);
+
+    if (groupInfo?.subgroup_title) subgroupTitle = groupInfo.subgroup_title;
 
     if (groupProducts) {
       sizeVariants = groupProducts.filter(p => p.size_label).map(p => ({
         id: p.id,
         slug: p.slug,
-        size_label: p.size_label
+        size_label: p.size_label,
+        subgroup_label: p.subgroup_label
       }));
     }
   }
@@ -166,6 +177,8 @@ export default async function ProductPage(props: { params: Params, searchParams:
       initialWishlistState={initialWishlistState}
       isLoggedIn={!!user}
       sizeVariants={sizeVariants}
+      subgroupTitle={subgroupTitle}
+      currentSubgroup={product.subgroup_label}
       initialVariantId={initialVariantId} // NEW: Pass it down to the client
     />
   );

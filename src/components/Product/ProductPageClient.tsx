@@ -56,6 +56,7 @@ interface SizeVariant {
   id: string;
   slug: string;
   size_label: string;
+  subgroup_label?: string | null;
 }
 interface Props {
   product: Product;
@@ -65,7 +66,9 @@ interface Props {
   categorySlug: string;
   initialWishlistState: boolean;
   isLoggedIn: boolean; 
-  sizeVariants?: SizeVariant[]; 
+  sizeVariants?: SizeVariant[];
+  subgroupTitle?: string;
+  currentSubgroup?: string | null;
   initialVariantId?: string; // Add this line
 }
 
@@ -330,12 +333,41 @@ function ReviewForm({ productId, accent, accentTint, isLoggedIn }: {
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
-export default function ProductPageClient({ product, initialWishlistState, variants, approvedReviews, similarProducts, categorySlug, isLoggedIn, sizeVariants, initialVariantId }: Props) {
+export default function ProductPageClient({ product, initialWishlistState, variants, approvedReviews, similarProducts, categorySlug, isLoggedIn, sizeVariants, subgroupTitle, currentSubgroup, initialVariantId }: Props) {
   const { addToCart } = useCart();
 
   // ── Variant selection ──
   const uniqueMaterials = useMemo(() => [...new Set(variants.map(v => v.material || 'Standard'))], [variants]);
-  
+
+  // ── Subgroup (2nd variant dimension, e.g. "High Back" / "Scattered Back") ──
+  // Products in a group may split across a style dimension as well as size.
+  // Groups that don't use subgroups leave subgroup_label null and behave as before.
+  const subgroups = useMemo(
+    () => [...new Set((sizeVariants ?? []).map(sv => sv.subgroup_label).filter(Boolean) as string[])],
+    [sizeVariants]
+  );
+
+  // Sizes shown are only those available in the currently selected style, so the
+  // customer can never land on a size/style combination that doesn't exist.
+  const sizesInSubgroup = useMemo(() => {
+    if (!sizeVariants) return [];
+    if (subgroups.length < 2) return sizeVariants;
+    return sizeVariants.filter(sv => sv.subgroup_label === currentSubgroup);
+  }, [sizeVariants, subgroups, currentSubgroup]);
+
+  const currentSizeLabel = useMemo(
+    () => (sizeVariants ?? []).find(sv => sv.slug === product.slug)?.size_label,
+    [sizeVariants, product.slug]
+  );
+
+  // Switching style keeps the customer on the same size when that combination
+  // exists, otherwise falls back to the cheapest size in the chosen style.
+  const targetForSubgroup = (sub: string) => {
+    const inSub = (sizeVariants ?? []).filter(sv => sv.subgroup_label === sub);
+    const sameSize = inSub.find(sv => sv.size_label === currentSizeLabel);
+    return (sameSize ?? inSub[0])?.slug;
+  };
+
   // 1. Find the target variant for the initial page load
   const startingVariant = useMemo(() => {
     if (initialVariantId) {
@@ -751,13 +783,51 @@ export default function ProductPageClient({ product, initialWishlistState, varia
           <div style={{ animation: 'slideUp 0.55s ease 0.1s both' }}>
             {renderTitleBlock('hidden md:block')}
 
+            {/* ── SUBGROUP / STYLE SELECTOR (only when the group uses one) ── */}
+            {subgroups.length > 1 && (
+              <div style={{ marginBottom: 18 }}>
+                <div style={{ fontSize: 10, color: '#78716c', textTransform: 'uppercase', letterSpacing: '0.18em', fontWeight: 600, marginBottom: 8 }}>
+                  {subgroupTitle || 'Style'} — <span style={{ color: '#1c1917', fontWeight: 700 }}>{currentSubgroup || '—'}</span>
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+                  {subgroups.map(sub => {
+                    const isActive = sub === currentSubgroup;
+                    const targetSlug = targetForSubgroup(sub);
+                    if (!targetSlug) return null;
+                    return (
+                      <Link
+                        key={sub}
+                        href={`/shop/${categorySlug}/${targetSlug}`}
+                        style={{
+                          padding: '7px 14px',
+                          borderRadius: 6,
+                          fontSize: 11,
+                          fontWeight: 600,
+                          textDecoration: 'none',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                          background: isActive ? accent : 'white',
+                          color: isActive ? textOnAccent : '#57534e',
+                          border: `1.5px solid ${isActive ? accent : '#e7e5e4'}`,
+                          transform: isActive ? 'scale(1.03)' : 'scale(1)',
+                          display: 'inline-block'
+                        }}
+                      >
+                        {sub}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* ── SIZE VARIANTS & CUSTOM SIZE ── */}
             <div style={{ marginBottom: 18 }}>
               <div style={{ fontSize: 10, color: '#78716c', textTransform: 'uppercase', letterSpacing: '0.18em', fontWeight: 600, marginBottom: 8 }}>
                 Size / Configuration
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
-                {sizeVariants && sizeVariants.map(sv => {
+                {sizesInSubgroup.map(sv => {
                   const isActive = sv.slug === product.slug;
                   return (
                     <Link

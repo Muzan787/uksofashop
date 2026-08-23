@@ -25,6 +25,7 @@ const productSchema = z.object({
   specifications: z.string().optional(),
   variantGroupId: z.string().uuid().optional().nullable().or(z.literal('')),
   sizeLabel: z.string().optional().nullable().or(z.literal('')),
+  subgroupLabel: z.string().optional().nullable().or(z.literal('')),
   gallery_images: z.string().optional(), // <-- NEW: Accepts stringified array of URLs
 })
 
@@ -41,6 +42,7 @@ export async function addProduct(formData: FormData, variants: VariantInput[]) {
     specifications: formData.get('specifications') as string || '{}',
     variantGroupId: formData.get('variantGroupId') || null,
     sizeLabel: formData.get('sizeLabel') || null,
+    subgroupLabel: formData.get('subgroupLabel') || null,
     gallery_images: formData.get('gallery_images') as string || '[]',
   }
 
@@ -50,7 +52,7 @@ export async function addProduct(formData: FormData, variants: VariantInput[]) {
     return { error: validatedData.error.issues[0].message }
   }
 
-  const { title, slug, categoryIds, basePrice, description, specifications, variantGroupId, sizeLabel, gallery_images } = validatedData.data
+  const { title, slug, categoryIds, basePrice, description, specifications, variantGroupId, sizeLabel, subgroupLabel, gallery_images } = validatedData.data
 
   let parsedSpecs = {};
   try { parsedSpecs = JSON.parse(specifications || '{}'); } catch { }
@@ -68,6 +70,7 @@ export async function addProduct(formData: FormData, variants: VariantInput[]) {
       specifications: parsedSpecs,
       variant_group_id: variantGroupId || null,
       size_label: sizeLabel || null,
+      subgroup_label: subgroupLabel || null,
       gallery_images: parsedGallery
     })
     .select('id')
@@ -140,6 +143,7 @@ export async function updateProduct(formData: FormData, variants: VariantInput[]
   const specifications = formData.get('specifications') as string || '{}'
   const variantGroupId = formData.get('variantGroupId') as string || null
   const sizeLabel = formData.get('sizeLabel') as string || null
+  const subgroupLabel = formData.get('subgroupLabel') as string || null
   const gallery_images = formData.get('gallery_images') as string || '[]'
 
   let parsedSpecs = {};
@@ -158,6 +162,7 @@ export async function updateProduct(formData: FormData, variants: VariantInput[]
       specifications: parsedSpecs,
       variant_group_id: variantGroupId,
       size_label: sizeLabel,
+      subgroup_label: subgroupLabel,
       gallery_images: parsedGallery
     })
     .eq('id', productId)

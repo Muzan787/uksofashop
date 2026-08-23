@@ -20,12 +20,16 @@ export default function AddProductForm({ categories }: { categories: Category[] 
   const [isPending, setIsPending] = useState(false)
   const [error, setError] = useState('')
   
-  const [variantGroups, setVariantGroups] = useState<{ id: string; name: string }[]>([])
+  const [variantGroups, setVariantGroups] = useState<{ id: string; name: string; subgroup_title: string }[]>([])
   const [selectedGroupId, setSelectedGroupId] = useState('')
   const [sizeLabel, setSizeLabel] = useState('')
+  const [subgroupLabel, setSubgroupLabel] = useState('')
+  const [knownSubgroups, setKnownSubgroups] = useState<string[]>([])
   const [isCreatingGroup, setIsCreatingGroup] = useState(false)
   const [newGroupName, setNewGroupName] = useState('')
   const [isSavingGroup, setIsSavingGroup] = useState(false)
+
+  const selectedGroup = variantGroups.find(g => g.id === selectedGroupId)
 
   // NEW: Global Gallery State
   const [galleryUrls, setGalleryUrls] = useState<string[]>([])
@@ -42,23 +46,38 @@ export default function AddProductForm({ categories }: { categories: Category[] 
 
   useEffect(() => {
     const fetchGroups = async () => {
-      const { data } = await supabase.from('variant_groups').select('id, name').order('name')
+      const { data } = await supabase.from('variant_groups').select('id, name, subgroup_title').order('name')
       if (data) setVariantGroups(data)
     }
     fetchGroups()
   }, [supabase])
 
+  // Suggest the style labels already used in this group, so the same style
+  // isn't accidentally created twice under slightly different spellings.
+  useEffect(() => {
+    if (!selectedGroupId) { setKnownSubgroups([]); return }
+    const fetchSubgroups = async () => {
+      const { data } = await supabase
+        .from('products')
+        .select('subgroup_label')
+        .eq('variant_group_id', selectedGroupId)
+        .not('subgroup_label', 'is', null)
+      if (data) setKnownSubgroups([...new Set(data.map(p => p.subgroup_label as string))])
+    }
+    fetchSubgroups()
+  }, [supabase, selectedGroupId])
+
   const handleCreateGroup = async () => {
     if (!newGroupName.trim()) return
     setIsSavingGroup(true)
-    
+
     // Auto-generate the slug from the name
     const generatedSlug = newGroupName.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
 
     const { data, error } = await supabase
       .from('variant_groups')
       .insert({ name: newGroupName.trim(), slug: generatedSlug })
-      .select('id, name')
+      .select('id, name, subgroup_title')
       .single()
 
     if (data) {
@@ -70,6 +89,14 @@ export default function AddProductForm({ categories }: { categories: Category[] 
       alert('Failed to create group: ' + error?.message)
     }
     setIsSavingGroup(false)
+  }
+
+  // The dimension name is a property of the group, not the product, so it saves
+  // straight away rather than waiting for the product form to be submitted.
+  const handleSubgroupTitleChange = async (title: string) => {
+    const clean = title.trim() || 'Style'
+    setVariantGroups(prev => prev.map(g => g.id === selectedGroupId ? { ...g, subgroup_title: clean } : g))
+    await supabase.from('variant_groups').update({ subgroup_title: clean }).eq('id', selectedGroupId)
   }
 
   // Handle Multi-Image Upload
@@ -133,6 +160,7 @@ export default function AddProductForm({ categories }: { categories: Category[] 
     if (selectedGroupId) {
       formData.append('variantGroupId', selectedGroupId)
       if (sizeLabel.trim()) formData.append('sizeLabel', sizeLabel.trim())
+      if (subgroupLabel.trim()) formData.append('subgroupLabel', subgroupLabel.trim())
     }
 
     const specificationsObject = specs.reduce((acc, curr) => {
@@ -187,7 +215,7 @@ export default function AddProductForm({ categories }: { categories: Category[] 
                   <label className="block text-[10px] font-bold text-stone-400 uppercase mb-1">Variant Group</label>
                   <select 
                     value={selectedGroupId} 
-                    onChange={(e) => { setSelectedGroupId(e.target.value); if (!e.target.value) setSizeLabel(''); }}
+                    onChange={(e) => { setSelectedGroupId(e.target.value); if (!e.target.value) { setSizeLabel(''); setSubgroupLabel('') } }}
                     className="w-full p-3 bg-white border border-stone-200 rounded-lg outline-none font-medium text-sm focus:border-orange-500"
                   >
                     <option value="">-- No Group (Standalone Product) --</option>
@@ -209,9 +237,49 @@ export default function AddProductForm({ categories }: { categories: Category[] 
               </div>
             )}
             {selectedGroupId && (
-              <div className="pt-4 border-t border-stone-200 mt-4">
-                <label className="block text-[10px] font-bold text-stone-400 uppercase mb-1">Size Label (Appears on Button)</label>
-                <input type="text" value={sizeLabel} onChange={(e) => setSizeLabel(e.target.value)} placeholder="e.g. 2 Seater, Corner" className="w-full p-3 bg-white border border-stone-200 rounded-lg outline-none font-medium text-sm focus:border-orange-500" required={!!selectedGroupId} />
+              <div className="pt-4 border-t border-stone-200 mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-bold text-stone-400 uppercase mb-1">Size Label (Appears on Button)</label>
+                  <input type="text" value={sizeLabel} onChange={(e) => setSizeLabel(e.target.value)} placeholder="e.g. 2 Seater, Corner" className="w-full p-3 bg-white border border-stone-200 rounded-lg outline-none font-medium text-sm focus:border-orange-500" required={!!selectedGroupId} />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-stone-400 uppercase mb-1">
+                    {selectedGroup?.subgroup_title || 'Style'} Label (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    list="known-subgroups"
+                    value={subgroupLabel}
+                    onChange={(e) => setSubgroupLabel(e.target.value)}
+                    placeholder="e.g. High Back, Scattered Back"
+                    className="w-full p-3 bg-white border border-stone-200 rounded-lg outline-none font-medium text-sm focus:border-orange-500"
+                  />
+                  <datalist id="known-subgroups">
+                    {knownSubgroups.map(s => <option key={s} value={s} />)}
+                  </datalist>
+                  <p className="text-[10px] text-stone-400 mt-1.5 leading-relaxed">
+                    Leave blank if this group only varies by size. Products sharing a label appear together as one style.
+                  </p>
+                </div>
+
+                {(subgroupLabel.trim() || knownSubgroups.length > 0) && (
+                  <div className="sm:col-span-2">
+                    <label className="block text-[10px] font-bold text-stone-400 uppercase mb-1">
+                      What customers see this choice called
+                    </label>
+                    <input
+                      type="text"
+                      defaultValue={selectedGroup?.subgroup_title || 'Style'}
+                      key={selectedGroup?.id}
+                      onBlur={(e) => handleSubgroupTitleChange(e.target.value)}
+                      placeholder="e.g. Back Style"
+                      className="w-full p-3 bg-white border border-stone-200 rounded-lg outline-none font-medium text-sm focus:border-orange-500"
+                    />
+                    <p className="text-[10px] text-stone-400 mt-1.5 leading-relaxed">
+                      Heading shown above the choice on the product page. Applies to the whole group — saved as soon as you click away.
+                    </p>
+                  </div>
+                )}
               </div>
             )}
           </div>

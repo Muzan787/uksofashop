@@ -46,7 +46,7 @@ export default async function CollectionPage(props: { params: Params }) {
   const { data: products } = await supabase
     .from('products')
     .select(`
-      id, title, slug, base_price, average_rating, review_count, size_label,
+      id, title, slug, base_price, average_rating, review_count, size_label, subgroup_label,
       product_variants (image_url, price_adjustment, priority),
       product_categories ( categories ( slug ) )
     `)
@@ -118,10 +118,20 @@ export default async function CollectionPage(props: { params: Params }) {
                       <div className="absolute inset-0 bg-[#e7e5e4]" />
                     )}
                     
-                    {/* Size Label Overlay */}
-                    {product.size_label && (
-                      <div className="absolute top-2 left-2 bg-[#d4871a] text-white font-bold uppercase text-[9px] tracking-wider px-2 py-1 rounded shadow-sm z-10">
-                        {product.size_label}
+                    {/* Size + Style Label Overlay — the style keeps same-size
+                        products in a group tellable apart at a glance */}
+                    {(product.size_label || product.subgroup_label) && (
+                      <div className="absolute top-2 left-2 flex flex-col items-start gap-1 z-10">
+                        {product.size_label && (
+                          <div className="bg-[#d4871a] text-white font-bold uppercase text-[9px] tracking-wider px-2 py-1 rounded shadow-sm">
+                            {product.size_label}
+                          </div>
+                        )}
+                        {product.subgroup_label && (
+                          <div className="bg-stone-900/85 text-white font-bold uppercase text-[9px] tracking-wider px-2 py-1 rounded shadow-sm">
+                            {product.subgroup_label}
+                          </div>
+                        )}
                       </div>
                     )}
 
