@@ -6,14 +6,17 @@ import Link from 'next/link';
 import {
   ShoppingBag, Check, Truck, Wallet, ShieldCheck,
   Ruler, X, ChevronDown, ChevronUp, Star, ZoomIn,
-  Loader2, CheckCircle, ChevronRight, RotateCcw, Gem, Heart, ImagePlus, ChevronLeft,
-  Sparkles, Phone // <-- Added Sparkles and Phone icons
+  Loader2, CheckCircle, ChevronRight, Gem, Heart, ImagePlus, ChevronLeft,
+  Sparkles, Phone, AlertTriangle
 } from 'lucide-react';
 import { toggleWishlist } from '@/app/actions/wishlist';
+import { PHONE_HREF, WHATSAPP_NUMBER } from '@/constants/contact';
+import { trackViewContent, trackAddToCart } from '@/utils/tracking';
 import { useCart } from '@/context/CartContext';
 import { submitGlobalReview } from '@/app/actions/reviews';
 import { uploadToCloudinary } from '@/app/actions/upload';
 import toast from 'react-hot-toast';
+import { PROMISES } from '@/constants/promises';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Variant {
@@ -23,7 +26,6 @@ interface Variant {
   material: string | null;
   image_url: string | null;
   price_adjustment: number;
-  stock_quantity: number;
 }
 interface Review {
   id: string;
@@ -44,6 +46,8 @@ interface Product {
   gallery_images?: string[] | null; 
   product_variants?: Variant[];
   reviews?: Review[];
+  origin?: string | null;
+  custom_made?: boolean | null;
 }
 interface SimilarProduct {
   id: string;
@@ -540,9 +544,30 @@ export default function ProductPageClient({ product, initialWishlistState, varia
   // Price
   const price = product.base_price + (selVariant?.price_adjustment || 0);
 
+  // ── ViewContent ────────────────────────────────────────────────────────────
+  // Fired per variant, because the variant id is what the Merchant feed
+  // publishes and therefore what a dynamic ad can retarget.
+  //
+  // The ref guard exists because React runs effects twice under StrictMode in
+  // development; without it every product view would be counted twice while
+  // testing. It also stops a re-render that doesn't change the variant from
+  // re-firing.
+  const lastViewed = useRef<string | null>(null);
+  useEffect(() => {
+    if (!selVariant) return;
+    if (lastViewed.current === selVariant.id) return;
+    lastViewed.current = selVariant.id;
+    trackViewContent({
+      variantId: selVariant.id,
+      title: product.title,
+      price,
+      quantity: 1,
+    });
+  }, [selVariant, price, product.title]);
+
   // Add to cart
   const handleAdd = useCallback(() => {
-    if (!selVariant || selVariant.stock_quantity === 0) return;
+    if (!selVariant) return;
     addToCart({
       variant_id: selVariant.id,
       quantity: 1,
@@ -550,6 +575,14 @@ export default function ProductPageClient({ product, initialWishlistState, varia
       title: product.title,
       color: `${selVariant.color ?? ''} ${selVariant.material ?? ''}`.trim(),
       image_url: mainSliderImages[0]?.src || '/placeholder.svg',
+    });
+    // Fired here rather than inside the cart reducer: the reducer runs inside a
+    // setState updater, which React may invoke more than once.
+    trackAddToCart({
+      variantId: selVariant.id,
+      title: product.title,
+      price,
+      quantity: 1,
     });
     setAdded(true);
     toast.success(`${product.title} added to cart!`, { icon: '🛋️', position: "top-center" });
@@ -563,21 +596,26 @@ export default function ProductPageClient({ product, initialWishlistState, varia
   };
 
   const { ref: reviewsRef, visible: reviewsVisible } = useReveal();
-  const outOfStock = selVariant?.stock_quantity === 0;
+  // Stock isn't tracked: sofas are made to order, so availability is controlled
+  // entirely by the product-level Active/Inactive switch in the admin panel.
 
   // ── Helper to render the title block responsibly ──
   const renderTitleBlock = (className?: string) => (
     <div className={className} style={{ marginBottom: 16 }}>
-      <div style={{
-        display: 'inline-flex', alignItems: 'center', gap: 6,
-        background: accentTint, border: `1px solid ${accent}33`,
-        borderRadius: 4, padding: '3px 10px', marginBottom: 10,
-      }}>
-        <div style={{ width: 5, height: 5, borderRadius: '50%', background: accent }} />
-        <span style={{ fontSize: 9, color: accent, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase' }}>
-          British Handcrafted
-        </span>
-      </div>
+      {/* Only where the product's own origin is 'uk'. Anything else renders
+          nothing rather than making a claim we cannot evidence. */}
+      {product.origin === 'uk' && (
+        <div style={{
+          display: 'inline-flex', alignItems: 'center', gap: 6,
+          background: accentTint, border: `1px solid ${accent}33`,
+          borderRadius: 4, padding: '3px 10px', marginBottom: 10,
+        }}>
+          <div style={{ width: 5, height: 5, borderRadius: '50%', background: accent }} />
+          <span style={{ fontSize: 9, color: accent, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase' }}>
+            Made in the UK
+          </span>
+        </div>
+      )}
 
       <h1 className="font-playfair" style={{ fontSize: 'clamp(22px,4vw,34px)', fontWeight: 700, color: '#1c1917', lineHeight: 1.1, letterSpacing: '-0.02em', marginBottom: 10 }}>
         {product.title}
@@ -608,8 +646,24 @@ export default function ProductPageClient({ product, initialWishlistState, varia
   );
 
   // ── WhatsApp Component ──
-  const whatsappNumber = "447476616022"; 
+  const whatsappNumber = WHATSAPP_NUMBER; 
   const whatsappText = encodeURIComponent(`Hi, I have a query about your product: ${product.title}`);
+
+  // Structured so a made-to-order enquiry arrives with the answers already
+  // prompted, rather than as an open-ended message.
+  const customEnquiryLink = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(
+    `Hi, I'd like a made-to-order ${product.title}.
+
+` +
+    `Colour:
+` +
+    `Fabric / material:
+` +
+    `Size or layout:
+` +
+    `Anything else:
+`
+  )}`;
   
   const WhatsAppCard = () => (
     <a 
@@ -735,17 +789,6 @@ export default function ProductPageClient({ product, initialWishlistState, varia
                     {i === 0 && (
                       <>
                         <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: accent, transition: 'background 0.7s ease' }} />
-                        {outOfStock && (
-                          <div style={{ position: 'absolute', top: 12, left: 12, background: 'rgba(239,68,68,0.9)', color: '#fff', fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', padding: '4px 10px', borderRadius: 4 }}>
-                            Out of Stock
-                          </div>
-                        )}
-                        {!outOfStock && selVariant?.stock_quantity && selVariant.stock_quantity <= 3 && (
-                          <div style={{ position: 'absolute', top: 12, left: 12, background: accent, color: textOnAccent, fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', padding: '4px 10px', borderRadius: 4, display: 'flex', alignItems: 'center', gap: 5 }}>
-                            <span style={{ width: 5, height: 5, borderRadius: '50%', background: textOnAccent, animation: 'pulseDot 1.5s infinite' }} />
-                            Only {selVariant.stock_quantity} left
-                          </div>
-                        )}
                       </>
                     )}
                   </div>
@@ -907,11 +950,6 @@ export default function ProductPageClient({ product, initialWishlistState, varia
                     return (
                       <button key={v.id} onClick={() => setSelColor(v.color ?? '')} title={v.color ?? ''} style={{ position: 'relative', width: active ? 42 : 36, height: active ? 42 : 36, borderRadius: '50%', background: hex, border: `3px solid ${active ? accent : 'transparent'}`, outline: active ? `3px solid ${accentTint}` : 'none', outlineOffset: 2, cursor: 'pointer', padding: 0, transition: 'all 0.25s cubic-bezier(.16,1,.3,1)', boxShadow: active ? `0 0 0 4px ${accent}30, 0 4px 12px ${hex}55` : `0 2px 6px ${hex}44`, transform: active ? 'scale(1.08)' : 'scale(1)' }}>
                         {active && <Check style={{ position: 'absolute', inset: 0, margin: 'auto', width: 13, height: 13, color: getTextColor(hex), filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))' }} />}
-                        {v.stock_quantity === 0 && (
-                          <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: 'rgba(255,255,255,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <div style={{ width: '60%', height: 1.5, background: '#ef4444', transform: 'rotate(-45deg)' }} />
-                          </div>
-                        )}
                       </button>
                     );
                   })}
@@ -919,7 +957,7 @@ export default function ProductPageClient({ product, initialWishlistState, varia
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px', marginTop: 8 }}>
                   {filtered.map(v => (
                     <span key={v.id} style={{ fontSize: 10, color: selColor === v.color ? accent : '#a8a29e', fontWeight: selColor === v.color ? 700 : 400, transition: 'color 0.3s' }}>
-                      {v.color}{v.stock_quantity === 0 ? ' (OOS)' : ''}
+                      {v.color}
                     </span>
                   ))}
                 </div>
@@ -965,10 +1003,9 @@ export default function ProductPageClient({ product, initialWishlistState, varia
               {activeTab === 'delivery' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {[
-                    { icon: Truck,     title: 'Free White-Glove Delivery', sub: 'On orders over £500. We set up everything and remove all packaging.' },
-                    { icon: Wallet,    title: 'Cash on Delivery',          sub: 'Pay only when your sofa arrives — no upfront payment required.'       },
-                    { icon: RotateCcw, title: '30-Day Home Trial',         sub: 'Not happy? Return it within 30 days, no questions asked.'             },
-                    { icon: ShieldCheck, title: '1-year Frame Guarantee', sub: 'Every sofa comes with a full structural guarantee.'                   },
+                    { icon: Truck,       title: PROMISES.delivery.label,  sub: PROMISES.delivery.long  },
+                    { icon: Wallet,      title: PROMISES.payment.label,   sub: PROMISES.payment.long   },
+                    { icon: ShieldCheck, title: PROMISES.guarantee.label, sub: PROMISES.guarantee.long },
                   ].map(({ icon: Icon, title, sub }) => (
                     <div key={title} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                       <div style={{ width: 32, height: 32, borderRadius: 7, flexShrink: 0, background: accentTint, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -1007,6 +1044,61 @@ export default function ProductPageClient({ product, initialWishlistState, varia
               </button>
             )}
 
+            {/* ── Made to your specification ──
+                Only on products flagged custom_made in the admin panel. Carries
+                the Consumer Contracts Regulations exemption HERE, at the point
+                the customer decides, rather than buried in the terms page. */}
+            {product.custom_made && (
+              <div style={{ border: `1.5px solid ${accent}40`, background: accentTint, borderRadius: 12, padding: '16px 18px', marginBottom: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                  <Ruler style={{ width: 15, height: 15, color: accent, flexShrink: 0 }} />
+                  <span style={{ fontSize: 10, color: accent, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase' }}>
+                    Made to Order
+                  </span>
+                </div>
+
+                <h3 className="font-playfair" style={{ fontSize: 19, fontWeight: 700, color: '#1c1917', marginBottom: 7, lineHeight: 1.25 }}>
+                  Want this in a different colour, fabric or size?
+                </h3>
+                <p style={{ fontSize: 13, color: '#57534e', lineHeight: 1.7, margin: '0 0 12px' }}>
+                  We make our fabric sofas to order. Tell us what you have in mind and we&apos;ll
+                  work it through with you — including the price and how long it will take.
+                </p>
+
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
+                  {['Any colour', 'Your choice of fabric', 'Custom size or layout'].map(t => (
+                    <span key={t} style={{ fontSize: 11, fontWeight: 600, color: '#57534e', background: '#fff', border: '1px solid #e7e5e4', borderRadius: 20, padding: '5px 11px' }}>
+                      {t}
+                    </span>
+                  ))}
+                </div>
+
+                <div style={{ display: 'flex', gap: 9, alignItems: 'flex-start', background: '#fff', border: '1px solid #e7e5e4', borderRadius: 8, padding: '11px 13px', marginBottom: 14 }}>
+                  <AlertTriangle style={{ width: 15, height: 15, color: '#b45309', flexShrink: 0, marginTop: 1 }} />
+                  <p style={{ fontSize: 12, color: '#57534e', lineHeight: 1.65, margin: 0 }}>
+                    <strong style={{ color: '#1c1917' }}>Before you order a made-to-measure sofa:</strong>{' '}
+                    because it&apos;s built to your own specification, the 14-day right to change
+                    your mind doesn&apos;t apply — that&apos;s the standard exemption under the Consumer
+                    Contracts Regulations. Faulty or damaged items are still covered exactly as normal.
+                  </p>
+                </div>
+
+                <a
+                  href={customEnquiryLink}
+                  target="_blank" rel="noopener noreferrer"
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '12px', background: '#25D366', color: '#fff', borderRadius: 8, fontSize: 13, fontWeight: 700, textDecoration: 'none' }}
+                  className="hover:brightness-95"
+                >
+                  <svg viewBox="0 0 24 24" className="w-5 h-5 fill-white">
+                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                  </svg>
+                  Design yours on WhatsApp
+                </a>
+                <p style={{ fontSize: 11, color: '#a8a29e', textAlign: 'center', margin: '8px 0 0' }}>
+                  Opens WhatsApp with this sofa&apos;s details already filled in.
+                </p>
+              </div>
+            )}
             {/* ── Add to cart & Wishlist ── (sticky on mobile) */}
             <div 
               className="flex flex-col md:hidden" 
@@ -1032,8 +1124,8 @@ export default function ProductPageClient({ product, initialWishlistState, varia
                   <Heart style={{ width: 18, height: 18, fill: inWishlist ? accent : 'transparent', color: inWishlist ? accent : '#78716c' }} />
                 </button>
 
-                <button onClick={handleAdd} disabled={outOfStock || added} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '12px 0', borderRadius: 8, border: 'none', background: added ? '#16a34a' : (outOfStock ? '#d6d3d1' : accent), color: added ? '#fff' : (outOfStock ? '#a8a29e' : textOnAccent), fontSize: 12, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', cursor: outOfStock ? 'not-allowed' : 'pointer', transition: 'background 0.3s ease' }}>
-                  {added ? <><Check style={{ width: 14, height: 14 }} /> Added!</> : outOfStock ? 'Out of Stock' : <><ShoppingBag style={{ width: 14, height: 14 }} /> Add to Cart</>}
+                <button onClick={handleAdd} disabled={added} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '12px 0', borderRadius: 8, border: 'none', background: added ? '#16a34a' : accent, color: added ? '#fff' : textOnAccent, fontSize: 12, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer', transition: 'background 0.3s ease' }}>
+                  {added ? <><Check style={{ width: 14, height: 14 }} /> Added!</>  : <><ShoppingBag style={{ width: 14, height: 14 }} /> Add to Cart</>}
                 </button>
               </div>
 
@@ -1044,8 +1136,8 @@ export default function ProductPageClient({ product, initialWishlistState, varia
             {/* Desktop add-to-cart & Wishlist */}
             <div className="hidden md:block">
               <div style={{ display: 'flex', gap: 10 }}>
-                <button onClick={handleAdd} disabled={outOfStock || added} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '14px 0', borderRadius: 10, border: 'none', background: added ? '#16a34a' : (outOfStock ? '#e7e5e4' : accent), color: added ? '#fff' : (outOfStock ? '#a8a29e' : textOnAccent), fontSize: 12, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', cursor: outOfStock ? 'not-allowed' : 'pointer', transition: 'all 0.3s ease', transform: added ? 'scale(0.99)' : 'scale(1)', boxShadow: outOfStock || added ? 'none' : `0 6px 24px ${accent}44` }}>
-                  {added ? <><Check style={{ width: 15, height: 15 }} /> Added to Cart!</> : outOfStock ? 'Out of Stock' : <><ShoppingBag style={{ width: 15, height: 15 }} /> Add to Cart — £{price.toFixed(0)}</>}
+                <button onClick={handleAdd} disabled={added} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '14px 0', borderRadius: 10, border: 'none', background: added ? '#16a34a' : accent, color: added ? '#fff' : textOnAccent, fontSize: 12, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', cursor: 'pointer', transition: 'all 0.3s ease', transform: added ? 'scale(0.99)' : 'scale(1)', boxShadow: added ? 'none' : `0 6px 24px ${accent}44` }}>
+                  {added ? <><Check style={{ width: 15, height: 15 }} /> Added to Cart!</>  : <><ShoppingBag style={{ width: 15, height: 15 }} /> Add to Cart — £{price.toFixed(0)}</>}
                 </button>
                 
                 <button onClick={handleWishlistToggle} disabled={wishlistLoading} style={{ width: 50, height: 50, borderRadius: 10, background: '#fff', border: '2px solid #e7e5e4', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s ease' }} className="hover:border-stone-300">
@@ -1057,7 +1149,7 @@ export default function ProductPageClient({ product, initialWishlistState, varia
 
               {/* Trust row */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 1, marginTop: 12, border: `1px solid ${accent}20`, borderRadius: 10, overflow: 'hidden' }}>
-                {[{ icon: Truck, label: 'Free Delivery' }, { icon: Gem, label: 'COD Available' }, { icon: ShieldCheck, label: '1-Yr Guarantee' }].map(({ icon: Icon, label }) => (
+                {[{ icon: Truck, label: PROMISES.delivery.label }, { icon: Gem, label: PROMISES.payment.label }, { icon: ShieldCheck, label: PROMISES.guarantee.label }].map(({ icon: Icon, label }) => (
                   <div key={label} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, padding: '10px 8px', background: accentTint, transition: 'background 0.7s ease' }}>
                     <Icon style={{ width: 14, height: 14, color: accent }} />
                     <span style={{ fontSize: 9, color: '#78716c', fontWeight: 600, textAlign: 'center', letterSpacing: '0.06em' }}>{label}</span>
@@ -1236,7 +1328,7 @@ export default function ProductPageClient({ product, initialWishlistState, varia
                 
                 {/* Phone Call Action */}
                 <a
-                  href="tel:447476616022"
+                  href={PHONE_HREF}
                   style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '12px', background: '#1c1917', color: '#fff', borderRadius: 8, fontSize: 13, fontWeight: 700, textDecoration: 'none', transition: 'transform 0.2s', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
                   className="hover:scale-[1.02]"
                 >
