@@ -6,8 +6,9 @@ import { BookOpen, PenTool, ArrowRight, Calendar, Clock, Newspaper } from 'lucid
 const ACCENT = '#d4871a';
 
 export const metadata: Metadata = {
-  title: 'The Journal | UK Sofashop',
-  description: 'Interior design inspiration, sofa styling tips, and the latest news from UK Sofashop.',
+  alternates: { canonical: '/journal' },
+  title: 'The Journal',
+  description: 'Interior design inspiration, sofa styling tips, and the latest news from UK Sofa Shop.',
 };
 
 // Placeholder data for your initial blog posts
@@ -30,9 +31,9 @@ const articles = [
   },
   {
     id: 3,
-    title: 'The Anatomy of a Handcrafted British Sofa',
-    excerpt: 'Take a look inside the UK Sofashop workshop to see how hardwood frames and premium fillings create a sofa that lasts a lifetime.',
-    category: 'Craftsmanship',
+    title: 'What’s Inside a Well-Made Sofa',
+    excerpt: 'Hardwood frames, spring systems and foam densities — the parts you can’t see are the ones that decide whether a sofa is still comfortable in ten years.',
+    category: 'Buying Guide',
     date: 'September 15, 2026',
     readTime: '6 min read',
   },

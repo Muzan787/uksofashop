@@ -1,14 +1,15 @@
-// src/app/collections/page.tsx
+// src/app/collection/page.tsx
 import { Metadata } from 'next';
-import { createClient } from '@/utils/supabase/server';
+import { createClient } from '@/utils/supabase/server'
+import { summariseCollections } from '@/utils/collections';
 import Link from 'next/link';
 import { ChevronRight, PackageSearch } from 'lucide-react';
 import CollectionCard from '@/components/Product/CollectionCard';
 
 export const metadata: Metadata = {
-  title: 'All Collections | UK Sofa Shop',
-  description: 'Browse our complete range of handcrafted British sofa collections and sets.',
-  alternates: { canonical: '/collections' },
+  title: 'All Collections',
+  description: 'Browse our complete range of sofa collections and sets, with free UK Mainland delivery.',
+  alternates: { canonical: '/collection' },
 };
 
 export default async function CollectionsIndexPage() {
@@ -32,67 +33,7 @@ export default async function CollectionsIndexPage() {
     // Add this to sort the nested variants!
     .order('priority', { referencedTable: 'products.product_variants', ascending: true });
 
-  const collectionsData = (groupsData || [])
-    .map((group: any) => {
-      const activeProducts = group.products?.filter((p: any) => p.is_active) || [];
-      if (activeProducts.length === 0) return null;
-
-      const prices = activeProducts.map((p: any) => p.base_price);
-      const minPrice = Math.min(...prices);
-      const maxPrice = Math.max(...prices);
-
-      // --- SMART IMAGE SELECTION ALGORITHM ---
-      const selectedImages: string[] = [];
-      const usedImages = new Set<string>();
-
-      // Pass 1: Try to get 1 primary image from EACH distinct product
-      activeProducts.forEach((p: any) => {
-        let imgToUse = null;
-        if (p.product_variants?.[0]?.image_url) {
-          imgToUse = p.product_variants[0].image_url;
-        } else if (p.gallery_images?.[0]) {
-          imgToUse = p.gallery_images[0];
-        }
-
-        if (imgToUse && !usedImages.has(imgToUse)) {
-          selectedImages.push(imgToUse);
-          usedImages.add(imgToUse);
-        }
-      });
-
-      // Pass 2: If we still don't have 3 images, backfill with extra variants or gallery images
-      if (selectedImages.length < 3) {
-        for (const p of activeProducts) {
-          if (Array.isArray(p.product_variants)) {
-            for (const v of p.product_variants) {
-              if (v.image_url && !usedImages.has(v.image_url) && selectedImages.length < 3) {
-                selectedImages.push(v.image_url);
-                usedImages.add(v.image_url);
-              }
-            }
-          }
-          if (Array.isArray(p.gallery_images)) {
-            for (const img of p.gallery_images) {
-              if (!usedImages.has(img) && selectedImages.length < 3) {
-                selectedImages.push(img);
-                usedImages.add(img);
-              }
-            }
-          }
-          if (selectedImages.length >= 3) break;
-        }
-      }
-
-      return {
-        id: group.id,
-        name: group.name,
-        slug: group.slug,
-        minPrice,
-        maxPrice,
-        images: selectedImages.slice(0, 3) 
-      };
-    })
-    .filter(Boolean) as any[];
+  const collectionsData = summariseCollections(groupsData);
 
   return (
     <div className="min-h-screen bg-[#f8f6f2]">
@@ -121,7 +62,7 @@ export default async function CollectionsIndexPage() {
             All Collections
           </h1>
           <p className="text-white/50 text-xs sm:text-sm mt-3 max-w-md leading-relaxed">
-            Discover our curated sets of handcrafted British sofas. Designed to completely transform your living space.
+            Discover our curated sets. Designed to completely transform your living space.
           </p>
         </div>
         <div className="h-[2px] bg-[#d4871a]" />

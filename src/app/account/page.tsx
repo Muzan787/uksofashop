@@ -1,9 +1,18 @@
 // src/app/account/page.tsx
+import type { Metadata } from 'next'
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import AccountTabs from './AccountTabs'
 import { logout } from '@/app/actions/auth'
 import { LogOut } from 'lucide-react'
+
+
+export const metadata: Metadata = {
+  title: 'My Account',
+  description:
+    'Your orders, wishlist and reviews.',
+  robots: { index: false, follow: false },
+}
 
 export default async function AccountPage() {
   const supabase = await createClient()

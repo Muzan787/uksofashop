@@ -1,106 +1,160 @@
 // src/app/shop/[category]/page.tsx
 import { Metadata } from 'next'
+import { notFound, permanentRedirect } from 'next/navigation'
+import { Suspense } from 'react'
 import { createClient } from '@/utils/supabase/server'
-import FilterSidebar from '@/components/Category/FilterSidebar'
-import Pagination from '@/components/UI/Pagination'
+import { breadcrumbSchema, jsonLd } from '@/utils/schema'
+import { LEGACY_CATEGORY_SLUGS } from '@/utils/productUrl'
+import {
+  ITEMS_PER_PAGE,
+  parsePageParam,
+  hasActiveFilters,
+  countMatchingProducts,
+} from './productQuery'
+import ProductGrid from './ProductGrid'
+import CategoryFilters from './CategoryFilters'
+import { ProductGridSkeleton, FilterSidebarSkeleton } from './Skeletons'
 import Link from 'next/link'
 import Image from 'next/image'
-import { PackageSearch, Star, ArrowRight } from 'lucide-react'
 
 type Params       = Promise<{ category: string }>
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>
 
-const ACCENT      = '#d4871a'
-const ITEMS_PER_PAGE = 9
-
-export async function generateMetadata(props: { params: Params }): Promise<Metadata> {
+export async function generateMetadata(
+  props: { params: Params; searchParams: SearchParams },
+): Promise<Metadata> {
   const { category } = await props.params
-  
+  const sp = await props.searchParams
+
   const decodedCategory = decodeURIComponent(category)
-  const slugWithPlus = decodedCategory.replace(/ /g, '+') 
 
   const supabase = await createClient()
+
   const { data } = await supabase
     .from('categories')
     .select('name')
-    .in('slug', [decodedCategory, slugWithPlus])
+    .eq('slug', decodedCategory)
     .limit(1)
     .maybeSingle()
 
   const name = data?.name ?? 'All Products'
+  const page = parsePageParam(sp.page)
+
+  const style    = typeof sp.style === 'string' ? sp.style : undefined
+  const material = typeof sp.material === 'string' ? sp.material : undefined
+  const color    = typeof sp.color === 'string' ? sp.color : undefined
+  const filtered = hasActiveFilters({ style, material, color })
+
+  const basePath = `/shop/${decodedCategory}`
+
+  // Each page of a listing is its own canonical. Pointing page 2 at page 1
+  // tells Google the deeper products are duplicates and it drops them.
+  // Page 1 stays parameter-free so /shop/x and /shop/x?page=1 do not compete.
+  const path = page > 1 ? `${basePath}?page=${page}` : basePath
+
+  const title = page > 1 ? `${name} - Page ${page}` : name
+  const description = `Shop our premium ${name.toLowerCase()} collection. Free delivery across UK Mainland. Cash on Delivery available.`
+
   return {
-    title: `${name} | UK Sofa Shop`,
-    description: `Shop our premium ${name.toLowerCase()} collection. Free UK delivery over £500. Cash on Delivery.`,
-    alternates: { canonical: `/shop/${decodedCategory}` },
+    title,
+    description,
+    alternates: { canonical: path },
+    // A filtered view is a near-duplicate of the unfiltered one and there is a
+    // combinatorial number of them, so keep them out of the index - but still
+    // follow the links, because the product pages they lead to matter.
+    ...(filtered ? { robots: { index: false, follow: true } } : {}),
+    // Overrides the root layout's card so a shared category link names the
+    // category rather than the homepage.
+    openGraph: { type: 'website', title, description, url: path },
+    twitter: { card: 'summary_large_image', title, description },
   }
 }
 
 export default async function CategoryPage(props: { params: Params; searchParams: SearchParams }) {
   const { category } = await props.params
   const decodedCategory = decodeURIComponent(category)
-  const slugWithPlus = decodedCategory.replace(/ /g, '+') 
-  
-  const sp          = await props.searchParams
-  const supabase    = await createClient()
+
+  const sp       = await props.searchParams
+
+  // A category we have renamed. Sending a 308 keeps old links and any indexed
+  // URLs working, and passes their ranking to the new slug. Filters and the
+  // page number are carried across so a bookmarked filtered view survives.
+  const renamedTo = LEGACY_CATEGORY_SLUGS[decodedCategory]
+  if (renamedTo) {
+    const qs = new URLSearchParams(
+      Object.entries(sp).flatMap(([k, v]) =>
+        typeof v === 'string' ? [[k, v] as [string, string]] : [],
+      ),
+    ).toString()
+    permanentRedirect(`/shop/${renamedTo}${qs ? `?${qs}` : ''}`)
+  }
+
+  const supabase = await createClient()
 
   let categoryData: { id: string; name: string; image_url?: string | null } | null = null
-  
+
   if (decodedCategory !== 'all') {
     const { data } = await supabase
       .from('categories')
       .select('id, name, image_url')
-      .in('slug', [decodedCategory, slugWithPlus])
+      .eq('slug', decodedCategory)
       .limit(1)
       .maybeSingle()
-      
-    if (!data) return (
-      <div className="min-h-[60vh] flex items-center justify-center">
-        <p className="text-lg text-stone-500">Category not found</p>
-      </div>
-    )
+
+    // notFound() rather than rendering a "not found" message inside a 200
+    // response - a soft 404 gets indexed and burns crawl budget. This runs
+    // before anything suspends, so the 404 status is real rather than a
+    // client-side transition on top of a 200.
+    if (!data) notFound()
     categoryData = data
   }
 
-  const currentPage = typeof sp.page === 'string' ? parseInt(sp.page) : 1
-  const from = (currentPage - 1) * ITEMS_PER_PAGE
-  const to   = from + ITEMS_PER_PAGE - 1
+  const pageTitle = categoryData ? categoryData.name : 'All Sofas'
 
-  let query = supabase
-    .from('products')
-    .select('id, title, slug, base_price, average_rating, review_count, product_variants!inner(image_url, material, color, price_adjustment, priority), product_categories!inner(category_id)', { count: 'exact' })
-    .eq('is_active', true)
+  const style    = typeof sp.style === 'string' ? sp.style : undefined
+  const material = typeof sp.material === 'string' ? sp.material : undefined
+  const color    = typeof sp.color === 'string' ? sp.color : undefined
 
-  if (categoryData) query = query.eq('product_categories.category_id', categoryData.id)
-  
-  // Apply URL Filters
-  if (typeof sp.style === 'string')    query = query.filter('specifications->>style', 'ilike', sp.style)
-  if (typeof sp.material === 'string') query = query.filter('product_variants.material', 'ilike', sp.material)
-  if (typeof sp.color === 'string')    query = query.filter('product_variants.color', 'ilike', sp.color)
+  // Anything that is not a positive integer becomes page 1 rather than being
+  // handed to range() as NaN or a negative number.
+  const currentPage = parsePageParam(sp.page)
 
-  const { data: products, count } = await query
-    .order('created_at', { ascending: false })
-    // Tell Supabase to sort the joined variants array by priority!
-    .order('priority', { referencedTable: 'product_variants', ascending: true }) 
-    .range(from, to)
-  const totalPages  = count ? Math.ceil(count / ITEMS_PER_PAGE) : 0
-  const pageTitle   = categoryData ? categoryData.name : 'All Sofas'
+  // Whether the requested page exists has to be settled here, before anything
+  // suspends - a notFound() raised inside a Suspense boundary arrives after the
+  // 200 has already been committed and Google records it as a soft 404.
+  //
+  // Page 1 of an empty category is legitimate ("no products found"); page 5 of
+  // a two-page listing is not, and left unchecked it lets a crawler walk an
+  // unlimited number of empty pages.
+  if (currentPage > 1) {
+    const total = await countMatchingProducts(supabase, {
+      categoryId: categoryData?.id ?? null,
+      style,
+      material,
+      color,
+    })
+    const lastPage = Math.max(1, Math.ceil(total / ITEMS_PER_PAGE))
+    if (currentPage > lastPage) notFound()
+  }
 
-  // Fetch specs for filter options globally for this category
-  let specsQ = supabase
-    .from('products')
-    .select('specifications, product_variants(material, color), product_categories!inner(category_id)')
-    .eq('is_active', true)
-    
-  if (categoryData) specsQ = specsQ.eq('product_categories.category_id', categoryData.id)
-  const { data: allSpecs } = await specsQ
-  
-  // Extract unique filter options
-  const uniqueStyles = [...new Set(allSpecs?.map(p => (p.specifications as any)?.style).filter(Boolean) as string[])]
-  const uniqueMaterials = [...new Set(allSpecs?.flatMap(p => p.product_variants.map((v: any) => v.material)).filter(Boolean) as string[])]
-  const uniqueColors = [...new Set(allSpecs?.flatMap(p => p.product_variants.map((v: any) => v.color)).filter(Boolean) as string[])]
+  // Re-fetching on a filter change should show the skeleton again rather than
+  // freezing the old results, so the boundary is keyed on what it depends on.
+  const gridKey = [decodedCategory, currentPage, style, material, color].join('|')
+
+  // Matches the visual breadcrumb rendered below, which had no markup behind it.
+  const breadcrumbLd = breadcrumbSchema(
+    decodedCategory === 'all'
+      ? [{ name: 'Home', path: '/' }, { name: 'All Sofas', path: '/shop/all' }]
+      : [
+          { name: 'Home', path: '/' },
+          { name: 'Shop', path: '/shop/all' },
+          { name: pageTitle, path: `/shop/${encodeURIComponent(decodedCategory)}` },
+        ]
+  )
 
   return (
     <div className="min-h-screen bg-[#f8f6f2]">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(breadcrumbLd) }} />
 
       {/* Hero banner */}
       <div className="relative bg-[#0c0c0b] overflow-hidden">
@@ -128,11 +182,6 @@ export default async function CategoryPage(props: { params: Params; searchParams
                 {pageTitle}
               </h1>
             </div>
-            {count !== null && (
-              <span className="text-xs text-white/35 self-end">
-                {count} {count === 1 ? 'product' : 'products'}
-              </span>
-            )}
           </div>
         </div>
         <div className="h-[2px] bg-[#d4871a]" />
@@ -140,98 +189,27 @@ export default async function CategoryPage(props: { params: Params; searchParams
 
       {/* Main content */}
       <div className="max-w-[1100px] mx-auto px-4 py-8 pb-20">
-        
+
         {/* BULLETPROOF GRID: Sidebar is exactly 200px, Product grid gets the remaining 1fr */}
         <div className="grid grid-cols-1 lg:grid-cols-[200px_1fr] gap-6 lg:gap-8 items-start">
 
           <div className="w-full">
-            <FilterSidebar 
-              availableStyles={uniqueStyles} 
-              availableMaterials={uniqueMaterials} 
-              availableColors={uniqueColors} 
-            />
+            <Suspense fallback={<FilterSidebarSkeleton />}>
+              <CategoryFilters categoryId={categoryData?.id ?? null} />
+            </Suspense>
           </div>
 
           <div className="w-full min-w-0">
-            {products && products.length > 0 ? (
-              <>
-                {/* STRICT GRID: 2 columns on mobile, 3 columns on tablet/desktop */}
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 lg:gap-6 mb-10 w-full">
-                  {products.map((product, i) => {
-                    
-                    let targetVariant = product.product_variants?.[0]
-                    
-                    if (typeof sp.color === 'string' || typeof sp.material === 'string') {
-                      const match = product.product_variants?.find(v => {
-                        const colorMatch = typeof sp.color === 'string' ? v.color?.toLowerCase() === sp.color.toLowerCase() : true;
-                        const matMatch = typeof sp.material === 'string' ? v.material?.toLowerCase() === sp.material.toLowerCase() : true;
-                        return colorMatch && matMatch;
-                      })
-                      if (match) targetVariant = match;
-                    }
-
-                    const img = targetVariant?.image_url ?? null
-                    const displayPrice = product.base_price + (targetVariant?.price_adjustment || 0)
-
-                    return (
-                      <Link key={product.id} href={`/shop/${category}/${product.slug}`}
-                        className="group block w-full outline-none"
-                        style={{
-                          opacity: 0, animation: `fadeUp 0.4s ease ${i * 40}ms forwards`,
-                        }}
-                      >
-                        <div className="relative w-full aspect-square md:aspect-[3/4] bg-[#ede8df] rounded-[10px] overflow-hidden mb-3">
-                          {img ? (
-                            <Image src={img} alt={product.title} fill sizes="(max-width:768px) 50vw, 33vw"
-                              className="object-cover transition-transform duration-700 group-hover:scale-105" />
-                          ) : (
-                            <div className="absolute inset-0 bg-[#e7e5e4]" />
-                          )}
-                          <div className="absolute inset-0 bg-black/0 transition-colors duration-300 group-hover:bg-black/10" />
-                          
-                          <div className="hidden md:block absolute bottom-2 left-2 right-2 bg-white/95 rounded-md py-2 text-center text-[10px] font-bold tracking-[0.1em] uppercase text-stone-900 opacity-0 translate-y-2 transition-all duration-300 group-hover:opacity-100 group-hover:translate-y-0">
-                            Quick View
-                          </div>
-                        </div>
-                        
-                        <div className="w-full px-1">
-                          {/* Built-in Tailwind line-clamp ensures long text wraps neatly without breaking the layout */}
-                          <h3 className="text-[13px] font-bold text-stone-900 leading-snug mb-1.5 line-clamp-2 transition-colors duration-200 group-hover:text-[#d4871a]">
-                            {product.title}
-                          </h3>
-
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="text-[15px] font-extrabold text-stone-900">
-                              £{displayPrice.toFixed(0)}
-                            </span>
-                            {(product.review_count ?? 0) > 0 && (
-                              <div className="flex items-center gap-1 shrink-0">
-                                <Star className="w-[11px] h-[11px] fill-[#d4871a] text-[#d4871a]" />
-                                <span className="text-[10px] font-medium text-stone-500">
-                                  {(product.average_rating ?? 0).toFixed(1)}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </Link>
-                    )
-                  })}
-                </div>
-                <Pagination currentPage={currentPage} totalPages={totalPages} />
-              </>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-16 px-5 text-center bg-white rounded-xl border border-[#f0ede8]">
-                <PackageSearch className="w-9 h-9 text-stone-300 mb-3.5" />
-                <h3 className="text-[17px] font-bold text-stone-900 mb-2">No products found</h3>
-                <p className="text-xs text-stone-500 max-w-[300px] mb-5 leading-relaxed">
-                  Try removing some filters or browse our full collection.
-                </p>
-                <Link href="/shop/all" className="inline-flex items-center gap-1.5 bg-[#d4871a] text-white px-5 py-2.5 rounded-lg text-[11px] font-bold no-underline tracking-widest uppercase hover:bg-[#b67316] transition-colors">
-                  Browse All <ArrowRight className="w-3 h-3" />
-                </Link>
-              </div>
-            )}
+            <Suspense key={gridKey} fallback={<ProductGridSkeleton />}>
+              <ProductGrid
+                categoryId={categoryData?.id ?? null}
+                categorySegment={category}
+                page={currentPage}
+                style={style}
+                material={material}
+                color={color}
+              />
+            </Suspense>
           </div>
         </div>
       </div>

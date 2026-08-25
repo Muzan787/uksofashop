@@ -4,7 +4,8 @@ import WishlistClient from './WishlistClient'
 import { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'My Wishlist | UK Sofashop',
+  robots: { index: false, follow: false },
+  title: 'My Wishlist',
   description: 'View and manage your saved luxury sofas and furniture.',
 }
 
@@ -64,7 +65,7 @@ export default async function WishlistPage() {
       <div className="border-b border-gray-200 pb-5 mb-8">
         <h1 className="text-3xl font-playfair font-bold text-gray-900">My Wishlist</h1>
         <p className="mt-2 text-sm text-gray-500">
-          Items you've saved for later. Prices and availability are subject to change.
+          Items you&apos;ve saved for later. Prices and availability are subject to change.
         </p>
       </div>
       

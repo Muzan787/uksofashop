@@ -4,8 +4,9 @@ import Link from 'next/link';
 import { Briefcase, ArrowLeft, Users } from 'lucide-react';
 
 export const metadata: Metadata = {
-  title: 'Careers | UK Sofashop',
-  description: 'Explore career opportunities and join the team at UK Sofashop.',
+  alternates: { canonical: '/careers' },
+  title: 'Careers',
+  description: 'Explore career opportunities and join the team at UK Sofa Shop.',
 };
 
 export default function CareersPage() {
@@ -26,7 +27,7 @@ export default function CareersPage() {
       </div>
 
       <p className="text-lg text-[#57534e] max-w-2xl mx-auto mb-10 leading-relaxed">
-        Whether your expertise lies in traditional British upholstery, premium customer service, or digital innovation, we are always looking for passionate talent to join us.
+        Whether your expertise lies in upholstery, customer service or digital innovation, we are always looking for passionate talent to join us.
         <br /><br />
         We are currently building our dedicated careers portal to showcase open roles. Please check back in the near future for updates on how you can help us shape the future of premium furniture.
       </p>

@@ -6,8 +6,9 @@ import { Sparkles, Droplets, Sun, Wind, Brush, Phone, ArrowRight, ShieldCheck } 
 const ACCENT = '#d4871a';
 
 export const metadata: Metadata = {
-  title: 'Sofa Care & Cleaning Guide | UK Sofashop',
-  description: 'Expert tips on how to maintain, clean, and protect your British handcrafted fabric or leather sofa for years to come.',
+  alternates: { canonical: '/care-guide' },
+  title: 'Sofa Care & Cleaning Guide',
+  description: 'Expert tips on how to maintain, clean and protect your fabric or leather sofa for years to come.',
 };
 
 export default function CareGuidePage() {
@@ -24,7 +25,7 @@ export default function CareGuidePage() {
             Sofa Care Guide
           </h1>
           <p className="text-white/60 max-w-xl text-lg leading-relaxed">
-            Our sofas are handcrafted to last a lifetime. With a little love and regular maintenance, you can keep your fabric or leather upholstery looking as immaculate as the day it arrived.
+            Our sofas are built to last. With a little care and regular maintenance, you can keep your fabric or leather upholstery looking as immaculate as the day it arrived.
           </p>
         </div>
       </div>
@@ -123,7 +124,7 @@ export default function CareGuidePage() {
               Dealing with a stubborn stain?
             </h2>
             <p className="text-[#a8a29e] text-sm md:text-base leading-relaxed">
-              Don't risk making it worse with the wrong cleaning product. Our care team is always happy to advise you on the safest way to treat specific spills and blemishes.
+              Don&apos;t risk making it worse with the wrong cleaning product. Our care team is always happy to advise you on the safest way to treat specific spills and blemishes.
             </p>
           </div>
           <Link 

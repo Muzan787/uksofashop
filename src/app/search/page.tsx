@@ -1,8 +1,17 @@
 // src/app/search/page.tsx
+import type { Metadata } from 'next'
 import { createClient } from '@/utils/supabase/server'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Search, PackageSearch, Star, ArrowRight } from 'lucide-react'
+
+
+export const metadata: Metadata = {
+  title: 'Search',
+  description:
+    'Search sofas, corner settees, recliners and fabric ranges at UK Sofa Shop.',
+  robots: { index: false, follow: true },
+}
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>
 const ACCENT = '#d4871a'
@@ -33,7 +42,7 @@ export default async function SearchPage(props: { searchParams: SearchParams }) 
           <div style={{ fontSize: 9, color: ACCENT, textTransform: 'uppercase', letterSpacing: '0.22em', fontWeight: 700, marginBottom: 8 }}>Search Results</div>
           <h1 className="font-playfair" style={{ fontSize: 'clamp(22px,4vw,36px)', fontWeight: 700, color: '#fff', lineHeight: 1.1 }}>
             {query
-              ? <><em style={{ color: ACCENT, fontStyle: 'normal' }}>"{query}"</em> — {products.length} {products.length === 1 ? 'result' : 'results'}</>
+              ? <><em style={{ color: ACCENT, fontStyle: 'normal' }}>&quot;{query}&quot;</em> — {products.length} {products.length === 1 ? 'result' : 'results'}</>
               : 'Search Our Collection'
             }
           </h1>
@@ -65,7 +74,7 @@ export default async function SearchPage(props: { searchParams: SearchParams }) 
         {query && products.length === 0 && (
           <div style={{ textAlign: 'center', padding: '60px 20px', background: '#fff', borderRadius: 12, border: '1px solid #f0ede8' }}>
             <PackageSearch style={{ width: 40, height: 40, color: '#d6d3d1', margin: '0 auto 14px' }} />
-            <h2 style={{ fontSize: 18, fontWeight: 700, color: '#1c1917', marginBottom: 8 }}>No results for "{query}"</h2>
+            <h2 style={{ fontSize: 18, fontWeight: 700, color: '#1c1917', marginBottom: 8 }}>No results for &quot;{query}&quot;</h2>
             <p style={{ fontSize: 13, color: '#78716c', maxWidth: 300, margin: '0 auto 20px', lineHeight: 1.6 }}>
               Try a different spelling or browse our full collection.
             </p>
