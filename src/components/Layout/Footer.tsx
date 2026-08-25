@@ -4,10 +4,15 @@ import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import {
   ArrowRight, Phone, Mail, MapPin, Clock,
-  Facebook, Instagram, Twitter, Youtube,
-  Shield, Truck, RotateCcw, Gem,
+  Facebook, Instagram,
+  Shield, Truck, Gem, Ruler,
   ChevronDown, ChevronUp,
 } from 'lucide-react';
+import { TRUST_POINTS } from '@/constants/promises';
+import { subscribeToNewsletter } from '@/app/actions/newsletter';
+import { openCookiePreferences } from '@/utils/consent';
+import { SOCIAL_PROFILES, PHONE_DISPLAY, PHONE_HREF } from '@/constants/contact';
+import TikTokIcon from '@/components/UI/TikTokIcon';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Category { id: string; name: string; slug: string; }
@@ -31,19 +36,33 @@ const companyLinks = [
   { href: '/sitemap',   label: 'Sitemap'      },
 ];
 
-const socials = [
-  { icon: Facebook,  href: '#', label: 'Facebook'  },
-  { icon: Instagram, href: '#', label: 'Instagram' },
-  { icon: Twitter,   href: '#', label: 'Twitter'   },
-  { icon: Youtube,   href: '#', label: 'YouTube'   },
-];
+// Driven by SOCIAL_PROFILES, which is also what feeds the `sameAs` array in
+// structured data - one list, so the footer and the markup cannot disagree
+// about which accounts exist.
+//
+// These were previously four icons all pointing at href="#": they looked like
+// working links, did nothing but jump to the top of the page, and claimed a
+// Twitter and YouTube presence that was never set up. Only the platforms in
+// SOCIAL_PROFILES render now.
+const SOCIAL_ICONS = { facebook: Facebook, instagram: Instagram, tiktok: TikTokIcon } as const
+const SOCIAL_LABELS = { facebook: 'Facebook', instagram: 'Instagram', tiktok: 'TikTok' } as const
 
-const trust = [
-  { icon: Truck,     label: 'Free Delivery',   sub: 'Over £500'         },
-  { icon: Shield,    label: '1-Yr Guarantee', sub: 'Frame warranty'    },
-  { icon: RotateCcw, label: '30-Day Returns',  sub: 'No questions asked'},
-  { icon: Gem,       label: 'British Made',    sub: 'Since 1995'        },
-];
+const socials = SOCIAL_PROFILES.map(({ platform, url }) => ({
+  icon: SOCIAL_ICONS[platform],
+  href: url,
+  label: SOCIAL_LABELS[platform],
+}))
+
+// Copy lives in src/constants/promises.ts; only the icons are chosen here.
+// NOTE: the "British Made / Since 1995" cell that used to sit here was removed
+// with the 30-day returns claim. Origin claims are handled separately - some
+// ranges are UK-made and recliners are not, so it can't be a sitewide badge.
+const TRUST_ICONS = [Truck, Gem, Ruler, Shield];
+const trust = TRUST_POINTS.map((p, i) => ({
+  icon: TRUST_ICONS[i] ?? Shield,
+  label: p.label,
+  sub: p.sub,
+}));
 
 // ─── Accordion section (mobile) ───────────────────────────────────────────────
 function AccordionSection({ title, children }: { title: string; children: React.ReactNode }) {
@@ -120,11 +139,23 @@ function Newsletter() {
   const [status, setStatus]   = useState<'idle'|'loading'|'success'|'error'>('idle');
   const [focused, setFocused] = useState(false);
 
-  const submit = (e: React.FormEvent) => {
+  const [message, setMessage] = useState('');
+
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.includes('@')) { setStatus('error'); return; }
     setStatus('loading');
-    setTimeout(() => { setStatus('success'); setEmail(''); }, 1200);
+    setMessage('');
+
+    const res = await subscribeToNewsletter(email);
+
+    if (res?.error) {
+      setStatus('error');
+      setMessage(res.error);
+      return;
+    }
+    setStatus('success');
+    setMessage(res?.message ?? '');
+    setEmail('');
   };
 
   return (
@@ -150,7 +181,7 @@ function Newsletter() {
           }}
         >
           <span style={{ fontSize: 16 }}>✓</span>
-          You're in! Check your inbox.
+          <span>{message}</span>
         </div>
       ) : (
         <form onSubmit={submit}>
@@ -196,10 +227,10 @@ function Newsletter() {
             </button>
           </div>
           {status === 'error' && (
-            <p style={{ fontSize: 10, color: '#f87171', marginTop: 5 }}>Please enter a valid email address.</p>
+            <p style={{ fontSize: 11, color: '#f87171', marginTop: 5 }}>{message || 'Please enter a valid email address.'}</p>
           )}
           <p style={{ fontSize: 10, color: '#3f3f3f', marginTop: 8 }}>
-            No spam, ever. Unsubscribe in one click.
+            We&apos;ll email you to confirm first. No spam, and one-click unsubscribe on every message.
           </p>
         </form>
       )}
@@ -254,25 +285,21 @@ export default function FooterClient({ categories }: Props) {
       <div style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 16px' }}>
           <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(2, 1fr)',
-            }}
-            className="sm:grid-cols-4"
+            className="grid grid-cols-2 sm:grid-cols-4"
+            style={{ gap: 1, background: 'rgba(255,255,255,0.05)' }}
           >
-            {trust.map(({ icon: Icon, label, sub }, i) => (
+            {trust.map(({ icon: Icon, label, sub }) => (
               <div
                 key={label}
                 className="group cursor-default"
                 style={{
                   display: 'flex', alignItems: 'center', gap: 10,
                   padding: '14px 16px',
-                  borderRight: i < 3 ? '1px solid rgba(255,255,255,0.05)' : 'none',
-                  borderBottom: i < 2 ? '1px solid rgba(255,255,255,0.05)' : 'none',
+                  background: '#0c0c0b',
                   transition: 'background 0.2s ease',
                 }}
                 onMouseEnter={e => (e.currentTarget.style.background = 'rgba(212,135,26,0.04)')}
-                onMouseLeave={e => (e.currentTarget.style.background = '')}
+                onMouseLeave={e => (e.currentTarget.style.background = '#0c0c0b')}
               >
                 <Icon
                   style={{ width: 14, height: 14, color: '#d4871a', flexShrink: 0 }}
@@ -303,17 +330,17 @@ export default function FooterClient({ categories }: Props) {
                 UK Sofa<span style={{ color: '#d4871a' }}>Shop</span>
               </div>
               <div style={{ fontSize: 8, letterSpacing: '0.2em', color: '#3f3f3f', textTransform: 'uppercase', marginTop: 3 }}>
-                British Craftsmanship Since 1995
+                Free UK Mainland Delivery
               </div>
             </Link>
             <p style={{ fontSize: 12, lineHeight: 1.7, marginBottom: 20, maxWidth: 220 }}>
-              Handcrafted luxury sofas for the modern British home. Built to last generations.
+              Quality sofas delivered free across UK Mainland, and you pay only when they arrive.
             </p>
 
             {/* Contact */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
               {[
-                { icon: Phone, text: '07476 616022', href: 'tel:07476616022' },
+                { icon: Phone, text: PHONE_DISPLAY, href: PHONE_HREF },
                 { icon: Mail,  text: 'uksofashop.co.uk@gmail.com', href: 'mailto:uksofashop.co.uk@gmail.com' },
                 { icon: Clock, text: 'Mon–Fri 9am–6pm · Sat 10am–4pm', href: null },
               ].map(({ icon: Icon, text, href }) => (
@@ -329,10 +356,12 @@ export default function FooterClient({ categories }: Props) {
             </div>
 
             {/* Socials */}
+            {socials.length > 0 && (
             <div style={{ display: 'flex', gap: 8 }}>
               {socials.map(({ icon: Icon, href, label }) => (
                 <a
                   key={label} href={href} aria-label={label}
+                  target="_blank" rel="noopener noreferrer"
                   className="group"
                   style={{
                     width: 30, height: 30, borderRadius: 6,
@@ -349,6 +378,7 @@ export default function FooterClient({ categories }: Props) {
                 </a>
               ))}
             </div>
+            )}
           </div>
 
           {/* Shop */}
@@ -381,11 +411,12 @@ export default function FooterClient({ categories }: Props) {
               UK Sofa<span style={{ color: '#d4871a' }}>Shop</span>
             </div>
             <p style={{ fontSize: 12, lineHeight: 1.7, maxWidth: 280 }}>
-              Handcrafted luxury sofas for the modern British home.
+              Quality sofas, delivered free across UK Mainland.
             </p>
+            {socials.length > 0 && (
             <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
               {socials.map(({ icon: Icon, href, label }) => (
-                <a key={label} href={href} aria-label={label}
+                <a key={label} href={href} aria-label={label} target="_blank" rel="noopener noreferrer"
                   style={{
                     width: 30, height: 30, borderRadius: 6,
                     background: 'rgba(255,255,255,0.05)',
@@ -396,6 +427,7 @@ export default function FooterClient({ categories }: Props) {
                 </a>
               ))}
             </div>
+            )}
           </div>
 
           {/* Newsletter */}
@@ -417,9 +449,9 @@ export default function FooterClient({ categories }: Props) {
           <div style={{ padding: '16px 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {[
-                { icon: Phone, text: '07476 616022', href: 'tel:07476616022' },
+                { icon: Phone, text: PHONE_DISPLAY, href: PHONE_HREF },
                 { icon: Mail,  text: 'uksofashop.co.uk@gmail.com', href: 'mailto:uksofashop.co.uk@gmail.com' },
-                { icon: MapPin, text: '7 Blacker St, Burnley BB10 2AF, UK', href: null },
+                { icon: MapPin, text: 'Unit 02, Waverledge Street, Blackburn, BB6 7LS', href: null },
               ].map(({ icon: Icon, text, href }) => (
                 <div key={text} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <Icon style={{ width: 12, height: 12, color: '#d4871a', flexShrink: 0 }} />
@@ -443,17 +475,29 @@ export default function FooterClient({ categories }: Props) {
           }}
         >
           <p style={{ fontSize: 10, color: '#3f3f3f', margin: 0 }}>
-            © {new Date().getFullYear()} UK Sofa Shop (UK Sofashop). All rights reserved.
+            © {new Date().getFullYear()} UK Sofa Shop. All rights reserved.
           </p>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
             {[['/terms','Terms'],['/privacy','Privacy'],['/cookies','Cookies']].map(([href, label]) => (
               <Link key={href as string} href={href as string}
-                style={{ fontSize: 10, color: '#3f3f3f', textDecoration: 'none', transition: 'color 0.2s' }}
+                style={{ fontSize: 11, color: '#57534e', textDecoration: 'none', transition: 'color 0.2s' }}
                 className="hover:text-[#d4871a]">
                 {label as string}
               </Link>
             ))}
+
+            {/* Reopens the consent banner so a visitor can change an answer
+                they already gave - UK GDPR wants withdrawing consent to be as
+                easy as giving it. */}
+            <button
+              type="button"
+              onClick={openCookiePreferences}
+              style={{ fontSize: 11, color: '#57534e', background: 'none', border: 'none', padding: 0, cursor: 'pointer', textDecoration: 'none', transition: 'color 0.2s' }}
+              className="hover:text-[#d4871a]"
+            >
+              Cookie preferences
+            </button>
             <BackToTop />
           </div>
         </div>
