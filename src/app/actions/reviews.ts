@@ -2,13 +2,13 @@
 'use server'
 
 import { createClient } from '@/utils/supabase/server'
-import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { revalidatePath } from 'next/cache'
+import { requireAdmin } from '@/utils/auth'
 import { sendAdminReviewNotification } from '@/utils/email'
 
 export async function submitGlobalReview(formData: FormData, imageUrl: string | null = null) {
   const supabase = await createClient()
-  
+
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
     return { error: 'You must be logged in to submit a review.' }
@@ -22,33 +22,33 @@ export async function submitGlobalReview(formData: FormData, imageUrl: string | 
     return { error: 'Please provide a valid rating between 1 and 5.' }
   }
 
-  // Extract the name from auth metadata, fallback to email prefix, or finally 'Verified Buyer'
-  const customerName = 
-    user.user_metadata?.full_name || 
-    user.user_metadata?.name || 
-    (user.email ? user.email.split('@')[0] : 'Verified Buyerrr');
+  // Extract the name from auth metadata, fallback to email prefix
+  const customerName =
+    user.user_metadata?.full_name ||
+    user.user_metadata?.name ||
+    (user.email ? user.email.split('@')[0] : 'Verified Buyer')
 
   const { error } = await supabase
     .from('reviews')
     .insert({
       user_id: user.id,
-      customer_name: customerName, // <-- Now actively saving the name!
+      customer_name: customerName,
       product_id: productId || null,
       rating,
       comment,
       image_url: imageUrl,
-      is_approved: false 
+      is_approved: false
     })
 
   if (error) {
-    console.error(error);
+    console.error(error)
     return { error: 'Failed to submit review. Please try again.' }
   }
 
   try {
-    await sendAdminReviewNotification(user.email || 'Unknown User', rating, comment, imageUrl);
+    await sendAdminReviewNotification(user.email || 'Unknown User', rating, comment, imageUrl)
   } catch (emailErr) {
-    console.error("Failed to send review notification email", emailErr);
+    console.error('Failed to send review notification email', emailErr)
   }
 
   revalidatePath('/reviews')
@@ -56,33 +56,34 @@ export async function submitGlobalReview(formData: FormData, imageUrl: string | 
 }
 
 export async function approveReview(formData: FormData) {
-  // Use the Service Role Key to bypass RLS for the update
-  const supabaseAdmin = createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-  const reviewId = formData.get('reviewId') as string
+  // Previously this used SUPABASE_SERVICE_ROLE_KEY with no caller check, which
+  // let anyone who could reach the action ID publish reviews on the storefront.
+  // The cookie-bound client plus the admin RLS policies now do the work.
+  await requireAdmin()
 
-  const { error } = await supabaseAdmin
+  const supabase = await createClient()
+  const reviewId = formData.get('reviewId') as string
+  if (!reviewId) throw new Error('Missing review ID')
+
+  const { error } = await supabase
     .from('reviews')
-    .update({ is_approved: true }) 
+    .update({ is_approved: true })
     .eq('id', reviewId)
 
   if (error) throw new Error('Failed to approve review')
 
   revalidatePath('/admin/reviews')
-  revalidatePath('/', 'layout') 
+  revalidatePath('/', 'layout')
 }
 
 export async function deleteReview(formData: FormData) {
-  // Use the Service Role Key to bypass RLS for the deletion
-  const supabaseAdmin = createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-  const reviewId = formData.get('reviewId') as string
+  await requireAdmin()
 
-  const { error } = await supabaseAdmin
+  const supabase = await createClient()
+  const reviewId = formData.get('reviewId') as string
+  if (!reviewId) throw new Error('Missing review ID')
+
+  const { error } = await supabase
     .from('reviews')
     .delete()
     .eq('id', reviewId)
@@ -90,5 +91,5 @@ export async function deleteReview(formData: FormData) {
   if (error) throw new Error('Failed to delete review')
 
   revalidatePath('/admin/reviews')
-  revalidatePath('/', 'layout') 
+  revalidatePath('/', 'layout')
 }

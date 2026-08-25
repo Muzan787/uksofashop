@@ -2,6 +2,7 @@
 'use server'
 
 import { createClient } from '@/utils/supabase/server'
+import { isAdmin } from '@/utils/auth'
 import { redirect } from 'next/navigation'
 
 export async function login(formData: FormData) {
@@ -20,11 +21,12 @@ export async function login(formData: FormData) {
     return { error: error.message }
   }
 
-  // Role-based redirection logic
-  const userEmail = data.user?.email;
-  const adminEmail = process.env.ADMIN_EMAIL;
-
-  if (userEmail && adminEmail && userEmail.toLowerCase() === adminEmail.toLowerCase()) {
+  // Where to send them is decided by the admins table, via is_admin() -
+  // the same source proxy.ts and requireAdmin() use. This used to compare the
+  // signed-in address against the ADMIN_EMAIL environment variable, which is a
+  // second definition of 'who is an admin' that can silently disagree with the
+  // table.
+  if (await isAdmin()) {
     redirect('/admin');
   } else {
     redirect('/account');
@@ -71,11 +73,12 @@ export async function verifySignupOtp(formData: FormData) {
     return { error: error.message }
   }
 
-  // Once verified, automatically route them based on email
-  const userEmail = data.user?.email;
-  const adminEmail = process.env.ADMIN_EMAIL;
-
-  if (userEmail && adminEmail && userEmail.toLowerCase() === adminEmail.toLowerCase()) {
+  // Where to send them is decided by the admins table, via is_admin() -
+  // the same source proxy.ts and requireAdmin() use. This used to compare the
+  // signed-in address against the ADMIN_EMAIL environment variable, which is a
+  // second definition of 'who is an admin' that can silently disagree with the
+  // table.
+  if (await isAdmin()) {
     redirect('/admin');
   } else {
     redirect('/account');
