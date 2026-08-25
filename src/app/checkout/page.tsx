@@ -2,7 +2,8 @@
 import CheckoutClient from '@/components/Checkout/CheckoutClient'
 
 export const metadata = {
-  title: 'Checkout | UK Sofa Shop',
+  robots: { index: false, follow: false },
+  title: 'Checkout',
   description: 'Complete your order — Cash on Delivery available.',
 }
 

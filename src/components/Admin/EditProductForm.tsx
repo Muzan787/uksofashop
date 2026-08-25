@@ -130,7 +130,7 @@ export default function EditProductForm({ product, categories }: { product: Prod
 
   const addVariantRow = () => setVariants([...variants, { sku: '', color: '', color_hex: '#000000', material: '', priceAdjustment: '0', image_url: '', isUploading: false }])
   const updateVariant = (index: number, field: keyof VariantState, value: string | boolean) => {
-    setVariants(prev => { const newVariants = [...prev]; /* @ts-ignore */ newVariants[index] = { ...newVariants[index], [field]: value }; return newVariants })
+    setVariants(prev => { const newVariants = [...prev]; newVariants[index] = { ...newVariants[index], [field]: value }; return newVariants })
   }
   const removeVariant = (index: number) => setVariants(variants.filter((_, i) => i !== index))
 
@@ -174,8 +174,7 @@ export default function EditProductForm({ product, categories }: { product: Prod
     // Append Global Gallery
     formData.append('gallery_images', JSON.stringify(galleryUrls))
 
-    const variantsWithDummyStock = variants.map(v => ({ ...v, stock: '999' }))
-    const result = await updateProduct(formData, variantsWithDummyStock, product.id)
+    const result = await updateProduct(formData, variants, product.id)
     
     if (result?.error) { setError(result.error); setIsPending(false); } 
     else { router.push('/admin/inventory'); router.refresh(); }
@@ -200,6 +199,34 @@ export default function EditProductForm({ product, categories }: { product: Prod
             <label className="block text-xs font-bold text-stone-500 uppercase tracking-wider mb-2">Base Price (£)</label>
             <input type="number" step="0.01" inputMode="decimal" name="basePrice" defaultValue={product.base_price || ''} required className="w-full p-3.5 bg-stone-50 border border-stone-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none font-bold text-lg" />
           </div>
+          {/* Origin drives the "Made in the UK" badge on the product page. */}
+          <div>
+            <label className="block text-xs font-bold text-stone-500 uppercase tracking-wider mb-2">Where is it made?</label>
+            <select name="origin" defaultValue={product.origin ?? 'unspecified'} className="w-full p-3.5 bg-stone-50 border border-stone-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none font-medium">
+              <option value="unspecified">Not specified — no badge shown</option>
+              <option value="uk">Made in the UK — shows the badge</option>
+              <option value="imported">Imported — no badge shown</option>
+            </select>
+            <p className="text-[11px] text-stone-400 mt-1.5 leading-relaxed">
+              Only pick &quot;Made in the UK&quot; if you can evidence it. Recliner ranges are imported.
+            </p>
+          </div>
+          {/* Controls the "Made to your specification" block on the product page. */}
+          <div>
+            <label className="flex items-start gap-3 p-3.5 bg-stone-50 border border-stone-200 rounded-xl cursor-pointer hover:border-orange-300 transition">
+              <input type="checkbox" name="customMade" value="true" defaultChecked={product.custom_made ?? false} className="mt-0.5 w-5 h-5 accent-orange-500 shrink-0 cursor-pointer" />
+              <span>
+                <span className="block text-sm font-bold text-stone-900">Can be made to order</span>
+                <span className="block text-[11px] text-stone-500 mt-1 leading-relaxed">
+                  Shows a &quot;Made to your specification&quot; block with a WhatsApp enquiry button.
+                  Also warns the customer that made-to-measure orders are exempt from the 14-day
+                  return right. Fabric sofas only — not recliners.
+                </span>
+              </span>
+            </label>
+          </div>
+
+
         </div>
 
         <div className="pt-6 border-t border-stone-100">

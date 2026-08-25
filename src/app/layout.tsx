@@ -1,23 +1,21 @@
 // src/app/layout.tsx
 import type { Metadata, Viewport } from 'next'
-import { Geist, Geist_Mono, Playfair_Display } from "next/font/google";
+import { Geist, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { CartProvider } from "@/context/CartContext";
 import MainLayoutWrapper from "@/components/Layout/MainLayoutWrapper";
 import { Toaster } from "react-hot-toast";
-import { Analytics } from "@vercel/analytics/next"
-import PWAPromptManager from '@/components/Admin/PWAPromptManager';
 import CookieConsent from '@/components/UI/CookieConsent';
 import TrackingScripts from '@/components/UI/TrackingScripts';
+import { META_DESCRIPTION } from '@/constants/promises';
+import { localBusinessSchema, jsonLd } from '@/utils/schema';
+import { METADATA_BASE } from '@/constants/site';
+import { ogImage } from '@/utils/socialImage';
+import { CONSENT_DEFAULT_SNIPPET } from '@/utils/consentMode';
 
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
   subsets: ["latin"],
 });
 
@@ -28,90 +26,70 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(
-    process.env.NODE_ENV === 'development' 
-      ? 'http://localhost:3000' 
-      : 'https://www.uksofashop.co.uk' // Replace with your actual production domain!
-  ),
-  title: "UK Sofa Shop | Luxury Furniture & Sofas",
-  description: "Discover luxury British sofas with 1-year guarantee. Free UK delivery over £500, cash on delivery available. Shop corner sofas, fabric sofas, and more.",
-  manifest: '/manifest.json',
-  keywords: "sofa UK, corner sofa, fabric sofa, luxury furniture, British sofas, cash on delivery sofas",
+  metadataBase: new URL(METADATA_BASE),
+  title: {
+    // Pages set a bare title and this appends the brand, so no page has to
+    // repeat the suffix and none can silently inherit the homepage title.
+    template: '%s | UK Sofa Shop',
+    default: 'UK Sofa Shop | Sofas with Cash on Delivery',
+  },
+  description: META_DESCRIPTION,
+  // Next serves the manifest.ts route at /manifest.webmanifest; '/manifest.json'
+  // was a 404, so no browser ever read it.
+  manifest: '/manifest.webmanifest',
+  keywords: "sofa UK, corner sofa, fabric sofa, recliner sofa, cash on delivery sofas, custom fabric sofa",
   openGraph: {
-    title: "UK Sofa Shop | Premium British Furniture",
-    description: "Luxury sofas crafted for comfort, built to last. Free UK delivery over £500.",
-    images: ["/og-image.png"],
+    type: 'website',
+    locale: 'en_GB',
+    siteName: 'UK Sofa Shop',
+    url: '/',
+    title: "UK Sofa Shop | Sofas with Cash on Delivery",
+    description: "Sofas delivered free across UK Mainland, and you pay only when they arrive.",
+    // Dimensions and type declared so a scraper can size the card before it
+    // has fetched the file - that is what gets a large preview in WhatsApp
+    // rather than a thumbnail, or nothing at all.
+    images: [ogImage('/og-image.jpg', 'UK Sofa Shop')],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'UK Sofa Shop | Sofas with Cash on Delivery',
+    description: 'Sofas delivered free across UK Mainland, and you pay only when they arrive.',
+    images: ['/og-image.jpg'],
   },
   appleWebApp: {
     capable: true,
-    title: 'UK Sofa Shop Admin',
+    title: 'UK Sofa Shop',
     statusBarStyle: 'black-translucent', // Makes the iOS status bar blend in
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: '#F97316', // Matches the manifest theme color
+  themeColor: '#d4871a',
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1, // Prevents zooming on mobile inputs for a native feel
-  userScalable: false,
+  // No maximumScale or userScalable: false. Blocking pinch-zoom fails
+  // WCAG 1.4.4 and is flagged by Lighthouse. It was there to stop iOS zooming
+  // when an input is focused, but globals.css already prevents that the
+  // correct way, with font-size: 16px on form fields - so the accessibility
+  // cost was being paid for a problem that was already solved.
 }
 
-// Enhanced schema with more detailed information
-const localBusinessSchema = {
-  "@context": "https://schema.org",
-  "@type": "FurnitureStore",
-  "name": "UK Sofa Shop",
-  "alternateName": "UK Sofashop",
-  "url": "https://uksofashop.co.uk",
-  "logo": "https://uksofashop.co.uk/logo.png",
-  "image": "https://uksofashop.co.uk/store-front.jpg",
-  "telephone": "0747 661 6022",
-  "priceRange": "££-£££",
-  "description": "Premium British furniture store specializing in luxury sofas with cash on delivery available.",
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "7 Blacker St",
-    "addressLocality": "Burnley",
-    "postalCode": "BB10 2AF",
-    "addressCountry": "GB"
-  },
-  "geo": {
-    "@type": "GeoCoordinates",
-    "latitude": "51.5074",
-    "longitude": "-0.1278"
-  },
-  "areaServed": {
-    "@type": "Country",
-    "name": "United Kingdom"
-  },
-  "paymentAccepted": "Cash, Bank Transfer, Credit Card",
-  "openingHours": "Mo-Fr 09:00-18:00, Sa 10:00-16:00",
-  "sameAs": [
-    "https://facebook.com/uksofashop",
-    "https://instagram.com/uksofashop",
-    "https://twitter.com/uksofashop"
-  ],
-  "makesOffer": {
-    "@type": "Offer",
-    "itemOffered": {
-      "@type": "Service",
-      "name": "Cash on Delivery",
-      "description": "Pay when your furniture arrives - no upfront payment needed"
-    }
-  }
-};
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <head>
+        {/* Google Consent Mode v2 defaults. MUST be the first script in the
+            document: a consent default that arrives after gtag.js has loaded
+            is too late, and the visitor is measured under whatever state
+            Google assumed in the meantime. Plain inline <script> rather than
+            next/script so the position is guaranteed rather than scheduled. */}
+        <script dangerouslySetInnerHTML={{ __html: CONSENT_DEFAULT_SNIPPET }} />
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessSchema) }}
+          dangerouslySetInnerHTML={{ __html: jsonLd(localBusinessSchema()) }}
         />
       </head>
-      <body className={`${geistSans.variable} ${geistMono.variable} ${playfair.variable} antialiased bg-white flex flex-col min-h-screen`}>
-        <PWAPromptManager /> {/* <-- Add this here! */}
+      <body className={`${geistSans.variable} ${playfair.variable} antialiased bg-white flex flex-col min-h-screen`}>
         <CartProvider>
           <Toaster 
             position="bottom-right" 
