@@ -42,7 +42,12 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-*.txt
+# Was a blanket *.txt, which silently kept "Database Schema.txt" out of
+# version control. The schema now lives in supabase/migrations/ as real SQL,
+# so only scratch notes are ignored.
+notes.txt
+scratch.txt
+trash.txt
 
 # PWA auto-generated files
 **/public/sw.js

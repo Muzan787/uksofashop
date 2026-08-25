@@ -1,9 +1,13 @@
+import type { Metadata } from 'next'
 // src/app/admin/categories/page.tsx
 import { createClient } from '@/utils/supabase/server'
 import AddCategoryForm from '@/components/Admin/AddCategoryForm'
 import { deleteCategory } from '@/app/actions/categories'
 import { Trash2, FolderOpen } from 'lucide-react'
 import Image from 'next/image'
+
+
+export const metadata: Metadata = { title: 'Categories' }
 
 export default async function AdminCategoriesPage() {
   const supabase = await createClient()

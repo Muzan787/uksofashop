@@ -1,9 +1,13 @@
+import type { Metadata } from 'next'
 // src/app/admin/inventory/[id]/edit/page.tsx
 import { createClient } from '@/utils/supabase/server'
 import EditProductForm from '@/components/Admin/EditProductForm'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { notFound } from 'next/navigation'
+
+
+export const metadata: Metadata = { title: 'Edit Product' }
 
 export default async function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

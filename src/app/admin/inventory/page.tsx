@@ -1,8 +1,12 @@
+import type { Metadata } from 'next'
 // src/app/admin/inventory/page.tsx
 import { createClient } from '@/utils/supabase/server'
 import { Plus, Edit3, EyeOff, Eye, LayoutGrid } from 'lucide-react'
 import { deleteProduct, activateProduct } from '@/app/actions/inventory'
 import Link from 'next/link'
+
+
+export const metadata: Metadata = { title: 'Inventory' }
 
 export default async function InventoryPage() {
   const supabase = await createClient()
