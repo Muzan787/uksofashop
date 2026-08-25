@@ -1,19 +1,48 @@
+import type { Metadata } from 'next'
 // src/app/admin/page.tsx
 import { createClient } from '@/utils/supabase/server'
 import { DollarSign, ShoppingBag, PackagePlus, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
+
+
+export const metadata: Metadata = { title: 'Overview' }
 
 export default async function AdminDashboardPage() {
   const supabase = await createClient()
 
   // Fetch metrics silently and rapidly
   const { data: orders } = await supabase.from('orders').select('total_amount, status')
-  const totalRevenue = orders?.reduce((sum, order) => sum + Number(order.total_amount), 0) || 0
-  const pendingOrders = orders?.filter(o => o.status === 'pending').length || 0
 
+  /**
+   * "Needs attention" rather than a literal status match.
+   *
+   * This counted `status === 'pending'`, but the database default is
+   * 'pending_cod' and nothing ever writes plain 'pending' - so the tile has
+   * read zero since launch. Confirmed orders are included because they are
+   * still waiting to be dispatched, which is work outstanding.
+   */
+  const NEEDS_ATTENTION = ['pending_cod', 'confirmed']
+  const pendingOrders = orders?.filter(o => NEEDS_ATTENTION.includes(o.status ?? 'pending_cod')).length || 0
+
+  /**
+   * Cancelled orders were being counted as revenue. They are excluded now.
+   *
+   * Unconfirmed cash-on-delivery orders are also excluded: about a quarter are
+   * never completed, so counting them inflates the figure by roughly a third.
+   * This tile shows money that is realistically going to be collected, and
+   * only becomes real on delivery.
+   */
+  const COUNTS_AS_REVENUE = ['confirmed', 'processing', 'shipped', 'delivered']
+  const totalRevenue = orders
+    ?.filter(o => COUNTS_AS_REVENUE.includes(o.status ?? ''))
+    .reduce((sum, order) => sum + Number(order.total_amount), 0) || 0
+
+  // The tile is labelled "Active Products" but this counted deactivated ones
+  // too, because the is_active filter was missing.
   const { count: productCount } = await supabase
     .from('products')
     .select('*', { count: 'exact', head: true })
+    .eq('is_active', true)
 
   return (
     <div className="space-y-6 lg:space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">

@@ -6,16 +6,37 @@ import Link from 'next/link'
 import {
   ShoppingBag, Trash2, Plus, Minus, ArrowRight,
   ArrowLeft, Truck, Wallet, ShieldCheck, CheckCircle,
-  Loader2, Package, RotateCcw, User, Mail, Phone,
+  Loader2, Package, User, Mail, Phone,
   MapPin, FileText, ChevronRight, Gem, Copy, Check, Search,
-  ChevronDown,
+  ChevronDown, Landmark,
 } from 'lucide-react'
-import { useCart } from '@/context/CartContext'
+import { useCart, type DisplayCartItem } from '@/context/CartContext'
 import { placeOrder } from '@/app/actions/checkout'
-import { trackPurchase } from '@/utils/tracking'
+import { trackOrderPlaced, trackInitiateCheckout, type TrackedItem } from '@/utils/tracking'
+import { PROMISES } from '@/constants/promises'
+import { isValidUkMobile, UK_MOBILE_ERROR } from '@/utils/phone'
+import {
+  ASSEMBLY_FEE, SOFA_REMOVAL_FEE, UPSTAIRS_FIRST_FLOOR, UPSTAIRS_PER_EXTRA_FLOOR,
+  DELIVERY_AREA_NOTE, NO_EXTRAS, deliveryBreakdown, deliveryTotal, floorName,
+  type DeliveryOptions,
+} from '@/constants/delivery'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Step = 'cart' | 'details' | 'success'
+
+/**
+ * Cart lines in the shape the pixel and GA4 want. variant_id is the same id
+ * the Merchant feed publishes as <g:id>, which is what lets a dynamic ad
+ * retarget the exact sofa in someone's basket.
+ */
+function toTrackedItems(items: DisplayCartItem[]): TrackedItem[] {
+  return items.map(i => ({
+    variantId: i.variant_id,
+    title: i.title,
+    price: i.price,
+    quantity: i.quantity,
+  }))
+}
 
 interface FormState {
   customerName: string
@@ -143,10 +164,58 @@ function Field({
   )
 }
 
+// ─── Optional delivery extra ──────────────────────────────────────────────────
+function ExtraOption({
+  checked, onToggle, title, note, price, priceIsFrom = false, children,
+}: {
+  checked: boolean
+  onToggle: (on: boolean) => void
+  title: string
+  note: string
+  price: number
+  priceIsFrom?: boolean
+  children?: React.ReactNode
+}) {
+  return (
+    <div style={{
+      border: `1.5px solid ${checked ? ACCENT : '#e7e5e4'}`,
+      borderRadius: 10,
+      background: checked ? `${ACCENT}08` : '#fff',
+      padding: '12px 14px',
+      transition: 'border-color 0.2s ease, background 0.2s ease',
+    }}>
+      <label style={{ display: 'flex', gap: 11, alignItems: 'flex-start', cursor: 'pointer' }}>
+        <input
+          type="checkbox"
+          checked={checked}
+          onChange={e => onToggle(e.target.checked)}
+          style={{ width: 18, height: 18, accentColor: ACCENT, cursor: 'pointer', flexShrink: 0, marginTop: 1 }}
+        />
+        <span style={{ flex: 1, minWidth: 0 }}>
+          <span style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'baseline' }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: '#1c1917' }}>{title}</span>
+            <span style={{ fontSize: 13, fontWeight: 800, color: ACCENT, flexShrink: 0 }}>
+              {priceIsFrom && <span style={{ fontSize: 10, fontWeight: 600, color: '#a8a29e' }}>from </span>}
+              £{price.toFixed(2)}
+            </span>
+          </span>
+          <span style={{ display: 'block', fontSize: 11, color: '#78716c', lineHeight: 1.55, marginTop: 3 }}>
+            {note}
+          </span>
+        </span>
+      </label>
+      {checked && children}
+    </div>
+  )
+}
+
 // ─── Order summary sidebar ────────────────────────────────────────────────────
-function OrderSummary({ compact = false }: { compact?: boolean }) {
+function OrderSummary({ compact = false, extras = NO_EXTRAS }: { compact?: boolean; extras?: DeliveryOptions }) {
   const { cartItems, totalAmount } = useCart()
-  const delivery = totalAmount >= 500 ? 0 : 49
+  // Base delivery to a UK Mainland ground floor is free, with no threshold.
+  // Anything chargeable comes from the extras the customer ticked.
+  const { lines: extraLines, total: delivery } = deliveryBreakdown(extras)
+  const grandTotal = totalAmount + delivery
 
   return (
     <div style={{
@@ -192,17 +261,24 @@ function OrderSummary({ compact = false }: { compact?: boolean }) {
           <span>£{totalAmount.toFixed(2)}</span>
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#78716c' }}>
-          <span>Delivery</span>
-          <span style={{ color: delivery === 0 ? '#4ade80' : '#fff' }}>
-            {delivery === 0 ? 'FREE' : `£${delivery}`}
-          </span>
+          <span>Delivery <span style={{ color: '#57534e' }}>· UK Mainland</span></span>
+          <span style={{ color: '#4ade80', fontWeight: 700 }}>FREE</span>
         </div>
-        {delivery === 0 && (
-          <div style={{ fontSize: 9, color: '#4ade80', letterSpacing: '0.1em' }}>✓ Free white-glove delivery applied</div>
-        )}
+
+        {/* Each chosen extra as its own line, so the total is never a mystery. */}
+        {extraLines.map(line => (
+          <div key={line.key} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: 11, color: '#78716c' }}>
+            <span style={{ minWidth: 0 }}>
+              {line.label}
+              {line.detail && <span style={{ color: '#57534e' }}> · {line.detail}</span>}
+            </span>
+            <span style={{ color: '#fff', flexShrink: 0 }}>£{line.amount.toFixed(2)}</span>
+          </div>
+        ))}
+
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 15, fontWeight: 800, color: '#fff', paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.07)', marginTop: 4 }}>
-          <span>Total (COD)</span>
-          <span style={{ color: ACCENT }}>£{(totalAmount + delivery).toFixed(2)}</span>
+          <span>Total due on delivery</span>
+          <span style={{ color: ACCENT }}>£{grandTotal.toFixed(2)}</span>
         </div>
       </div>
 
@@ -210,12 +286,12 @@ function OrderSummary({ compact = false }: { compact?: boolean }) {
       {!compact && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 16, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
           {[
-            [Wallet,     'Pay only when your sofa arrives'],
-            [ShieldCheck,'1-year structural guarantee'],
-            [RotateCcw,  '30-day home trial'],
+            [Wallet,      PROMISES.payment.long],
+            [ShieldCheck, PROMISES.guarantee.short],
+            [Truck,       PROMISES.delivery.long],
           ].map(([Icon, text]) => (
             <div key={text as string} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              {/* @ts-ignore */}
+              {/* @ts-expect-error */}
               <Icon style={{ width: 12, height: 12, color: ACCENT, flexShrink: 0 }} />
               <span style={{ fontSize: 10, color: '#57534e' }}>{text as string}</span>
             </div>
@@ -364,9 +440,16 @@ function CartStep({ onNext }: { onNext: () => void }) {
 
 // ─── STEP 2: Delivery details ─────────────────────────────────────────────────
 function DetailsStep({
-  onBack, onSuccess,
-}: { onBack: () => void; onSuccess: (id: string, postcode: string) => void }) {
+  onBack, onSuccess, extras, setExtras,
+}: {
+  onBack: () => void
+  onSuccess: (id: string, postcode: string) => void
+  extras: DeliveryOptions
+  setExtras: (next: DeliveryOptions) => void
+}) {
   const { cartItems, totalAmount, clearCart } = useCart()
+  const extrasTotal = deliveryTotal(extras)
+  const grandTotal = totalAmount + extrasTotal
   const [form, setForm] = useState<FormState>({
     customerName: '', customerEmail: '', customerPhone: '',
     postcode: '', shippingAddress: '', specialInstructions: '', // NEW POSTCODE FIELD
@@ -390,7 +473,7 @@ function DetailsStep({
     const errs: FieldError = {}
     if (form.customerName.trim().length < 2) errs.customerName = 'Please enter your full name'
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.customerEmail)) errs.customerEmail = 'Please enter a valid email address'
-    if (form.customerPhone.replace(/\s/g, '').length < 8) errs.customerPhone = 'Please enter a valid UK phone number'
+    if (!isValidUkMobile(form.customerPhone)) errs.customerPhone = UK_MOBILE_ERROR
     if (form.postcode.trim().length < 5) errs.postcode = 'Please enter a valid UK postcode'
     if (form.shippingAddress.trim().length < 5) errs.shippingAddress = 'Please enter your full delivery address'
     setErrors(errs)
@@ -470,14 +553,21 @@ function DetailsStep({
       }
     })
     
-    const items = cartItems.map(i => ({ variant_id: i.variant_id, quantity: i.quantity, price: i.price }))
-    const res = await placeOrder(fd, items, totalAmount)
-    
+    // Ids and quantities only - the database looks up every price itself, so a
+    // tampered request can't change what an order costs.
+    const items = cartItems.map(i => ({ variant_id: i.variant_id, quantity: i.quantity }))
+
+    const res = await placeOrder(fd, items, grandTotal, extras)
+
     if (res?.error) { setServerError(res.error); setPending(false) }
-    else if (res?.success) { 
-      trackPurchase(res.orderId || '', totalAmount);
-      clearCart(); 
-      onSuccess(res.orderId || '', form.postcode.toUpperCase()) 
+    else if (res?.success) {
+      // The database's figure, not ours, so reported conversion value always
+      // matches what we actually collect - and total_amount is delivery
+      // inclusive, so paid extras are credited to the campaign too. Items are
+      // read before clearCart(), which empties the array this maps over.
+      trackOrderPlaced(res.orderId || '', res.total ?? grandTotal, toTrackedItems(cartItems));
+      clearCart();
+      onSuccess(res.orderId || '', form.postcode.toUpperCase())
     }
   }
 
@@ -494,7 +584,7 @@ function DetailsStep({
         Delivery Information
       </div>
       <p style={{ fontSize: 12, color: '#78716c', marginBottom: 20 }}>
-        Your sofa will be delivered by our white-glove team. We'll call before arrival.
+        Delivered free to UK Mainland, ground floor. We&apos;ll call before arrival.
       </p>
 
       {serverError && (
@@ -508,7 +598,7 @@ function DetailsStep({
         {/* Basic Info Fields */}
         <Field icon={User} label="Full Name" name="customerName" placeholder="Jane Smith" value={form.customerName} onChange={set('customerName')} error={errors.customerName} />
         <Field icon={Mail} label="Email Address" type="email" name="customerEmail" placeholder="jane@example.com" hint="Your order confirmation will be sent here" value={form.customerEmail} onChange={set('customerEmail')} error={errors.customerEmail} />
-        <Field icon={Phone} label="Phone Number(Preferable Whatsapp)" type="tel" name="customerPhone" placeholder="07700 900123" hint="Our driver will call before delivery" value={form.customerPhone} onChange={set('customerPhone')} error={errors.customerPhone} />
+        <Field icon={Phone} label="Mobile Number" type="tel" name="customerPhone" placeholder="07700 900123" hint="A UK mobile — our driver calls before delivery, and we message you on WhatsApp" value={form.customerPhone} onChange={set('customerPhone')} error={errors.customerPhone} />
         
         {/* NEW: Postcode Lookup Section */}
         <div>
@@ -635,18 +725,128 @@ function DetailsStep({
         <Field icon={FileText} label="Special Instructions" name="specialInstructions" required={false} textarea placeholder="e.g. Narrow hallway, call on arrival…" value={form.specialInstructions} onChange={set('specialInstructions')} />
       </div>
 
-      {/* COD notice */}
-      <div style={{
-        display: 'flex', gap: 12, alignItems: 'flex-start',
-        padding: '14px', borderRadius: 10,
-        background: `${ACCENT}10`, border: `1px solid ${ACCENT}22`,
-        marginBottom: 20,
-      }}>
-        <Wallet style={{ width: 18, height: 18, color: ACCENT, flexShrink: 0, marginTop: 1 }} />
-        <div>
-          <div style={{ fontSize: 12, fontWeight: 700, color: '#1c1917' }}>Cash on Delivery</div>
-          <div style={{ fontSize: 11, color: '#78716c', lineHeight: 1.5, marginTop: 3 }}>
-            You won't be charged now. Pay your driver in cash or by card when your sofa arrives. Your total due on delivery is <strong style={{ color: '#1c1917' }}>£{totalAmount.toFixed(2)}</strong>.
+      {/* ── Optional delivery extras ── */}
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ fontSize: 10, color: ACCENT, textTransform: 'uppercase', letterSpacing: '0.2em', fontWeight: 700, marginBottom: 4 }}>
+          Delivery Options
+        </div>
+        <p style={{ fontSize: 12, color: '#78716c', marginBottom: 12, lineHeight: 1.5 }}>
+          Delivery to a UK Mainland ground floor is free. Add anything else you need —
+          your total updates as you go, and you still pay on delivery.
+        </p>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+
+          <ExtraOption
+            checked={extras.floor > 0}
+            onToggle={on => setExtras({ ...extras, floor: on ? 1 : 0, hasLift: on ? extras.hasLift : false })}
+            title="Upstairs delivery"
+            note={`£${UPSTAIRS_FIRST_FLOOR} to the first floor or any floor with a lift, £${UPSTAIRS_PER_EXTRA_FLOOR} per extra floor without one.`}
+            price={extras.floor > 0 ? deliveryBreakdown(extras).lines.find(l => l.key === 'upstairs')?.amount ?? 0 : UPSTAIRS_FIRST_FLOOR}
+            priceIsFrom={extras.floor === 0}
+          >
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12, paddingTop: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 11, color: '#57534e', fontWeight: 600 }}>Floor</span>
+                <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #e7e5e4', borderRadius: 6, overflow: 'hidden', background: '#fff' }}>
+                  <button type="button" aria-label="Fewer floors"
+                    onClick={() => setExtras({ ...extras, floor: Math.max(1, extras.floor - 1) })}
+                    style={{ width: 30, height: 30, border: 'none', background: 'none', cursor: 'pointer', color: '#78716c' }}>
+                    <Minus style={{ width: 12, height: 12 }} />
+                  </button>
+                  <span style={{ minWidth: 30, textAlign: 'center', fontSize: 13, fontWeight: 700, color: '#1c1917' }}>{extras.floor}</span>
+                  <button type="button" aria-label="More floors"
+                    onClick={() => setExtras({ ...extras, floor: Math.min(20, extras.floor + 1) })}
+                    style={{ width: 30, height: 30, border: 'none', background: 'none', cursor: 'pointer', color: '#78716c' }}>
+                    <Plus style={{ width: 12, height: 12 }} />
+                  </button>
+                </div>
+                <span style={{ fontSize: 11, color: '#a8a29e' }}>{floorName(extras.floor)}</span>
+              </div>
+
+              <label style={{ display: 'flex', alignItems: 'center', gap: 7, cursor: 'pointer', fontSize: 12, color: '#57534e' }}>
+                <input
+                  type="checkbox"
+                  checked={extras.hasLift}
+                  onChange={e => setExtras({ ...extras, hasLift: e.target.checked })}
+                  style={{ width: 16, height: 16, accentColor: ACCENT, cursor: 'pointer' }}
+                />
+                There&apos;s a lift
+              </label>
+            </div>
+          </ExtraOption>
+
+          <ExtraOption
+            checked={extras.assembly}
+            onToggle={on => setExtras({ ...extras, assembly: on })}
+            title="Assembly"
+            note="Our team assembles the sofa in the room for you."
+            price={ASSEMBLY_FEE}
+          />
+
+          <ExtraOption
+            checked={extras.sofaRemoval}
+            onToggle={on => setExtras({ ...extras, sofaRemoval: on })}
+            title="Old sofa removal"
+            note="We take your old sofa away. This is an estimate — for very large items the team will contact you to confirm before delivery."
+            price={SOFA_REMOVAL_FEE}
+          />
+        </div>
+
+        <p style={{ fontSize: 11, color: '#a8a29e', marginTop: 12, lineHeight: 1.6 }}>
+          {DELIVERY_AREA_NOTE}
+        </p>
+      </div>
+
+      {/* ── How you pay ── */}
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ fontSize: 10, color: ACCENT, textTransform: 'uppercase', letterSpacing: '0.2em', fontWeight: 700, marginBottom: 4 }}>
+          How You Pay
+        </div>
+        <p style={{ fontSize: 12, color: '#78716c', marginBottom: 12, lineHeight: 1.5 }}>
+          Nothing is taken now. You pay once your sofa has arrived and you&apos;re happy with it —
+          choose either method on the day, there&apos;s nothing to decide here.
+        </p>
+
+        {/* Tailwind only - an inline gridTemplateColumns would beat the
+            sm: breakpoint and pin this to one column at every width. */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div style={{ border: '1px solid #e7e5e4', borderRadius: 10, padding: '12px 14px', background: '#fff' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+              <Wallet style={{ width: 15, height: 15, color: ACCENT, flexShrink: 0 }} />
+              <span style={{ fontSize: 13, fontWeight: 700, color: '#1c1917' }}>Cash</span>
+            </div>
+            <p style={{ fontSize: 11, color: '#78716c', lineHeight: 1.55, margin: 0 }}>
+              Hand the full amount to our driver when your sofa is delivered.
+            </p>
+          </div>
+
+          <div style={{ border: '1px solid #e7e5e4', borderRadius: 10, padding: '12px 14px', background: '#fff' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+              <Landmark style={{ width: 15, height: 15, color: ACCENT, flexShrink: 0 }} />
+              <span style={{ fontSize: 13, fontWeight: 700, color: '#1c1917' }}>Bank transfer</span>
+            </div>
+            <p style={{ fontSize: 11, color: '#78716c', lineHeight: 1.55, margin: 0 }}>
+              Transfer <strong style={{ color: '#57534e' }}>at the door</strong>, not in advance. Our
+              driver gives you the account details and waits for the payment to show.
+            </p>
+          </div>
+        </div>
+
+        <div style={{
+          display: 'flex', gap: 12, alignItems: 'flex-start',
+          padding: '13px 14px', borderRadius: 10, marginTop: 10,
+          background: `${ACCENT}10`, border: `1px solid ${ACCENT}22`,
+        }}>
+          <ShieldCheck style={{ width: 17, height: 17, color: ACCENT, flexShrink: 0, marginTop: 1 }} />
+          <div style={{ fontSize: 12, color: '#78716c', lineHeight: 1.55 }}>
+            Your total due on delivery is <strong style={{ color: '#1c1917' }}>£{grandTotal.toFixed(2)}</strong>
+            {extrasTotal > 0 && (
+              <span style={{ color: '#a8a29e' }}> (£{totalAmount.toFixed(2)} for your order plus £{extrasTotal.toFixed(2)} of delivery extras)</span>
+            )}.
+            <span style={{ display: 'block', marginTop: 3, color: '#a8a29e', fontSize: 11 }}>
+              We don&apos;t accept card payments of any kind.
+            </span>
           </div>
         </div>
       </div>
@@ -670,7 +870,7 @@ function DetailsStep({
       </button>
 
       <p style={{ fontSize: 10, color: '#a8a29e', textAlign: 'center', marginTop: 12, lineHeight: 1.6 }}>
-        By placing this order you agree to pay on delivery. We'll send a confirmation email with a tracking link.
+        By placing this order you agree to pay on delivery. We&apos;ll send a confirmation email with a tracking link.
       </p>
     </form>
   )
@@ -720,7 +920,7 @@ function SuccessStep({ orderId, postcode }: { orderId: string, postcode: string 
         Thank You!
       </h2>
       <p style={{ fontSize: 13, color: '#78716c', lineHeight: 1.65, marginBottom: 24, maxWidth: 320, margin: '0 auto 24px' }}>
-        We've received your order and sent a confirmation email. Our team will be in touch to arrange delivery.
+        We&apos;ve received your order and sent a confirmation email. Our team will be in touch to arrange delivery.
       </p>
 
       {/* Order ref (Now showing the SHORT ID) */}
@@ -742,7 +942,7 @@ function SuccessStep({ orderId, postcode }: { orderId: string, postcode: string 
       {/* CTAs */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {/* Tracking link now passes the POSTCODE and SHORT ID */}
-        <Link href={`/track-order?postcode=${encodeURIComponent(postcode)}&order=${shortOrderNumber.replace('#', '')}`} style={{
+        <Link href={`/track-order?ref=${encodeURIComponent(shortOrderNumber.replace('#', ''))}&postcode=${encodeURIComponent(postcode)}`} style={{
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
           padding: '13px 0', borderRadius: 9, background: ACCENT, color: '#fff',
           fontSize: 12, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase',
@@ -770,7 +970,10 @@ export default function CheckoutClient() {
   const [orderPostcode, setOrderPostcode] = useState('')
   const [direction, setDirection] = useState<'forward' | 'back'>('forward')
   const [visible, setVisible] = useState(true)
-  const { cartItems } = useCart()
+  // Held here rather than in DetailsStep so the order summary - which renders in
+  // the sidebar and again in the mobile drawer - reflects every tick live.
+  const [extras, setExtras] = useState<DeliveryOptions>(NO_EXTRAS)
+  const { cartItems, totalAmount } = useCart()
 
   const transition = useCallback((nextStep: Step, dir: 'forward' | 'back') => {
     setDirection(dir)
@@ -781,7 +984,16 @@ export default function CheckoutClient() {
     }, 250)
   }, [])
 
-  const goNext   = () => transition('details', 'forward')
+  // Fired on the way from the basket into the details form - the moment the
+  // visitor commits to checking out. Sits in the click handler rather than in
+  // an effect on `step`, so it cannot re-fire if the user navigates back to the
+  // cart and forward again, and is not double-counted under StrictMode.
+  const goNext = () => {
+    if (cartItems.length > 0) {
+      trackInitiateCheckout(toTrackedItems(cartItems), totalAmount)
+    }
+    transition('details', 'forward')
+  }
   const goBack   = () => transition('cart', 'back')
   const goSuccess = (id: string, postcode: string) => { 
     setOrderId(id); 
@@ -803,7 +1015,7 @@ export default function CheckoutClient() {
           <div style={{ maxWidth: 960, margin: '0 auto', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <Link href="/" style={{ textDecoration: 'none' }}>
               <span className="font-playfair" style={{ fontSize: 18, fontWeight: 700, color: '#fff' }}>
-                Uk Sofashop<span style={{ color: ACCENT }}>Group</span>
+                UK Sofa <span style={{ color: ACCENT }}>Shop</span>
               </span>
             </Link>
             {step !== 'success' && (
@@ -840,7 +1052,7 @@ export default function CheckoutClient() {
               }}
             >
               {step === 'cart'    && <CartStep onNext={goNext} />}
-              {step === 'details' && <DetailsStep onBack={goBack} onSuccess={goSuccess} />}
+              {step === 'details' && <DetailsStep onBack={goBack} onSuccess={goSuccess} extras={extras} setExtras={setExtras} />}
               {step === 'success' && <SuccessStep orderId={orderId} postcode={orderPostcode} />}
             </div>
 
@@ -848,7 +1060,7 @@ export default function CheckoutClient() {
             {step !== 'success' && cartItems.length > 0 && (
               <div className="hidden lg:block">
                 <div style={{ position: 'sticky', top: 80 }}>
-                  <OrderSummary />
+                  <OrderSummary extras={extras} />
                 </div>
               </div>
             )}
@@ -868,7 +1080,7 @@ export default function CheckoutClient() {
                   Show order summary
                 </summary>
                 <div style={{ marginTop: 10 }}>
-                  <OrderSummary />
+                  <OrderSummary extras={extras} />
                 </div>
               </details>
             </div>

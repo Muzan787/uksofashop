@@ -1,21 +1,15 @@
+import type { Metadata } from 'next'
 // src/app/admin/orders/page.tsx
 import { createClient } from '@/utils/supabase/server'
-import { Package, Inbox, Printer, MapPin, User, Phone } from 'lucide-react'
+import { Package, Inbox, Printer, MapPin, User, Phone, Truck } from 'lucide-react'
 import { updateOrderStatus } from '@/app/actions/orders'
 import DirectPrintButton from './DirectPrintButton'
 import Link from 'next/link'
 
-// Smart WhatsApp Formatter for UK numbers
-const getWhatsAppLink = (phone: string) => {
-  if (!phone) return '#'
-  let cleaned = phone.replace(/\D/g, '') // Remove all non-numbers
-  if (cleaned.startsWith('0')) {
-    cleaned = '44' + cleaned.substring(1) // Replace leading 0 with UK code
-  } else if (!cleaned.startsWith('44')) {
-    cleaned = '44' + cleaned // Prepend UK code if missing
-  }
-  return `https://wa.me/${cleaned}`
-}
+import { whatsAppLink } from '@/utils/phone'
+
+
+export const metadata: Metadata = { title: 'Orders' }
 
 const StatusBadge = ({ status }: { status: string }) => {
   const styles: Record<string, string> = {
@@ -35,10 +29,42 @@ const StatusBadge = ({ status }: { status: string }) => {
   )
 }
 
-export default async function AdminOrdersPage() {
-  const supabase = await createClient()
+const PER_PAGE = 20
 
-  const { data: orders, error } = await supabase
+/**
+ * Orders still waiting on you: taken but not acknowledged, or acknowledged but
+ * not yet dispatched. This is the default view, because a flat reverse-
+ * chronological list buries the two or three that need doing today under
+ * everything already delivered.
+ */
+const NEEDS_ATTENTION = ['pending_cod', 'confirmed']
+
+const FILTERS = [
+  { key: 'attention', label: 'Needs attention' },
+  { key: 'all',       label: 'All' },
+  { key: 'pending_cod', label: 'Pending' },
+  { key: 'confirmed', label: 'Confirmed' },
+  { key: 'processing', label: 'Processing' },
+  { key: 'shipped',   label: 'Shipped' },
+  { key: 'delivered', label: 'Delivered' },
+  { key: 'cancelled', label: 'Cancelled' },
+] as const
+
+type SearchParams = Promise<{ status?: string; page?: string }>
+
+export default async function AdminOrdersPage(props: { searchParams: SearchParams }) {
+  const supabase = await createClient()
+  const sp = await props.searchParams
+
+  const status = FILTERS.some(f => f.key === sp.status) ? sp.status! : 'attention'
+  // Anything that isn't a positive integer falls back to page 1, rather than
+  // reaching range() as NaN.
+  const page = /^\d+$/.test(sp.page ?? '') ? Math.max(1, parseInt(sp.page!, 10)) : 1
+  const from = (page - 1) * PER_PAGE
+
+  // This used to select every order ever placed, with all their line items and
+  // nested product rows, on every load. Paged now, and counted server-side.
+  let query = supabase
     .from('orders')
     .select(`
       *,
@@ -46,15 +72,45 @@ export default async function AdminOrdersPage() {
         id, quantity, price_at_time_of_purchase,
         product_variants ( sku, color, products ( title ) )
       )
-    `)
+    `, { count: 'exact' })
+
+  if (status === 'attention') query = query.in('status', NEEDS_ATTENTION)
+  else if (status !== 'all') query = query.eq('status', status)
+
+  const { data: orders, error, count } = await query
     .order('created_at', { ascending: false })
+    .range(from, from + PER_PAGE - 1)
 
   if (error) return <div className="p-8 text-red-500">Error: {error.message}</div>
+
+  const total = count ?? 0
+  const lastPage = Math.max(1, Math.ceil(total / PER_PAGE))
+  const href = (s: string, p = 1) => `/admin/orders?status=${s}${p > 1 ? `&page=${p}` : ''}`
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 lg:space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h1 className="text-2xl lg:text-3xl font-bold text-stone-900 tracking-tight">Order Management</h1>
+        <span className="text-sm text-stone-500">
+          {total} {total === 1 ? 'order' : 'orders'}
+        </span>
+      </div>
+
+      {/* Status filter */}
+      <div className="flex gap-2 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden">
+        {FILTERS.map(f => (
+          <Link
+            key={f.key}
+            href={href(f.key)}
+            className={`shrink-0 px-3.5 py-2 rounded-lg text-xs font-bold transition ${
+              status === f.key
+                ? 'bg-stone-900 text-white'
+                : 'bg-white text-stone-600 border border-stone-200 hover:border-stone-300'
+            }`}
+          >
+            {f.label}
+          </Link>
+        ))}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
@@ -66,6 +122,11 @@ export default async function AdminOrdersPage() {
               <div>
                 <p className="text-xs font-mono text-stone-400">#{order.id.split('-')[0]}</p>
                 <p className="text-lg font-bold text-stone-900 mt-1">£{order.total_amount.toFixed(2)}</p>
+                {Number(order.delivery_total ?? 0) > 0 && (
+                  <p className="text-[11px] text-stone-500 mt-0.5">
+                    £{Number(order.items_subtotal ?? 0).toFixed(2)} order + £{Number(order.delivery_total).toFixed(2)} extras
+                  </p>
+                )}
               </div>
               <StatusBadge status={order.status || 'pending_cod'} />
             </div>
@@ -83,12 +144,44 @@ export default async function AdminOrdersPage() {
                 <MapPin className="w-4 h-4 text-stone-400 mt-0.5 shrink-0" />
                 <p className="text-sm text-stone-600 line-clamp-2">{order.shipping_address}</p>
               </div>
+
+              {/* What the driver needs to do on arrival, and what to collect for it. */}
+              {Number(order.delivery_total ?? 0) > 0 && (
+                <div className="flex items-start gap-3 pt-3 border-t border-stone-200">
+                  <Truck className="w-4 h-4 text-stone-400 mt-0.5 shrink-0" />
+                  <div className="text-sm space-y-1">
+                    {Number(order.fee_upstairs ?? 0) > 0 && (
+                      <p className="text-stone-700">
+                        <span className="font-semibold">Upstairs delivery</span>
+                        <span className="text-stone-500">
+                          {' '}— {order.delivery_has_lift ? 'lift available' : `floor ${order.delivery_floor}, no lift`} · £{Number(order.fee_upstairs).toFixed(2)}
+                        </span>
+                      </p>
+                    )}
+                    {order.wants_assembly && (
+                      <p className="text-stone-700">
+                        <span className="font-semibold">Assembly</span>
+                        <span className="text-stone-500"> — £{Number(order.fee_assembly).toFixed(2)}</span>
+                      </p>
+                    )}
+                    {order.wants_sofa_removal && (
+                      <p className="text-stone-700">
+                        <span className="font-semibold">Old sofa removal</span>
+                        <span className="text-stone-500"> — £{Number(order.fee_sofa_removal).toFixed(2)} (confirm if oversized)</span>
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Quick Actions (WhatsApp & Print) */}
             <div className="flex gap-2 mb-4">
-              <a  
-                href={getWhatsAppLink(order.customer_phone)} 
+              {/* Hidden when the stored number is not a UK mobile, rather than
+                  rendering a wa.me link that goes nowhere. */}
+              {whatsAppLink(order.customer_phone) && (
+              <a
+                href={whatsAppLink(order.customer_phone)!}
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="flex-1 flex items-center justify-center gap-2 bg-[#25D366]/10 text-[#128C7E] py-2.5 rounded-xl text-sm font-bold hover:bg-[#25D366]/20 transition"
@@ -97,7 +190,8 @@ export default async function AdminOrdersPage() {
                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86s.274.072.376-.043c.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.1.824zm-3.423-14.416c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm.029 18.88c-1.161 0-2.305-.292-3.318-.844l-3.677.964.984-3.595c-.607-1.052-.927-2.246-.926-3.468.001-3.825 3.113-6.937 6.937-6.937 3.825 0 6.938 3.112 6.938 6.937 0 3.825-3.113 6.938-6.938 6.938z"/></svg>
                 WhatsApp
               </a>
-              
+              )}
+
               <DirectPrintButton order={order} />
 
             </div>
@@ -156,11 +250,37 @@ export default async function AdminOrdersPage() {
         {(!orders || orders.length === 0) && (
           <div className="col-span-full py-12 flex flex-col items-center justify-center bg-white rounded-3xl border border-stone-200 shadow-sm">
             <Inbox className="w-12 h-12 text-stone-300 mb-3" />
-            <p className="text-lg font-bold text-stone-900">No orders yet</p>
-            <p className="text-stone-500 text-sm mt-1">New customer orders will appear here.</p>
+            <p className="text-lg font-bold text-stone-900">
+              {status === 'attention' ? 'Nothing needs your attention' : 'No orders here'}
+            </p>
+            <p className="text-stone-500 text-sm mt-1">
+              {status === 'attention'
+                ? 'Every order is either dispatched or done.'
+                : 'Try a different filter.'}
+            </p>
           </div>
         )}
       </div>
+
+      {lastPage > 1 && (
+        <div className="flex items-center justify-between gap-4 pt-2">
+          {page > 1 ? (
+            <Link href={href(status, page - 1)} className="px-4 py-2.5 rounded-lg text-xs font-bold bg-white border border-stone-200 text-stone-700 hover:border-stone-300 transition">
+              ← Newer
+            </Link>
+          ) : <span />}
+
+          <span className="text-xs text-stone-500 font-medium">
+            Page {page} of {lastPage}
+          </span>
+
+          {page < lastPage ? (
+            <Link href={href(status, page + 1)} className="px-4 py-2.5 rounded-lg text-xs font-bold bg-white border border-stone-200 text-stone-700 hover:border-stone-300 transition">
+              Older →
+            </Link>
+          ) : <span />}
+        </div>
+      )}
     </div>
   )
 }

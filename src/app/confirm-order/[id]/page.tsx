@@ -1,8 +1,17 @@
 // src/app/confirm-order/[id]/page.tsx
+import type { Metadata } from 'next'
 import { createClient } from '@/utils/supabase/server'
 import { notFound } from 'next/navigation'
 import { CheckCircle, MessageCircle, Package, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
+
+
+export const metadata: Metadata = {
+  title: 'Confirm Your Order',
+  description:
+    'Confirm the details of your order.',
+  robots: { index: false, follow: false },
+}
 
 export default async function ConfirmOrderPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params

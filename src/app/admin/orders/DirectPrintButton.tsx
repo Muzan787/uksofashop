@@ -1,47 +1,8 @@
 'use client'
 // src/app/admin/orders/DirectPrintButton.tsx
 import { Printer } from 'lucide-react'
-
-/*
-// ==========================================
-// DUMMY CUSTOM ORDER TEMPLATE
-// Uncomment this block and change the details 
-// when you need to print a custom receipt.
-// ==========================================
-const DUMMY_CUSTOM_ORDER = {
-  id: "CUSTOM-001",
-  created_at: new Date().toISOString(),
-  customer_name: "Jane Doe",
-  customer_email: "jane.doe@example.com",
-  customer_phone: "07700 900077",
-  shipping_address: "10 Downing Street\nLondon\nSW1A 2AA",
-  total_amount: 1199.98,
-  order_items: [
-    {
-      quantity: 1,
-      price_at_time_of_purchase: 899.99,
-      product_variants: {
-        color: "Emerald Green",
-        sku: "SOFA-EMR-3SEAT",
-        products: {
-          title: "Premium Velvet Chesterfield Sofa"
-        }
-      }
-    },
-    {
-      quantity: 1,
-      price_at_time_of_purchase: 299.99,
-      product_variants: {
-        color: "Emerald Green",
-        sku: "CHAIR-EMR-1SEAT",
-        products: {
-          title: "Matching Accent Chair"
-        }
-      }
-    }
-  ]
-};
-*/
+import { ADDRESS_LINE, PHONE_DISPLAY } from '@/constants/contact'
+import { ORGANISATION_NAME } from '@/utils/schema'
 
 export default function DirectPrintButton({ order }: { order: any }) {
   
@@ -344,12 +305,27 @@ export default function DirectPrintButton({ order }: { order: any }) {
               <div class="summary-box">
                 <div class="summary-row">
                   <span>Subtotal</span>
-                  <span style="font-weight: 600; color: #1c1917;">£${activeOrder.total_amount.toFixed(2)}</span>
+                  <span style="font-weight: 600; color: #1c1917;">£${Number(activeOrder.items_subtotal ?? activeOrder.total_amount).toFixed(2)}</span>
                 </div>
                 <div class="summary-row">
-                  <span>Delivery</span>
-                  <span style="font-weight: 600; color: #1c1917;">£0.00</span>
+                  <span>Delivery (UK Mainland, ground floor)</span>
+                  <span style="font-weight: 600; color: #1c1917;">FREE</span>
                 </div>
+                ${Number(activeOrder.fee_upstairs ?? 0) > 0 ? `
+                <div class="summary-row">
+                  <span>Upstairs delivery${activeOrder.delivery_has_lift ? ' (lift)' : activeOrder.delivery_floor ? ` (floor ${activeOrder.delivery_floor})` : ''}</span>
+                  <span style="font-weight: 600; color: #1c1917;">£${Number(activeOrder.fee_upstairs).toFixed(2)}</span>
+                </div>` : ''}
+                ${Number(activeOrder.fee_assembly ?? 0) > 0 ? `
+                <div class="summary-row">
+                  <span>Assembly</span>
+                  <span style="font-weight: 600; color: #1c1917;">£${Number(activeOrder.fee_assembly).toFixed(2)}</span>
+                </div>` : ''}
+                ${Number(activeOrder.fee_sofa_removal ?? 0) > 0 ? `
+                <div class="summary-row">
+                  <span>Old sofa removal</span>
+                  <span style="font-weight: 600; color: #1c1917;">£${Number(activeOrder.fee_sofa_removal).toFixed(2)}</span>
+                </div>` : ''}
                 <div class="summary-total">
                   <span class="summary-total-label">Total Due</span>
                   <span class="summary-total-value">£${activeOrder.total_amount.toFixed(2)}</span>
@@ -360,7 +336,7 @@ export default function DirectPrintButton({ order }: { order: any }) {
             <div class="footer">
                <div class="thank-you">Thank you for your business.</div>
                <div class="company-details">
-                 Uk Sofashop &nbsp;&bull;&nbsp; 7 Blacker St, Burnley BB10 2AF, UK &nbsp;&bull;&nbsp; 0747 661 6022
+                 {ORGANISATION_NAME} &nbsp;&bull;&nbsp; {ADDRESS_LINE} &nbsp;&bull;&nbsp; {PHONE_DISPLAY}
                </div>
                <div class="guarantee-badge">1-year Frame Guarantee</div>
             </div>
