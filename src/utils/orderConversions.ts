@@ -64,7 +64,7 @@ export async function reportOrderConversion(
     // which collapses every field below to an error type.
     const { data: order } = await supabase
       .from('orders')
-      .select('id, customer_name, customer_email, customer_phone, shipping_address, total_amount, purchase_event_id, ga_client_id, meta_fbp, meta_fbc, purchase_event_sent_at, delivered_event_sent_at')
+      .select('id, customer_name, customer_email, customer_phone, shipping_address, total_amount, purchase_event_id, ga_client_id, meta_fbp, meta_fbc, customer_user_agent, customer_ip, purchase_event_sent_at, delivered_event_sent_at')
       .eq('id', orderId)
       .single()
 
@@ -121,6 +121,13 @@ export async function reportOrderConversion(
           postcode: order.shipping_address?.split(',').pop()?.trim() ?? null,
           fbp: order.meta_fbp,
           fbc: order.meta_fbc,
+          // Captured with the request that PLACED the order, not this one.
+          // Meta lists client_user_agent as required for website events, and
+          // both improve match quality - but at confirmation time the only
+          // headers going are the admin's, which would attribute the sale to
+          // the shop owner's device.
+          userAgent: order.customer_user_agent,
+          clientIp: order.customer_ip,
         },
         contents,
         value,

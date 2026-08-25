@@ -154,6 +154,8 @@ export type Database = {
           customer_email: string | null
           customer_name: string
           customer_phone: string
+          customer_ip: string | null
+          customer_user_agent: string | null
           delivered_event_sent_at: string | null
           delivered_at: string | null
           review_request_sent_at: string | null
@@ -182,6 +184,8 @@ export type Database = {
           customer_email?: string | null
           customer_name: string
           customer_phone: string
+          customer_ip: string | null
+          customer_user_agent: string | null
           delivered_event_sent_at?: string | null
           delivered_at?: string | null
           review_request_sent_at?: string | null
@@ -210,6 +214,8 @@ export type Database = {
           customer_email?: string | null
           customer_name?: string
           customer_phone?: string
+          customer_ip?: string | null
+          customer_user_agent?: string | null
           delivered_event_sent_at?: string | null
           delivered_at?: string | null
           review_request_sent_at?: string | null

@@ -156,10 +156,21 @@ export async function placeOrder(
   // Only present when the visitor accepted cookies; the tags that write these
   // do not run otherwise.
   const jar = await cookies()
+  const hdrs = await headers()
+
   const attribution = {
     ga_client_id: jar.get('_ga')?.value ?? null,
     meta_fbp: jar.get('_fbp')?.value ?? null,
     meta_fbc: jar.get('_fbc')?.value ?? null,
+    // Meta requires client_user_agent for website events, and the IP
+    // materially improves match quality. They have to be taken from THIS
+    // request: at confirmation time the only headers available belong to the
+    // admin, and sending those would attribute the sale to their device.
+    customer_user_agent: hdrs.get('user-agent'),
+    customer_ip:
+      hdrs.get('x-forwarded-for')?.split(',')[0].trim() ||
+      hdrs.get('x-real-ip') ||
+      null,
   }
 
   if (attribution.ga_client_id || attribution.meta_fbp || attribution.meta_fbc) {
