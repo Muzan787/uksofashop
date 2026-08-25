@@ -202,7 +202,7 @@ function ZoomModal({ src, alt, onClose }: { src: string; alt: string; onClose: (
         style={{ position: 'relative', width: '90vw', height: '90vh', maxWidth: 900 }}
         onClick={e => e.stopPropagation()}
       >
-        <Image src={src} alt={alt} fill style={{ objectFit: 'contain' }} />
+        <Image src={src} alt={alt} fill sizes="90vw" style={{ objectFit: 'contain' }} />
       </div>
     </div>
   );
