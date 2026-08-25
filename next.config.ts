@@ -55,10 +55,23 @@ const nextConfig: NextConfig = {
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' data: https://fonts.gstatic.com",
       "img-src 'self' data: blob: https://res.cloudinary.com https://images.pexels.com https://www.googletagmanager.com https://www.google-analytics.com https://www.facebook.com",
+      // IMAGE HOSTS MUST APPEAR HERE AS WELL AS IN img-src.
+      //
+      // An <img src> is governed by img-src - but this site registers a
+      // service worker (next-pwa/workbox), and the worker intercepts image
+      // requests and re-issues them with the Fetch API. A fetch from a service
+      // worker is governed by connect-src, whatever the resource turns out to
+      // be. With res.cloudinary.com in img-src only, every product photo was
+      // blocked in production with "Refused to connect".
+      //
+      // This did not show up in local testing because next-pwa sets
+      // `disable: NODE_ENV === "development"`, so no service worker runs in
+      // dev and the images are fetched normally. Verify CSP against a
+      // production build, not the dev server.
+      //
       // api.homedata.co.uk is the postcode -> address lookup in checkout, and
-      // api.cloudinary.com receives review photo uploads. Both are called from
-      // the browser, so omitting either silently breaks a customer flow.
-      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com https://connect.facebook.net https://graph.facebook.com https://vitals.vercel-insights.com https://api.homedata.co.uk https://api.cloudinary.com",
+      // api.cloudinary.com receives review photo uploads.
+      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com https://connect.facebook.net https://graph.facebook.com https://vitals.vercel-insights.com https://api.homedata.co.uk https://api.cloudinary.com https://res.cloudinary.com https://images.pexels.com",
       "frame-src 'self' https://www.facebook.com",
       "object-src 'none'",
       "base-uri 'self'",
