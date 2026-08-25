@@ -62,7 +62,7 @@ export default function AccountTabs({ orders, reviews, wishlist }: any) {
           ) : (
             <div className="p-8 text-center text-[#a8a29e] flex flex-col items-center">
               <Package className="w-12 h-12 mb-3 opacity-20" />
-              <p>You haven't placed any orders yet.</p>
+              <p>You haven&apos;t placed any orders yet.</p>
             </div>
           )}
         </div>
@@ -96,7 +96,7 @@ export default function AccountTabs({ orders, reviews, wishlist }: any) {
               </div>
             ))
           ) : (
-            <p className="text-center text-[#a8a29e] py-8">You haven't left any reviews yet.</p>
+            <p className="text-center text-[#a8a29e] py-8">You haven&apos;t left any reviews yet.</p>
           )}
         </div>
       )}

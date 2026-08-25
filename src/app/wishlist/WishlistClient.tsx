@@ -48,7 +48,7 @@ export default function WishlistClient({ initialItems }: { initialItems: Wishlis
       <div className="text-center py-16 bg-gray-50 rounded-2xl border border-gray-100">
         <h3 className="text-lg font-medium text-gray-900 mb-2">Your wishlist is empty</h3>
         <p className="text-gray-500 mb-6 max-w-sm mx-auto">
-          You haven't saved any items yet. Explore our collections to find your perfect match.
+          You haven&apos;t saved any items yet. Explore our collections to find your perfect match.
         </p>
         <Link 
           href="/shop/sofas" 
@@ -89,7 +89,7 @@ export default function WishlistClient({ initialItems }: { initialItems: Wishlis
                   {item.title}
                 </Link>
               </h3>
-              <p className="mt-1 text-sm text-gray-500 font-geist-mono">£{item.price.toFixed(2)}</p>
+              <p className="mt-1 text-sm text-gray-500">£{item.price.toFixed(2)}</p>
               
               <div className="mt-auto pt-4 flex items-center justify-between">
                 <button

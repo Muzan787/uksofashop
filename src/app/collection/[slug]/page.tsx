@@ -1,6 +1,7 @@
 // src/app/collection/[slug]/page.tsx
 import { Metadata } from 'next'
 import { createClient } from '@/utils/supabase/server'
+import { socialImageUrl, leadVariantImage, ogImage } from '@/utils/socialImage'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -16,16 +17,43 @@ export async function generateMetadata(props: { params: Params }): Promise<Metad
   
   const { data: group } = await supabase
     .from('variant_groups')
-    .select('name')
+    .select('name, products(product_variants(image_url, priority))')
     .eq('slug', slug)
     .single()
 
   if (!group) return { title: 'Collection Not Found' }
 
+  const title = `The ${group.name} Collection`
+  const description = `Shop the exclusive ${group.name} collection. Luxury sofas with free delivery across UK Mainland and cash on delivery available.`
+  const path = `/collection/${slug}`
+
+  // Lead photo from the first product in the collection, so a shared link
+  // shows this range rather than the generic site card.
+  const variants = (group.products ?? []).flatMap(
+    (p: { product_variants?: { image_url?: string | null; priority?: number | null }[] | null }) =>
+      p.product_variants ?? [],
+  )
+  const card = socialImageUrl(leadVariantImage(variants))
+
   return {
-    title: `The ${group.name} Collection | UK Sofa Shop`,
-    description: `Shop the exclusive ${group.name} collection. Handcrafted luxury British sofas with free white-glove delivery.`,
-    alternates: { canonical: `/collection/${slug}` },
+    title,
+    description,
+    alternates: { canonical: path },
+    openGraph: {
+      type: 'website',
+      title,
+      description,
+      url: path,
+      images: card
+        ? [ogImage(card, title)]
+        : undefined,
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: card ? [card] : undefined,
+    },
   }
 }
 
@@ -83,7 +111,7 @@ export default async function CollectionPage(props: { params: Params }) {
             {group.name}
           </h1>
           <p className="text-white/50 text-xs sm:text-sm mt-3 max-w-md leading-relaxed">
-            Explore all available sizes and configurations for the {group.name}. Handcrafted to order.
+            Explore all available sizes and configurations for the {group.name}.
           </p>
         </div>
         <div className="h-[2px] bg-[#d4871a]" />
@@ -100,7 +128,6 @@ export default async function CollectionPage(props: { params: Params }) {
               const displayPrice = product.base_price + (targetVariant?.price_adjustment || 0)
               
               // Safely extract the category slug to build the correct product URL
-              // @ts-ignore - Supabase nested types can be tricky
               const catSlug = product.product_categories?.[0]?.categories?.slug || 'all'
 
               return (

@@ -1,5 +1,21 @@
 // src/app/admin/layout.tsx
+import type { Metadata } from 'next'
 import AdminSidebarClient from '@/components/Admin/AdminSidebarClient'
+
+// Applies to every page under /admin. robots.txt already disallows the path,
+// but that only asks crawlers not to fetch it - noindex is what keeps it out
+// of the index if a URL is ever discovered another way.
+export const metadata: Metadata = {
+  title: {
+    template: '%s | Admin',
+    default: 'Admin',
+  },
+  robots: { index: false, follow: false },
+  // The owner's installable app, scoped to /admin. Overrides the customer
+  // manifest inherited from the root layout, so installing from inside the
+  // admin panel gives an app that opens the dashboard rather than the shop.
+  manifest: '/admin/manifest.webmanifest',
+}
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (

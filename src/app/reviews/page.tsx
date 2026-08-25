@@ -1,8 +1,17 @@
 // src/app/reviews/page.tsx
+import type { Metadata } from 'next'
 import { createClient } from '@/utils/supabase/server'
 import Link from 'next/link'
 import { Star, BadgeCheck } from 'lucide-react'
 import ReviewFormModal from './ReviewFormModal'
+
+
+export const metadata: Metadata = {
+  title: 'Customer Reviews',
+  description:
+    'Genuine reviews from UK Sofa Shop customers. Every review here comes from someone who actually bought from us.',
+  alternates: { canonical: '/reviews' },
+}
 
 export default async function ReviewsPage() {
   const supabase = await createClient()
@@ -30,7 +39,7 @@ export default async function ReviewsPage() {
             <h1 className="text-4xl font-playfair font-bold text-[#1c1917] mb-2">
               Customer Reviews
             </h1>
-            <p className="text-[#57534e]">See what our customers are saying about UK Sofashop.</p>
+            <p className="text-[#57534e]">See what our customers are saying about UK Sofa Shop.</p>
           </div>
           
           <ReviewFormModal isLoggedIn={!!user} />
@@ -60,12 +69,20 @@ export default async function ReviewsPage() {
                       <p className="text-base font-bold text-[#1c1917]">
                         {displayName}
                       </p>
-                      <div className="flex items-center gap-1 mt-0.5">
-                        <BadgeCheck className="w-3.5 h-3.5 text-green-500" />
-                        <span className="text-[11px] font-bold text-green-600 uppercase tracking-wide">
-                          Verified Buyer
-                        </span>
-                      </div>
+                      {/* Only where the review is genuinely tied to a delivered
+                          order. This badge used to render on every review with
+                          nothing behind it - an unverifiable verified-purchase
+                          claim, which the DMCC Act 2024 treats as a misleading
+                          practice. review.order_id is set only by the signed
+                          link in the post-delivery email. */}
+                      {review.order_id && (
+                        <div className="flex items-center gap-1 mt-0.5">
+                          <BadgeCheck className="w-3.5 h-3.5 text-green-500" />
+                          <span className="text-[11px] font-bold text-green-600 uppercase tracking-wide">
+                            Verified Buyer
+                          </span>
+                        </div>
+                      )}
                     </div>
                     
                     {/* Date */}
@@ -76,7 +93,7 @@ export default async function ReviewsPage() {
 
                   {/* Comment */}
                   {review.comment && (
-                    <p className="text-[#44403c] text-sm leading-relaxed mb-4 italic">"{review.comment}"</p>
+                    <p className="text-[#44403c] text-sm leading-relaxed mb-4 italic">&quot;{review.comment}&quot;</p>
                   )}
 
                   {/* Optional Image */}
@@ -99,8 +116,30 @@ export default async function ReviewsPage() {
             })}
           </div>
         ) : (
-          <div className="text-center py-20 bg-white rounded-xl border border-[#f0ede8]">
-            <p className="text-[#a8a29e]">No reviews yet. Be the first to share your experience!</p>
+          <div className="text-center py-20 px-6 bg-white rounded-xl border border-[#f0ede8]">
+            <div className="w-14 h-14 rounded-full bg-[#fef9f0] border border-[#d4871a]/20 flex items-center justify-center mx-auto mb-5">
+              <Star className="w-6 h-6 text-[#d4871a]" />
+            </div>
+            <h2 className="text-xl font-playfair font-bold text-[#1c1917] mb-2">
+              No reviews yet
+            </h2>
+            <p className="text-[#57534e] text-sm max-w-sm mx-auto leading-relaxed mb-6">
+              We&apos;re a new shop, so this page is genuinely empty — every review here
+              will come from a real customer. If you&apos;ve bought from us, yours would
+              be the first.
+            </p>
+            {user ? (
+              <p className="text-xs text-[#a8a29e]">
+                Use the button above to write the first one.
+              </p>
+            ) : (
+              <Link
+                href="/login"
+                className="inline-flex items-center gap-2 bg-[#d4871a] text-white px-6 py-3 rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-[#b67316] transition-colors"
+              >
+                Sign in to leave a review
+              </Link>
+            )}
           </div>
         )}
       </div>

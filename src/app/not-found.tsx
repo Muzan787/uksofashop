@@ -1,6 +1,14 @@
 // src/app/not-found.tsx
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Home, Search, Sofa } from 'lucide-react';
+
+// The 404 status alone keeps this out of the index, but the explicit noindex
+// covers the case where a soft 404 is served with a 200.
+export const metadata: Metadata = {
+  title: 'Page Not Found',
+  robots: { index: false, follow: true },
+};
 
 export default function NotFound() {
   return (
@@ -16,7 +24,7 @@ export default function NotFound() {
       </h1>
       
       <h2 className="text-2xl md:text-3xl font-bold text-[#1c1917] mb-4">
-        We can't find that page
+        We can&apos;t find that page
       </h2>
       
       <p className="text-[#57534e] max-w-md mx-auto mb-10 text-lg">

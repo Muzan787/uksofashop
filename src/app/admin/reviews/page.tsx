@@ -1,17 +1,21 @@
+import type { Metadata } from 'next'
 // src/app/admin/reviews/page.tsx
 export const dynamic = 'force-dynamic';
 
-import { createClient as createSupabaseClient } from '@supabase/supabase-js'
+import { createClient } from '@/utils/supabase/server'
 import { approveReview, deleteReview } from '@/app/actions/reviews'
 import { Check, Trash2, Star, MessageSquare, Image as ImageIcon, AlertCircle, BadgeCheck } from 'lucide-react'
 
-export default async function AdminReviewsPage() {
-  const supabaseAdmin = createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
 
-  const { data: reviews, error } = await supabaseAdmin
+export const metadata: Metadata = { title: 'Review Moderation' }
+
+export default async function AdminReviewsPage() {
+  // Uses the ordinary cookie-bound client. Reading every review - including
+  // other people's unapproved ones - is granted by the "admin can view all
+  // reviews" RLS policy, so the service-role key is no longer needed here.
+  const supabase = await createClient()
+
+  const { data: reviews, error } = await supabase
     .from('reviews')
     .select('*, products(title)')
     .order('created_at', { ascending: false })
@@ -62,12 +66,21 @@ export default async function AdminReviewsPage() {
                       <p className="text-base font-bold text-stone-900">
                         {review.customer_name || 'Anonymous Customer'}
                       </p>
-                      <div className="flex items-center gap-1 mt-0.5">
-                        <BadgeCheck className="w-3.5 h-3.5 text-green-500" />
-                        <span className="text-[11px] font-bold text-green-600 uppercase tracking-wide">
-                          Verified Buyer
+                      {/* Shows you which reviews came through the signed link
+                          in a post-delivery email, and which arrived some
+                          other way. Worth knowing before you approve one. */}
+                      {review.order_id ? (
+                        <div className="flex items-center gap-1 mt-0.5">
+                          <BadgeCheck className="w-3.5 h-3.5 text-green-500" />
+                          <span className="text-[11px] font-bold text-green-600 uppercase tracking-wide">
+                            Verified Buyer
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-[11px] font-bold text-stone-400 uppercase tracking-wide mt-0.5 inline-block">
+                          Unverified
                         </span>
-                      </div>
+                      )}
                     </div>
 
                     {/* Product Name */}
@@ -79,7 +92,7 @@ export default async function AdminReviewsPage() {
 
                 {/* Review Text */}
                 <div className="bg-stone-50 p-4 rounded-xl text-sm text-stone-700 italic border border-stone-100">
-                  "{review.comment}"
+                  &quot;{review.comment}&quot;
                 </div>
 
                 {/* Optional Image */}

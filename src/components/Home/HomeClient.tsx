@@ -1,14 +1,11 @@
-'use client';
-
-import { useEffect, useRef, useState, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import CollectionCard from '../Product/CollectionCard';
 import {
   ArrowRight, ArrowUpRight, Star, Shield, Truck,
-  RotateCcw, Gem, Phone, Package, ChevronRight,
-  ChevronLeft, Quote,
+  Gem, Phone, Package, Ruler,
 } from 'lucide-react';
+import { MARQUEE_ITEMS, TRUST_POINTS, PROMISES } from '@/constants/promises';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Category {
@@ -16,6 +13,8 @@ interface Category {
 }
 interface Product {
   id: string; title: string; slug: string; base_price: number;
+  average_rating?: number | null;
+  review_count?: number | null;
   product_variants?: { image_url?: string }[];
   product_categories?: { categories?: { slug: string; name: string } }[];
 }
@@ -29,124 +28,59 @@ interface Props {
 }
 
 // ─── Static data ──────────────────────────────────────────────────────────────
-const marqueeItems = [
-  'British Craftsmanship Since 1995',
-  'Free White-Glove Delivery Over £500',
-  '30-Day Home Trial',
-  'Cash on Delivery Available',
-  '1-year Frame Guarantee',
-  'Handmade in Yorkshire',
-];
-const guarantees = [
-  { icon: Truck,     label: 'Free Delivery',    sub: 'Orders over £500'     },
-  { icon: Shield,    label: '1-Yr Guarantee',  sub: 'Lifetime frame'       },
-  { icon: RotateCcw, label: '30-Day Trial',     sub: 'Love it or return it' },
-  { icon: Gem,       label: 'British Made',     sub: 'Handmade Yorkshire'   },
-];
-const heroStats = [
-  { end: 15000, suffix: '+', label: 'Happy Families' },
-  { end: 28,    suffix: 'yr', label: 'Heritage'      },
-  { end: 4.9,   suffix: '',  label: 'Star Rating',  decimal: true },
-];
-const testimonials = [
-  { name: 'Sarah T.', loc: 'Manchester', rating: 5, purchase: 'Harrington Corner',
-    text: 'The quality is absolutely exceptional. My new corner sofa transformed our living space entirely.' },
-  { name: 'James W.', loc: 'Birmingham', rating: 5, purchase: 'Mayfair Chesterfield',
-    text: 'White-glove delivery was impeccable. They set everything up and removed all the packaging.' },
-  { name: 'Emma D.', loc: 'London', rating: 5, purchase: 'Belgravia Recliner',
-    text: 'The 30-day home trial gave us complete peace of mind. Even more comfortable than we imagined.' },
-];
-
-// ─── Hooks ────────────────────────────────────────────────────────────────────
-function useInView(threshold = 0.15) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [inView, setInView] = useState(false);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const obs = new IntersectionObserver(
-      ([e]) => { if (e.isIntersecting) { setInView(true); obs.disconnect(); } },
-      { threshold }
-    );
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, [threshold]);
-  return { ref, inView };
-}
-
-function useCounter(end: number, decimal = false, active = false) {
-  const [val, setVal] = useState(0);
-  useEffect(() => {
-    if (!active) return;
-    const dur = 1400;
-    const steps = 60;
-    const inc = end / steps;
-    let cur = 0;
-    const t = setInterval(() => {
-      cur = Math.min(cur + inc, end);
-      setVal(decimal ? Math.round(cur * 10) / 10 : Math.floor(cur));
-      if (cur >= end) clearInterval(t);
-    }, dur / steps);
-    return () => clearInterval(t);
-  }, [active, end, decimal]);
-  return val;
-}
+// Copy lives in src/constants/promises.ts; only the icons are chosen here.
+// The "British Craftsmanship Since 1995" and "Handmade in Yorkshire" lines that
+// were in the marquee are origin claims and belong per-range, not sitewide.
+const marqueeItems = MARQUEE_ITEMS;
+const GUARANTEE_ICONS = [Truck, Gem, Ruler, Shield];
+const guarantees = TRUST_POINTS.map((p, i) => ({
+  icon: GUARANTEE_ICONS[i] ?? Shield,
+  label: p.label,
+  sub: p.sub,
+}));
+// The hero stats ("15,000+ Happy Families", "28yr Heritage", "4.9 Star Rating")
+// and three named testimonials that used to live here were invented. Removed
+// rather than re-numbered: this is a new shop and real reviews come from the
+// reviews table via /reviews and the product pages.
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function Reveal({ children, delay = 0, className = '' }: { children: React.ReactNode; delay?: number; className?: string; }) {
-  const { ref, inView } = useInView();
+/**
+ * Scroll reveal with no JavaScript. See .reveal in globals.css: the animation
+ * only applies where the browser supports scroll-driven animations, and the
+ * content is plainly visible everywhere else.
+ *
+ * Replaces a hook that created one IntersectionObserver per instance - a dozen
+ * of them on this page - and rendered its children at opacity:0 until React
+ * had hydrated.
+ */
+function Reveal({ children, delay = 0, className = '' }: { children: React.ReactNode; delay?: number; className?: string }) {
   return (
-    <div ref={ref} className={className}
-      style={{
-        opacity: inView ? 1 : 0,
-        transform: inView ? 'translateY(0)' : 'translateY(28px)',
-        transition: `opacity 0.6s ease ${delay}ms, transform 0.6s cubic-bezier(.16,1,.3,1) ${delay}ms`,
-      }}>
+    <div
+      className={`reveal ${className}`}
+      style={delay ? { animationDelay: `${delay}ms` } : undefined}
+    >
       {children}
     </div>
   );
 }
 
-function StatCell({ end, suffix, label, decimal, active }: { end: number; suffix: string; label: string; decimal?: boolean; active: boolean; }) {
-  const val = useCounter(end, decimal, active);
-  return (
-    <div className="text-center">
-      <div className="font-playfair font-bold text-white" style={{ fontSize: 22 }}>
-        {decimal ? val.toFixed(1) : val.toLocaleString()}{suffix}
-      </div>
-      <div className="text-zinc-500 mt-0.5 uppercase" style={{ fontSize: 9, letterSpacing: '0.18em' }}>
-        {label}
-      </div>
-    </div>
-  );
-}
-
+/**
+ * The pointer-tracking tilt this card used to do has become a CSS hover lift
+ * (.lift-card in globals.css, behind `@media (hover: hover)`).
+ *
+ * It was a useState plus an onMouseMove handler on every card, which meant six
+ * pieces of React state and six listeners shipped to and hydrated on every
+ * phone - where a pointer-tilt effect can never fire at all. Moving it to CSS
+ * is what lets this whole page be a server component.
+ */
 function ProductCard({ product }: { product: Product }) {
-  const cardRef = useRef<HTMLAnchorElement>(null);
-  const [tilt, setTilt] = useState({ x: 0, y: 0, active: false });
-
   const image = product.product_variants?.[0]?.image_url ?? null;
   const firstCat = product.product_categories?.[0]?.categories ?? null;
   const catSlug = firstCat?.slug ?? 'all';
 
-  const onMove = useCallback((e: React.MouseEvent) => {
-    const el = cardRef.current;
-    if (!el) return;
-    const r = el.getBoundingClientRect();
-    const x = ((e.clientX - r.left) / r.width - 0.5) * 14;
-    const y = ((e.clientY - r.top)  / r.height - 0.5) * -14;
-    setTilt({ x, y, active: true });
-  }, []);
-
   return (
-    <Link ref={cardRef} href={`/shop/${catSlug}/${product.slug}`} className="group block"
-      onMouseMove={onMove} onMouseLeave={() => setTilt({ x: 0, y: 0, active: false })}
-      style={{
-        transform: tilt.active ? `perspective(600px) rotateY(${tilt.x}deg) rotateX(${tilt.y}deg) scale(1.02)` : 'perspective(600px) rotateY(0) rotateX(0) scale(1)',
-        transition: tilt.active ? 'transform 0.1s ease' : 'transform 0.5s cubic-bezier(.16,1,.3,1)',
-        willChange: 'transform',
-      }}>
+    <Link href={`/shop/${catSlug}/${product.slug}`} className="group block lift-card">
       <div className="relative overflow-hidden bg-stone-100 aspect-[4/3]" style={{ borderRadius: 10 }}>
         {image ? (
           <Image src={image} alt={product.title} fill sizes="(max-width:640px) 80vw, 50vw" className="object-cover group-hover:scale-110 transition-transform duration-700" />
@@ -171,64 +105,23 @@ function ProductCard({ product }: { product: Product }) {
           <span className="font-bold text-stone-900" style={{ fontSize: 14 }}>
             £{product.base_price.toFixed(0)}
           </span>
-          <div className="flex items-center gap-0.5">
-            <Star className="w-3 h-3 fill-[#d4871a] text-[#d4871a]" />
-            <span className="text-stone-400" style={{ fontSize: 11 }}>4.9</span>
-          </div>
+          {/* Only shown once the product has genuine approved reviews. */}
+          {(product.review_count ?? 0) > 0 && (
+            <div className="flex items-center gap-0.5">
+              <Star className="w-3 h-3 fill-[#d4871a] text-[#d4871a]" />
+              <span className="text-stone-400" style={{ fontSize: 11 }}>
+                {(product.average_rating ?? 0).toFixed(1)}
+              </span>
+            </div>
+          )}
         </div>
       </div>
     </Link>
   );
 }
 
-function TestimonialsCarousel() {
-  const [active, setActive] = useState(0);
-  const total = testimonials.length;
-  const prev = () => setActive(i => (i - 1 + total) % total);
-  const next = () => setActive(i => (i + 1) % total);
-
-  return (
-    <div>
-      <div className="relative overflow-hidden">
-        <div className="flex transition-transform duration-500" style={{ transform: `translateX(-${active * 100}%)` }}>
-          {testimonials.map((t) => (
-            <div key={t.name} className="w-full shrink-0" style={{ padding: '0 0' }}>
-              <div className="bg-white mx-1" style={{ borderTop: '2px solid #d4871a', borderRadius: '0 0 10px 10px', padding: '18px 16px' }}>
-                <Quote className="w-5 h-5 text-[#d4871a] mb-2" />
-                <p className="font-playfair italic text-stone-600 leading-relaxed" style={{ fontSize: 13 }}>"{t.text}"</p>
-                <div className="flex gap-0.5 mt-3 mb-2">
-                  {[...Array(t.rating)].map((_, i) => <Star key={i} className="w-3 h-3 fill-[#d4871a] text-[#d4871a]" />)}
-                </div>
-                <div className="font-semibold text-stone-900" style={{ fontSize: 12 }}>{t.name}</div>
-                <div className="text-stone-400" style={{ fontSize: 11 }}>{t.loc} · {t.purchase}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-      <div className="flex items-center justify-center gap-4 mt-4">
-        <button onClick={prev} className="w-7 h-7 rounded-full border border-stone-200 flex items-center justify-center hover:border-[#d4871a] hover:text-[#d4871a] transition-colors"><ChevronLeft className="w-4 h-4" /></button>
-        {testimonials.map((_, i) => <button key={i} onClick={() => setActive(i)} className="rounded-full transition-all duration-300" style={{ width: i === active ? 20 : 6, height: 6, background: i === active ? '#d4871a' : '#d6d3d1' }} />)}
-        <button onClick={next} className="w-7 h-7 rounded-full border border-stone-200 flex items-center justify-center hover:border-[#d4871a] hover:text-[#d4871a] transition-colors"><ChevronRight className="w-4 h-4" /></button>
-      </div>
-    </div>
-  );
-}
-
 // ─── Main export ──────────────────────────────────────────────────────────────
 export default function HomeClient({ categories, products, collections }: Props) {
-  const statsRef = useRef<HTMLDivElement>(null);
-  const [statsActive, setStatsActive] = useState(false);
-  useEffect(() => {
-    const el = statsRef.current;
-    if (!el) return;
-    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setStatsActive(true); obs.disconnect(); } }, { threshold: 0.5 });
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, []);
-
-  const [heroIn, setHeroIn] = useState(false);
-  useEffect(() => { const t = setTimeout(() => setHeroIn(true), 80); return () => clearTimeout(t); }, []);
 
   return (
     <div style={{ fontFamily: 'var(--font-geist-sans), system-ui, sans-serif' }}>
@@ -245,26 +138,23 @@ export default function HomeClient({ categories, products, collections }: Props)
         <div className="absolute top-0 left-0 right-0 h-0.5" style={{ background: '#d4871a' }} />
 
         <div className="relative top-4 max-w-6xl mx-auto px-4 sm:px-2 flex flex-col justify-end pt-2 lg:pt-0" style={{ minHeight: '8vh', paddingBottom: '32px' }}>
-          <div className="flex items-center gap-2 mb-4" style={{ opacity: heroIn ? 1 : 0, transform: heroIn ? 'translateY(0)' : 'translateY(16px)', transition: 'all 0.7s ease 0.1s' }}>
+          <div className="flex items-center gap-2 mb-4">
             <div className="h-px w-6 bg-[#d4871a]" />
-            <span className="text-[#d4871a] font-medium uppercase" style={{ fontSize: 10, letterSpacing: '0.22em' }}>British Luxury Since 1995</span>
+            <span className="text-[#d4871a] font-medium uppercase" style={{ fontSize: 10, letterSpacing: '0.22em' }}>Cash on Delivery Available</span>
           </div>
-          <h1 className="font-playfair font-bold text-white leading-none" style={{ fontSize: 'clamp(40px,10vw,80px)', letterSpacing: '-0.02em', opacity: heroIn ? 1 : 0, transform: heroIn ? 'translateY(0)' : 'translateY(24px)', transition: 'all 0.7s ease 0.2s' }}>
+          <h1 className="font-playfair font-bold text-white leading-none" style={{ fontSize: 'clamp(40px,10vw,80px)', letterSpacing: '-0.02em' }}>
             Where <em className="not-italic" style={{ color: '#d4871a' }}>Comfort</em><br />Meets Art.
           </h1>
-          <p className="text-zinc-400 mt-3 max-w-sm leading-relaxed" style={{ fontSize: 13, opacity: heroIn ? 1 : 0, transform: heroIn ? 'translateY(0)' : 'translateY(20px)', transition: 'all 0.7s ease 0.35s' }}>
-            Handcrafted luxury sofas for the modern British home. Cash on delivery. Free white-glove setup.
+          <p className="text-zinc-400 mt-3 max-w-sm leading-relaxed" style={{ fontSize: 13 }}>
+            Luxury sofas for the modern home. {PROMISES.payment.short}. {PROMISES.delivery.short}.
           </p>
-          <div className="flex flex-wrap gap-3 mt-5" style={{ opacity: heroIn ? 1 : 0, transform: heroIn ? 'translateY(0)' : 'translateY(16px)', transition: 'all 0.7s ease 0.45s' }}>
+          <div className="flex flex-wrap gap-3 mt-5">
             <Link href="/shop/all" className="group inline-flex items-center gap-2 text-white font-semibold hover:bg-[#b8721a] active:scale-95 transition-all duration-200" style={{ background: '#d4871a', padding: '11px 22px', fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', borderRadius: 6 }}>
               Shop Now <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
             </Link>
             <Link href="/track-order" className="inline-flex items-center gap-2 text-zinc-300 font-medium hover:text-white transition-colors border border-white/15 hover:border-white/30" style={{ padding: '10px 20px', fontSize: 11, borderRadius: 6 }}>
               <Package className="w-3.5 h-3.5" /> Track Order
             </Link>
-          </div>
-          <div ref={statsRef} className="grid grid-cols-3 gap-4 mt-2 pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.08)', maxWidth: 320, opacity: heroIn ? 1 : 0, transition: 'opacity 0.7s ease 0.6s' }}>
-            {heroStats.map((s) => <StatCell key={s.label} {...s} active={statsActive} />)}
           </div>
         </div>
       </section>
@@ -286,7 +176,7 @@ export default function HomeClient({ categories, products, collections }: Props)
           <div className="grid grid-cols-2 sm:grid-cols-4" style={{ borderLeft: '1px solid #e7e5e4' }}>
             {guarantees.map(({ icon: Icon, label, sub }) => (
               <Reveal key={label}>
-                <div className="flex items-center gap-2.5 group cursor-default" style={{ padding: '14px 16px', borderRight: '1px solid #e7e5e4', borderBottom: '1px solid #e7e5e4', transition: 'background 0.2s' }} onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#fef9f0'} onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = ''}>
+                <div className="flex items-center gap-2.5 group cursor-default tint-hover" style={{ padding: '14px 16px', borderRight: '1px solid #e7e5e4', borderBottom: '1px solid #e7e5e4' }}>
                   <Icon className="w-4 h-4 text-[#d4871a] shrink-0 group-hover:scale-110 transition-transform duration-200" />
                   <div>
                     <div className="text-stone-900 font-semibold leading-tight" style={{ fontSize: 11 }}>{label}</div>
@@ -388,7 +278,7 @@ export default function HomeClient({ categories, products, collections }: Props)
       <section className="overflow-hidden" style={{ background: '#0c0c0b' }}>
         <div className="grid grid-cols-1 sm:grid-cols-2">
           <div className="relative" style={{ minHeight: 220 }}>
-            <Image src="https://res.cloudinary.com/dmlna04yk/image/upload/v1782255171/Home-Page-Furniture-Background-Image-2_cgmd50.jpg" alt="Yorkshire workshop craftsmanship" fill className="object-cover" />
+            <Image src="https://res.cloudinary.com/dmlna04yk/image/upload/v1782255171/Home-Page-Furniture-Background-Image-2_cgmd50.jpg" alt="Sofa upholstery detail" fill className="object-cover" />
             <div className="absolute top-0 bottom-0 right-0 w-0.5" style={{ background: '#d4871a' }} />
           </div>
           <Reveal className="flex flex-col justify-center" delay={100}>
@@ -398,19 +288,14 @@ export default function HomeClient({ categories, products, collections }: Props)
                 <span className="text-[#d4871a] font-medium uppercase" style={{ fontSize: 9, letterSpacing: '0.22em' }}>Our Story</span>
               </div>
               <h2 className="font-playfair font-bold text-white leading-tight" style={{ fontSize: 'clamp(24px,5vw,42px)' }}>
-                Handcrafted for Life,<br /><em className="not-italic" style={{ color: '#d4871a' }}>Not a Season.</em>
+                Built for Life,<br /><em className="not-italic" style={{ color: '#d4871a' }}>Not a Season.</em>
               </h2>
               <p className="text-zinc-400 mt-4 leading-relaxed" style={{ fontSize: 12 }}>
-                Every sofa begins with seasoned British hardwood. Our Yorkshire craftsmen use joinery techniques refined over three generations — no shortcuts, no compromises.
+                We pick every range ourselves and stand behind it. Our fabric sofas are made to order in the UK, in your choice of colour, material and size — and whatever you buy, you pay for it only once it is standing in your living room.
               </p>
-              <div className="grid grid-cols-3 gap-4 mt-6 pt-5" style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}>
-                {[['100%','British Made'],['28yr','Heritage'],['10yr','Guarantee']].map(([n, l]) => (
-                  <div key={l}>
-                    <div className="font-playfair font-bold" style={{ fontSize: 20, color: '#d4871a' }}>{n}</div>
-                    <div className="text-zinc-500 uppercase mt-0.5" style={{ fontSize: 9, letterSpacing: '0.14em' }}>{l}</div>
-                  </div>
-                ))}
-              </div>
+              {/* A "100% British Made / 28yr Heritage / 10yr Guarantee" strip
+                  sat here. All three were invented, and the 10-year figure also
+                  contradicted the 1-year guarantee claimed everywhere else. */}
               <Link href="/about" className="inline-flex items-center gap-2 text-white font-medium mt-6 group hover:text-[#d4871a] transition-colors" style={{ fontSize: 12, borderBottom: '1px solid rgba(255,255,255,0.2)', paddingBottom: 2 }}>
                 Our Story <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
               </Link>
@@ -452,7 +337,7 @@ export default function HomeClient({ categories, products, collections }: Props)
           <div className="absolute inset-0 flex items-center justify-center" style={{ background: 'rgba(12,12,11,0.5)' }}>
             <div className="text-center px-6">
               <p className="font-playfair italic text-white" style={{ fontSize: 'clamp(13px,3vw,26px)', letterSpacing: '-0.01em' }}>
-                "A home is defined by the spaces that make you feel most yourself."
+                &quot;A home is defined by the spaces that make you feel most yourself.&quot;
               </p>
               <div className="flex items-center justify-center gap-2 mt-2" style={{ color: '#d4871a' }}>
                 <div className="h-px w-6 bg-[#d4871a]" />
@@ -464,35 +349,9 @@ export default function HomeClient({ categories, products, collections }: Props)
         </div>
       </Reveal>
 
-      {/* ══════════════════════════════════════════ TESTIMONIALS ══════════════════════════════════════════ */}
-      <section className="py-10" style={{ background: '#f5f0e8' }}>
-        <div className="max-w-5xl mx-auto px-4 sm:px-6">
-          <Reveal>
-            <div className="text-center mb-7">
-              <span className="text-[#d4871a] font-semibold uppercase" style={{ fontSize: 9, letterSpacing: '0.22em' }}>Reviews</span>
-              <h2 className="font-playfair font-bold text-stone-900 mt-1" style={{ fontSize: 'clamp(22px,5vw,34px)', lineHeight: 1.1 }}>
-                What Customers Say
-              </h2>
-            </div>
-          </Reveal>
-          <div className="sm:hidden"><TestimonialsCarousel /></div>
-          <div className="hidden sm:grid sm:grid-cols-3 gap-4">
-            {testimonials.map((t, i) => (
-              <Reveal key={t.name} delay={i * 80}>
-                <div className="bg-white h-full flex flex-col" style={{ borderTop: '2px solid #d4871a', borderRadius: '0 0 8px 8px', padding: '16px' }}>
-                  <Quote className="w-4 h-4 text-[#d4871a] mb-2" />
-                  <p className="font-playfair italic text-stone-600 leading-relaxed flex-1" style={{ fontSize: 12 }}>"{t.text}"</p>
-                  <div className="flex gap-0.5 mt-3 mb-2">
-                    {[...Array(t.rating)].map((_, i) => <Star key={i} className="w-3 h-3 fill-[#d4871a] text-[#d4871a]" />)}
-                  </div>
-                  <div className="font-semibold text-stone-900" style={{ fontSize: 11 }}>{t.name}</div>
-                  <div className="text-stone-400" style={{ fontSize: 10 }}>{t.loc} · {t.purchase}</div>
-                </div>
-              </Reveal>
-            ))}
-          </div>
-        </div>
-      </section>
+      {/* The testimonials section was removed: all three reviews in it were
+          invented. Genuine reviews live at /reviews, linked from the header
+          and the mobile nav. */}
 
       {/* ══════════════════════════════════════════ COD TRUST STRIP ══════════════════════════════════════════ */}
       <Reveal>
@@ -507,9 +366,9 @@ export default function HomeClient({ categories, products, collections }: Props)
                 </div>
               </div>
               <div className="flex flex-wrap gap-4">
-                {[[Shield,'1-Yr Guarantee'],[Truck,'Free Delivery'],[RotateCcw,'30-Day Returns']].map(([Icon, lbl]) => (
+                {[[Shield, PROMISES.guarantee.label], [Truck, PROMISES.delivery.label], [Gem, PROMISES.payment.label]].map(([Icon, lbl]) => (
                   <div key={lbl as string} className="flex items-center gap-1.5 text-stone-400" style={{ fontSize: 11 }}>
-                    {/* @ts-ignore */}
+                    {/* @ts-expect-error */}
                     <Icon className="w-3.5 h-3.5 text-[#d4871a]" />{lbl as string}
                   </div>
                 ))}
@@ -539,7 +398,7 @@ export default function HomeClient({ categories, products, collections }: Props)
               Your Perfect<br /><em className="not-italic" style={{ color: '#d4871a' }}>Sofa</em> Awaits.
             </h2>
             <p className="text-zinc-500 mt-4" style={{ fontSize: 12 }}>
-              Cash on Delivery · Free White-Glove Setup · 30-Day Home Trial
+              {PROMISES.payment.short} · {PROMISES.delivery.short} · {PROMISES.guarantee.short}
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-8">
               <Link href="/shop/all" className="group w-full sm:w-auto inline-flex items-center justify-center gap-2 text-white font-semibold hover:bg-[#b8721a] active:scale-95 transition-all duration-200" style={{ background: '#d4871a', padding: '12px 28px', fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', borderRadius: 6 }}>

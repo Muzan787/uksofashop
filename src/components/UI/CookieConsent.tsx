@@ -2,37 +2,48 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import {
+  getConsent, grantConsent, revokeConsent,
+  CONSENT_GRANTED_EVENT, CONSENT_REOPEN_EVENT,
+} from '@/utils/consent';
 
 export default function CookieConsent() {
   const [showBanner, setShowBanner] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
 
   useEffect(() => {
-    // Check if the user has already answered
-    const consent = localStorage.getItem('cookie_consent');
+    const consent = getConsent();
     if (!consent) {
-      // Mount the component first
       setShowBanner(true);
-      // Trigger the slide-in animation slightly after mounting
       setTimeout(() => setIsAnimating(true), 50);
     } else if (consent === 'granted') {
-      window.dispatchEvent(new Event('cookies_accepted'));
+      window.dispatchEvent(new Event(CONSENT_GRANTED_EVENT));
     }
+
+    // The footer link and the /cookies page ask the banner to come back, so a
+    // visitor can change an answer they have already given. UK GDPR wants
+    // withdrawing consent to be as easy as giving it.
+    const reopen = () => {
+      setShowBanner(true);
+      setTimeout(() => setIsAnimating(true), 50);
+    };
+    window.addEventListener(CONSENT_REOPEN_EVENT, reopen);
+    return () => window.removeEventListener(CONSENT_REOPEN_EVENT, reopen);
   }, []);
 
   const handleConsent = (status: 'granted' | 'denied') => {
-    localStorage.setItem('cookie_consent', status);
-    
-    // Trigger the slide-out animation
     setIsAnimating(false);
-    
-    // Wait for the CSS animation to finish before removing from DOM
+
     setTimeout(() => {
       setShowBanner(false);
       if (status === 'granted') {
-        window.dispatchEvent(new Event('cookies_accepted'));
+        grantConsent();
+      } else {
+        // Deletes any analytics cookies already written and reloads, because
+        // GA and the Meta Pixel cannot be unloaded once they have run.
+        revokeConsent({ reload: getConsent() === 'granted' });
       }
-    }, 500); // 500ms matches our Tailwind duration
+    }, 500); // matches the slide-out duration
   };
 
   if (!showBanner) return null;

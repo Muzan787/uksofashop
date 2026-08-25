@@ -4,13 +4,14 @@ import { useState } from 'react'
 import { Mail, Phone, MapPin, Clock, Loader2, CheckCircle, MessageSquare, ArrowRight, Send } from 'lucide-react'
 import { submitContactForm } from '@/app/actions/contact'
 import Link from 'next/link'
-
+
+import { PHONE_HREF, PHONE_DISPLAY } from '@/constants/contact'
 const ACCENT = '#d4871a'
 
 const CONTACT_INFO = [
-  { icon: Phone,  label: 'Phone',    value: '07476 616022',              sub: 'Mon–Fri 9am–6pm, Sat 10am–4pm', href: 'tel:07476616022' },
+  { icon: Phone,  label: 'Phone',    value: PHONE_DISPLAY,              sub: 'Mon–Fri 9am–6pm, Sat 10am–4pm', href: PHONE_HREF },
   { icon: Mail,   label: 'Email',    value: 'uksofashop.co.uk@gmail.com',     sub: 'We reply within 24 hours',       href: 'mailto:uksofashop.co.uk@gmail.com' },
-  { icon: MapPin, label: 'Showroom', value: '7 Blacker St, Burnley BB10 2AF, UK',     sub: 'Visit us by appointment',        href: null },
+  { icon: MapPin, label: 'Showroom', value: 'Unit 02, Waverledge Street, Blackburn, BB6 7LS',     sub: 'Visit us by appointment',        href: null },
   { icon: Clock,  label: 'Hours',    value: 'Mon–Fri 9am–6pm',            sub: 'Saturday 10am–4pm',              href: null },
 ]
 
@@ -62,10 +63,10 @@ export default function ContactPage() {
         <div style={{ maxWidth: 1100, margin: '0 auto', padding: '40px 16px 32px' }}>
           <div style={{ fontSize: 9, color: ACCENT, textTransform: 'uppercase', letterSpacing: '0.22em', fontWeight: 700, marginBottom: 8 }}>Get in Touch</div>
           <h1 className="font-playfair" style={{ fontSize: 'clamp(28px,5vw,44px)', fontWeight: 700, color: '#fff', lineHeight: 1.1, marginBottom: 10 }}>
-            We'd Love to Hear<br /><em style={{ color: ACCENT, fontStyle: 'normal' }}>From You</em>
+            We&apos;d Love to Hear<br /><em style={{ color: ACCENT, fontStyle: 'normal' }}>From You</em>
           </h1>
           <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', maxWidth: 400 }}>
-            Whether it's a question about a sofa, a delivery query, or you just want to say hello — our team is here.
+            Whether it&apos;s a question about a sofa, a delivery query, or you just want to say hello — our team is here.
           </p>
         </div>
       </div>
@@ -134,7 +135,7 @@ export default function ContactPage() {
                 </div>
                 <h3 style={{ fontSize: 18, fontWeight: 700, color: '#1c1917', marginBottom: 8 }}>Message Sent!</h3>
                 <p style={{ fontSize: 13, color: '#78716c', lineHeight: 1.6, marginBottom: 20 }}>
-                  Thank you for reaching out. We'll get back to you within 24 hours.
+                  Thank you for reaching out. We&apos;ll get back to you within 24 hours.
                 </p>
                 <button onClick={() => setStatus('idle')} style={{ background: `${ACCENT}12`, border: `1px solid ${ACCENT}22`, color: ACCENT, fontSize: 11, fontWeight: 700, padding: '9px 20px', borderRadius: 7, cursor: 'pointer' }}>
                   Send Another
@@ -142,6 +143,15 @@ export default function ContactPage() {
               </div>
             ) : (
               <form action={handle} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                {/* Honeypot. Hidden from people, filled in by bots - see
+                    HONEYPOT_FIELD in src/app/actions/contact.ts. Not display:none,
+                    which some bots detect; tabIndex and aria-hidden keep it out of
+                    the keyboard order and away from screen readers. */}
+                <div aria-hidden="true" style={{ position: 'absolute', left: '-9999px', width: 1, height: 1, overflow: 'hidden' }}>
+                  <label htmlFor="company_website">Do not fill this in</label>
+                  <input id="company_website" name="company_website" type="text" tabIndex={-1} autoComplete="off" />
+                </div>
+
                 {status === 'error' && <div style={{ padding: '10px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 7, fontSize: 12, color: '#dc2626' }}>{errMsg}</div>}
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>

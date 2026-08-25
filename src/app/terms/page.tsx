@@ -1,16 +1,25 @@
+import type { Metadata } from 'next'
 
 
 // ─── TERMS PAGE  →  src/app/terms/page.tsx ────────────────────────────────────
 import { FileText, Link } from 'lucide-react'
 
+
+export const metadata: Metadata = {
+  title: 'Terms & Conditions',
+  description:
+    'Our terms of sale: pricing, payment on delivery, delivery to UK Mainland, and your 14-day right to cancel.',
+  alternates: { canonical: '/terms' },
+}
+
 const ACCENT = '#d18b41'
 
 const termsSections = [
-  { num: '1.', title: 'Introduction', body: 'These Terms and Conditions govern your use of uksofashop.co.uk and the purchase of goods from UK Sofa Shop (UK Sofashop). By placing an order you confirm that you have read, understood, and agree to these terms.' },
+  { num: '1.', title: 'Introduction', body: 'These Terms and Conditions govern your use of uksofashop.co.uk and the purchase of goods from UK Sofa Shop. By placing an order you confirm that you have read, understood, and agree to these terms.' },
   { num: '2.', title: 'Placing an Order', body: 'When you submit an order, you are making an offer to purchase. We will send an acknowledgement email upon receipt. This is not an acceptance. The contract is formed when we dispatch the goods.' },
-  { num: '3.', title: 'Pricing and Payment', body: 'All prices are inclusive of VAT at the current rate. We offer Cash on Delivery — payment is due in full to the delivery driver upon arrival, via cash or mobile card terminal.' },
-  { num: '4.', title: 'Delivery', body: 'Free delivery applies to Mainland UK orders over £500. Delivery dates are estimates. Delays may occasionally occur due to unforeseen factors. We will notify you of any significant delays.' },
-  { num: '5.', title: 'Returns and Cancellations', body: 'You may cancel before dispatch free of charge. After delivery, you have 30 days to return items in original condition. A £50 collection fee applies, deducted from your refund. Faulty items are collected free of charge.' },
+  { num: '3.', title: 'Pricing and Payment', body: 'All prices are inclusive of VAT at the current rate. Payment is due in full on delivery, either in cash to the delivery driver or by bank transfer completed at the point of delivery. We do not accept card payments. No payment is taken at the time of ordering.' },
+  { num: '4.', title: 'Delivery', body: 'Delivery is free to UK Mainland addresses with no minimum order value, to the ground floor or a ground-floor room of your choice. Delivery dates are estimates. Delays may occasionally occur due to unforeseen factors. We will notify you of any significant delays.' },
+  { num: '5.', title: 'Returns and Cancellations', body: 'Under the Consumer Contracts Regulations you have 14 days from delivery to cancel your order. Return carriage is arranged and paid for by the customer. Faulty or damaged items are collected free of charge - see our Delivery & Returns page for the full process.' },
   { num: '6.', title: 'Guarantees', body: 'All sofas include a 1-year structural guarantee covering the frame and springs. This excludes wear and tear, accidental damage, and fabric fading.' },
   { num: '7.', title: 'Limitation of Liability', body: 'We are not liable for indirect or consequential losses arising from use of our products or services. Our liability is limited to the purchase price of the affected goods.' },
   { num: '8.', title: 'Governing Law', body: 'These terms are governed by the laws of England and Wales. Any disputes will be subject to the exclusive jurisdiction of the courts of England and Wales.' },

@@ -1,6 +1,15 @@
 // ─── PRIVACY PAGE  →  src/app/privacy/page.tsx ────────────────────────────────
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import { ShieldCheck } from 'lucide-react'
+
+
+export const metadata: Metadata = {
+  title: 'Privacy Policy',
+  description:
+    'What personal data UK Sofa Shop collects, why we hold it, how long we keep it, and how to ask us to delete it.',
+  alternates: { canonical: '/privacy' },
+}
 
 const ACCENT = '#d4871a'
 
@@ -38,7 +47,7 @@ function PrivacyPage() {
         <div style={{ background: '#fff', borderRadius: 14, padding: '28px 24px', border: '1px solid #f0ede8', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
 
           <p style={{ fontSize: 13, color: '#57534e', lineHeight: 1.8, marginBottom: 28, paddingBottom: 20, borderBottom: '1px solid #f5f5f4' }}>
-            At UK Sofa Shop (operated by UK Sofashop), we are committed to protecting your privacy. This policy explains when and why we collect personal information, how we use it, and how we keep it secure.
+            At UK Sofa Shop (operated by UK Sofa Shop), we are committed to protecting your privacy. This policy explains when and why we collect personal information, how we use it, and how we keep it secure.
           </p>
 
           <ProseSection num="1." title="Information We Collect">

@@ -3,6 +3,8 @@
 
 import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { adminGuard, requireAdmin } from '@/utils/auth'
+import { pickCanonicalCategorySlug } from '@/utils/productUrl'
 import { z } from 'zod'
 
 export interface VariantInput {
@@ -11,7 +13,6 @@ export interface VariantInput {
   color: string;
   color_hex: string;
   material: string;
-  stock: string;
   priceAdjustment: string;
   image_url: string;
 }
@@ -26,10 +27,41 @@ const productSchema = z.object({
   variantGroupId: z.string().uuid().optional().nullable().or(z.literal('')),
   sizeLabel: z.string().optional().nullable().or(z.literal('')),
   subgroupLabel: z.string().optional().nullable().or(z.literal('')),
-  gallery_images: z.string().optional(), // <-- NEW: Accepts stringified array of URLs
+  gallery_images: z.string().optional(),
+  // Only 'uk' ever renders a claim; anything else is silent.
+  origin: z.enum(['uk', 'imported', 'unspecified']).default('unspecified'),
+  customMade: z.boolean().default(false),
 })
 
+
+/**
+ * products.category_id is the single canonical category that decides a
+ * product's URL. product_categories says where it can be BROWSED; this says
+ * where it LIVES. Without setting it, every new product lands with a null
+ * category_id and the sitemap and Merchant feed fall back to different
+ * placeholder paths - which is exactly the duplicate-URL bug this fixes.
+ */
+async function resolveCanonicalCategoryId(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  categoryIds: string[],
+): Promise<string | null> {
+  if (categoryIds.length === 0) return null
+
+  const { data: cats } = await supabase
+    .from('categories')
+    .select('id, slug')
+    .in('id', categoryIds)
+
+  if (!cats || cats.length === 0) return null
+
+  const winner = pickCanonicalCategorySlug(cats)
+  return cats.find(c => c.slug === winner)?.id ?? cats[0].id
+}
+
 export async function addProduct(formData: FormData, variants: VariantInput[]) {
+  const denied = await adminGuard()
+  if (denied) return { error: denied.error }
+
   const supabase = await createClient()
   const formCategoryIds = formData.getAll('categoryIds') as string[];
 
@@ -44,6 +76,8 @@ export async function addProduct(formData: FormData, variants: VariantInput[]) {
     sizeLabel: formData.get('sizeLabel') || null,
     subgroupLabel: formData.get('subgroupLabel') || null,
     gallery_images: formData.get('gallery_images') as string || '[]',
+    origin: (formData.get('origin') as string) || 'unspecified',
+    customMade: formData.get('customMade') === 'true',
   }
 
   const validatedData = productSchema.safeParse(rawData)
@@ -52,7 +86,7 @@ export async function addProduct(formData: FormData, variants: VariantInput[]) {
     return { error: validatedData.error.issues[0].message }
   }
 
-  const { title, slug, categoryIds, basePrice, description, specifications, variantGroupId, sizeLabel, subgroupLabel, gallery_images } = validatedData.data
+  const { title, slug, categoryIds, basePrice, description, specifications, variantGroupId, sizeLabel, subgroupLabel, gallery_images, origin, customMade } = validatedData.data
 
   let parsedSpecs = {};
   try { parsedSpecs = JSON.parse(specifications || '{}'); } catch { }
@@ -71,7 +105,9 @@ export async function addProduct(formData: FormData, variants: VariantInput[]) {
       variant_group_id: variantGroupId || null,
       size_label: sizeLabel || null,
       subgroup_label: subgroupLabel || null,
-      gallery_images: parsedGallery
+      gallery_images: parsedGallery,
+      origin,
+      custom_made: customMade
     })
     .select('id')
     .single()
@@ -84,6 +120,11 @@ export async function addProduct(formData: FormData, variants: VariantInput[]) {
   }))
   await supabase.from('product_categories').insert(productCategoryData)
 
+  const canonicalCategoryId = await resolveCanonicalCategoryId(supabase, categoryIds)
+  if (canonicalCategoryId) {
+    await supabase.from('products').update({ category_id: canonicalCategoryId }).eq('id', product.id)
+  }
+
   if (variants.length > 0) {
     const variantData = variants.map(v => ({
       product_id: product.id,
@@ -91,7 +132,6 @@ export async function addProduct(formData: FormData, variants: VariantInput[]) {
       color: v.color,
       color_hex: v.color_hex || null,
       material: v.material,
-      stock_quantity: parseInt(v.stock),
       price_adjustment: parseFloat(v.priceAdjustment || '0'),
       image_url: v.image_url || null
     }))
@@ -103,6 +143,8 @@ export async function addProduct(formData: FormData, variants: VariantInput[]) {
 }
 
 export async function deleteProduct(formData: FormData) {
+  await requireAdmin()
+
   const supabase = await createClient()
   const productId = formData.get('productId') as string
 
@@ -121,6 +163,8 @@ export async function deleteProduct(formData: FormData) {
 }
 
 export async function activateProduct(formData: FormData) {
+  await requireAdmin()
+
   const productId = formData.get('productId') as string
   if (!productId) return
   const supabase = await createClient()
@@ -133,6 +177,9 @@ export async function activateProduct(formData: FormData) {
 }
 
 export async function updateProduct(formData: FormData, variants: VariantInput[], productId: string) {
+  const denied = await adminGuard()
+  if (denied) return { error: denied.error }
+
   const supabase = await createClient()
 
   const title = formData.get('title') as string
@@ -145,6 +192,9 @@ export async function updateProduct(formData: FormData, variants: VariantInput[]
   const sizeLabel = formData.get('sizeLabel') as string || null
   const subgroupLabel = formData.get('subgroupLabel') as string || null
   const gallery_images = formData.get('gallery_images') as string || '[]'
+  const originRaw = formData.get('origin') as string
+  const origin = ['uk', 'imported', 'unspecified'].includes(originRaw) ? originRaw : 'unspecified'
+  const customMade = formData.get('customMade') === 'true'
 
   let parsedSpecs = {};
   try { parsedSpecs = JSON.parse(specifications); } catch { }
@@ -163,7 +213,9 @@ export async function updateProduct(formData: FormData, variants: VariantInput[]
       variant_group_id: variantGroupId,
       size_label: sizeLabel,
       subgroup_label: subgroupLabel,
-      gallery_images: parsedGallery
+      gallery_images: parsedGallery,
+      origin,
+      custom_made: customMade
     })
     .eq('id', productId)
 
@@ -175,6 +227,11 @@ export async function updateProduct(formData: FormData, variants: VariantInput[]
     await supabase.from('product_categories').delete().eq('product_id', productId)
     const productCategoryData = categoryIds.map(id => ({ product_id: productId, category_id: id }))
     await supabase.from('product_categories').insert(productCategoryData)
+
+    const canonicalCategoryId = await resolveCanonicalCategoryId(supabase, categoryIds)
+    if (canonicalCategoryId) {
+      await supabase.from('products').update({ category_id: canonicalCategoryId }).eq('id', productId)
+    }
   }
 
   if (variants.length > 0) {
@@ -185,7 +242,6 @@ export async function updateProduct(formData: FormData, variants: VariantInput[]
       color: v.color,
       color_hex: v.color_hex || null,
       material: v.material || null,
-      stock_quantity: parseInt(v.stock),
       price_adjustment: parseFloat(v.priceAdjustment || '0'),
       image_url: v.image_url || null
     }))

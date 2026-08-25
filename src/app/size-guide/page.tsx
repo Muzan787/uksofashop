@@ -5,7 +5,8 @@ import { Ruler, DoorOpen, Home, ArrowRight, ArrowDownToLine, Maximize } from 'lu
 const ACCENT = '#d4871a';
 
 export const metadata: Metadata = {
-  title: 'Sofa Size & Measurement Guide | UK Sofashop',
+  alternates: { canonical: '/size-guide' },
+  title: 'Sofa Size & Measurement Guide',
   description: 'Ensure your perfect sofa fits perfectly. Use our measurement guide or submit your home dimensions for a complimentary fit check.',
 };
 
@@ -46,7 +47,7 @@ export default function SizeGuidePage() {
                 <div>
                   <h3 className="text-lg font-bold text-[#1c1917] mb-2">1. Front Doors & Entrances</h3>
                   <p className="text-[#57534e] text-sm leading-relaxed">
-                    Open your door as wide as possible. Measure the narrowest point of the doorway (from the inside of the frame to the edge of the door). Don't forget to check the height of the door frame too.
+                    Open your door as wide as possible. Measure the narrowest point of the doorway (from the inside of the frame to the edge of the door). Don&apos;t forget to check the height of the door frame too.
                   </p>
                 </div>
               </div>
@@ -72,7 +73,7 @@ export default function SizeGuidePage() {
                 <div>
                   <h3 className="text-lg font-bold text-[#1c1917] mb-2">3. The Final Room</h3>
                   <p className="text-[#57534e] text-sm leading-relaxed">
-                    Map out the footprint of the sofa on your floor using masking tape or newspaper. Ensure there is enough room to walk around it and that it doesn't block doors, windows, or plug sockets.
+                    Map out the footprint of the sofa on your floor using masking tape or newspaper. Ensure there is enough room to walk around it and that it doesn&apos;t block doors, windows, or plug sockets.
                   </p>
                 </div>
               </div>

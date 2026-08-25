@@ -3,8 +3,12 @@
 
 import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { adminGuard, requireAdmin } from '@/utils/auth'
 
 export async function addCategory(formData: FormData, imageUrl: string) {
+  const denied = await adminGuard()
+  if (denied) return { error: denied.error }
+
   const supabase = await createClient()
 
   const name = formData.get('name') as string
@@ -30,6 +34,8 @@ export async function addCategory(formData: FormData, imageUrl: string) {
 }
 
 export async function deleteCategory(formData: FormData) {
+  await requireAdmin()
+
   const supabase = await createClient()
   const categoryId = formData.get('categoryId') as string
 

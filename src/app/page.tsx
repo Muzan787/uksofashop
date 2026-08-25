@@ -1,7 +1,15 @@
 // src/app/page.tsx
+import type { Metadata } from 'next';
 import { createClient } from '@/utils/supabase/server';
+import { summariseCollections } from '@/utils/collections';
 import HomeClient from '@/components/Home/HomeClient';
-import { Analytics } from '@vercel/analytics/next';
+import { organizationSchema, webSiteSchema, jsonLd } from '@/utils/schema';
+
+// The title deliberately repeats the layout default rather than using the
+// "%s | UK Sofa Shop" template - the homepage should not read "Home | ...".
+export const metadata: Metadata = {
+  alternates: { canonical: '/' },
+};
 
 export default async function HomePage() {
   const supabase = await createClient();
@@ -48,76 +56,20 @@ export default async function HomePage() {
     `)
     .limit(6); // Optional: Limit to top 6 on homepage
 
-  const collectionsData = (groupsData || [])
-    .map((group: any) => {
-      const activeProducts = group.products?.filter((p: any) => p.is_active) || [];
-      if (activeProducts.length === 0) return null;
-
-      const prices = activeProducts.map((p: any) => p.base_price);
-      const minPrice = Math.min(...prices);
-      const maxPrice = Math.max(...prices);
-
-      // --- SMART IMAGE SELECTION ALGORITHM ---
-      const selectedImages: string[] = [];
-      const usedImages = new Set<string>();
-
-      // Pass 1: Try to get 1 primary image from EACH distinct product
-      activeProducts.forEach((p: any) => {
-        let imgToUse = null;
-        if (p.product_variants?.[0]?.image_url) {
-          imgToUse = p.product_variants[0].image_url;
-        } else if (p.gallery_images?.[0]) {
-          imgToUse = p.gallery_images[0];
-        }
-
-        if (imgToUse && !usedImages.has(imgToUse)) {
-          selectedImages.push(imgToUse);
-          usedImages.add(imgToUse);
-        }
-      });
-
-      // Pass 2: If we still don't have 3 images, backfill with extra variants or gallery images
-      if (selectedImages.length < 3) {
-        for (const p of activeProducts) {
-          if (Array.isArray(p.product_variants)) {
-            for (const v of p.product_variants) {
-              if (v.image_url && !usedImages.has(v.image_url) && selectedImages.length < 3) {
-                selectedImages.push(v.image_url);
-                usedImages.add(v.image_url);
-              }
-            }
-          }
-          if (Array.isArray(p.gallery_images)) {
-            for (const img of p.gallery_images) {
-              if (!usedImages.has(img) && selectedImages.length < 3) {
-                selectedImages.push(img);
-                usedImages.add(img);
-              }
-            }
-          }
-          if (selectedImages.length >= 3) break;
-        }
-      }
-
-      return {
-        id: group.id,
-        name: group.name,
-        slug: group.slug,
-        minPrice,
-        maxPrice,
-        images: selectedImages.slice(0, 3) 
-      };
-    })
-    .filter(Boolean) as any[];
+  const collectionsData = summariseCollections(groupsData);
 
   return (
     <>
+      {/* Organization is referenced by @id from the Product offers, so the
+          seller resolves to one entity rather than being repeated per page.
+          WebSite carries the sitelinks search box. */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(organizationSchema()) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(webSiteSchema()) }} />
       <HomeClient
         categories={categoriesData}
         products={productsData}
         collections={collectionsData}
       />
-      <Analytics />
     </>
   );
 }

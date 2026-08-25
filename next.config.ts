@@ -9,22 +9,106 @@ const withPWA = withPWAInit({
 
 const nextConfig: NextConfig = {
   reactCompiler: true,
+
+  /**
+   * Apex -> www, permanently (308).
+   *
+   * www is the canonical host: every canonical tag, the sitemap, robots.txt
+   * and the JSON-LD all point there. Without this redirect the bare domain
+   * serves a full duplicate of the site on a second hostname, splitting
+   * ranking signals between the two.
+   *
+   * Vercel can also do this in Project -> Settings -> Domains by marking www
+   * as primary, which redirects at the edge before the app is invoked and is
+   * therefore cheaper. This rule is kept as a backstop so the behaviour is
+   * guaranteed by the repository rather than by dashboard state, and so it
+   * survives a move to different hosting.
+   */
+  // Removes the `X-Powered-By: Next.js` response header, which advertises the
+  // framework and version to anyone scanning.
+  poweredByHeader: false,
+
+  /**
+   * Security headers. There were none at all.
+   *
+   * The CSP is deliberately permissive about scripts: 'unsafe-inline' and
+   * 'unsafe-eval' are required by the Meta Pixel and Google's tag, both of
+   * which inject inline script, and by the inline Consent Mode defaults in the
+   * root layout. A nonce-based policy would be stricter but cannot cover the
+   * third-party tags, so this buys what it can - blocking framing, plugins,
+   * form hijacking and unexpected connection targets - without breaking
+   * measurement.
+   *
+   * Hosts allowed here and why:
+   *   googletagmanager / google-analytics / analytics.google  - GA4
+   *   connect.facebook.net / facebook.com                     - Meta Pixel
+   *   res.cloudinary.com                                      - product images
+   *   images.pexels.com                                       - one About photo
+   *   *.supabase.co                                           - database + auth
+   *   fonts.googleapis.com / fonts.gstatic.com                - webfonts
+   *   vitals.vercel-insights.com                              - Vercel Analytics
+   */
+  async headers() {
+    const csp = [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://connect.facebook.net https://*.vercel-insights.com https://va.vercel-scripts.com",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "font-src 'self' data: https://fonts.gstatic.com",
+      "img-src 'self' data: blob: https://res.cloudinary.com https://images.pexels.com https://www.googletagmanager.com https://www.google-analytics.com https://www.facebook.com",
+      // api.homedata.co.uk is the postcode -> address lookup in checkout, and
+      // api.cloudinary.com receives review photo uploads. Both are called from
+      // the browser, so omitting either silently breaks a customer flow.
+      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com https://connect.facebook.net https://graph.facebook.com https://vitals.vercel-insights.com https://api.homedata.co.uk https://api.cloudinary.com",
+      "frame-src 'self' https://www.facebook.com",
+      "object-src 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+      "frame-ancestors 'none'",
+      'upgrade-insecure-requests',
+    ].join('; ')
+
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          { key: 'Content-Security-Policy', value: csp },
+          // Two years, subdomains included, and preload-eligible.
+          { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'X-Frame-Options', value: 'DENY' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          { key: 'X-DNS-Prefetch-Control', value: 'on' },
+          {
+            key: 'Permissions-Policy',
+            value: 'camera=(), microphone=(), geolocation=(), interest-cohort=()',
+          },
+        ],
+      },
+    ]
+  },
+
+  async redirects() {
+    return [
+      {
+        source: '/:path*',
+        has: [{ type: 'host', value: 'uksofashop.co.uk' }],
+        destination: 'https://www.uksofashop.co.uk/:path*',
+        permanent: true,
+      },
+    ]
+  },
+
   images: {
     loader: 'custom', // <-- Tell Next.js to use a custom loader
     loaderFile: './cloudinaryLoader.js', // <-- Path to your custom loader
+    // Only hosts we actually load images from. Every entry here is a domain
+    // this site will fetch and re-serve images from, so the list stays short.
     remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'images.pexels.com',
-      },
-      {
-        protocol: 'https',
-        hostname: 'res.cloudinary.com',
-      },
-      {
-        protocol: 'https',
-        hostname: 'ae01.alicdn.com', // Added this new domain!
-      },
+      // 63 product, category and review images.
+      { protocol: 'https', hostname: 'res.cloudinary.com' },
+      // One stock photo on the About page.
+      { protocol: 'https', hostname: 'images.pexels.com' },
+      // ae01.alicdn.com was removed: no image anywhere referenced it.
     ],
   },
 };

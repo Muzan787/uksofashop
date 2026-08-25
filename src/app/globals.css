@@ -2,7 +2,6 @@
 
 @theme {
   --font-playfair: "Playfair Display", serif;
-  --font-inter: "Inter", sans-serif;
 
   --animate-marquee: marquee 25s linear infinite;
   --animate-shimmer: shimmer 2.5s linear infinite;
@@ -37,7 +36,12 @@
   }
 
   body {
-    @apply bg-white text-zinc-900 font-inter antialiased;
+    @apply bg-white text-zinc-900 antialiased;
+    /* Set explicitly rather than via Tailwind's font-sans utility. Redefining
+       --font-sans in @theme does not win against Tailwind's own default, so
+       the utility silently resolved to the stock ui-sans-serif stack and Geist
+       - which we download - was never actually applied to body copy. */
+    font-family: var(--font-geist-sans), system-ui, sans-serif;
     font-feature-settings: "ss01", "ss02", "cv01", "cv02";
     overscroll-behavior-y: none;
   }
@@ -113,6 +117,66 @@
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
+    /* Without this, an animation set to run `infinite` - the 25s marquee and
+       the 2.5s shimmer both do - restarts every 0.01ms instead of stopping.
+       That turns a slow drift into a strobe, which is considerably worse for
+       the people this media query exists to protect. Capping the iteration
+       count is what actually ends the animation. */
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    /* Belt and braces: also honour the preference for programmatic scrolling. */
+    scroll-behavior: auto !important;
   }
+}
+/* ─── JavaScript-free entrance and reveal ─────────────────────────────────────
+ *
+ * These replace the IntersectionObserver-driven `Reveal` wrapper and the
+ * `heroIn` state that the homepage used to run. Both worked by rendering
+ * content at opacity:0 and only making it visible once React had hydrated -
+ * so on a slow phone the hero headline and every section below it stayed
+ * invisible until the JavaScript arrived, and stayed invisible forever if it
+ * failed. Doing it in CSS means the content is painted on the first frame.
+ *
+ * The scroll-driven reveal is applied ONLY inside @supports. Where
+ * animation-timeline is unsupported (Safari, Firefox today) the rule never
+ * matches and content is simply visible with no animation. Content is never
+ * hidden waiting for a capability the browser may not have.
+ */
+
+/* No hero entrance animation, deliberately.
+ *
+ * A fade-up with a stagger delay holds the element at opacity:0 for the length
+ * of the delay - so the headline, the single most important thing above the
+ * fold, would be invisible for the first few hundred milliseconds. That is the
+ * same mistake the 3.4s splash screen made, just smaller. The hero is painted
+ * as it is and animates nothing.
+ */
+
+/* Section reveal on scroll, where the browser can do it without JavaScript. */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .reveal {
+      animation: fade-up 1ms linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 20%;
+    }
+  }
+}
+
+/* Card hover lift. Was a per-card useState driven by onMouseMove, which
+ * shipped state and handlers to every device including phones, where a
+ * pointer-tilt effect can never fire. */
+.lift-card {
+  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
+}
+@media (hover: hover) {
+  .lift-card:hover { transform: translateY(-4px) scale(1.02); }
+}
+
+/* Replaces inline onMouseEnter/onMouseLeave handlers that assigned
+ * element.style.background directly. */
+.tint-hover { transition: background 0.2s ease; }
+@media (hover: hover) {
+  .tint-hover:hover { background: #fef9f0; }
 }

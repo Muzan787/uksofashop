@@ -1,6 +1,15 @@
 // src/app/about/page.tsx
+import type { Metadata } from 'next'
 import Image from 'next/image';
 import { Shield, Heart, Truck } from 'lucide-react';
+
+
+export const metadata: Metadata = {
+  title: 'About Us',
+  description:
+    'A Blackburn furniture shop selling sofas with free UK Mainland delivery and cash on delivery. Who we are and how we work.',
+  alternates: { canonical: '/about' },
+}
 
 export default function AboutPage() {
   return (
@@ -9,7 +18,7 @@ export default function AboutPage() {
       <div className="bg-stone-900 text-white py-20 px-4 text-center">
         <h1 className="text-4xl md:text-5xl font-bold mb-4">About UK Sofa Shop</h1>
         <p className="text-stone-300 max-w-2xl mx-auto text-lg">
-          Bringing premium, handcrafted comfort to homes across the United Kingdom.
+          Bringing quality, comfortable furniture to homes across the United Kingdom.
         </p>
       </div>
 

@@ -41,5 +41,12 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*'],
+  // Everything under /admin except the admin PWA manifest. A manifest is
+  // fetched by the browser before any session is established, so redirecting
+  // it to the login page means the install prompt never appears. It contains
+  // nothing sensitive - a name, an icon and a start URL.
+  // Two entries on purpose. The second pattern requires a path segment after
+  // /admin, so on its own it would leave the bare /admin dashboard unmatched
+  // and reachable without a session.
+  matcher: ['/admin', '/admin/((?!manifest.webmanifest).*)'],
 }

@@ -11,17 +11,19 @@ import {
 } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { createClient } from '@/utils/supabase/client';
-
+import { ANNOUNCEMENTS } from '@/constants/promises';
+
+import { PHONE_HREF, PHONE_DISPLAY } from '@/constants/contact'
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Category { id: string; name: string; slug: string; }
 
 // ─── Announcement messages ────────────────────────────────────────────────────
-const announcements = [
-  { icon: Truck,     text: 'Free White-Glove Delivery on Orders Over £500' },
-  { icon: Shield,    text: '1-year Frame Guarantee on Every Sofa'         },
-  { icon: Sparkles,  text: 'Cash on Delivery Available Nationwide'          },
-  { icon: Clock,     text: 'Next-Day Delivery Available — Order Before 2pm' },
-];
+// Copy lives in src/constants/promises.ts; only the icons are chosen here.
+const ANNOUNCEMENT_ICONS = [Truck, Shield, Sparkles, Clock];
+const announcements = ANNOUNCEMENTS.map((text, i) => ({
+  icon: ANNOUNCEMENT_ICONS[i] ?? Truck,
+  text,
+}));
 
 // ─── Nav links ────────────────────────────────────────────────────────────────
 const navLinks = [
@@ -306,7 +308,7 @@ export default function Header() {
                     transition: 'color 0.4s ease',
                   }}
                 >
-                  British Craftsmanship
+                  Pay on Delivery
                 </div>
               </div>
             </Link>
@@ -406,7 +408,7 @@ export default function Header() {
                               <em style={{ color: '#d4871a', fontStyle: 'normal' }}>Workshop</em>
                             </div>
                             <p style={{ fontSize: 11, color: '#78716c', marginTop: 6, lineHeight: 1.5 }}>
-                              Discover the latest additions to our British luxury collection.
+                              Discover the latest additions to our collection.
                             </p>
                           </div>
                           <Link
@@ -750,10 +752,10 @@ export default function Header() {
           }}
         >
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'center' }}>
-            <a href="tel:07476616022"
+            <a href={PHONE_HREF}
               style={{ display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none', color: '#78716c', fontSize: 11 }}>
               <Phone style={{ width: 12, height: 12, color: '#d4871a' }} />
-              07476 616022
+              {PHONE_DISPLAY}
             </a>
             <Link href="/track-order"
               style={{ display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none', color: '#78716c', fontSize: 11 }}>
