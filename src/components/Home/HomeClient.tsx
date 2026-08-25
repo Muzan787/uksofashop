@@ -129,7 +129,7 @@ export default function HomeClient({ categories, products, collections }: Props)
       {/* ══════════════════════════════════════════ HERO ══════════════════════════════════════════ */}
       <section className="relative overflow-hidden pb-2 lg:pb-0 lg:min-h-[10vh]" style={{ background: '#0c0c0b' }}>
         <div className="absolute inset-0" style={{ opacity: 0.55 }}>
-          <Image src="https://res.cloudinary.com/dmlna04yk/image/upload/v1782255182/Main-Hero-Background-Image_bzpvmg.jpg" alt="Luxury living room" fill priority className="object-cover" style={{ objectPosition: 'center 30%' }} />
+          <Image src="https://res.cloudinary.com/dmlna04yk/image/upload/v1782255182/Main-Hero-Background-Image_bzpvmg.jpg" alt="Luxury living room" fill sizes="100vw" priority className="object-cover" style={{ objectPosition: 'center 30%' }} />
           <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, rgba(12,12,11,0.6) 0%, rgba(12,12,11,0.35) 50%, rgba(12,12,11,0.85) 100%)' }} />
         </div>
         <div className="absolute bottom-0 left-0 right-0 overflow-hidden pointer-events-none select-none">
@@ -211,7 +211,7 @@ export default function HomeClient({ categories, products, collections }: Props)
               {categories[0] && (
                 <Reveal>
                   <Link href={`/shop/${categories[0].slug}`} className="relative overflow-hidden group block sm:row-span-2" style={{ aspectRatio: '3/4', borderRadius: 10 }}>
-                    {categories[0].image_url ? <Image src={categories[0].image_url} alt={categories[0].name} fill className="object-cover group-hover:scale-105 transition-transform duration-600" /> : <div className="absolute inset-0 bg-stone-300" />}
+                    {categories[0].image_url ? <Image src={categories[0].image_url} alt={categories[0].name} fill sizes="(max-width:640px) 50vw, 33vw" className="object-cover group-hover:scale-105 transition-transform duration-600" /> : <div className="absolute inset-0 bg-stone-300" />}
                     <div className="absolute inset-0" style={{ background: 'linear-gradient(to top,rgba(0,0,0,0.65) 0%,transparent 60%)' }} />
                     <div className="absolute bottom-0 left-0 right-0 p-3">
                       <h3 className="font-playfair font-bold text-white" style={{ fontSize: 15 }}>{categories[0].name}</h3>
@@ -224,7 +224,7 @@ export default function HomeClient({ categories, products, collections }: Props)
               {categories.slice(1, 6).map((cat, i) => (
                 <Reveal key={cat.id} delay={i * 60}>
                   <Link href={`/shop/${cat.slug}`} className="relative overflow-hidden group block" style={{ aspectRatio: '4/3', borderRadius: 10 }}>
-                    {cat.image_url ? <Image src={cat.image_url} alt={cat.name} fill className="object-cover group-hover:scale-105 transition-transform duration-600" /> : <div className="absolute inset-0 bg-stone-300" />}
+                    {cat.image_url ? <Image src={cat.image_url} alt={cat.name} fill sizes="(max-width:640px) 50vw, 25vw" className="object-cover group-hover:scale-105 transition-transform duration-600" /> : <div className="absolute inset-0 bg-stone-300" />}
                     <div className="absolute inset-0" style={{ background: 'linear-gradient(to top,rgba(0,0,0,0.6) 0%,transparent 55%)' }} />
                     <div className="absolute bottom-0 left-0 right-0 p-2.5">
                       <h3 className="font-playfair font-bold text-white leading-tight" style={{ fontSize: 13 }}>{cat.name}</h3>
@@ -278,7 +278,7 @@ export default function HomeClient({ categories, products, collections }: Props)
       <section className="overflow-hidden" style={{ background: '#0c0c0b' }}>
         <div className="grid grid-cols-1 sm:grid-cols-2">
           <div className="relative" style={{ minHeight: 220 }}>
-            <Image src="https://res.cloudinary.com/dmlna04yk/image/upload/v1782255171/Home-Page-Furniture-Background-Image-2_cgmd50.jpg" alt="Sofa upholstery detail" fill className="object-cover" />
+            <Image src="https://res.cloudinary.com/dmlna04yk/image/upload/v1782255171/Home-Page-Furniture-Background-Image-2_cgmd50.jpg" alt="Sofa upholstery detail" fill sizes="100vw" className="object-cover" />
             <div className="absolute top-0 bottom-0 right-0 w-0.5" style={{ background: '#d4871a' }} />
           </div>
           <Reveal className="flex flex-col justify-center" delay={100}>
@@ -333,7 +333,7 @@ export default function HomeClient({ categories, products, collections }: Props)
       {/* ══════════════════════════════════════════ MOOD STRIP ══════════════════════════════════════════ */}
       <Reveal>
         <div className="relative overflow-hidden" style={{ height: 'clamp(140px,25vw,280px)' }}>
-          <Image src="https://res.cloudinary.com/dmlna04yk/image/upload/v1782255172/Home-Page-Furniture-Background-Image-3_dxl0qo.avif" alt="UK Sofa Shop interior" fill className="object-cover" style={{ objectPosition: 'center 40%' }} />
+          <Image src="https://res.cloudinary.com/dmlna04yk/image/upload/v1782255172/Home-Page-Furniture-Background-Image-3_dxl0qo.avif" alt="UK Sofa Shop interior" fill sizes="100vw" className="object-cover" style={{ objectPosition: 'center 40%' }} />
           <div className="absolute inset-0 flex items-center justify-center" style={{ background: 'rgba(12,12,11,0.5)' }}>
             <div className="text-center px-6">
               <p className="font-playfair italic text-white" style={{ fontSize: 'clamp(13px,3vw,26px)', letterSpacing: '-0.01em' }}>
@@ -381,7 +381,7 @@ export default function HomeClient({ categories, products, collections }: Props)
       {/* ══════════════════════════════════════════ FINAL CTA ══════════════════════════════════════════ */}
       <section className="relative py-20 overflow-hidden" style={{ background: '#0c0c0b' }}>
         <div className="absolute inset-0">
-          <Image src="https://res.cloudinary.com/dmlna04yk/image/upload/v1782255178/Home-Page-Furniture-Background-Image-4_j5camh.jpg" alt="Luxury living room" fill className="object-cover" style={{ opacity: 0.12 }} />
+          <Image src="https://res.cloudinary.com/dmlna04yk/image/upload/v1782255178/Home-Page-Furniture-Background-Image-4_j5camh.jpg" alt="Luxury living room" fill sizes="100vw" className="object-cover" style={{ opacity: 0.12 }} />
         </div>
         <div className="absolute bottom-0 right-0 overflow-hidden pointer-events-none select-none">
           <span className="block font-playfair font-bold text-white leading-none tracking-tighter whitespace-nowrap" style={{ fontSize: 'clamp(70px,18vw,200px)', opacity: 0.03, paddingRight: 24 }}>LUXE</span>

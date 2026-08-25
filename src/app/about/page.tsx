@@ -30,6 +30,8 @@ export default function AboutPage() {
               src="https://images.pexels.com/photos/1866149/pexels-photo-1866149.jpeg" 
               alt="Crafting furniture" 
               fill 
+              sizes="(max-width:768px) 100vw, 50vw"
+              
               className="object-cover"
             />
           </div>
