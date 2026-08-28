@@ -1,14 +1,14 @@
 @import "tailwindcss";
+/* Every design token lives in one file. See src/styles/tokens.css for the
+   colour ramps, type scale, radii, elevation, easing, duration and z-stack —
+   and for why nothing below this line may hardcode a value. */
+@import "../styles/tokens.css";
 
 @theme {
-  --font-playfair: "Playfair Display", serif;
-
-  --animate-marquee: marquee 25s linear infinite;
   --animate-shimmer: shimmer 2.5s linear infinite;
 
   @keyframes fade-in   { from { opacity: 0; }  to { opacity: 1; }  }
   @keyframes fade-up   { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
-  @keyframes marquee   { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
   @keyframes shimmer   { 0% { background-position: -1000px 0; } 100% { background-position: 1000px 0; } }
   @keyframes slideUp   { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
   @keyframes spin      { to { transform: rotate(360deg); } }
@@ -24,7 +24,8 @@
 
 @layer base {
   * {
-    @apply border-zinc-200;
+    /* One hairline weight for the whole site. */
+    @apply border-calico-300;
     -webkit-tap-highlight-color: transparent;
     box-sizing: border-box;
   }
@@ -32,11 +33,35 @@
   html {
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
-    scroll-behavior: smooth;
+    /* Deliberately auto. Smooth scrolling used to be global, which meant every
+       programmatic jump inherited it - a filter change, a pagination click, a
+       route transition - and each one animated a full page-height scroll the
+       visitor never asked for. */
+    scroll-behavior: auto;
+  }
+
+  /* Smooth scrolling, scoped to the one case that wants it: following an
+     in-page anchor. :has(:target) is true only while the URL carries a
+     fragment that matches an element, so nothing else can pick it up.
+
+     `:not(.lenis)` matters. Lenis stamps that class on <html> and takes over
+     anchor clicks itself (anchors: true). Leaving native smooth scrolling on
+     underneath it means two systems animating the same scroll position at
+     once, which reads as a stutter. This rule is the fallback for when Lenis
+     is absent — reduced motion, or the admin panel. */
+  @media (prefers-reduced-motion: no-preference) {
+    html:not(.lenis):has(:target) {
+      scroll-behavior: smooth;
+    }
+  }
+
+  /* Anchored headings clear the sticky header rather than hiding beneath it. */
+  :target {
+    scroll-margin-block-start: 96px;
   }
 
   body {
-    @apply bg-white text-zinc-900 antialiased;
+    @apply bg-calico-50 text-ink-700 antialiased;
     /* Set explicitly rather than via Tailwind's font-sans utility. Redefining
        --font-sans in @theme does not win against Tailwind's own default, so
        the utility silently resolved to the stock ui-sans-serif stack and Geist
@@ -46,18 +71,65 @@
     overscroll-behavior-y: none;
   }
 
+  /* Headings default to Fraunces. Small headings — card titles, list labels —
+     carry `font-body` to override this, because Fraunces below 20px loses the
+     optical-size advantage it was chosen for and reads worse than the sans.
+     A utility beats a base rule in the cascade, so the override is enough. */
   h1, h2, h3, h4, h5, h6 {
-    @apply font-playfair tracking-tight;
+    @apply font-display;
+    text-wrap: balance;
   }
 
-  /* CRITICAL for iOS — prevents zoom on input focus */
+  /* iOS zooms the page when a focused field is under 16px, so 16px is the
+     floor for every form control.
+   *
+   * Declared WITHOUT !important. With it, the rule also capped fields that
+   * deliberately want to be larger — the search overlay asks for a 32px
+   * Fraunces line and silently got 16px. A utility beats a base-layer rule, so
+   * a deliberate size now wins while an unstyled field still lands on 16px.
+   *
+   * The trade is that a field styled BELOW 16px would reintroduce the zoom.
+   * Nothing on the storefront does; if one ever needs to, raise it instead. */
   input, textarea, select {
-    font-size: 16px !important;
+    font-size: 16px;
   }
+
+  /* THE FOCUS RING
+   *
+   * Two colours, because no single one clears 3:1 against both grounds this
+   * site uses. Measured:
+   *
+   *   ember-500 on calico-50   2.76:1   fails
+   *   ember-700 on calico-50   5.69:1   passes
+   *   ember-700 on ink-900     2.89:1   FAILS  <- what this used to be
+   *   ember-300 on ink-900    10.94:1   passes
+   *
+   * So the ring is a variable, and dark surfaces override it. Custom
+   * properties inherit, so putting the override on the dark background
+   * utilities carries it to every control inside them — the footer's
+   * newsletter field, the search overlay, the mega menu, the lightbox, every
+   * editorial hero, the dark order summaries — without any of them knowing.
+   *
+   * The 3px offset matters too: it puts the ring on the element's PARENT
+   * background rather than its own fill, which is what lets an ember-500
+   * button keep a legible ring despite ember on ember being 1:1.
+   */
+  :root { --focus-ring: var(--color-ember-700); }
+
+  .bg-ink-900, .bg-ink-800, .bg-ink-700,
+  [data-ground="dark"] { --focus-ring: var(--color-ember-300); }
 
   :focus-visible {
-    outline: 2px solid #d4871a;
-    outline-offset: 2px;
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 3px;
+  }
+
+  /* A control that suppresses the outline must say what replaces it. This is
+     the replacement: same colour contract, drawn as a ring rather than an
+     outline so it can sit tight against a field's own border. */
+  .focus-ring-inset:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--focus-ring);
   }
 
   button {
@@ -80,13 +152,18 @@
   .overlay-gradient       { @apply absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent; }
   .overlay-gradient-light { @apply absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent; }
 
-  /* Touch target — Apple HIG minimum 44×44pt */
+  /* Touch target — Apple HIG minimum 44×44pt.
+   *
+   * Deliberately does NOT set `display`. It used to declare `display: flex`,
+   * which sits in the same cascade layer as `hidden` and `lg:grid` and beat
+   * both of them — so a header icon marked `hidden lg:grid` stayed visible on
+   * a phone, and the `lg:hidden` hamburger kept its 44px on desktop and pushed
+   * the wordmark out of position. A utility that guarantees a hit area has no
+   * business deciding whether the element is displayed at all. Pair it with
+   * `grid place-items-center` or `inline-flex items-center justify-center`. */
   .touch-target {
     min-width: 44px;
     min-height: 44px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
   }
 
   /* Safe area helpers */
@@ -95,8 +172,24 @@
   .mb-safe { margin-bottom: env(safe-area-inset-bottom); }
 
   /* Bottom nav clearance */
+  /* Clearance for the mobile bottom navigation.
+   *
+   * That navigation is `lg:hidden`, so above the breakpoint there is nothing to
+   * clear and this has to collapse to nothing. Building the query into the
+   * utility rather than leaving every caller to pair it with `lg:pb-0` is the
+   * difference between correct and coincidental: the two are ordinary utilities
+   * of equal specificity, so which one wins depends on the order they happen to
+   * land in the stylesheet, and here `pb-bottom-nav` won at every width — 68px
+   * of dead space under the desktop footer.
+   *
+   * 68px rather than the 57px in --bottom-nav, because this is clearance above
+   * the bar rather than a flush fit against it. */
   .pb-bottom-nav {
     padding-bottom: calc(68px + env(safe-area-inset-bottom));
+  }
+
+  @media (width >= 64rem) {
+    .pb-bottom-nav { padding-bottom: 0; }
   }
 
   /* Snap scrolling for carousels */
@@ -107,22 +200,98 @@
   /* iOS momentum scrolling */
   .scroll-momentum { -webkit-overflow-scrolling: touch; }
 
-  /* Button press feedback */
-  .btn-press:active { transform: scale(0.95); transition: transform 0.1s; }
-
   /* No text selection on UI chrome */
   .no-select { -webkit-user-select: none; user-select: none; }
+}
+
+/* ─── Tap feedback, everywhere ────────────────────────────────────────────────
+ *
+ * -webkit-tap-highlight-color is transparent site-wide, which removed the one
+ * piece of feedback a phone gives for free. `.btn-press` was supposed to
+ * replace it and was applied to about six elements, so most of the site
+ * answered a tap with nothing at all.
+ *
+ * Two decisions make this safe to apply that broadly:
+ *
+ *   `scale`, not `transform: scale()`. The independent transform property
+ *   COMPOSES with transform instead of replacing it, so the four elements
+ *   centred with -translate-y-1/2 keep their centring, the product card keeps
+ *   its hover lift while being pressed, and the header keeps its hide-on-scroll
+ *   translate. Written as `transform` this rule would have thrown all of them
+ *   back to the origin mid-press.
+ *
+ *   No `!important` and base-layer placement, so a component that genuinely
+ *   needs a different press can just say so.
+ */
+@layer base {
+  a[href],
+  button,
+  summary,
+  label[for],
+  select,
+  input[type='submit'],
+  input[type='button'],
+  input[type='reset'],
+  input[type='checkbox'],
+  input[type='radio'],
+  [role='button'],
+  [role='tab'],
+  [role='link'],
+  [role='menuitem'],
+  [role='option'],
+  [data-press] {
+    transition: scale var(--dur-press) var(--ease-out-expo);
+  }
+
+  a[href]:active,
+  button:not(:disabled):active,
+  summary:active,
+  label[for]:active,
+  select:active,
+  input[type='submit']:not(:disabled):active,
+  input[type='button']:not(:disabled):active,
+  input[type='reset']:not(:disabled):active,
+  input[type='checkbox']:active,
+  input[type='radio']:active,
+  [role='button']:not([aria-disabled='true']):active,
+  [role='tab']:active,
+  [role='link']:active,
+  [role='menuitem']:active,
+  [role='option']:active,
+  [data-press]:active {
+    scale: 0.97;
+  }
+
+  /* Anything that opts out — a full-bleed hero link, a skip link, a row that
+     should not visibly shrink. */
+  [data-press='off']:active {
+    scale: 1;
+  }
+
+  /* A transform is ignored on an inline box, so a link inside a paragraph
+     would answer a tap with nothing. Those carry .hover-link, and they dim
+     instead — the one feedback that works on an inline element. */
+  .hover-link:active {
+    opacity: 0.65;
+    transition: opacity var(--dur-press) var(--ease-out-expo);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
-    /* Without this, an animation set to run `infinite` - the 25s marquee and
-       the 2.5s shimmer both do - restarts every 0.01ms instead of stopping.
-       That turns a slow drift into a strobe, which is considerably worse for
-       the people this media query exists to protect. Capping the iteration
-       count is what actually ends the animation. */
+    /* Without this, an animation set to run `infinite` - the 2.5s shimmer on
+       the loading skeletons still does, now that the marquee is gone -
+       restarts every 0.01ms instead of stopping. That turns a slow drift into
+       a strobe, which is considerably worse for the people this media query
+       exists to protect. Capping the iteration count is what actually ends
+       the animation. */
     animation-iteration-count: 1 !important;
+    /* Delay too, not just duration. A staggered grid uses `animation-delay`
+       with `fill-mode: both`, which holds each card at opacity 0 for the
+       length of its delay — so capping only the duration still left the last
+       card in a nine-up grid invisible for a third of a second. */
+    animation-delay: 0ms !important;
     transition-duration: 0.01ms !important;
     /* Belt and braces: also honour the preference for programmatic scrolling. */
     scroll-behavior: auto !important;
@@ -160,23 +329,1152 @@
       animation-timeline: view();
       animation-range: entry 0% cover 20%;
     }
+
+    /* A rating distribution bar growing from its left edge. Same contract as
+     * .reveal above: the bar is drawn at its true width by default and this
+     * animates only its arrival, so a browser without animation-timeline — or
+     * a visitor whose JavaScript never runs — sees the finished chart. */
+    .bar-fill {
+      animation: bar-grow 1ms linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 30%;
+    }
   }
 }
 
-/* Card hover lift. Was a per-card useState driven by onMouseMove, which
- * shipped state and handlers to every device including phones, where a
- * pointer-tilt effect can never fire. */
-.lift-card {
-  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
-  will-change: transform;
-}
-@media (hover: hover) {
-  .lift-card:hover { transform: translateY(-4px) scale(1.02); }
+@keyframes bar-grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+/* A grid of cards arriving on a diagonal, driven by the scroll rather than by
+ * a load-time delay.
+ *
+ * The rule this replaces put `animation: fadeUp … <delay>ms both` inline on
+ * every card. `both` holds an element at the keyframe FROM state for the
+ * length of its delay, so each card was deliberately invisible until its turn
+ * came — and anything that stopped the animation finishing left a grid of
+ * products nobody could see.
+ *
+ * Here the finished state is the default and the whole rule lives inside
+ * @supports. Where animation-timeline is unsupported — Safari and Firefox
+ * today — it never matches and the cards are simply there. --card-step is the
+ * card's diagonal: row + column, so the wave crosses the grid corner to
+ * corner instead of marching along one row.
+ */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .card-in {
+      animation: card-in 1ms linear both;
+      animation-timeline: view();
+      animation-range:
+        entry calc(var(--card-step, 0) * 5%)
+        cover calc(22% + var(--card-step, 0) * 5%);
+    }
+  }
 }
 
-/* Replaces inline onMouseEnter/onMouseLeave handlers that assigned
- * element.style.background directly. */
-.tint-hover { transition: background 0.2s ease; }
+@keyframes card-in { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+
+/* A form field refusing an answer. Small and once — a big shake reads as the
+ * page breaking rather than as one value being wrong. */
+@keyframes field-shake {
+  0%, 100% { transform: translateX(0); }
+  20%      { transform: translateX(-5px); }
+  40%      { transform: translateX(5px); }
+  60%      { transform: translateX(-3px); }
+  80%      { transform: translateX(2px); }
+}
+
+/* A stroke drawing itself. The element sets its own dasharray to the path
+ * length; this only ever runs it down to zero. */
+@keyframes draw-stroke { to { stroke-dashoffset: 0; } }
+
+/* A dialog arriving. From 0.96 rather than from nothing: scaling up from zero
+ * reads as a thing being created, which a dialog is not doing. */
+@keyframes modal-in { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+
+/* ─── Motion primitives ───────────────────────────────────────────────────────
+ * Support for src/components/Motion. Anything here is something Framer cannot
+ * express on its own — a :hover state, or a rule for when JavaScript never
+ * arrives at all.
+ */
+
+/* THE GUARD lives in the root layout, not here.
+ *
+ * Every primitive marks its animated element with data-motion, and Framer
+ * writes the hidden `initial` state into the server-rendered HTML — so without
+ * a fallback a visitor whose JavaScript fails would be left looking at a page
+ * of invisible content. That is the exact bug this codebase already fixed once
+ * by moving the old reveals out of JavaScript.
+ *
+ * The fallback is a <noscript><style> block in src/app/layout.tsx, because a
+ * rule that has to apply ONLY when scripting is off cannot be written in a
+ * stylesheet that always loads. See MOTION_NOSCRIPT_GUARD there.
+ */
+
+/* ─── View transitions ────────────────────────────────────────────────────────
+ *
+ * Two things happen on a navigation. The page as a whole lifts out and settles
+ * back in; and any element carrying a view-transition-name — in practice, a
+ * product image — is lifted out of that and morphed from where it was to where
+ * it lands. The morph is the point. The page fade is what stops everything
+ * else from looking like a hard cut around it.
+ */
+
+/* Real document navigations: typing a URL, arriving from a search result,
+ * submitting the search form. Client-side navigation is handled in
+ * src/components/Motion/ViewTransitions.tsx, which can decide whether a given
+ * navigation deserves a transition at all. */
+@view-transition {
+  navigation: auto;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  ::view-transition-old(root) {
+    animation: vt-leave 300ms var(--ease-in-out-quart) both;
+  }
+  ::view-transition-new(root) {
+    animation: vt-arrive 500ms var(--ease-out-expo) both;
+  }
+
+  @keyframes vt-leave {
+    to { opacity: 0; transform: translateY(-12px); }
+  }
+  @keyframes vt-arrive {
+    from { opacity: 0; transform: translateY(12px); }
+  }
+
+  /* A product image is not part of the page fade — it is the one thing that
+     travels. It gets the settle duration, longer than either half of the page
+     transition, so the image is still moving as the new page arrives under it
+     and the two read as one movement rather than two. */
+  ::view-transition-group(.product-image) {
+    animation-duration: var(--dur-settle);
+    animation-timing-function: var(--ease-out-expo);
+  }
+  /* Cross-fading the two snapshots on top of the morph muddies it — the same
+     photograph dissolving into itself. The group transform does the work. */
+  ::view-transition-image-pair(.product-image) {
+    isolation: auto;
+  }
+  ::view-transition-old(.product-image),
+  ::view-transition-new(.product-image) {
+    animation: none;
+    mix-blend-mode: normal;
+  }
+}
+
+/* Under reduced motion the snapshot is taken and swapped with no movement at
+   all — which is still a clean swap, never a blank frame. */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}
+
+/* Lenis. Transcribed from lenis/dist/lenis.css rather than imported, so the
+ * rules are visible next to everything else that governs scrolling and cannot
+ * change underneath us on a package bump. Keep in step if Lenis is upgraded. */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+/* While a drawer or modal has the page locked. */
+.lenis:not(.lenis-autoToggle).lenis-stopped {
+  overflow: clip;
+}
+/* Anything with its own scrollbar — drawer bodies, modal panels, the product
+ * carousels — keeps native scrolling and does not chain out to the page. */
+.lenis [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+/* An iframe swallows wheel events and strands the page mid-scroll. */
+.lenis.lenis-smooth iframe {
+  pointer-events: none;
+}
+
+/* Marquee. The animation is here rather than inline because pausing on hover
+ * and on keyboard focus is not something an inline style can express — and a
+ * ticker that cannot be paused is the main reason tickers are unpopular. */
+.marquee {
+  display: flex;
+  overflow: hidden;
+  width: 100%;
+}
+.marquee-copy {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--marquee-gap, 3rem);
+  padding-inline-end: var(--marquee-gap, 3rem);
+}
+.marquee-track {
+  animation: marquee-pass var(--marquee-duration, 40s) linear infinite;
+  animation-direction: var(--marquee-direction, normal);
+  will-change: transform;
+}
+.marquee:hover .marquee-track,
+.marquee:focus-within .marquee-track {
+  animation-play-state: paused;
+}
+@keyframes marquee-pass {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-100%); }
+}
+/* No motion preference: it stops entirely and becomes a hand-scrolled row. */
+@media (prefers-reduced-motion: reduce) {
+  .marquee { overflow-x: auto; }
+  .marquee-track { animation: none; }
+}
+
+/* The carousel's drag hint. Nudges twice and stops — it is a hint, not a
+ * ticker, and it is removed entirely the moment the rail is actually scrolled. */
+.drag-hint {
+  animation: drag-hint var(--dur-cinematic) var(--ease-in-out-quart) 2;
+}
+@keyframes drag-hint {
+  0%, 100% { translate: 0 0; }
+  50%      { translate: 6px 0; }
+}
+
+/* The hero's ken burns. 20 seconds from 1.0 to 1.06 and back, so it never
+ * snaps back to the start — a slow breath rather than a loop with a seam.
+ * Uses `scale` so it composes with the Parallax translate on the parent
+ * instead of overwriting it. */
+.hero-kenburns {
+  scale: 1;
+  animation: hero-kenburns 40s ease-in-out infinite;
+  will-change: scale;
+}
+@keyframes hero-kenburns {
+  0%   { scale: 1; }
+  50%  { scale: 1.06; }
+  100% { scale: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-kenburns { animation: none; scale: 1; }
+}
+
+/* The cart badge pops when the count changes. Driven by remounting the badge
+ * with key={itemCount} rather than a piece of state and a 600ms timer — the
+ * animation replays because the element is new, and there is nothing to clean
+ * up if the visitor navigates away mid-pop. */
+.cart-pop {
+  animation: cart-pop var(--dur-settle) var(--ease-out-expo) both;
+}
+@keyframes cart-pop {
+  0%   { scale: 0.4; opacity: 0; }
+  55%  { scale: 1.18; opacity: 1; }
+  100% { scale: 1; opacity: 1; }
+}
+
+/* ─── The brand entrance ──────────────────────────────────────────────────────
+ *
+ * 900ms, once per session, homepage only. See BrandEntrance.tsx for why the
+ * hero renders underneath rather than behind.
+ *
+ * `display: none` is the default and the class that lifts it is added by a
+ * pre-paint script in the root layout. That ordering is the whole safety
+ * story: no script, no class, no curtain — and the markup costs nothing
+ * because it was never shown.
+ */
+.brand-entrance {
+  display: none;
+}
+
+html.entrance .brand-entrance {
+  display: flex;
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-entrance);
+  align-items: center;
+  justify-content: center;
+  background: var(--color-calico-50);
+  pointer-events: none;
+  /* Starts at 200ms so the wordmark has drawn before the floor moves. Ends at
+     exactly 900ms: 200 + 700. */
+  animation: entrance-wipe 700ms var(--ease-in-out-quart) 200ms both;
+}
+
+html.entrance .brand-entrance__mark {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+html.entrance .brand-entrance__word {
+  font-family: var(--font-display);
+  font-size: var(--text-h1);
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  color: var(--color-ink-900);
+  white-space: nowrap;
+  /* The draw: the wordmark is uncovered left to right rather than faded in. */
+  clip-path: inset(0 100% 0 0);
+  animation: entrance-draw 450ms var(--ease-out-expo) 60ms both;
+}
+
+html.entrance .brand-entrance__accent {
+  color: var(--color-ember-700);
+}
+
+/* The ember rule chases the letters, arriving just behind them. */
+html.entrance .brand-entrance__rule {
+  display: block;
+  height: 2px;
+  width: 100%;
+  background: var(--color-ember-500);
+  transform-origin: left center;
+  scale: 0 1;
+  animation: entrance-rule 420ms var(--ease-out-expo) 140ms both;
+}
+
+@keyframes entrance-draw {
+  to { clip-path: inset(0 0 0 0); }
+}
+@keyframes entrance-rule {
+  to { scale: 1 1; }
+}
+@keyframes entrance-wipe {
+  to { transform: translateY(-100%); visibility: hidden; }
+}
+
+/* Belt and braces. The script already declines to add the class under reduced
+   motion, but if it ever did, this stops the curtain existing at all rather
+   than leaving it frozen over the page by the 0.01ms duration override. */
+@media (prefers-reduced-motion: reduce) {
+  html.entrance .brand-entrance { display: none; }
+}
+
+/* ─── The hover vocabulary ────────────────────────────────────────────────────
+ *
+ * Six states, and nothing else. Before this, a product card fired four effects
+ * at once — a lift, a 1.10 image zoom, a dark overlay and a sliding "Quick
+ * View" label — while five other components assigned element.style.background
+ * from inline onMouseEnter handlers, which is a hover state that ships to a
+ * phone where it can never fire.
+ *
+ * Two rules hold it together:
+ *
+ *   The TRANSITION is declared outside the hover query, so :active and
+ *   :focus-visible get it too. Only the hover STATE sits behind
+ *   `@media (hover: hover)`, so nothing fires on touch.
+ *
+ *   Structure is addressed with data attributes rather than nested classes.
+ *   A card marks its image `data-card-media` and the vocabulary finds it; the
+ *   card does not have to know what the hover does.
+ */
+
+/* ── Links ── an ember rule that draws left to right ─────────────────────── */
+.hover-link {
+  position: relative;
+  text-decoration: none;
+}
+.hover-link::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  bottom: -2px;
+  height: 1px;
+  background: var(--color-ember-500);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform var(--dur-swift) var(--ease-out-expo);
+}
+.hover-link:focus-visible::after { transform: scaleX(1); }
 @media (hover: hover) {
-  .tint-hover:hover { background: #fef9f0; }
+  .hover-link:hover::after { transform: scaleX(1); }
+}
+
+/* ── Buttons ── one ramp step darker, a 2px lift, and a press ────────────── */
+.hover-btn {
+  transition:
+    transform var(--dur-swift) var(--ease-out-expo),
+    scale var(--dur-press) var(--ease-out-expo),
+    background-color var(--dur-swift) var(--ease-out-expo),
+    box-shadow var(--dur-swift) var(--ease-out-expo);
+}
+/* The wash is a translucent ink layer laid over whatever the button already
+ * is, so one rule darkens ember, sage and white alike without having to know
+ * which it is sitting on. Buttons on a dark ground add `hover-btn-dark` and
+ * lighten instead.
+ *
+ * Mixing the wash from currentColor would have been neater, and it does not
+ * survive the build: the CSS compiler emits a flattened fallback that folds
+ * color-mix(… currentColor …) down to a solid currentColor, which paints the
+ * whole button black. Mixing from a var() it cannot resolve statically leaves
+ * the value alone. */
+.hover-btn { --hover-wash: color-mix(in srgb, var(--color-ink-900) 14%, transparent); }
+.hover-btn-dark { --hover-wash: color-mix(in srgb, var(--color-calico-50) 16%, transparent); }
+@media (hover: hover) {
+  .hover-btn:hover {
+    transform: translateY(-2px);
+    background-image: linear-gradient(var(--hover-wash), var(--hover-wash));
+  }
+}
+.hover-btn:active {
+  scale: 0.97;
+  transition-duration: var(--dur-press);
+}
+
+/* ── Product cards ── a lift and a breath of scale. Nothing else. ────────── */
+.hover-card {
+  /* scale is listed alongside transform so the universal press still eases.
+     A component that declares its own transition shadows the base rule, which
+     is how the press ended up snapping on cards the first time round. */
+  transition:
+    transform var(--dur-settle) var(--ease-out-expo),
+    scale var(--dur-press) var(--ease-out-expo);
+}
+.hover-card [data-card-media] img {
+  transition: transform var(--dur-settle) var(--ease-out-expo);
+}
+@media (hover: hover) {
+  .hover-card:hover { transform: translateY(-6px); }
+  .hover-card:hover [data-card-media] img { transform: scale(1.03); }
+}
+/* scale, not transform: the card is already translated -6px by the hover and
+ * a transform here would drop it back to the origin as you pressed it. */
+.hover-card:active {
+  scale: 0.97;
+  transition-duration: var(--dur-press);
+}
+
+/* ── Category tiles ── the caption lifts to make room for a second line ──── */
+.hover-tile img {
+  transition: transform var(--dur-settle) var(--ease-out-expo);
+}
+.hover-tile [data-tile-caption] {
+  transition: transform var(--dur-base) var(--ease-out-expo);
+}
+.hover-tile [data-tile-more] {
+  opacity: 0;
+  transform: translateY(6px);
+  transition:
+    opacity var(--dur-base) var(--ease-out-expo),
+    transform var(--dur-base) var(--ease-out-expo);
+}
+@media (hover: hover) {
+  .hover-tile:hover img { transform: scale(1.04); }
+  .hover-tile:hover [data-tile-caption] { transform: translateY(-4px); }
+  .hover-tile:hover [data-tile-more],
+  .hover-tile:focus-visible [data-tile-more] { opacity: 1; transform: translateY(0); }
+}
+/* No pointer, no hover: the second line is simply always there. */
+@media (hover: none) {
+  .hover-tile [data-tile-more] { opacity: 1; transform: none; }
+}
+
+/* ── Swatches ── a ring grows out of the swatch, the name fades in below ─── */
+.hover-swatch {
+  position: relative;
+  transition:
+    transform var(--dur-swift) var(--ease-out-expo),
+    scale var(--dur-press) var(--ease-out-expo);
+}
+.hover-swatch::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: inherit;
+  border: 1.5px solid var(--color-ember-500);
+  opacity: 0;
+  transform: scale(0.85);
+  transition:
+    opacity var(--dur-swift) var(--ease-out-expo),
+    transform var(--dur-swift) var(--ease-out-expo);
+  pointer-events: none;
+}
+.hover-swatch [data-swatch-name] {
+  opacity: 0;
+  transform: translateY(-4px);
+  transition:
+    opacity var(--dur-swift) var(--ease-out-expo),
+    transform var(--dur-swift) var(--ease-out-expo);
+}
+.hover-swatch:focus-visible::after { opacity: 1; transform: scale(1); }
+@media (hover: hover) {
+  .hover-swatch:hover::after { opacity: 1; transform: scale(1); }
+  .hover-swatch:hover [data-swatch-name] { opacity: 1; transform: translateY(0); }
+}
+.hover-swatch:active { scale: 0.97; transition-duration: var(--dur-press); }
+
+/* ── The custom cursor ────────────────────────────────────────────────────
+ *
+ * The class is added by src/components/Motion/Cursor.tsx, and only once it has
+ * decided to render — so a touch device or a visitor with reduced motion never
+ * loses the system cursor to a component that is not there to replace it.
+ *
+ * The second rule is the one that matters. Anything you can type into keeps its
+ * native cursor: losing the I-beam in an address field costs somebody their
+ * place in a postcode, and that is a real failure rather than a stylistic one.
+ */
+@media (hover: hover) and (pointer: fine) {
+  html.has-custom-cursor,
+  html.has-custom-cursor * {
+    cursor: none;
+  }
+
+  html.has-custom-cursor input,
+  html.has-custom-cursor textarea,
+  html.has-custom-cursor select,
+  html.has-custom-cursor [contenteditable],
+  html.has-custom-cursor [contenteditable] *,
+  html.has-custom-cursor [data-cursor-native],
+  html.has-custom-cursor [data-cursor-native] * {
+    cursor: auto;
+  }
+  html.has-custom-cursor select,
+  html.has-custom-cursor [data-cursor-native] button {
+    cursor: pointer;
+  }
+}
+
+/* ── Icon buttons ── a well fills in behind the glyph ────────────────────── */
+.hover-icon {
+  transition:
+    scale var(--dur-press) var(--ease-out-expo),
+    background-color var(--dur-swift) var(--ease-out-expo),
+    color var(--dur-swift) var(--ease-out-expo);
+}
+@media (hover: hover) {
+  .hover-icon:hover { background-color: var(--color-calico-200); }
+  /* On a dark ground the well has to lighten, not darken. */
+  .hover-icon-dark:hover { background-color: color-mix(in srgb, var(--color-calico-50) 12%, transparent); }
+}
+.hover-icon:active { scale: 0.97; transition-duration: var(--dur-press); }
+
+/* The stage an order is sitting at, on the tracking timeline. A ring leaving
+ * the dot rather than the dot itself changing size: a marker that grows and
+ * shrinks on a row of fixed markers makes the whole line look unstable. */
+@keyframes pulse-ring {
+  from { transform: scale(1);   opacity: 0.45; }
+  to   { transform: scale(2.4); opacity: 0; }
+}
+
+/* ─── Editorial prose ─────────────────────────────────────────────────────────
+ * The eleven content pages — about, the guides, the journal, the legal set —
+ * each styled their own paragraphs, so no two of them shared a measure, a body
+ * size or a line height. This is the one column they all read in.
+ *
+ * 68 characters. Below about 45 the eye jumps lines too often; above about 75
+ * it loses its place coming back to the left margin. 68 sits in the middle of
+ * the range typography has settled on for continuous reading.
+ */
+.prose {
+  max-width: 68ch;
+  font-size: var(--text-body);          /* 16px. Not 14 — this is reading, not UI. */
+  line-height: 1.75;
+  color: var(--color-ink-700);
+}
+
+.prose > * + * { margin-top: 1.25em; }
+
+.prose h2 {
+  font-family: var(--font-display);
+  font-size: var(--text-h2);
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  color: var(--color-ink-900);
+  margin-top: 2.5em;
+  /* Scrolled to from the table of contents, so the heading must not land
+     underneath the fixed header. */
+  scroll-margin-top: 6rem;
+}
+
+.prose h3 {
+  font-family: var(--font-display);
+  font-size: var(--text-h3);
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--color-ink-900);
+  margin-top: 2em;
+  scroll-margin-top: 6rem;
+}
+
+.prose h2 + *, .prose h3 + * { margin-top: 0.75em; }
+
+.prose strong { font-weight: 600; color: var(--color-ink-900); }
+
+.prose a {
+  color: var(--color-ember-700);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  text-decoration-thickness: 1px;
+  text-decoration-color: color-mix(in oklab, var(--color-ember-700) 35%, transparent);
+  transition: text-decoration-color var(--dur-swift) var(--ease-out-expo);
+}
+.prose a:hover { text-decoration-color: var(--color-ember-700); }
+
+.prose ul, .prose ol { padding-left: 1.5em; }
+.prose ul { list-style: disc; }
+.prose ol { list-style: decimal; }
+.prose li + li { margin-top: 0.5em; }
+.prose li::marker { color: var(--color-ember-700); }
+
+.prose hr {
+  border: 0;
+  border-top: 1px solid var(--color-calico-300);
+  margin-top: 3em;
+  margin-bottom: 3em;
+}
+
+.prose dt { font-weight: 600; color: var(--color-ink-900); }
+.prose dd { margin-left: 0; color: var(--color-ink-700); }
+
+/* The small print at the foot of a policy. */
+.prose .fine { font-size: var(--text-body-sm); color: var(--color-ink-500); }
+
+/* A block inside .prose that supplies its own layout — an empty state, a
+   calculator. Undoes the column's vertical rhythm rather than fighting it. */
+.prose .not-prose { margin-top: 0; }
+
+/* ═════════════════════════════════════════════════════════════════════════
+   THE ATMOSPHERE LAYER
+   ─────────────────────────────────────────────────────────────────────────
+   Everything the homepage needs to stop looking like a stack of rectangles:
+   the drifting aurora behind the hero, the grain over it, the pool of light a
+   floating sofa sits in, the sheen crossing a call to action, and the panned
+   gradient on a headline word.
+
+   Two rules hold this together, and both are about cost.
+
+   Nothing here uses `filter: blur()`. A blurred 600px element is an offscreen
+   buffer the size of the element, reallocated and repainted on every frame it
+   moves — which on a mid-range Android is the difference between a hero that
+   drifts and a hero that stutters. Every soft edge below is a radial gradient
+   instead, which the compositor draws for free.
+
+   Everything that moves animates `transform`, `opacity` or `background-position`
+   and nothing else. No width, no top, no box-shadow keyframes.
+
+   The site-wide prefers-reduced-motion block above already caps duration and
+   iteration count, so none of these run for a visitor who has asked for calm.
+   They are all decoration over content that is already painted; stopping them
+   never leaves anything invisible.
+   ═════════════════════════════════════════════════════════════════════════ */
+
+/* ── A NOTE ON WHAT WAS TURNED OFF ─────────────────────────────────────────
+ *
+ * This layer was built to the brief that beauty came before performance, and
+ * it went too far on a phone. Measured on the homepage at 375px it was running
+ * 31 infinite animations, 37 backdrop-filters, 12 blend layers, and holding 75
+ * elements on their own compositor layers via will-change — for the whole
+ * session, not just while anything was moving.
+ *
+ * None of that is free on a mid-range Android. It is the difference between a
+ * page that arrives and a page that crawls.
+ *
+ * What went, and what stayed:
+ *
+ *   Aurora        gradients KEPT, drift removed. The lighting is what the
+ *                 design needs; the movement was 14 permanently animating
+ *                 layers nobody was looking at.
+ *   Grain         kept above lg only. mix-blend-mode forces the compositor to
+ *                 read back the backdrop, which is the single most expensive
+ *                 thing here, and on a phone the texture is invisible anyway.
+ *   Glass         translucent fill and hairline KEPT, backdrop blur removed.
+ *                 37 separate backdrop snapshots was the bulk of the cost, and
+ *                 the panels read almost identically without it.
+ *   Sheen         hover only, one pass. It never ran on a phone regardless —
+ *                 there is no hover there — so this only removes cost.
+ *   Shimmer       gradient KEPT, the pan removed. background-clip:text
+ *                 re-rasterises the glyphs on every frame.
+ *   Float         the hero sofa and its shadow are still lit, no longer
+ *                 breathing.
+ *   will-change   removed everywhere it was permanent. It is a hint for
+ *                 something about to move, not a decoration.
+ *
+ * Still running: the two ember marquees, the scroll cue and the live dot.
+ * Four small things, which is what alive costs.
+ */
+
+/* ── Aurora ───────────────────────────────────────────────────────────────
+   Three washes of light behind a dark surface, drifting against each other on
+   different periods so the composition never repeats exactly. Inset negatively
+   so the soft edges are always outside the frame — a radial gradient that ends
+   inside the box shows its own circle.
+
+   The element must be aria-hidden and pointer-events:none; it is lighting. */
+.aurora {
+  position: absolute;
+  inset: -30%;
+  pointer-events: none;
+}
+
+.aurora__warm,
+.aurora__cool,
+.aurora__deep {
+  position: absolute;
+  inset: 0;
+  background-repeat: no-repeat;
+}
+
+/* The ember key light — top left, the brightest of the three. */
+.aurora__warm {
+  background-image: var(--glow-ember);
+  background-size: 78% 62%;
+  background-position: 14% 22%;
+  opacity: 0.55;
+}
+
+/* The indigo fill from the opposite corner. Cooler and much weaker — it is
+   there to stop the warm side reading as a single orange smear. */
+.aurora__cool {
+  background-image: var(--glow-indigo);
+  background-size: 66% 54%;
+  background-position: 88% 8%;
+  opacity: 0.5;
+}
+
+/* The low ember bounce, coming up off the floor of the section. */
+.aurora__deep {
+  background-image: var(--glow-ember);
+  background-size: 96% 56%;
+  background-position: 62% 104%;
+  opacity: 0.34;
+}
+
+@keyframes aurora-warm {
+  from { transform: translate3d(-3%, -2%, 0) scale(1); }
+  to   { transform: translate3d(4%, 3%, 0) scale(1.12); }
+}
+@keyframes aurora-cool {
+  from { transform: translate3d(3%, 0, 0) scale(1.06); }
+  to   { transform: translate3d(-4%, 4%, 0) scale(1); }
+}
+@keyframes aurora-deep {
+  from { transform: translate3d(0, 2%, 0) scale(1.04); }
+  to   { transform: translate3d(-3%, -3%, 0) scale(1.14); }
+}
+
+/* ── Grain ────────────────────────────────────────────────────────────────
+   Over a gradient, not under it. `soft-light` rather than `overlay` because
+   overlay pushes the darks black and takes the lift out of the top of
+   --grad-ink, which is the whole reason that gradient has a lift. */
+@media (width >= 64rem) {
+  .grain::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: var(--noise);
+    background-repeat: repeat;
+    mix-blend-mode: soft-light;
+    opacity: 0.5;
+    pointer-events: none;
+  }
+}
+
+/* On a light ground the same noise at a fraction of the strength, multiplied,
+   so it reads as paper tooth rather than as television static. */
+@media (width >= 64rem) {
+  .grain-light::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: var(--noise);
+    background-repeat: repeat;
+    mix-blend-mode: multiply;
+    opacity: 0.14;
+    pointer-events: none;
+  }
+}
+
+/* ── The floor ────────────────────────────────────────────────────────────
+   A cut-out object needs three things to read as being in a room rather than
+   pasted onto one: a pool of light under it, a contact shadow inside that
+   pool, and a slow drift that the shadow answers.
+
+   The shadow scales DOWN as the object rises. That inversion is the whole
+   trick — a shadow that moves with the object reads as a sticker with a blur
+   behind it; a shadow that tightens as the object lifts reads as distance. */
+.spotlight {
+  position: absolute;
+  background-image: var(--glow-floor);
+  pointer-events: none;
+}
+
+.contact-shadow {
+  position: absolute;
+  background-image: var(--glow-contact);
+  pointer-events: none;
+}
+
+.float-slow {
+  /* Static. See the note at the head of this section. */
+}
+
+@keyframes float-slow {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50%      { transform: translate3d(0, -14px, 0); }
+}
+
+@keyframes contact-breathe {
+  0%, 100% { transform: scale(1);         opacity: 0.85; }
+  50%      { transform: scale(0.9, 0.82); opacity: 0.55; }
+}
+
+/* ── Sheen ────────────────────────────────────────────────────────────────
+   A band of light crossing a surface every few seconds. Reserved for the
+   primary call to action — the one element on the page allowed to ask for
+   attention while nobody is pointing at it.
+
+   A translated fixed-width band, not an animated `left`, so it composes with
+   the button's own hover lift instead of triggering layout. */
+.sheen {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+.sheen::after {
+  content: '';
+  position: absolute;
+  inset-block: -50%;
+  inset-inline-start: 0;
+  width: 45%;
+  background-image: linear-gradient(
+    100deg,
+    transparent 0%,
+    color-mix(in srgb, var(--color-calico-50) 45%, transparent) 50%,
+    transparent 100%
+  );
+  transform: translateX(-220%) skewX(-16deg);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Only on a pointer, only while it is over the button, and once per pass. On a
+ * phone this rule never matches and the band is never drawn at all. */
+@media (hover: hover) {
+  .sheen:hover::after {
+    animation: sheen-pass 1.1s var(--ease-in-out-quart) 1;
+  }
+}
+@keyframes sheen-pass {
+  0%, 62% { transform: translateX(-220%) skewX(-16deg); }
+  100%    { transform: translateX(320%) skewX(-16deg); }
+}
+
+/* ── Panned gradient letterforms ──────────────────────────────────────────
+   The one word in a headline that is allowed to be a gradient.
+
+   `color: transparent` with background-clip:text is the only place on the site
+   where a colour token is not doing the work, so the plain colour is declared
+   first and only replaced inside @supports — anything that cannot clip a
+   background to text keeps ember-300 rather than rendering nothing at all. */
+.text-shimmer {
+  color: var(--color-ember-300);
+  background-image: var(--grad-text);
+  background-size: 260% 100%;
+  background-position: 0% 50%;
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+@supports (background-clip: text) or (-webkit-background-clip: text) {
+  .text-shimmer { color: transparent; }
+}
+@keyframes text-shimmer {
+  to { background-position: -260% 50%; }
+}
+
+/* ── Glass ────────────────────────────────────────────────────────────────
+   Two of them, because a translucent panel has to know whether it is sitting
+   on ink or on calico — the same rule the focus ring follows. */
+.glass-dark-panel {
+  background-color: color-mix(in srgb, var(--color-calico-50) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-calico-50) 15%, transparent);
+  box-shadow: var(--shadow-glass);
+}
+
+.glass-light-panel {
+  background-color: color-mix(in srgb, var(--color-calico-50) 88%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-ink-900) 8%, transparent);
+  box-shadow: var(--shadow-e1);
+}
+
+/* ── Gradient hairline border ─────────────────────────────────────────────
+   A 1px ember ring that no border-image can draw on a rounded box. Two masks
+   composited so only the padding ring survives — the fill is punched out, and
+   whatever the element's own background is shows through untouched. */
+.ring-gradient {
+  position: relative;
+}
+.ring-gradient::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background-image: var(--grad-ember);
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* ── The scroll cue ───────────────────────────────────────────────────────
+   A bead running down a hairline. It says "there is more below" without the
+   bouncing mouse-with-a-wheel that nobody on a phone has ever owned. */
+.cue-rail {
+  position: relative;
+  display: block;
+  width: 1px;
+  overflow: hidden;
+  background-color: color-mix(in srgb, var(--color-calico-50) 18%, transparent);
+}
+.cue-rail::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 45%;
+  background-image: linear-gradient(to bottom, transparent, var(--color-ember-500));
+  animation: cue-run 2.6s var(--ease-in-out-quart) infinite;
+}
+@keyframes cue-run {
+  0%   { transform: translateY(-100%); opacity: 0; }
+  35%  { opacity: 1; }
+  100% { transform: translateY(240%); opacity: 0; }
+}
+
+/* ── Bento tiles ──────────────────────────────────────────────────────────
+   The category grid. One hover state, and it belongs to the vocabulary above
+   rather than being invented here: the photograph breathes, the ember rule
+   under the caption draws itself out, and the whole tile lifts.
+
+   The scrim is a gradient element rather than a background on the caption, so
+   the photograph is never darkened where the caption is not. */
+.bento {
+  transition:
+    transform var(--dur-settle) var(--ease-out-expo),
+    box-shadow var(--dur-settle) var(--ease-out-expo),
+    scale var(--dur-press) var(--ease-out-expo);
+}
+.bento img {
+  transition: transform var(--dur-cinematic) var(--ease-out-expo);
+}
+.bento [data-bento-rule] {
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform var(--dur-base) var(--ease-out-expo);
+}
+@media (hover: hover) {
+  .bento:hover {
+    transform: translateY(-6px);
+    box-shadow: var(--shadow-e3);
+  }
+  .bento:hover img { transform: scale(1.07); }
+  .bento:hover [data-bento-rule] { transform: scaleX(1); }
+}
+.bento:focus-within [data-bento-rule] { transform: scaleX(1); }
+.bento:active { scale: 0.98; transition-duration: var(--dur-press); }
+
+/* No pointer: the rule is simply drawn. Nothing on a phone should be hiding
+   behind a state that phone cannot enter. */
+@media (hover: none) {
+  .bento [data-bento-rule] { transform: scaleX(1); }
+}
+
+/* ── Rail edge fades ──────────────────────────────────────────────────────
+   A horizontal scroller stops dead at the container edge otherwise, and the
+   cut reads as a rendering fault rather than as an invitation. Painted as an
+   overlay in the section's own ground colour, which it is told via
+   --fade-from, so one pair of rules serves every rail on the page. */
+.rail-fade {
+  position: absolute;
+  inset-block: 0;
+  width: clamp(20px, 6vw, 72px);
+  pointer-events: none;
+  z-index: var(--z-raised);
+}
+.rail-fade-start {
+  inset-inline-start: 0;
+  background-image: linear-gradient(to right, var(--fade-from, transparent), transparent);
+}
+.rail-fade-end {
+  inset-inline-end: 0;
+  background-image: linear-gradient(to left, var(--fade-from, transparent), transparent);
+}
+
+/* ── The ember button ─────────────────────────────────────────────────────
+   The primary call to action, on the brand gradient rather than the flat fill.
+
+   It has to redeclare the hover wash rather than inherit it. `.hover-btn:hover`
+   sets background-image outright, which would drop the gradient the moment a
+   cursor touched the button — so the wash is composed ON TOP of the gradient
+   here as two stacked layers. Declared after the hover vocabulary and at the
+   same specificity, so this is the one that lands.
+
+   Ink 900 still sits on it. Every stop of --grad-ember clears 4.5:1 against
+   ink-900, which is the whole reason the gradient ends at ember-700 rather
+   than continuing to darken. */
+.btn-ember {
+  background-image: var(--grad-ember);
+}
+@media (hover: hover) {
+  .btn-ember:hover {
+    background-image:
+      linear-gradient(var(--hover-wash), var(--hover-wash)),
+      var(--grad-ember);
+  }
+}
+
+/* The WhatsApp button, on the same terms as .btn-ember above — and for the
+ * same reason. `.hover-btn:hover` sets background-image outright, so a
+ * gradient fill would vanish the instant a cursor touched it. The wash is
+ * composed on top as a second layer instead.
+ *
+ * Ink 900 sits on this, not white. Calico 50 on WhatsApp green is 2.15:1 and
+ * fails at any size; ink is 9.4:1 on the flat colour and roughly 7.6:1 against
+ * the darkest stop of the gradient. A saturated mid-tone fill is a light
+ * surface and takes dark type — the same rule that governs ember. */
+.btn-whatsapp {
+  background-image: var(--grad-whatsapp);
+}
+@media (hover: hover) {
+  .btn-whatsapp:hover {
+    background-image:
+      linear-gradient(var(--hover-wash), var(--hover-wash)),
+      var(--grad-whatsapp);
+  }
+}
+
+/* A dot with a ring leaving it. The live indicator on the hero badge and
+   anywhere else something is genuinely happening right now. */
+.pulse-dot {
+  animation: pulse-ring 2.4s var(--ease-out-expo) infinite;
+}
+
+/* The light-ground twin of .text-shimmer.
+ *
+ * Same mechanism, different ramp — and it has to be a different ramp rather
+ * than the same one at lower opacity. --grad-text climbs to near-white, which
+ * is what makes an emphasised word glow on ink and what makes it disappear on
+ * calico. This one travels between ember-700 and ember-900, so every frame of
+ * the pan clears 5.5:1 against the page ground.
+ *
+ * Slower, too. On a dark ground the shimmer is a highlight passing over a
+ * bright word and it should be noticeable; here it is a sheen crossing a dark
+ * one, and at nine seconds it read as a flicker rather than as movement. */
+.text-shimmer-ink {
+  color: var(--color-ember-700);
+  background-image: var(--grad-text-ink);
+  background-size: 260% 100%;
+  background-position: 0% 50%;
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+@supports (background-clip: text) or (-webkit-background-clip: text) {
+  .text-shimmer-ink { color: transparent; }
+}
+
+/* ── The disclosure hint ──────────────────────────────────────────────────
+ *
+ * "How this works" is three tappable rows on a phone, closed to begin with.
+ * Closed, they look like three headings — the gesture that opens them is
+ * invisible, and a chevron alone is a weak signal at the bottom of a long
+ * page. So the first row opens a little way and settles back as the section
+ * arrives: the control demonstrates itself once, rather than a caption
+ * explaining it.
+ *
+ * The peek animates `grid-template-rows` because that is what the panel's own
+ * open state animates — one property, one mechanism, so the hint and the real
+ * thing cannot disagree. 0.14fr is a fraction of the panel's content height
+ * rather than a fixed number of pixels, so it lifts the same proportion of the
+ * photograph whatever the copy underneath runs to.
+ *
+ * Below lg only, and never under reduced motion. The global reduced-motion
+ * block would otherwise cap this to 0.01ms, which turns a slow reveal into a
+ * single flicked frame — considerably worse than no hint at all. The rows stay
+ * perfectly usable without it.
+ */
+/* ── The mobile disclosure ────────────────────────────────────────────────
+ *
+ * "How this works" is a three-panel editorial on desktop and a three-row
+ * accordion below lg. The whole collapse is declared inside this one media
+ * query, so above the breakpoint there is simply no rule to override — the
+ * panel is a plain block and the desktop layout cannot be disturbed by
+ * anything done to the mobile one.
+ *
+ * That is not fussiness. Written as Tailwind state classes with an
+ * lg:grid-rows-[1fr] override, the override lost: both are arbitrary values of
+ * the same property, so the winner came down to the order Tailwind happened to
+ * emit them in, and the desktop body copy sat clipped to zero height. A media
+ * query is not a tie to be broken.
+ *
+ * The 0fr/1fr grid row is the site's existing accordion mechanism — see
+ * Accordion in src/components/Product/Details.tsx. The visibility swap is what
+ * stops a keyboard tabbing into a closed panel.
+ */
+@media (width < 64rem) {
+  .craft-panel {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows var(--dur-base) var(--ease-out-expo);
+  }
+
+  .craft-panel > * {
+    overflow: hidden;
+    visibility: hidden;
+  }
+
+  .craft-panel[data-open='true'] {
+    grid-template-rows: 1fr;
+  }
+
+  .craft-panel[data-open='true'] > * {
+    visibility: visible;
+  }
+}
+
+@media (width < 64rem) and (prefers-reduced-motion: no-preference) {
+  .craft-hint {
+    animation: craft-peek 1500ms var(--ease-in-out-quart) 400ms 1;
+  }
+
+  .craft-hint-chevron {
+    animation: craft-peek-chevron 1500ms var(--ease-in-out-quart) 400ms 1;
+  }
+}
+
+@keyframes craft-peek {
+  0%       { grid-template-rows: 0fr; }
+  28%, 60% { grid-template-rows: 0.14fr; }
+  100%     { grid-template-rows: 0fr; }
+}
+
+/* The chevron dips with the panel. `translate` rather than `transform`, so it
+ * composes with the `rotate` the open state applies instead of replacing it. */
+@keyframes craft-peek-chevron {
+  0%, 100% { translate: 0 0; }
+  28%, 60% { translate: 0 3px; }
+}
+
+/* Where the floating button sits.
+ *
+ * In CSS rather than on the element, because the two rules it needs cannot
+ * both be expressed there. The mobile offset has to be a calc() against
+ * --bottom-nav and the safe-area inset, which means an inline style — and an
+ * inline style beats every class, so the `lg:bottom-6` this used to carry
+ * alongside it never applied once. The button has been sitting 73px off the
+ * bottom of every desktop screen instead of 24px, silently, because the
+ * override it was written with could not win.
+ *
+ * A media query has nothing to beat.
+ */
+.fab-offset {
+  bottom: calc(var(--bottom-nav) + env(safe-area-inset-bottom) + 16px);
+}
+
+@media (width >= 64rem) {
+  .fab-offset { bottom: 1.5rem; }
 }

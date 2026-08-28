@@ -3,538 +3,309 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import {
-  ShoppingBag, Menu, X, Search, ChevronDown,
-  User, Heart, Package, Phone, Truck, Shield,
-  Sparkles, ArrowRight, Clock,
-  Sofa,
-} from 'lucide-react';
+import { ShoppingBag, X, Search, ChevronDown, User, Heart, Sofa } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
-import { createClient } from '@/utils/supabase/client';
 import { ANNOUNCEMENTS } from '@/constants/promises';
-
-import { PHONE_HREF, PHONE_DISPLAY } from '@/constants/contact'
-// ─── Types ────────────────────────────────────────────────────────────────────
-interface Category { id: string; name: string; slug: string; }
+import { useCategories } from '@/hooks/useCategories';
+import MegaMenu from './MegaMenu';
+import MobileMenu from './MobileMenu';
+import SearchOverlay from './SearchOverlay';
 
-// ─── Announcement messages ────────────────────────────────────────────────────
-// Copy lives in src/constants/promises.ts; only the icons are chosen here.
-const ANNOUNCEMENT_ICONS = [Truck, Shield, Sparkles, Clock];
-const announcements = ANNOUNCEMENTS.map((text, i) => ({
-  icon: ANNOUNCEMENT_ICONS[i] ?? Truck,
-  text,
-}));
+/** One message. This bar used to cycle four of them every four seconds. */
+const ANNOUNCEMENT = ANNOUNCEMENTS[0];
 
-// ─── Nav links ────────────────────────────────────────────────────────────────
 const navLinks = [
-  { href: '/',              label: 'Home'     },
-  { href: '/shop/all',      label: 'Shop',  hasMenu: true },
-  { href: '/collection',   label: 'Collections' }, // <-- NEW
-  { href: '/reviews',       label: 'Reviews' },
-  { href: '/track-order',   label: 'Track'    },
-  { href: '/contact',       label: 'Contact'  },
+  { href: '/',            label: 'Home' },
+  { href: '/shop/all',    label: 'Shop', hasMenu: true },
+  { href: '/collection',  label: 'Collections' },
+  { href: '/reviews',     label: 'Reviews' },
+  { href: '/track-order', label: 'Track' },
+  { href: '/contact',     label: 'Contact' },
 ];
 
-const mobileLinks = [
-  { href: '/',            label: 'Home',          icon: '⌂'  },
-  { href: '/shop/all',    label: 'All Sofas',     icon: '🛋'  },
-  { href: '/collection', label: 'Collections',   icon: '⊞'  }, // <-- NEW
-  { href: '/reviews',     label: 'Reviews',       icon: '★'  },
-  { href: '/track-order', label: 'Track Order',   icon: '◎'  },
-  { href: '/contact',     label: 'Contact Us',    icon: '✉'  },
-];
+/**
+ * The lockup, rendered twice — left on desktop, centred on mobile.
+ *
+ * The 6.5px "Pay on Delivery" sub-line is gone rather than resized. At the
+ * 12px floor it was 144px wide with its letterspacing and crowded the
+ * hamburger on a 360px screen, and the announcement bar directly above it
+ * already says the same thing.
+ */
+function Wordmark({ light, className = '' }: { light: boolean; className?: string }) {
+  return (
+    <Link
+      href="/"
+      aria-label="UK Sofa Shop — home"
+      className={`flex min-h-11 items-center gap-2 no-underline ${className}`}
+    >
+      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-sm bg-ember-500">
+        <Sofa className="h-5 w-5 text-ink-900" aria-hidden="true" />
+      </span>
+      <span
+        className={`font-display text-h3 font-semibold leading-none tracking-tight transition-colors duration-swift ${
+          light ? 'text-calico-50' : 'text-ink-900'
+        }`}
+      >
+        UK Sofa<span className="text-ember-500">Shop</span>
+      </span>
+    </Link>
+  );
+}
 
-// ─── Component ────────────────────────────────────────────────────────────────
 export default function Header() {
   const { itemCount } = useCart();
+  const categories = useCategories();
   const pathname = usePathname();
 
-  // State
-  const [scrolled, setScrolled]         = useState(false);
-  const [scrollDir, setScrollDir]       = useState<'up'|'down'>('up');
-  const prevY                           = useRef(0); // Changed to useRef!
-  const [menuOpen, setMenuOpen]         = useState(false);
-  const [searchOpen, setSearchOpen]     = useState(false);
-  const [megaOpen, setMegaOpen]         = useState(false);
-  const [annoIdx, setAnnoIdx]           = useState(0);
-  const [annoVisible, setAnnoVisible]   = useState(true);
-  const [annoExiting, setAnnoExiting]   = useState(false);
-  const [categories, setCategories]     = useState<Category[]>([]);
-  const [query, setQuery]               = useState('');
-  const [prevCount, setPrevCount]       = useState(0);
-  const [cartBounce, setCartBounce]     = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const [scrollDir, setScrollDir] = useState<'up' | 'down'>('up');
+  const prevY = useRef(0);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [megaOpen, setMegaOpen] = useState(false);
+  const [annoVisible, setAnnoVisible] = useState(true);
 
-  const searchRef = useRef<HTMLInputElement>(null);
-  const megaRef   = useRef<HTMLDivElement>(null);
   const megaTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const megaTrigger = useRef<HTMLButtonElement>(null);
+  const menuTrigger = useRef<HTMLButtonElement>(null);
+  const searchTrigger = useRef<HTMLButtonElement>(null);
+  // Focus is only pulled into the drawer when it was opened from the keyboard;
+  // doing it on hover would strand a mouse user who then pressed Tab.
+  const [megaFromKeyboard, setMegaFromKeyboard] = useState(false);
 
-  // Scroll behaviour// Scroll behaviour
+  // Scroll position and direction. The 2px threshold stops a trackpad or an
+  // iOS rubber-band from flipping the direction on every frame.
   useEffect(() => {
     let ticking = false;
     const onScroll = () => {
-      if (!ticking) {
-        requestAnimationFrame(() => {
-          const y = window.scrollY;
-          setScrolled(y > 40);
-          
-          // Added a small threshold (> 2px) to prevent trackpad/mobile bounce flickering
-          if (Math.abs(y - prevY.current) > 2) {
-            setScrollDir(y > prevY.current ? 'down' : 'up');
-          }
-          
-          prevY.current = y;
-          ticking = false;
-        });
-        ticking = true;
-      }
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        const y = window.scrollY;
+        setScrolled(y > 40);
+        if (Math.abs(y - prevY.current) > 2) {
+          setScrollDir(y > prevY.current ? 'down' : 'up');
+        }
+        prevY.current = y;
+        ticking = false;
+      });
     };
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
-  }, []); // <-- Empty dependency array stops the constant re-attaching!
-
-  // Fetch categories
-  useEffect(() => {
-    createClient()
-      .from('categories').select('id,name,slug').order('name')
-      .then(({ data }) => { if (data) setCategories(data); });
   }, []);
 
-  // Close on route change
-  useEffect(() => {
+  // Close every overlay when the route changes.
+  //
+  // Adjusted during render rather than in an effect. An effect would paint the
+  // new page once with the drawer still open and only then close it — a visible
+  // flash — and it is the pattern React's own docs steer away from. Comparing
+  // the stored path to the current one settles it before the first paint.
+  const [lastPath, setLastPath] = useState(pathname);
+  if (pathname !== lastPath) {
+    setLastPath(pathname);
     setMenuOpen(false);
     setSearchOpen(false);
     setMegaOpen(false);
-  }, [pathname]);
+  }
 
-  // Focus search on open
-  useEffect(() => {
-    if (searchOpen) setTimeout(() => searchRef.current?.focus(), 80);
-  }, [searchOpen]);
-
-  // Announcement cycle
-  useEffect(() => {
-    const id = setInterval(() => {
-      setAnnoExiting(true);
-      setTimeout(() => {
-        setAnnoIdx(i => (i + 1) % announcements.length);
-        setAnnoExiting(false);
-      }, 350);
-    }, 4000);
-    return () => clearInterval(id);
-  }, []);
-
-  // Cart badge bounce
-  useEffect(() => {
-    if (itemCount > prevCount) {
-      setCartBounce(true);
-      setTimeout(() => setCartBounce(false), 600);
-    }
-    setPrevCount(itemCount);
-  }, [itemCount]);
-
-  // Mega menu delay helpers
-  const openMega  = useCallback(() => {
+  const openMega = useCallback(() => {
     clearTimeout(megaTimer.current);
+    setMegaFromKeyboard(false);
     setMegaOpen(true);
   }, []);
   const closeMega = useCallback(() => {
     megaTimer.current = setTimeout(() => setMegaOpen(false), 180);
   }, []);
 
-  // Lock body scroll when mobile menu open
+  // Lock the page behind anything that opens over it. SmoothScroll watches this
+  // exact attribute to stop Lenis, so every overlay gets that for free.
   useEffect(() => {
-    document.body.style.overflow = menuOpen ? 'hidden' : '';
+    document.body.style.overflow = menuOpen || searchOpen ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
-  }, [menuOpen]);
+  }, [menuOpen, searchOpen]);
 
-  // Derived
-  const isTransparent = !scrolled && pathname === '/';
-  const hidden        = scrolled && scrollDir === 'down' && !menuOpen && !searchOpen;
+  useEffect(() => {
+    if (!menuOpen && !searchOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      setMenuOpen(false);
+      setSearchOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [menuOpen, searchOpen]);
 
-  const AnnoIcon = announcements[annoIdx].icon;
+  const isHome = pathname === '/';
+
+  /**
+   * On the homepage, before any scrolling, the chrome sits ON the hero.
+   *
+   * The old build set the background to a fully transparent black and left the
+   * text dark — but the header was in normal flow above the hero, so what you
+   * actually saw was the white page showing through: a pale bar sandwiched
+   * between the dark announcement bar and the dark hero.
+   *
+   * The `-mb-14` below is what makes it real. It pulls the following content
+   * up by exactly the height of the bar, so the hero starts at the top of the
+   * viewport and the header floats over it with Calico 50 text.
+   */
+  const onHero = isHome && !scrolled;
+  const hidden = scrolled && scrollDir === 'down' && !menuOpen && !searchOpen;
+
+  const iconButton =
+    'touch-target hover-icon relative grid place-items-center rounded-sm no-underline';
+  const iconTone = onHero ? 'text-calico-50' : 'text-ink-700';
 
   return (
     <>
-      {/* ══════════════════════════════════════
-          ANNOUNCEMENT BAR
-      ══════════════════════════════════════ */}
+      {/* The first focusable element in the document. */}
+      <a
+        href="#main-content"
+        className="sr-only focus-visible:not-sr-only focus-visible:fixed focus-visible:left-4 focus-visible:top-4 focus-visible:z-modal focus-visible:rounded-sm focus-visible:bg-ink-900 focus-visible:px-4 focus-visible:py-3 focus-visible:text-body-sm focus-visible:font-semibold focus-visible:text-calico-50 focus-visible:no-underline"
+      >
+        Skip to content
+      </a>
+
+      {/* ── Announcement ──────────────────────────────────────────────────── */}
       {annoVisible && (
-        <div
-          className="relative overflow-hidden"
-          style={{ background: '#0c0c0b', height: 30 }}
-        >
-          {/* Message */}
-          <div className="flex items-center justify-center h-full gap-2 px-8">
-            <div
-              style={{
-                display: 'flex', alignItems: 'center', gap: 6,
-                opacity: annoExiting ? 0 : 1,
-                transform: annoExiting ? 'translateY(-6px)' : 'translateY(0)',
-                transition: 'opacity 0.3s ease, transform 0.3s ease',
-              }}
-            >
-              <AnnoIcon style={{ width: 11, height: 11, color: '#d4871a', flexShrink: 0 }} />
-              <span style={{
-                fontSize: 9, letterSpacing: '0.14em',
-                color: '#a8a29e', textTransform: 'uppercase', fontWeight: 500,
-                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                maxWidth: 'min(260px, 70vw)',
-              }}>
-                {announcements[annoIdx].text}
-              </span>
-            </div>
-          </div>
-
-          {/* Dismiss */}
+        <div className="relative flex min-h-9 items-center justify-center bg-ink-900 px-12 py-2">
+          <p aria-live="polite" className="eyebrow m-0 text-center text-calico-300">
+            {ANNOUNCEMENT}
+          </p>
           <button
+            type="button"
             onClick={() => setAnnoVisible(false)}
-            className="absolute right-2 top-1/2 -translate-y-1/2 touch-target"
-            style={{ color: '#4f4640' }}
-            aria-label="Dismiss"
+            aria-label="Dismiss announcement"
+            className="hover-icon-dark absolute right-1 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-sm text-calico-300"
           >
-            <X style={{ width: 11, height: 11 }} />
+            <X className="h-4 w-4" aria-hidden="true" />
           </button>
-
-          {/* Dot indicators — desktop only */}
-          <div className="absolute left-2 top-1/2 -translate-y-1/2 hidden sm:flex gap-1">
-            {announcements.map((_, i) => (
-              <button
-                key={i}
-                onClick={() => setAnnoIdx(i)}
-                style={{
-                  width: i === annoIdx ? 14 : 4, height: 4, borderRadius: 2,
-                  background: i === annoIdx ? '#d4871a' : '#3f3f3f',
-                  transition: 'width 0.3s ease, background 0.3s ease',
-                  border: 'none', cursor: 'pointer',
-                }}
-              />
-            ))}
-          </div>
         </div>
       )}
 
-      {/* ══════════════════════════════════════
-          MAIN HEADER
-      ══════════════════════════════════════ */}
+      {/* ── Header bar ────────────────────────────────────────────────────── */}
       <header
-        style={{
-          position: 'sticky',
-          top: 0,
-          zIndex: 50,
-          transform: hidden ? 'translateY(-100%)' : 'translateY(0)',
-          transition: 'transform 0.4s cubic-bezier(.16,1,.3,1), background 0.4s ease, box-shadow 0.4s ease',
-          background: isTransparent ? 'rgba(12,12,11,0)' : 'rgba(255,255,255,0.97)',
-          backdropFilter: scrolled ? 'blur(12px)' : 'none',
-          boxShadow: scrolled ? '0 1px 0 rgba(0,0,0,0.07)' : 'none',
-        }}
+        className={[
+          'relative sticky top-0 z-header transition-[transform,background-color,box-shadow] duration-base ease-out-expo',
+          hidden ? '-translate-y-full' : 'translate-y-0',
+          onHero ? 'bg-transparent' : 'bg-calico-50 shadow-e1',
+          isHome ? '-mb-14' : '',
+        ].join(' ')}
       >
-        {/* Amber top rule — only when scrolled */}
-        <div
-          style={{
-            height: 2,
-            background: '#d4871a',
-            transform: scrolled ? 'scaleX(1)' : 'scaleX(0)',
-            transformOrigin: 'left',
-            transition: 'transform 0.5s cubic-bezier(.16,1,.3,1)',
-          }}
+        {/* The ember rule sweeps in from the left as the bar solidifies. */}
+        <span
+          aria-hidden="true"
+          className={`block h-0.5 origin-left bg-ember-500 transition-transform duration-settle ease-out-expo ${
+            scrolled ? 'scale-x-100' : 'scale-x-0'
+          }`}
         />
 
-        <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 12px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 48 }}>
-
-            {/* ── Hamburger (mobile) — only visible on mobile, categories menu ── */}
-            <button
-              onClick={() => setMenuOpen(true)}
-              className="lg:hidden touch-target btn-press"
-              aria-label="Open menu"
-            >
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4.5, width: 20 }}>
-                {[0, 1, 2].map(i => (
-                  <span
-                    key={i}
-                    style={{
-                      display: 'block',
-                      width: i === 1 ? 14 : 20,
-                      height: 1.5,
-                      background: '#1c1917',
-                      borderRadius: 2,
-                      transition: 'width 0.3s ease',
-                    }}
-                  />
-                ))}
-              </div>
-            </button>
-
-            {/* ── Logo ── */}
-            <Link
-              href="/"
-              style={{ display: 'flex', alignItems: 'center', gap: 9, textDecoration: 'none' }}
-            >
-              {/* Icon mark */}
-              <div
-                style={{
-                  width: 32, height: 32,
-                  background: '#d4871a',
-                  borderRadius: 7,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  flexShrink: 0,
-                  transition: 'transform 0.3s ease',
-                }}
-                className="hover:scale-110"
+        <div className="mx-auto max-w-shell px-3">
+          <div className="grid h-14 grid-cols-[1fr_auto_1fr] items-center">
+            {/* Left — hamburger on mobile, wordmark on desktop */}
+            <div className="flex items-center justify-start">
+              <button
+                type="button"
+                ref={menuTrigger}
+                onClick={() => setMenuOpen(true)}
+                aria-label="Open menu"
+                aria-expanded={menuOpen}
+                aria-haspopup="dialog"
+                aria-controls="mobile-menu"
+                className={`${iconButton} lg:hidden ${onHero ? 'text-calico-50' : 'text-ink-900'}`}
               >
-                {/* <div className="absolute inset-0 bg-white/20 animate-shimmer" 
-                     style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)', backgroundSize: '200% 100%' }} /> */}
-                <div className="relative h-full flex items-center justify-center">
-                  <Sofa className="w-6 h-6 text-white" />
-                </div>
-              </div>
-              {/* Wordmark */}
-              <div className="sm:block">
-                <div
-                  className="font-playfair font-bold leading-none text-[15px] sm:text-[18px]"
-                  style={{
-                    color: '#1c1917',
-                    transition: 'color 0.4s ease',
-                  }}
-                >
-                  UK Sofa<span style={{ color: '#d4871a' }}>Shop</span>
-                </div>
-                <div
-                  className="text-[6.5px] sm:text-[8px]"
-                  style={{
-                    letterSpacing: '0.2em',
-                    color: '#a8a29e',
-                    textTransform: 'uppercase',
-                    transition: 'color 0.4s ease',
-                  }}
-                >
-                  Pay on Delivery
-                </div>
-              </div>
-            </Link>
+                <span className="flex w-5 flex-col gap-[5px]" aria-hidden="true">
+                  <span className="block h-px w-5 bg-current" />
+                  <span className="block h-px w-3.5 bg-current" />
+                  <span className="block h-px w-5 bg-current" />
+                </span>
+              </button>
+              <Wordmark light={onHero} className="hidden lg:flex" />
+            </div>
 
-            {/* ── Desktop Nav ── */}
-            <nav className="hidden lg:flex items-center" style={{ gap: 4 }}>
-              {navLinks.map(({ href, label, hasMenu }) =>
-                hasMenu ? (
-                  <div
-                    key={label}
-                    ref={megaRef}
-                    onMouseEnter={openMega}
-                    onMouseLeave={closeMega}
-                    style={{ position: 'relative' }}
-                  >
-                    <button
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: 4,
-                        padding: '6px 12px',
-                        fontSize: 12, fontWeight: 500, letterSpacing: '0.03em',
-                        color: '#44403c',
-                        background: megaOpen ? '#fef9f0' : 'transparent',
-                        border: 'none', cursor: 'pointer', borderRadius: 6,
-                        transition: 'all 0.2s ease',
-                      }}
+            {/* Centre — wordmark on mobile, nav on desktop */}
+            <div className="flex items-center justify-center">
+              <Wordmark light={onHero} className="lg:hidden" />
+
+              <nav aria-label="Main" className="hidden items-center gap-1 lg:flex">
+                {navLinks.map(({ href, label, hasMenu }) =>
+                  hasMenu ? (
+                    <div key={label} onPointerEnter={openMega} onPointerLeave={closeMega}>
+                      <button
+                        ref={megaTrigger}
+                        type="button"
+                        aria-expanded={megaOpen}
+                        aria-haspopup="dialog"
+                        aria-controls="mega-menu"
+                        // Opens; never toggles closed. On a hover device the
+                        // pointer has already opened the drawer by the time a
+                        // click lands, so a toggle here shut it again the
+                        // instant you clicked the thing that opens it.
+                        // Closing is Escape, outside-click or route change.
+                        //
+                        // detail === 0 means the activation came from the
+                        // keyboard, which is when focus should move inside.
+                        onClick={(e) => {
+                          setMegaFromKeyboard(e.detail === 0);
+                          setMegaOpen(true);
+                        }}
+                        className={`hover-link flex items-center gap-1 rounded-sm px-3 py-2 text-body-sm font-medium ${
+                          onHero ? 'text-calico-50' : 'text-ink-700'
+                        }`}
+                      >
+                        {label}
+                        <ChevronDown
+                          aria-hidden="true"
+                          className={`h-3 w-3 text-ember-500 transition-transform duration-base ease-out-expo ${megaOpen ? 'rotate-180' : ''}`}
+                        />
+                      </button>
+                    </div>
+                  ) : (
+                    <Link
+                      key={href}
+                      href={href}
+                      aria-current={pathname === href ? 'page' : undefined}
+                      className={`hover-link rounded-sm px-3 py-2 text-body-sm font-medium no-underline ${
+                        pathname === href
+                          ? 'text-ember-500'
+                          : onHero ? 'text-calico-50' : 'text-ink-700'
+                      }`}
                     >
                       {label}
-                      <ChevronDown
-                        style={{
-                          width: 12, height: 12,
-                          transform: megaOpen ? 'rotate(180deg)' : 'rotate(0)',
-                          transition: 'transform 0.3s ease',
-                          color: '#d4871a',
-                        }}
-                      />
-                    </button>
+                    </Link>
+                  ),
+                )}
+              </nav>
+            </div>
 
-                    {/* Mega menu */}
-                    <div
-                      onMouseEnter={openMega}
-                      onMouseLeave={closeMega}
-                      style={{
-                        position: 'absolute', top: 'calc(100% + 8px)', left: '50%',
-                        transform: `translateX(-50%) ${megaOpen ? 'translateY(0)' : 'translateY(-8px)'}`,
-                        opacity: megaOpen ? 1 : 0,
-                        pointerEvents: megaOpen ? 'auto' : 'none',
-                        transition: 'opacity 0.25s ease, transform 0.25s cubic-bezier(.16,1,.3,1)',
-                        width: 440,
-                        background: '#fff',
-                        borderRadius: 10,
-                        boxShadow: '0 20px 60px rgba(0,0,0,0.12), 0 1px 0 rgba(0,0,0,0.05)',
-                        overflow: 'hidden',
-                      }}
-                    >
-                      {/* Amber top border */}
-                      <div style={{ height: 2, background: '#d4871a' }} />
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0 }}>
-                        {/* Categories */}
-                        <div style={{ padding: '18px 20px', borderRight: '1px solid #f5f5f4' }}>
-                          <div style={{ fontSize: 9, letterSpacing: '0.2em', color: '#d4871a', textTransform: 'uppercase', fontWeight: 600, marginBottom: 10 }}>
-                            Categories
-                          </div>
-                          {categories.slice(0, 6).map((cat, i) => (
-                            <Link
-                              key={cat.id}
-                              href={`/shop/${cat.slug}`}
-                              style={{
-                                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                padding: '7px 0',
-                                fontSize: 12, color: '#57534e',
-                                textDecoration: 'none',
-                                borderBottom: i < categories.length - 1 ? '1px solid #f5f5f4' : 'none',
-                                transition: 'color 0.2s ease',
-                              }}
-                              className="group"
-                            >
-                              <span className="group-hover:text-[#d4871a] transition-colors">{cat.name}</span>
-                              <ArrowRight style={{ width: 10, height: 10, opacity: 0, transition: 'opacity 0.2s' }}
-                                className="group-hover:opacity-100 text-[#d4871a]" />
-                            </Link>
-                          ))}
-                        </div>
-                        {/* Promo */}
-                        <div
-                          style={{
-                            padding: '18px 20px',
-                            background: '#0c0c0b',
-                            display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
-                          }}
-                        >
-                          <div>
-                            <div style={{ fontSize: 9, letterSpacing: '0.2em', color: '#d4871a', textTransform: 'uppercase', fontWeight: 600, marginBottom: 8 }}>
-                              New Arrivals
-                            </div>
-                            <div className="font-playfair" style={{ fontSize: 17, color: '#fff', lineHeight: 1.2, fontWeight: 700 }}>
-                              Fresh from Our<br />
-                              <em style={{ color: '#d4871a', fontStyle: 'normal' }}>Workshop</em>
-                            </div>
-                            <p style={{ fontSize: 11, color: '#78716c', marginTop: 6, lineHeight: 1.5 }}>
-                              Discover the latest additions to our collection.
-                            </p>
-                          </div>
-                          <Link
-                            href="/shop/all"
-                            className="group"
-                            style={{
-                              display: 'inline-flex', alignItems: 'center', gap: 6,
-                              marginTop: 16, padding: '8px 14px',
-                              background: '#d4871a', color: '#fff',
-                              fontSize: 10, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase',
-                              textDecoration: 'none', borderRadius: 5,
-                              transition: 'background 0.2s ease',
-                            }}
-                          >
-                            Shop All
-                            <ArrowRight style={{ width: 10, height: 10 }} className="group-hover:translate-x-1 transition-transform" />
-                          </Link>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <Link
-                    key={href}
-                    href={href}
-                    style={{
-                      position: 'relative',
-                      padding: '6px 12px',
-                      fontSize: 12, fontWeight: 500, letterSpacing: '0.03em',
-                      color: pathname === href
-                        ? '#d4871a'
-                        : '#44403c',
-                      textDecoration: 'none',
-                      borderRadius: 6,
-                      transition: 'color 0.2s ease',
-                    }}
-                    className="hover:text-[#d4871a]"
-                  >
-                    {label}
-                    {/* Active underline */}
-                    <span
-                      style={{
-                        position: 'absolute', bottom: 2, left: 12, right: 12, height: 1.5,
-                        background: '#d4871a', borderRadius: 1,
-                        transform: pathname === href ? 'scaleX(1)' : 'scaleX(0)',
-                        transformOrigin: 'left',
-                        transition: 'transform 0.3s cubic-bezier(.16,1,.3,1)',
-                      }}
-                    />
-                  </Link>
-                )
-              )}
-            </nav>
-
-            {/* ── Right icons ── */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-
-              {/* Search — visible on all sizes */}
+            {/* Right — search and cart everywhere, wishlist and account on desktop */}
+            <div className="flex items-center justify-end gap-0.5">
               <button
+                type="button"
+                ref={searchTrigger}
                 onClick={() => setSearchOpen(true)}
                 aria-label="Search"
-                className="touch-target btn-press"
-                style={{
-                  width: 40, height: 40, borderRadius: 8,
-                  background: '#f5f5f4',
-                  border: 'none', cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: '#57534e',
-                }}
+                className={`${iconButton} ${iconTone}`}
               >
-                <Search style={{ width: 16, height: 16 }} />
+                <Search className="h-4 w-4" aria-hidden="true" />
               </button>
 
-              {/* Wishlist + Account — desktop only (in bottom nav on mobile) */}
-              <Link
-                href="/wishlist"
-                aria-label="Wishlist"
-                className="hidden lg:flex touch-target"
-                style={{
-                  width: 40, height: 40, borderRadius: 8,
-                  background: '#f5f5f4',
-                  alignItems: 'center', justifyContent: 'center',
-                  color: '#57534e',
-                }}
-              >
-                <Heart style={{ width: 15, height: 15 }} />
+              <Link href="/wishlist" aria-label="Wishlist" className={`${iconButton} hidden lg:grid ${iconTone}`}>
+                <Heart className="h-4 w-4" aria-hidden="true" />
               </Link>
 
-              <Link
-                href="/account"
-                aria-label="Account"
-                className="hidden lg:flex touch-target"
-                style={{
-                  width: 40, height: 40, borderRadius: 8,
-                  background: '#f5f5f4',
-                  alignItems: 'center', justifyContent: 'center',
-                  color: '#57534e',
-                }}
-              >
-                <User style={{ width: 15, height: 15 }} />
+              <Link href="/account" aria-label="Your account" className={`${iconButton} hidden lg:grid ${iconTone}`}>
+                <User className="h-4 w-4" aria-hidden="true" />
               </Link>
 
-              {/* Cart — desktop only (in bottom nav on mobile) */}
               <Link
                 href="/checkout"
-                aria-label="Cart"
-                className="hidden lg:flex"
-                style={{
-                  position: 'relative',
-                  width: 40, height: 40, borderRadius: 8,
-                  background: '#d4871a',
-                  alignItems: 'center', justifyContent: 'center',
-                  transition: 'background 0.2s ease, transform 0.2s ease',
-                  transform: cartBounce ? 'scale(1.18)' : 'scale(1)',
-                }}
+                aria-label={itemCount > 0 ? `Cart, ${itemCount} item${itemCount === 1 ? '' : 's'}` : 'Cart, empty'}
+                className={`${iconButton} ${iconTone}`}
               >
-                <ShoppingBag style={{ width: 15, height: 15, color: '#fff' }} />
+                <ShoppingBag className="h-4 w-4" aria-hidden="true" />
                 {itemCount > 0 && (
-                  <span style={{
-                    position: 'absolute', top: -5, right: -5,
-                    width: 17, height: 17, borderRadius: '50%',
-                    background: '#0c0c0b', color: '#fff',
-                    fontSize: 9, fontWeight: 800,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    border: '2px solid #fff',
-                  }}>
+                  <span key={itemCount} className="cart-pop absolute right-1.5 top-1.5 grid min-w-4 place-items-center rounded-pill border-2 border-calico-50 bg-ember-500 px-1 font-data text-caption font-bold leading-none text-ink-900">
                     {itemCount > 9 ? '9+' : itemCount}
                   </span>
                 )}
@@ -542,238 +313,31 @@ export default function Header() {
             </div>
           </div>
         </div>
+        <MegaMenu
+          open={megaOpen}
+          categories={categories}
+          onClose={() => setMegaOpen(false)}
+          onPointerEnter={openMega}
+          onPointerLeave={closeMega}
+          triggerRef={megaTrigger}
+          fromKeyboard={megaFromKeyboard}
+        />
       </header>
 
-      {/* ══════════════════════════════════════
-          FULL-SCREEN SEARCH OVERLAY
-      ══════════════════════════════════════ */}
-      <div
-        style={{
-          position: 'fixed', inset: 0, zIndex: 100,
-          background: 'rgba(12,12,11,0.92)',
-          backdropFilter: 'blur(16px)',
-          display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
-          paddingTop: 120,
-          opacity: searchOpen ? 1 : 0,
-          pointerEvents: searchOpen ? 'auto' : 'none',
-          transition: 'opacity 0.3s ease',
-        }}
-      >
-        <button
-          onClick={() => setSearchOpen(false)}
-          style={{
-            position: 'absolute', top: 20, right: 20,
-            width: 36, height: 36, borderRadius: '50%',
-            background: 'rgba(255,255,255,0.08)',
-            border: '1px solid rgba(255,255,255,0.12)',
-            color: '#fff', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            transition: 'background 0.2s ease',
-          }}
-          aria-label="Close search"
-        >
-          <X style={{ width: 14, height: 14 }} />
-        </button>
+      <SearchOverlay
+        open={searchOpen}
+        onClose={() => setSearchOpen(false)}
+        categories={categories}
+        triggerRef={searchTrigger}
+      />
 
-        <div style={{ width: '100%', maxWidth: 560, padding: '0 20px' }}>
-          <div
-            style={{
-              transform: searchOpen ? 'translateY(0)' : 'translateY(-20px)',
-              transition: 'transform 0.4s cubic-bezier(.16,1,.3,1)',
-            }}
-          >
-            <p style={{ fontSize: 9, letterSpacing: '0.25em', color: '#d4871a', textTransform: 'uppercase', fontWeight: 600, marginBottom: 16, textAlign: 'center' }}>
-              Search
-            </p>
-            <div style={{ position: 'relative' }}>
-              <input
-                ref={searchRef}
-                value={query}
-                onChange={e => setQuery(e.target.value)}
-                placeholder="Sofas, corner sofas, fabric…"
-                onKeyDown={e => { if (e.key === 'Escape') setSearchOpen(false); }}
-                style={{
-                  width: '100%', padding: '14px 50px 14px 18px',
-                  background: 'rgba(255,255,255,0.06)',
-                  border: '1px solid rgba(255,255,255,0.12)',
-                  borderBottom: '2px solid #d4871a',
-                  color: '#fff', fontSize: 16, outline: 'none', borderRadius: '6px 6px 0 0',
-                  boxSizing: 'border-box',
-                }}
-              />
-              <button
-                style={{
-                  position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
-                  background: 'none', border: 'none', cursor: 'pointer', color: '#d4871a',
-                }}
-              >
-                <Search style={{ width: 16, height: 16 }} />
-              </button>
-            </div>
-            <p style={{ fontSize: 10, color: '#57534e', marginTop: 10, textAlign: 'center' }}>
-              Press <kbd style={{ background: 'rgba(255,255,255,0.08)', padding: '1px 5px', borderRadius: 3, fontSize: 9 }}>ESC</kbd> to close
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* ══════════════════════════════════════
-          MOBILE FULL-SCREEN MENU
-      ══════════════════════════════════════ */}
-      <div
-        style={{
-          position: 'fixed', inset: 0, zIndex: 90,
-          background: '#0c0c0b',
-          display: 'flex', flexDirection: 'column',
-          opacity: menuOpen ? 1 : 0,
-          transform: menuOpen ? 'translateX(0)' : 'translateX(-100%)',
-          transition: 'opacity 0.4s ease, transform 0.4s cubic-bezier(.16,1,.3,1)',
-        }}
-      >
-        {/* Amber rule */}
-        <div style={{ height: 2, background: '#d4871a', flexShrink: 0 }} />
-
-        {/* Top bar */}
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '14px 18px', flexShrink: 0,
-          borderBottom: '1px solid rgba(255,255,255,0.06)',
-        }}>
-          <div className="font-playfair font-bold text-white" style={{ fontSize: 18 }}>
-            UK Sofa<span style={{ color: '#d4871a' }}>Shop</span>
-          </div>
-          <button
-            onClick={() => setMenuOpen(false)}
-            style={{
-              width: 34, height: 34, borderRadius: '50%',
-              background: 'rgba(255,255,255,0.07)',
-              border: '1px solid rgba(255,255,255,0.1)',
-              color: '#fff', cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}
-          >
-            <X style={{ width: 14, height: 14 }} />
-          </button>
-        </div>
-
-        {/* Links — staggered */}
-        <nav style={{ flex: 1, overflow: 'auto', padding: '16px 18px' }}>
-
-          {/* Search inside mobile menu */}
-          <div style={{ marginBottom: 20 }}>
-            <form
-              onSubmit={e => { e.preventDefault(); setMenuOpen(false); window.location.href = `/search?q=${encodeURIComponent(query)}`; }}
-              style={{ position: 'relative' }}
-            >
-              <Search style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', width: 14, height: 14, color: '#57534e', pointerEvents: 'none' }} />
-              <input
-                value={query}
-                onChange={e => setQuery(e.target.value)}
-                placeholder="Search sofas…"
-                style={{
-                  width: '100%', padding: '10px 12px 10px 36px',
-                  background: 'rgba(255,255,255,0.07)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  borderRadius: 8, color: '#fff', fontSize: 14, outline: 'none',
-                  boxSizing: 'border-box',
-                }}
-              />
-            </form>
-          </div>
-
-          {mobileLinks.map(({ href, label }, i) => (
-            <Link
-              key={href}
-              href={href}
-              style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '13px 0',
-                borderBottom: '1px solid rgba(255,255,255,0.05)',
-                textDecoration: 'none',
-                opacity: menuOpen ? 1 : 0,
-                transform: menuOpen ? 'translateX(0)' : 'translateX(-16px)',
-                transition: `opacity 0.35s ease ${i * 50 + 80}ms, transform 0.35s cubic-bezier(.16,1,.3,1) ${i * 50 + 80}ms`,
-                minHeight: 44,
-              }}
-            >
-              <span
-                className="font-playfair font-bold"
-                style={{ fontSize: 22, color: pathname === href ? '#d4871a' : '#fff' }}
-              >
-                {label}
-              </span>
-              <ArrowRight style={{ width: 14, height: 14, color: '#3f3f3f' }} />
-            </Link>
-          ))}
-
-          {/* Categories */}
-          {categories.length > 0 && (
-            <div
-              style={{
-                marginTop: 24,
-                opacity: menuOpen ? 1 : 0,
-                transition: `opacity 0.4s ease 420ms`,
-              }}
-            >
-              <div style={{ fontSize: 9, letterSpacing: '0.2em', color: '#d4871a', textTransform: 'uppercase', fontWeight: 600, marginBottom: 12 }}>
-                Categories
-              </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                {categories.map(cat => (
-                  <Link
-                    key={cat.id}
-                    href={`/shop/${cat.slug}`}
-                    style={{
-                      padding: '6px 12px',
-                      background: 'rgba(255,255,255,0.05)',
-                      border: '1px solid rgba(255,255,255,0.08)',
-                      color: '#a8a29e', fontSize: 11, borderRadius: 5,
-                      textDecoration: 'none',
-                      transition: 'all 0.2s ease',
-                    }}
-                    className="hover:bg-[#d4871a]/20 hover:text-white hover:border-[#d4871a]/30"
-                  >
-                    {cat.name}
-                  </Link>
-                ))}
-              </div>
-            </div>
-          )}
-        </nav>
-
-        {/* Footer strip */}
-        <div
-          style={{
-            padding: '14px 18px',
-            borderTop: '1px solid rgba(255,255,255,0.06)',
-            flexShrink: 0,
-            opacity: menuOpen ? 1 : 0,
-            transition: 'opacity 0.4s ease 500ms',
-          }}
-        >
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'center' }}>
-            <a href={PHONE_HREF}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none', color: '#78716c', fontSize: 11 }}>
-              <Phone style={{ width: 12, height: 12, color: '#d4871a' }} />
-              {PHONE_DISPLAY}
-            </a>
-            <Link href="/track-order"
-              style={{ display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none', color: '#78716c', fontSize: 11 }}>
-              <Package style={{ width: 12, height: 12, color: '#d4871a' }} />
-              Track Order
-            </Link>
-            <Link href="/checkout"
-              style={{
-                marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6,
-                background: '#d4871a', color: '#fff', fontSize: 11, fontWeight: 600,
-                padding: '7px 14px', borderRadius: 5, textDecoration: 'none',
-              }}>
-              <ShoppingBag style={{ width: 12, height: 12 }} />
-              Cart {itemCount > 0 && `(${itemCount})`}
-            </Link>
-          </div>
-        </div>
-      </div>
+      <MobileMenu
+        open={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        categories={categories}
+        itemCount={itemCount}
+        triggerRef={menuTrigger}
+      />
     </>
   );
 }

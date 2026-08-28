@@ -181,28 +181,28 @@ export default function EditProductForm({ product, categories }: { product: Prod
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-8 bg-white p-5 lg:p-8 rounded-2xl shadow-sm border border-stone-200">
-      {error && <div className="p-4 bg-red-50 text-red-600 font-medium rounded-xl">{error}</div>}
+    <form onSubmit={handleSubmit} className="space-y-8 bg-white p-5 lg:p-8 rounded-md shadow-sm border border-stone-200">
+      {error && <div className="p-4 bg-red-50 text-red-600 font-medium rounded-sm">{error}</div>}
 
       <div className="space-y-5">
         <div>
           <label className="block text-xs font-bold text-stone-500 uppercase tracking-wider mb-2">Product Title</label>
-          <input type="text" name="title" defaultValue={product.title} required className="w-full p-3.5 bg-stone-50 border border-stone-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none font-medium" />
+          <input type="text" name="title" defaultValue={product.title} required className="w-full p-3.5 bg-stone-50 border border-stone-200 rounded-sm focus:ring-2 focus:ring-orange-500 outline-none font-medium" />
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <div>
             <label className="block text-xs font-bold text-stone-500 uppercase tracking-wider mb-2">URL Slug</label>
-            <input type="text" name="slug" defaultValue={product.slug} required className="w-full p-3.5 bg-stone-50 border border-stone-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none font-medium" />
+            <input type="text" name="slug" defaultValue={product.slug} required className="w-full p-3.5 bg-stone-50 border border-stone-200 rounded-sm focus:ring-2 focus:ring-orange-500 outline-none font-medium" />
           </div>
           <div>
             <label className="block text-xs font-bold text-stone-500 uppercase tracking-wider mb-2">Base Price (£)</label>
-            <input type="number" step="0.01" inputMode="decimal" name="basePrice" defaultValue={product.base_price || ''} required className="w-full p-3.5 bg-stone-50 border border-stone-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none font-bold text-lg" />
+            <input type="number" step="0.01" inputMode="decimal" name="basePrice" defaultValue={product.base_price || ''} required className="w-full p-3.5 bg-stone-50 border border-stone-200 rounded-sm focus:ring-2 focus:ring-orange-500 outline-none font-bold text-lg" />
           </div>
           {/* Origin drives the "Made in the UK" badge on the product page. */}
           <div>
             <label className="block text-xs font-bold text-stone-500 uppercase tracking-wider mb-2">Where is it made?</label>
-            <select name="origin" defaultValue={product.origin ?? 'unspecified'} className="w-full p-3.5 bg-stone-50 border border-stone-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none font-medium">
+            <select name="origin" defaultValue={product.origin ?? 'unspecified'} className="w-full p-3.5 bg-stone-50 border border-stone-200 rounded-sm focus:ring-2 focus:ring-orange-500 outline-none font-medium">
               <option value="unspecified">Not specified — no badge shown</option>
               <option value="uk">Made in the UK — shows the badge</option>
               <option value="imported">Imported — no badge shown</option>
@@ -213,7 +213,7 @@ export default function EditProductForm({ product, categories }: { product: Prod
           </div>
           {/* Controls the "Made to your specification" block on the product page. */}
           <div>
-            <label className="flex items-start gap-3 p-3.5 bg-stone-50 border border-stone-200 rounded-xl cursor-pointer hover:border-orange-300 transition">
+            <label className="flex items-start gap-3 p-3.5 bg-stone-50 border border-stone-200 rounded-sm cursor-pointer hover:border-orange-300 transition">
               <input type="checkbox" name="customMade" value="true" defaultChecked={product.custom_made ?? false} className="mt-0.5 w-5 h-5 accent-orange-500 shrink-0 cursor-pointer" />
               <span>
                 <span className="block text-sm font-bold text-stone-900">Can be made to order</span>
@@ -231,7 +231,7 @@ export default function EditProductForm({ product, categories }: { product: Prod
 
         <div className="pt-6 border-t border-stone-100">
           <label className="block text-xs font-bold text-stone-500 uppercase tracking-wider mb-4">Size & Variant Grouping (Optional)</label>
-          <div className="p-5 bg-stone-50 border border-stone-200 rounded-xl space-y-4">
+          <div className="p-5 bg-stone-50 border border-stone-200 rounded-sm space-y-4">
             {!isCreatingGroup ? (
               <div className="flex flex-col sm:flex-row items-end gap-3">
                 <div className="flex-1 w-full">
@@ -239,16 +239,16 @@ export default function EditProductForm({ product, categories }: { product: Prod
                   <select 
                     value={selectedGroupId} 
                     onChange={(e) => { setSelectedGroupId(e.target.value); if (!e.target.value) setSizeLabel(''); }}
-                    className="w-full p-3 bg-white border border-stone-200 rounded-lg outline-none font-medium text-sm focus:border-orange-500"
+                    className="w-full p-3 bg-white border border-stone-200 rounded-sm outline-none font-medium text-sm focus:border-orange-500"
                   >
                     <option value="">-- No Group (Standalone Product) --</option>
                     {variantGroups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
                   </select>
                 </div>
-                <button type="button" onClick={() => setIsCreatingGroup(true)} className="px-4 py-3 bg-white border border-stone-200 text-stone-600 font-bold text-sm rounded-lg hover:border-orange-500 transition whitespace-nowrap w-full sm:w-auto">Create New</button>
+                <button type="button" onClick={() => setIsCreatingGroup(true)} className="px-4 py-3 bg-white border border-stone-200 text-stone-600 font-bold text-sm rounded-sm hover:border-orange-500 transition whitespace-nowrap w-full sm:w-auto">Create New</button>
               </div>
             ) : (
-              <div className="flex flex-col sm:flex-row items-end gap-3 p-3 bg-white border border-stone-200 rounded-lg">
+              <div className="flex flex-col sm:flex-row items-end gap-3 p-3 bg-white border border-stone-200 rounded-sm">
                 <div className="flex-1 w-full">
                   <label className="block text-[10px] font-bold text-stone-400 uppercase mb-1">New Group Name</label>
                   <input type="text" value={newGroupName} onChange={(e) => setNewGroupName(e.target.value)} placeholder="e.g. Havana Sofa Set" className="w-full p-2.5 bg-stone-50 border border-stone-200 rounded outline-none font-medium text-sm focus:border-orange-500" />
@@ -263,7 +263,7 @@ export default function EditProductForm({ product, categories }: { product: Prod
               <div className="pt-4 border-t border-stone-200 mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[10px] font-bold text-stone-400 uppercase mb-1">Size Label (Appears on Button)</label>
-                  <input type="text" value={sizeLabel} onChange={(e) => setSizeLabel(e.target.value)} placeholder="e.g. 2 Seater, Corner" className="w-full p-3 bg-white border border-stone-200 rounded-lg outline-none font-medium text-sm focus:border-orange-500" required={!!selectedGroupId} />
+                  <input type="text" value={sizeLabel} onChange={(e) => setSizeLabel(e.target.value)} placeholder="e.g. 2 Seater, Corner" className="w-full p-3 bg-white border border-stone-200 rounded-sm outline-none font-medium text-sm focus:border-orange-500" required={!!selectedGroupId} />
                 </div>
                 <div>
                   <label className="block text-[10px] font-bold text-stone-400 uppercase mb-1">
@@ -275,7 +275,7 @@ export default function EditProductForm({ product, categories }: { product: Prod
                     value={subgroupLabel}
                     onChange={(e) => setSubgroupLabel(e.target.value)}
                     placeholder="e.g. High Back, Scattered Back"
-                    className="w-full p-3 bg-white border border-stone-200 rounded-lg outline-none font-medium text-sm focus:border-orange-500"
+                    className="w-full p-3 bg-white border border-stone-200 rounded-sm outline-none font-medium text-sm focus:border-orange-500"
                   />
                   <datalist id="known-subgroups">
                     {knownSubgroups.map(s => <option key={s} value={s} />)}
@@ -296,7 +296,7 @@ export default function EditProductForm({ product, categories }: { product: Prod
                       key={selectedGroup?.id}
                       onBlur={(e) => handleSubgroupTitleChange(e.target.value)}
                       placeholder="e.g. Back Style"
-                      className="w-full p-3 bg-white border border-stone-200 rounded-lg outline-none font-medium text-sm focus:border-orange-500"
+                      className="w-full p-3 bg-white border border-stone-200 rounded-sm outline-none font-medium text-sm focus:border-orange-500"
                     />
                     <p className="text-[10px] text-stone-400 mt-1.5 leading-relaxed">
                       Heading shown above the choice on the product page. Applies to the whole group — saved as soon as you click away.
@@ -311,17 +311,17 @@ export default function EditProductForm({ product, categories }: { product: Prod
         {/* --- GLOBAL PRODUCT GALLERY --- */}
         <div className="pt-6 border-t border-stone-100">
           <label className="block text-xs font-bold text-stone-500 uppercase tracking-wider mb-4">Product Image Gallery</label>
-          <div className="p-5 bg-stone-50 rounded-2xl border border-stone-200">
+          <div className="p-5 bg-stone-50 rounded-md border border-stone-200">
             <div className="flex flex-wrap gap-4">
               {galleryUrls.map((url, i) => (
-                <div key={i} className="relative w-24 h-24 rounded-xl border border-stone-200 overflow-hidden group shadow-sm">
+                <div key={i} className="relative w-24 h-24 rounded-sm border border-stone-200 overflow-hidden group shadow-sm">
                   <img src={url} alt={`Gallery ${i}`} className="w-full h-full object-cover" />
-                  <button type="button" onClick={() => removeGalleryImage(i)} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-md opacity-0 group-hover:opacity-100 transition hover:bg-red-600">
+                  <button type="button" onClick={() => removeGalleryImage(i)} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-sm opacity-0 group-hover:opacity-100 transition hover:bg-red-600">
                     <Trash2 className="w-3 h-3" />
                   </button>
                 </div>
               ))}
-              <label className="w-24 h-24 flex flex-col items-center justify-center border-2 border-dashed border-stone-300 rounded-xl cursor-pointer hover:border-orange-500 hover:bg-orange-50 transition bg-white">
+              <label className="w-24 h-24 flex flex-col items-center justify-center border-2 border-dashed border-stone-300 rounded-sm cursor-pointer hover:border-orange-500 hover:bg-orange-50 transition bg-white">
                 {isUploadingGallery ? <Loader2 className="w-6 h-6 animate-spin text-stone-400" /> : <ImagePlus className="w-6 h-6 text-stone-400 mb-1" />}
                 <span className="text-[10px] font-bold text-stone-500 text-center px-2">{isUploadingGallery ? 'Uploading...' : 'Add Multiple Photos'}</span>
                 <input type="file" multiple accept="image/*" className="hidden" onChange={handleGalleryUpload} disabled={isUploadingGallery} />
@@ -333,9 +333,9 @@ export default function EditProductForm({ product, categories }: { product: Prod
 
         <div>
           <label className="block text-xs font-bold text-stone-500 uppercase tracking-wider mb-2">Categories</label>
-          <div className="w-full p-3 bg-stone-50 border border-stone-200 rounded-xl max-h-48 overflow-y-auto space-y-3">
+          <div className="w-full p-3 bg-stone-50 border border-stone-200 rounded-sm max-h-48 overflow-y-auto space-y-3">
             {categories.map(c => (
-              <label key={c.id} className="flex items-center gap-3 cursor-pointer p-2 hover:bg-stone-100 rounded-lg transition">
+              <label key={c.id} className="flex items-center gap-3 cursor-pointer p-2 hover:bg-stone-100 rounded-sm transition">
                 <input type="checkbox" name="categoryIds" value={c.id} defaultChecked={product.product_categories?.some(pc => pc.category_id === c.id)} className="w-5 h-5 rounded border-stone-300 text-orange-500 focus:ring-orange-500" />
                 <span className="font-medium text-stone-700">{c.name}</span>
               </label>
@@ -345,22 +345,22 @@ export default function EditProductForm({ product, categories }: { product: Prod
 
         <div>
           <label className="block text-xs font-bold text-stone-500 uppercase tracking-wider mb-2">Description</label>
-          <textarea name="description" rows={4} defaultValue={product.description || ''} required className="w-full p-3.5 bg-stone-50 border border-stone-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none font-medium"></textarea>
+          <textarea name="description" rows={4} defaultValue={product.description || ''} required className="w-full p-3.5 bg-stone-50 border border-stone-200 rounded-sm focus:ring-2 focus:ring-orange-500 outline-none font-medium"></textarea>
         </div>
       </div>
 
       <div className="pt-6 border-t border-stone-100">
         <div className="flex items-center justify-between mb-4">
           <label className="block text-xs font-bold text-stone-500 uppercase tracking-wider">Specifications</label>
-          <button type="button" onClick={handleAddSpec} className="flex items-center gap-2 text-sm bg-orange-50 text-orange-600 font-bold px-4 py-2 rounded-xl transition hover:bg-orange-100"><Plus className="w-4 h-4" /> Add Spec</button>
+          <button type="button" onClick={handleAddSpec} className="flex items-center gap-2 text-sm bg-orange-50 text-orange-600 font-bold px-4 py-2 rounded-sm transition hover:bg-orange-100"><Plus className="w-4 h-4" /> Add Spec</button>
         </div>
         <div className="flex flex-col gap-3">
           {specs.map((spec, index) => (
-            <div key={index} className="flex flex-col sm:flex-row items-start gap-2 sm:gap-3 bg-stone-50 p-3 rounded-xl border border-stone-200">
-              <input type="text" placeholder="Name" value={spec.key} onChange={(e) => handleSpecChange(index, 'key', e.target.value)} className="w-full sm:flex-1 p-3 bg-white border border-stone-200 rounded-lg outline-none font-medium text-sm focus:border-orange-500" />
+            <div key={index} className="flex flex-col sm:flex-row items-start gap-2 sm:gap-3 bg-stone-50 p-3 rounded-sm border border-stone-200">
+              <input type="text" placeholder="Name" value={spec.key} onChange={(e) => handleSpecChange(index, 'key', e.target.value)} className="w-full sm:flex-1 p-3 bg-white border border-stone-200 rounded-sm outline-none font-medium text-sm focus:border-orange-500" />
               <div className="flex w-full sm:flex-[2] gap-2">
-                <input type="text" placeholder="Value" value={spec.value} onChange={(e) => handleSpecChange(index, 'value', e.target.value)} className="w-full p-3 bg-white border border-stone-200 rounded-lg outline-none font-medium text-sm focus:border-orange-500" />
-                <button type="button" onClick={() => handleRemoveSpec(index)} className="p-3 text-red-500 bg-white border border-stone-200 hover:bg-red-50 rounded-lg transition shrink-0"><Trash2 className="w-5 h-5" /></button>
+                <input type="text" placeholder="Value" value={spec.value} onChange={(e) => handleSpecChange(index, 'value', e.target.value)} className="w-full p-3 bg-white border border-stone-200 rounded-sm outline-none font-medium text-sm focus:border-orange-500" />
+                <button type="button" onClick={() => handleRemoveSpec(index)} className="p-3 text-red-500 bg-white border border-stone-200 hover:bg-red-50 rounded-sm transition shrink-0"><Trash2 className="w-5 h-5" /></button>
               </div>
             </div>
           ))}
@@ -370,39 +370,39 @@ export default function EditProductForm({ product, categories }: { product: Prod
       <div className="pt-6 border-t border-stone-100">
         <div className="flex justify-between items-center mb-4">
           <label className="block text-xs font-bold text-stone-500 uppercase tracking-wider">Color Variants</label>
-          <button type="button" onClick={addVariantRow} className="text-sm bg-stone-900 text-white font-bold px-4 py-2 rounded-xl flex items-center gap-2 transition hover:bg-stone-800"><Plus className="w-4 h-4" /> Add Color</button>
+          <button type="button" onClick={addVariantRow} className="text-sm bg-stone-900 text-white font-bold px-4 py-2 rounded-sm flex items-center gap-2 transition hover:bg-stone-800"><Plus className="w-4 h-4" /> Add Color</button>
         </div>
         <div className="space-y-4">
           {variants.map((variant, index) => (
-            <div key={index} className="flex flex-col gap-4 p-5 bg-stone-50 rounded-2xl border border-stone-200 relative">
+            <div key={index} className="flex flex-col gap-4 p-5 bg-stone-50 rounded-md border border-stone-200 relative">
               {(!variant.id) && (
-                <button type="button" onClick={() => removeVariant(index)} className="absolute top-4 right-4 p-2 text-red-500 hover:bg-red-100 rounded-lg transition"><Trash2 className="w-5 h-5" /></button>
+                <button type="button" onClick={() => removeVariant(index)} className="absolute top-4 right-4 p-2 text-red-500 hover:bg-red-100 rounded-sm transition"><Trash2 className="w-5 h-5" /></button>
               )}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pr-10 sm:pr-0">
                 <div className="col-span-2">
                   <label className="block text-[10px] font-bold text-stone-400 uppercase mb-1">Color Name</label>
-                  <div className="flex items-center gap-2 bg-white border border-stone-200 rounded-xl p-1.5 focus-within:border-orange-500">
+                  <div className="flex items-center gap-2 bg-white border border-stone-200 rounded-sm p-1.5 focus-within:border-orange-500">
                     <input type="color" value={variant.color_hex} onChange={(e) => updateVariant(index, 'color_hex', e.target.value)} className="w-8 h-8 rounded cursor-pointer border-0 p-0 shrink-0" />
                     <input type="text" placeholder="e.g. Royal Blue" value={variant.color} onChange={(e) => updateVariant(index, 'color', e.target.value)} required className="w-full p-2 text-sm outline-none font-medium" />
                   </div>
                 </div>
                 <div className="col-span-2 sm:col-span-1">
                   <label className="block text-[10px] font-bold text-stone-400 uppercase mb-1">Material</label>
-                  <input type="text" placeholder="e.g. Velvet" value={variant.material} onChange={(e) => updateVariant(index, 'material', e.target.value)} required className="w-full p-3 bg-white border border-stone-200 rounded-xl text-sm font-medium outline-none focus:border-orange-500" />
+                  <input type="text" placeholder="e.g. Velvet" value={variant.material} onChange={(e) => updateVariant(index, 'material', e.target.value)} required className="w-full p-3 bg-white border border-stone-200 rounded-sm text-sm font-medium outline-none focus:border-orange-500" />
                 </div>
                 <div className="col-span-1">
                   <label className="block text-[10px] font-bold text-stone-400 uppercase mb-1">SKU</label>
-                  <input type="text" placeholder="SOFA-BLU" value={variant.sku} onChange={(e) => updateVariant(index, 'sku', e.target.value)} required className="w-full p-3 bg-white border border-stone-200 rounded-xl text-sm font-medium outline-none focus:border-orange-500" />
+                  <input type="text" placeholder="SOFA-BLU" value={variant.sku} onChange={(e) => updateVariant(index, 'sku', e.target.value)} required className="w-full p-3 bg-white border border-stone-200 rounded-sm text-sm font-medium outline-none focus:border-orange-500" />
                 </div>
                 <div className="col-span-1">
                   <label className="block text-[10px] font-bold text-stone-400 uppercase mb-1">+ Price (£)</label>
-                  <input type="number" step="0.01" inputMode="decimal" placeholder="0.00" value={variant.priceAdjustment} onChange={(e) => updateVariant(index, 'priceAdjustment', e.target.value)} className="w-full p-3 bg-white border border-stone-200 rounded-xl text-sm font-bold outline-none focus:border-orange-500" />
+                  <input type="number" step="0.01" inputMode="decimal" placeholder="0.00" value={variant.priceAdjustment} onChange={(e) => updateVariant(index, 'priceAdjustment', e.target.value)} className="w-full p-3 bg-white border border-stone-200 rounded-sm text-sm font-bold outline-none focus:border-orange-500" />
                 </div>
               </div>
               <div className="relative mt-2">
                 <input type="file" accept="image/*" onChange={(e) => { if (e.target.files?.[0]) handleImageUpload(index, e.target.files[0]) }} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
-                <div className={`flex items-center justify-center gap-3 p-4 rounded-xl border-2 border-dashed transition ${variant.image_url ? 'border-green-500 bg-green-50' : 'border-stone-300 bg-white hover:border-orange-500'}`}>
-                  {variant.isUploading ? <div className="flex items-center gap-2 text-stone-500 font-medium"><Loader2 className="w-5 h-5 animate-spin" /> Uploading...</div> : variant.image_url ? <><img src={variant.image_url} alt="Variant" className="w-12 h-12 object-cover rounded-lg shadow-sm" /><span className="text-green-700 font-bold text-sm">Image Uploaded (Tap to change)</span></> : <><ImagePlus className="w-6 h-6 text-stone-400" /><span className="font-bold text-stone-600 text-sm">Tap to Change Photo</span></>}
+                <div className={`flex items-center justify-center gap-3 p-4 rounded-sm border-2 border-dashed transition ${variant.image_url ? 'border-green-500 bg-green-50' : 'border-stone-300 bg-white hover:border-orange-500'}`}>
+                  {variant.isUploading ? <div className="flex items-center gap-2 text-stone-500 font-medium"><Loader2 className="w-5 h-5 animate-spin" /> Uploading...</div> : variant.image_url ? <><img src={variant.image_url} alt="Variant" className="w-12 h-12 object-cover rounded-sm shadow-sm" /><span className="text-green-700 font-bold text-sm">Image Uploaded (Tap to change)</span></> : <><ImagePlus className="w-6 h-6 text-stone-400" /><span className="font-bold text-stone-600 text-sm">Tap to Change Photo</span></>}
                 </div>
               </div>
             </div>
@@ -411,7 +411,7 @@ export default function EditProductForm({ product, categories }: { product: Prod
       </div>
 
       <div className="pt-8">
-        <button type="submit" disabled={isPending || isUploadingGallery || variants.some((v: any) => v.isUploading)} className="w-full bg-orange-500 text-white py-4 rounded-2xl font-black text-lg hover:bg-orange-600 transition shadow-lg disabled:opacity-70 flex justify-center items-center gap-2 active:scale-[0.98]">
+        <button type="submit" disabled={isPending || isUploadingGallery || variants.some((v: any) => v.isUploading)} className="w-full bg-orange-500 text-white py-4 rounded-md font-black text-lg hover:bg-orange-600 transition shadow-lg disabled:opacity-70 flex justify-center items-center gap-2 active:scale-[0.98]">
           {isPending ? <Loader2 className="w-6 h-6 animate-spin" /> : 'Save Changes'}
         </button>
       </div>

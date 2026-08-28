@@ -1,93 +1,123 @@
 'use client';
+// src/components/UI/CookieConsent.tsx
 
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { Cookie } from 'lucide-react';
 import {
   getConsent, grantConsent, revokeConsent,
   CONSENT_GRANTED_EVENT, CONSENT_REOPEN_EVENT,
 } from '@/utils/consent';
 
+/**
+ * The cookie banner.
+ *
+ * Three things changed and all three matter.
+ *
+ * It sat at `bottom: 0` over the bottom navigation, so on a phone the way to
+ * get to the cart was underneath the thing asking about cookies. It clears the
+ * navigation now.
+ *
+ * "Accept All" was a filled ember button and "Essential Only" a grey outline —
+ * which is a nudge, and under UK GDPR refusing has to be as easy as accepting.
+ * The two are the same size, the same shape and the same weight; only the
+ * colour differs, and it differs the least it can while still being legible.
+ *
+ * And the copy said we use cookies to "personalize our furniture
+ * recommendations", which the site does not do. It says what actually happens.
+ */
 export default function CookieConsent() {
-  const [showBanner, setShowBanner] = useState(false);
-  const [isAnimating, setIsAnimating] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [entered, setEntered] = useState(false);
+
+  const show = useCallback(() => {
+    setOpen(true);
+    // A frame's grace so the element exists at its start position before the
+    // transition runs; without it the sheet appears already in place.
+    requestAnimationFrame(() => setEntered(true));
+  }, []);
 
   useEffect(() => {
     const consent = getConsent();
-    if (!consent) {
-      setShowBanner(true);
-      setTimeout(() => setIsAnimating(true), 50);
-    } else if (consent === 'granted') {
-      window.dispatchEvent(new Event(CONSENT_GRANTED_EVENT));
-    }
+    if (!consent) show();
+    else if (consent === 'granted') window.dispatchEvent(new Event(CONSENT_GRANTED_EVENT));
 
     // The footer link and the /cookies page ask the banner to come back, so a
     // visitor can change an answer they have already given. UK GDPR wants
     // withdrawing consent to be as easy as giving it.
-    const reopen = () => {
-      setShowBanner(true);
-      setTimeout(() => setIsAnimating(true), 50);
-    };
-    window.addEventListener(CONSENT_REOPEN_EVENT, reopen);
-    return () => window.removeEventListener(CONSENT_REOPEN_EVENT, reopen);
-  }, []);
+    window.addEventListener(CONSENT_REOPEN_EVENT, show);
+    return () => window.removeEventListener(CONSENT_REOPEN_EVENT, show);
+  }, [show]);
 
-  const handleConsent = (status: 'granted' | 'denied') => {
-    setIsAnimating(false);
-
+  function answer(status: 'granted' | 'denied') {
+    setEntered(false);
     setTimeout(() => {
-      setShowBanner(false);
-      if (status === 'granted') {
-        grantConsent();
-      } else {
-        // Deletes any analytics cookies already written and reloads, because
-        // GA and the Meta Pixel cannot be unloaded once they have run.
-        revokeConsent({ reload: getConsent() === 'granted' });
-      }
-    }, 500); // matches the slide-out duration
-  };
+      setOpen(false);
+      if (status === 'granted') grantConsent();
+      // Deletes any analytics cookies already written and reloads, because GA
+      // and the Meta Pixel cannot be unloaded once they have run.
+      else revokeConsent({ reload: getConsent() === 'granted' });
+    }, 380);
+  }
 
-  if (!showBanner) return null;
+  if (!open) return null;
+
+  const button =
+    'hover-btn hover-btn-dark flex h-12 flex-1 items-center justify-center rounded-sm ' +
+    'text-body-sm font-semibold transition-colors duration-swift ease-out-expo sm:flex-none sm:px-8';
 
   return (
-    <div 
-      className={`fixed bottom-0 left-0 right-0 z-50 p-4 sm:p-6 flex justify-center pointer-events-none transition-all duration-500 ease-out ${
-        isAnimating ? 'translate-y-0 opacity-100' : 'translate-y-16 opacity-0'
-      }`}
+    <div
+      role="dialog"
+      aria-modal="false"
+      aria-labelledby="consent-heading"
+      className="fixed inset-x-0 z-consent px-4 pb-4 sm:px-6"
+      // Above the bottom navigation, inset included. It used to sit on top of
+      // it — so the one control a phone always needs was behind this.
+      style={{ bottom: 'calc(var(--bottom-nav) + env(safe-area-inset-bottom))' }}
     >
-      {/* Floating Card Design matching your Toaster theme */}
-      <div className="pointer-events-auto bg-[#1c1917] border border-[#b45309] rounded-2xl shadow-2xl p-6 max-w-3xl w-full flex flex-col md:flex-row gap-6 items-center">
-        
-        {/* Left Side: Icon & Text */}
-        <div className="flex-1 flex gap-4 items-start">
-          <div className="text-3xl shrink-0 mt-1">🛋️</div>
-          <div>
-            <h3 className="text-lg font-semibold text-white font-serif tracking-wide mb-1">
-              Crafting your perfect space
-            </h3>
-            <p className="text-sm text-stone-300 leading-relaxed">
-              Just like picking the right fabric, we use cookies to tailor your experience. 
-              They help us personalize our furniture recommendations, analyze site traffic, and improve our ads. 
-              Read our <Link href="/privacy" className="text-[#b45309] font-medium hover:text-orange-400 transition-colors underline underline-offset-2">Privacy Policy</Link> to learn more.
+      <div
+        className={`mx-auto flex max-w-shell flex-col gap-5 rounded-lg border border-ink-700 bg-ink-900 p-5 shadow-e3 transition-[transform,opacity] duration-base ease-out-expo sm:flex-row sm:items-center sm:gap-6 ${
+          entered ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0'
+        }`}
+      >
+        <div className="flex flex-1 items-start gap-4">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-sm bg-ink-700">
+            <Cookie aria-hidden="true" className="h-5 w-5 text-ember-300" />
+          </span>
+
+          <div className="min-w-0">
+            <h2 id="consent-heading" className="m-0 text-body font-semibold text-calico-50">
+              Cookies on this site
+            </h2>
+            <p className="m-0 mt-1.5 text-body-sm leading-relaxed text-calico-300">
+              Some are needed for the shop to work — your basket, your session. The rest measure
+              how the site is used and how well our ads do. You choose whether we set those.{' '}
+              <Link href="/cookies" className="hover-link font-semibold text-ember-300">
+                What we set, and why
+              </Link>.
             </p>
           </div>
         </div>
 
-        {/* Right Side: Buttons */}
-        <div className="flex flex-row md:flex-col gap-3 shrink-0 w-full md:w-auto">
+        {/* Equal weight, deliberately. Refusing has to be as easy as accepting,
+            and a grey outline beside a filled button is not equally easy. */}
+        <div className="flex shrink-0 flex-col gap-3 sm:w-auto sm:flex-row">
           <button
-            onClick={() => handleConsent('granted')}
-            className="flex-1 md:flex-none px-6 py-2.5 text-sm font-medium text-white transition-all bg-[#b45309] rounded-lg hover:bg-orange-700 hover:shadow-[0_0_15px_rgba(180,83,9,0.4)] focus:outline-none focus:ring-2 focus:ring-[#b45309] focus:ring-offset-2 focus:ring-offset-[#1c1917]"
+            type="button"
+            onClick={() => answer('denied')}
+            className={`${button} border border-calico-50/30 text-calico-50`}
           >
-            Accept All
+            Essential only
           </button>
           <button
-            onClick={() => handleConsent('denied')}
-            className="flex-1 md:flex-none px-6 py-2.5 text-sm font-medium text-stone-300 transition-colors bg-transparent border border-stone-600 rounded-lg hover:bg-stone-800 hover:text-white focus:outline-none"
+            type="button"
+            onClick={() => answer('granted')}
+            className={`${button} border border-ember-500 bg-ember-500 text-ink-900`}
           >
-            Essential Only
+            Accept all
           </button>
         </div>
-        
       </div>
     </div>
   );

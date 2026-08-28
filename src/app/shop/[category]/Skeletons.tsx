@@ -6,24 +6,28 @@
 // which turned every unknown category into a soft 404. Suspending inside the
 // page means the status code is settled first and only the slow parts stream.
 
+import Skeleton, { CardSkeleton } from '@/components/UI/Skeleton'
+
 const CARD_COUNT = 9
 
+/**
+ * The grid's placeholder, built to the real card's measurements.
+ *
+ * It matters that these agree. The old skeleton drew a square well on mobile
+ * and 3:4 above it, against a card that is 4:5 everywhere, and left out the
+ * swatch row entirely — so every listing jumped as the products arrived. Each
+ * block below is the same size as the thing it stands in for: the 4:5 well,
+ * two lines of 16px title, the 17px price, and the 16px swatch dots.
+ */
 export function ProductGridSkeleton() {
   return (
     <div aria-hidden className="w-full">
-      {/* Mirrors the real count line so nothing shifts when results arrive. */}
-      <div className="h-4 w-24 bg-[#ede8df] rounded mb-5 animate-pulse" />
+      {/* The count line above the grid. */}
+      <Skeleton className="mb-4 h-4 w-24 rounded-sm" />
 
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 lg:gap-6 mb-10 w-full">
+      <div className="grid w-full grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 lg:gap-6">
         {Array.from({ length: CARD_COUNT }).map((_, i) => (
-          <div key={i} className="w-full">
-            <div className="w-full aspect-square md:aspect-[3/4] bg-[#ede8df] rounded-[10px] mb-3 animate-pulse" />
-            <div className="px-1 flex flex-col gap-2">
-              <div className="h-3 w-full bg-[#ede8df] rounded animate-pulse" />
-              <div className="h-3 w-2/3 bg-[#ede8df] rounded animate-pulse" />
-              <div className="h-4 w-14 bg-[#ede8df] rounded mt-1 animate-pulse" />
-            </div>
-          </div>
+          <CardSkeleton key={i} />
         ))}
       </div>
     </div>
@@ -32,12 +36,12 @@ export function ProductGridSkeleton() {
 
 export function FilterSidebarSkeleton() {
   return (
-    <div aria-hidden className="w-full flex flex-col gap-5">
+    <div aria-hidden className="flex w-full flex-col gap-6">
       {Array.from({ length: 3 }).map((_, section) => (
-        <div key={section} className="flex flex-col gap-2.5">
-          <div className="h-3 w-20 bg-[#ede8df] rounded animate-pulse" />
+        <div key={section} className="flex flex-col gap-3">
+          <Skeleton className="h-3 w-20 rounded-sm" />
           {Array.from({ length: 4 }).map((_, row) => (
-            <div key={row} className="h-3 w-full bg-[#ede8df] rounded animate-pulse" />
+            <Skeleton key={row} className="h-3 w-full rounded-sm" />
           ))}
         </div>
       ))}

@@ -1,359 +1,137 @@
 'use client';
+// src/components/Product/ProductPageClient.tsx
+//
+// The orchestrator. It owns the state the sections share — which variant is
+// selected, whether the item is in the cart or on the wishlist — and nothing
+// else. The page itself is six components:
+//
+//   Gallery      the photographs and the colour swatches
+//   BuyBox       title, price, delivery dates, the choices, add to cart
+//   StickyBar    the phone's add-to-cart bar
+//   Details      description, specifications, delivery, dimensions
+//   Reviews      the reviews and the form
+//   Similar      more from the same category, and Recently viewed under it
+//
+// This file was 1,361 lines with all six of them inlined, roughly two hundred
+// inline style objects, and one <h1> rendered twice.
 
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import Image from 'next/image';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import {
-  ShoppingBag, Check, Truck, Wallet, ShieldCheck,
-  Ruler, X, ChevronDown, ChevronUp, Star, ZoomIn,
-  Loader2, CheckCircle, ChevronRight, Gem, Heart, ImagePlus, ChevronLeft,
-  Sparkles, Phone, AlertTriangle
-} from 'lucide-react';
-import { toggleWishlist } from '@/app/actions/wishlist';
-import { PHONE_HREF, WHATSAPP_NUMBER } from '@/constants/contact';
-import { trackViewContent, trackAddToCart } from '@/utils/tracking';
-import { useCart } from '@/context/CartContext';
-import { submitGlobalReview } from '@/app/actions/reviews';
-import { uploadToCloudinary } from '@/app/actions/upload';
+import { ChevronRight, Phone, Sparkles } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { PROMISES } from '@/constants/promises';
+import { toggleWishlist } from '@/app/actions/wishlist';
+import { PHONE_HREF, whatsAppHref } from '@/constants/contact';
+import { useCart } from '@/context/CartContext';
+import { trackAddToCart, trackViewContent } from '@/utils/tracking';
+import type { DeliveryWindow } from '@/utils/delivery';
+import { accentVars } from './accent';
+import BuyBox from './BuyBox';
+import Details from './Details';
+import Gallery from './Gallery';
+import RecentlyViewed from './RecentlyViewed';
+import Reviews from './Reviews';
+import SecondaryActions from './SecondaryActions';
+import Similar from './Similar';
+import StickyBar from './StickyBar';
+import WhatsAppIcon from './WhatsAppIcon';
+import Modal from '@/components/UI/Modal';
+import type { GalleryImage, Product, Review, SimilarProduct, SizeVariant, Swatch, Variant } from './types';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-interface Variant {
-  id: string;
-  color: string | null;
-  color_hex: string | null;
-  material: string | null;
-  image_url: string | null;
-  price_adjustment: number;
-}
-interface Review {
-  id: string;
-  customer_name: string;
-  image_url: string | null;
-  rating: number;
-  comment: string;
-  created_at: string;
-  status: string;
-}
-interface Product {
-  id: string;
-  title: string;
-  slug: string;
-  description: string | null;
-  base_price: number;
-  specifications: Record<string, string> | string | null;
-  gallery_images?: string[] | null; 
-  product_variants?: Variant[];
-  reviews?: Review[];
-  origin?: string | null;
-  custom_made?: boolean | null;
-}
-interface SimilarProduct {
-  id: string;
-  title: string;
-  slug: string;
-  base_price: number;
-  image_url: string;
-}
-interface SizeVariant {
-  id: string;
-  slug: string;
-  size_label: string;
-  subgroup_label?: string | null;
-}
 interface Props {
   product: Product;
   variants: Variant[];
   approvedReviews: Review[];
   similarProducts: SimilarProduct[];
   categorySlug: string;
+  /** The category's real name. See the note on the breadcrumb below. */
+  categoryName: string;
+  /** Computed on the server so the dates are in the HTML and cannot drift. */
+  deliveryEstimate: DeliveryWindow;
   initialWishlistState: boolean;
-  isLoggedIn: boolean; 
+  isLoggedIn: boolean;
   sizeVariants?: SizeVariant[];
   subgroupTitle?: string;
   currentSubgroup?: string | null;
-  initialVariantId?: string; // Add this line
+  initialVariantId?: string;
 }
 
-// ─── Color utilities ──────────────────────────────────────────────────────────
-function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
-  const clean = hex.replace('#', '');
-  if (clean.length !== 3 && clean.length !== 6) return null;
-  const full = clean.length === 3
-    ? clean.split('').map(c => c + c).join('')
-    : clean;
-  return {
-    r: parseInt(full.slice(0, 2), 16),
-    g: parseInt(full.slice(2, 4), 16),
-    b: parseInt(full.slice(4, 6), 16),
-  };
+/**
+ * "corner-sofas" → "Corner Sofas".
+ *
+ * Only reached when the category row has no name, which is the case the
+ * breadcrumb used to hit every time: it printed the raw URL slug, so the trail
+ * on every product page in that category read "Corner-sofas".
+ */
+function titleCase(value: string): string {
+  return value
+    .replace(/[-_]+/g, ' ')
+    .trim()
+    .replace(/\b\p{Ll}/gu, c => c.toUpperCase());
 }
 
-function getLuminance(r: number, g: number, b: number): number {
-  const [rs, gs, bs] = [r, g, b].map(c => {
-    const s = c / 255;
-    return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
-  });
-  return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
-}
-
-function getTextColor(hex: string): string {
-  const rgb = hexToRgb(hex);
-  if (!rgb) return '#1c1917';
-  return getLuminance(rgb.r, rgb.g, rgb.b) > 0.4 ? '#1c1917' : '#ffffff';
-}
-
-function getPageTint(hex: string, lightness = 0.97): string {
-  const rgb = hexToRgb(hex);
-  if (!rgb) return `hsl(0,0%,${lightness * 100}%)`;
-  const r = rgb.r / 255, g = rgb.g / 255, b = rgb.b / 255;
-  const max = Math.max(r, g, b), min = Math.min(r, g, b);
-  let h = 0;
-  if (max !== min) {
-    const d = max - min;
-    switch (max) {
-      case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
-      case g: h = ((b - r) / d + 2) / 6; break;
-      case b: h = ((r - g) / d + 4) / 6; break;
-    }
-  }
-  return `hsl(${Math.round(h * 360)},${Math.round(15)}%,${Math.round(lightness * 100)}%)`;
-}
-
-function getAccentTint(hex: string): string {
-  const rgb = hexToRgb(hex);
-  if (!rgb) return 'rgba(212,135,26,0.08)';
-  return `rgba(${rgb.r},${rgb.g},${rgb.b},0.1)`;
-}
-
-function getMidTint(hex: string): string {
-  const rgb = hexToRgb(hex);
-  if (!rgb) return 'rgba(212,135,26,0.18)';
-  return `rgba(${rgb.r},${rgb.g},${rgb.b},0.2)`;
-}
-
-// ─── Reveal hook ─────────────────────────────────────────────────────────────
-function useReveal(threshold = 0.1) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = useState(false);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const obs = new IntersectionObserver(
-      ([e]) => { if (e.isIntersecting) { setVisible(true); obs.disconnect(); } },
-      { threshold }
-    );
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, []);
-  return { ref, visible };
-}
-
-// ─── Star rating display ──────────────────────────────────────────────────────
-function StarRow({ rating, size = 14, accent }: { rating: number; size?: number; accent: string }) {
-  return (
-    <div style={{ display: 'flex', gap: 2 }}>
-      {[1, 2, 3, 4, 5].map(i => (
-        <Star
-          key={i}
-          style={{
-            width: size, height: size,
-            fill: i <= rating ? accent : 'transparent',
-            color: i <= rating ? accent : '#d6d3d1',
-          }}
-        />
-      ))}
-    </div>
-  );
-}
-
-// ─── Image Zoom modal ─────────────────────────────────────────────────────────
-function ZoomModal({ src, alt, onClose }: { src: string; alt: string; onClose: () => void }) {
-  useEffect(() => {
-    const fn = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', fn);
-    return () => window.removeEventListener('keydown', fn);
-  }, [onClose]);
-
-  return (
-    <div
-      style={{
-        position: 'fixed', inset: 0, zIndex: 200,
-        background: 'rgba(0,0,0,0.92)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        animation: 'fadeIn 0.25s ease',
-      }}
-      onClick={onClose}
-    >
-      <button
-        onClick={onClose}
-        style={{
-          position: 'absolute', top: 16, right: 16,
-          width: 38, height: 38, borderRadius: '50%',
-          background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)',
-          color: '#fff', cursor: 'pointer',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}
-      >
-        <X style={{ width: 14, height: 14 }} />
-      </button>
-      <div
-        style={{ position: 'relative', width: '90vw', height: '90vh', maxWidth: 900 }}
-        onClick={e => e.stopPropagation()}
-      >
-        <Image src={src} alt={alt} fill sizes="90vw" style={{ objectFit: 'contain' }} />
-      </div>
-    </div>
-  );
-}
-
-// ─── Review form ──────────────────────────────────────────────────────────────
-function ReviewForm({ productId, accent, accentTint, isLoggedIn }: {
-  productId: string; accent: string; accentTint: string; isLoggedIn: boolean;
-}) {
-  const [pending, setPending] = useState(false);
-  const [error, setError]     = useState('');
-  const [success, setSuccess] = useState(false);
-  const [rating, setRating]   = useState(5);
-  const [hovered, setHovered] = useState(0);
-  const [file, setFile]       = useState<File | null>(null);
-
-  if (!isLoggedIn) {
-    return (
-      <div style={{ background: accentTint, border: `1px solid ${accent}33`, borderRadius: 10, padding: '32px 24px', textAlign: 'center' }}>
-        <div style={{ fontWeight: 700, fontSize: 16, color: '#1c1917', marginBottom: 8 }}>Share your thoughts</div>
-        <p style={{ fontSize: 12, color: '#78716c', marginBottom: 20 }}>You must be logged in to leave a review for this product.</p>
-        <Link href="/login" style={{
-          display: 'inline-block', background: '#1c1917', color: '#fff', padding: '10px 20px',
-          borderRadius: 8, fontSize: 12, fontWeight: 700, textTransform: 'uppercase', textDecoration: 'none'
-        }}>
-          Log In to Review
-        </Link>
-      </div>
-    );
-  }
-
-  if (success) return (
-    <div style={{ background: accentTint, border: `1px solid ${accent}33`, borderRadius: 10, padding: '24px', textAlign: 'center' }}>
-      <CheckCircle style={{ width: 28, height: 28, color: accent, margin: '0 auto 8px' }} />
-      <div style={{ fontWeight: 700, fontSize: 14, color: '#1c1917', marginBottom: 4 }}>Thank you!</div>
-      <p style={{ fontSize: 12, color: '#78716c' }}>Your review has been submitted and is pending approval.</p>
-    </div>
-  );
-
-  async function submit(fd: FormData) {
-    setPending(true); setError('');
-    fd.append('rating', rating.toString());
-    fd.append('productId', productId);
-
-    try {
-      let imageUrl = null;
-      if (file) {
-        imageUrl = await uploadToCloudinary(file);
-      }
-
-      const res = await submitGlobalReview(fd, imageUrl);
-      if (res?.error) { setError(res.error); setPending(false); }
-      else if (res?.success) { setSuccess(true); setPending(false); }
-    } catch (err) {
-      setError('Something went wrong. Please try again.');
-      setPending(false);
-    }
-  }
-
-  return (
-    <form action={submit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <div style={{ fontSize: 13, fontWeight: 700, color: '#1c1917', letterSpacing: '-0.01em' }}>
-        Write a Review
-      </div>
-      {error && <div style={{ padding: '8px 12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, fontSize: 11, color: '#dc2626' }}>{error}</div>}
-
-      <div>
-        <div style={{ fontSize: 10, color: '#78716c', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: 8, fontWeight: 600 }}>Rating</div>
-        <div style={{ display: 'flex', gap: 4 }}>
-          {[1,2,3,4,5].map(s => (
-            <button key={s} type="button" onClick={() => setRating(s)}
-              onMouseEnter={() => setHovered(s)} onMouseLeave={() => setHovered(0)}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-            >
-              <Star style={{
-                width: 22, height: 22,
-                fill: s <= (hovered || rating) ? accent : 'transparent',
-                color: s <= (hovered || rating) ? accent : '#d6d3d1',
-                transition: 'all 0.15s ease',
-                transform: s <= (hovered || rating) ? 'scale(1.15)' : 'scale(1)',
-              }} />
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <label style={{ display: 'block', fontSize: 10, color: '#78716c', textTransform: 'uppercase', letterSpacing: '0.15em', fontWeight: 600, marginBottom: 6 }}>
-          Your Review
-        </label>
-        <textarea name="comment" required rows={3} placeholder="What did you think of this sofa?"
-          style={{
-            width: '100%', padding: '10px 12px', borderRadius: 7, border: '1px solid #e7e5e4',
-            fontSize: 12, outline: 'none', resize: 'vertical', fontFamily: 'inherit',
-            transition: 'border-color 0.2s ease', boxSizing: 'border-box',
-          }}
-          onFocus={e => e.currentTarget.style.borderColor = accent}
-          onBlur={e => e.currentTarget.style.borderColor = '#e7e5e4'}
-        />
-      </div>
-
-      <div>
-        <label style={{ display: 'block', fontSize: 10, color: '#78716c', textTransform: 'uppercase', letterSpacing: '0.15em', fontWeight: 600, marginBottom: 6 }}>
-          Add a Photo (Optional)
-        </label>
-        <label style={{
-          display: 'flex', alignItems: 'center', gap: 8, padding: '12px',
-          borderRadius: 7, border: '1px dashed #d6d3d1', cursor: 'pointer',
-          background: '#fafaf9', transition: 'background 0.2s'
-        }}>
-          <ImagePlus style={{ width: 16, height: 16, color: '#a8a29e' }} />
-          <span style={{ fontSize: 11, color: '#57534e' }}>{file ? file.name : 'Click to upload an image'}</span>
-          <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => setFile(e.target.files?.[0] || null)} />
-        </label>
-      </div>
-
-      <button type="submit" disabled={pending}
-        style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-          padding: '11px 0', borderRadius: 7, border: 'none',
-          background: accent, color: getTextColor(accent),
-          fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase',
-          cursor: pending ? 'wait' : 'pointer', transition: 'opacity 0.2s ease',
-          opacity: pending ? 0.7 : 1, marginTop: 4
-        }}
-      >
-        {pending && <Loader2 style={{ width: 13, height: 13, animation: 'spin 0.8s linear infinite' }} />}
-        Submit Review
-      </button>
-    </form>
-  );
-}
-
-// ─── Main component ───────────────────────────────────────────────────────────
-export default function ProductPageClient({ product, initialWishlistState, variants, approvedReviews, similarProducts, categorySlug, isLoggedIn, sizeVariants, subgroupTitle, currentSubgroup, initialVariantId }: Props) {
+export default function ProductPageClient({
+  product, variants, approvedReviews, similarProducts,
+  categorySlug, categoryName, deliveryEstimate,
+  initialWishlistState, isLoggedIn,
+  sizeVariants, subgroupTitle, currentSubgroup, initialVariantId,
+}: Props) {
   const { addToCart } = useCart();
 
-  // ── Variant selection ──
-  const uniqueMaterials = useMemo(() => [...new Set(variants.map(v => v.material || 'Standard'))], [variants]);
-
-  // ── Subgroup (2nd variant dimension, e.g. "High Back" / "Scattered Back") ──
-  // Products in a group may split across a style dimension as well as size.
-  // Groups that don't use subgroups leave subgroup_label null and behave as before.
-  const subgroups = useMemo(
-    () => [...new Set((sizeVariants ?? []).map(sv => sv.subgroup_label).filter(Boolean) as string[])],
-    [sizeVariants]
+  // ── Variant selection ────────────────────────────────────────────────────
+  const materials = useMemo(
+    () => [...new Set(variants.map(v => v.material || 'Standard'))],
+    [variants],
   );
 
-  // Sizes shown are only those available in the currently selected style, so the
-  // customer can never land on a size/style combination that doesn't exist.
-  const sizesInSubgroup = useMemo(() => {
+  const startingVariant = useMemo(
+    () => (initialVariantId ? variants.find(v => v.id === initialVariantId) : undefined) ?? variants[0],
+    [variants, initialVariantId],
+  );
+
+  const [selMat, setSelMat] = useState(startingVariant?.material || 'Standard');
+  const [selColor, setSelColor] = useState(startingVariant?.color ?? '');
+
+  // Someone can arrive at ?variant=… while already on the page — a swatch on a
+  // card in Similar, for instance. Adjusted during render rather than in an
+  // effect: an effect would paint the previous variant first and then correct
+  // itself, which is a visible flash of the wrong sofa.
+  const [appliedVariantId, setAppliedVariantId] = useState(initialVariantId);
+  if (initialVariantId && initialVariantId !== appliedVariantId) {
+    setAppliedVariantId(initialVariantId);
+    const target = variants.find(v => v.id === initialVariantId);
+    if (target) {
+      setSelMat(target.material || 'Standard');
+      setSelColor(target.color || '');
+    }
+  }
+
+  const inMaterial = useMemo(
+    () => variants.filter(v => (v.material || 'Standard') === selMat),
+    [variants, selMat],
+  );
+  const selVariant = variants.find(v => (v.material || 'Standard') === selMat && v.color === selColor) ?? inMaterial[0];
+
+  const handleMaterial = (mat: string) => {
+    setSelMat(mat);
+    const cols = variants.filter(v => (v.material || 'Standard') === mat);
+    if (!cols.find(v => v.color === selColor)) setSelColor(cols[0]?.color ?? '');
+  };
+
+  // ── The accent ───────────────────────────────────────────────────────────
+  // Six custom properties on this one wrapper. The page ground stays Calico;
+  // the variant colour reaches swatches, rings and the trust row and stops
+  // there. See accent.ts for what the whole-page tint used to do.
+  const accent = accentVars(selVariant?.color_hex);
+
+  // ── Subgroups ────────────────────────────────────────────────────────────
+  const subgroups = useMemo(
+    () => [...new Set((sizeVariants ?? []).map(sv => sv.subgroup_label).filter(Boolean) as string[])],
+    [sizeVariants],
+  );
+
+  // Sizes shown are only those available in the currently selected style, so
+  // the customer can never land on a size/style combination that doesn't exist.
+  const sizes = useMemo(() => {
     if (!sizeVariants) return [];
     if (subgroups.length < 2) return sizeVariants;
     return sizeVariants.filter(sv => sv.subgroup_label === currentSubgroup);
@@ -361,211 +139,74 @@ export default function ProductPageClient({ product, initialWishlistState, varia
 
   const currentSizeLabel = useMemo(
     () => (sizeVariants ?? []).find(sv => sv.slug === product.slug)?.size_label,
-    [sizeVariants, product.slug]
+    [sizeVariants, product.slug],
   );
 
-  // Switching style keeps the customer on the same size when that combination
+  // Switching style keeps the customer on the same size where that combination
   // exists, otherwise falls back to the cheapest size in the chosen style.
-  const targetForSubgroup = (sub: string) => {
+  const hrefForSubgroup = useCallback((sub: string) => {
     const inSub = (sizeVariants ?? []).filter(sv => sv.subgroup_label === sub);
-    const sameSize = inSub.find(sv => sv.size_label === currentSizeLabel);
-    return (sameSize ?? inSub[0])?.slug;
-  };
+    const slug = (inSub.find(sv => sv.size_label === currentSizeLabel) ?? inSub[0])?.slug;
+    return slug ? `/shop/${categorySlug}/${slug}` : undefined;
+  }, [sizeVariants, currentSizeLabel, categorySlug]);
 
-  // 1. Find the target variant for the initial page load
-  const startingVariant = useMemo(() => {
-    if (initialVariantId) {
-      return variants.find(v => v.id === initialVariantId) || variants[0];
-    }
-    return variants[0];
-  }, [variants, initialVariantId]);
-
-  // 2. Initialize state
-  const [selMat, setSelMat]   = useState(startingVariant?.material || 'Standard');
-  const [selColor, setSelColor] = useState(startingVariant?.color ?? '');
-
-  // 3. NEW: Force state updates if the URL parameter changes while the user is already on the page
-  useEffect(() => {
-    if (initialVariantId) {
-      const targetVariant = variants.find(v => v.id === initialVariantId);
-      if (targetVariant) {
-        setSelMat(targetVariant.material || 'Standard');
-        setSelColor(targetVariant.color || '');
-      }
-    }
-  }, [initialVariantId, variants]);
-
-  // 4. Derive the current selected variant
-  const filtered   = useMemo(() => variants.filter(v => (v.material || 'Standard') === selMat), [variants, selMat]);
-  const selVariant = variants.find(v => (v.material || 'Standard') === selMat && v.color === selColor) ?? filtered[0];
-
-  // ── Theming ──
-  const accent    = selVariant?.color_hex || '#d4871a';
-  const pageBg    = getPageTint(accent, 0.975);
-  const accentTint = getAccentTint(accent);
-  const midTint   = getMidTint(accent);
-  const textOnAccent = getTextColor(accent);
-
-  // ── UI state ──
-  const [zoomImage, setZoomImage]       = useState<string | null>(null);
-  const [showDims, setShowDims]         = useState(false);
-  const [showCustomSize, setShowCustomSize] = useState(false); // <-- NEW: State for Custom Size Modal
-  const [descExpanded, setDescExpanded] = useState(false);
-  const [added, setAdded]               = useState(false);
-  const [imgLoaded, setImgLoaded]       = useState(false);
-  const [activeTab, setActiveTab]       = useState<'description'|'specs'|'delivery'>('description');
-
-  // ── Wishlist State ──
-  const [inWishlist, setInWishlist] = useState(initialWishlistState);
-  const [wishlistLoading, setWishlistLoading] = useState(false);
-
-  const handleWishlistToggle = async () => {
-    setWishlistLoading(true);
-    const result = await toggleWishlist(product.id);
-    if (result.success) {
-      setInWishlist(result.isWishlisted ?? false);
-      toast.success(result.isWishlisted ? 'Added to Wishlist' : 'Removed from Wishlist');
-    } else {
-      toast.error(result.error || 'You must be logged in to modify your wishlist.');
-    }
-    setWishlistLoading(false);
-  };
-
-  // ── SPLIT GALLERY LOGIC ──
-  
-  // 1. Variant Thumbnails (Displayed below main image)
-  const variantThumbnails = useMemo(() => {
-    const items: { src: string; variantId: string; color: string }[] = [];
+  // ── Gallery inputs ───────────────────────────────────────────────────────
+  const swatches = useMemo<Swatch[]>(() => {
     const seen = new Set<string>();
-    filtered.forEach(v => {
-      if (v.image_url && !seen.has(v.image_url)) {
-        items.push({ src: v.image_url, variantId: v.id, color: v.color ?? '' });
-        seen.add(v.image_url);
-      }
-    });
-    return items;
-  }, [filtered]);
+    const out: Swatch[] = [];
+    for (const v of inMaterial) {
+      const key = v.color ?? '';
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push({ id: v.id, color: key, hex: v.color_hex, image: v.image_url });
+    }
+    return out;
+  }, [inMaterial]);
 
-  // 2. Main Slider Images (Active Variant + Extra Gallery Images)
-  const mainSliderImages = useMemo(() => {
-    const items: { src: string }[] = [];
+  const images = useMemo<GalleryImage[]>(() => {
     const seen = new Set<string>();
+    const out: GalleryImage[] = [];
 
-    // Active variant goes FIRST
-    const activeImg = selVariant?.image_url || filtered[0]?.image_url;
-    if (activeImg && !seen.has(activeImg)) {
-      items.push({ src: activeImg });
-      seen.add(activeImg);
+    // The selected variant's own photograph leads.
+    const lead = selVariant?.image_url || inMaterial[0]?.image_url;
+    if (lead) { out.push({ src: lead }); seen.add(lead); }
+
+    for (const url of product.gallery_images ?? []) {
+      if (url && !seen.has(url)) { out.push({ src: url }); seen.add(url); }
     }
+    return out;
+  }, [selVariant?.image_url, inMaterial, product.gallery_images]);
 
-    // Extra gallery images follow
-    if (product.gallery_images && Array.isArray(product.gallery_images)) {
-      product.gallery_images.forEach(url => {
-        if (!seen.has(url)) {
-          items.push({ src: url });
-          seen.add(url);
-        }
-      });
-    }
-
-    return items;
-  }, [selVariant?.image_url, filtered, product.gallery_images]);
-
-  // ── MAIN IMAGE SCROLLING LOGIC ──
-  const mainSliderRef = useRef<HTMLDivElement>(null);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(false);
-
-  const checkScroll = useCallback(() => {
-    if (mainSliderRef.current) {
-      const { scrollLeft, scrollWidth, clientWidth } = mainSliderRef.current;
-      setCanScrollLeft(scrollLeft > 2);
-      setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 2);
-    }
-  }, []);
-
-  useEffect(() => {
-    checkScroll();
-    window.addEventListener('resize', checkScroll);
-    return () => window.removeEventListener('resize', checkScroll);
-  }, [mainSliderImages, checkScroll]);
-
-  // Automatically reset main slider to beginning when color variant changes
-  useEffect(() => {
-    mainSliderRef.current?.scrollTo({ left: 0, behavior: 'smooth' });
-    setImgLoaded(false);
-  }, [selVariant?.image_url]);
-
-  // "Peek" Animation Effect on the MAIN slider
-  useEffect(() => {
-    if (mainSliderImages.length > 1 && mainSliderRef.current) {
-      const timer1 = setTimeout(() => {
-        mainSliderRef.current?.scrollBy({ left: 75, behavior: 'smooth' });
-      }, 800);
-      const timer2 = setTimeout(() => {
-        mainSliderRef.current?.scrollBy({ left: -75, behavior: 'smooth' });
-      }, 1500);
-      return () => { clearTimeout(timer1); clearTimeout(timer2); };
-    }
-  }, [mainSliderImages.length]);
-
-  // Mouse Drag to Scroll
-  const [isDown, setIsDown] = useState(false);
-  const [startX, setStartX] = useState(0);
-  const [scrollLeft, setScrollLeft] = useState(0);
-
-  const handleMouseDown = (e: React.MouseEvent) => {
-    setIsDown(true);
-    if (!mainSliderRef.current) return;
-    setStartX(e.pageX - mainSliderRef.current.offsetLeft);
-    setScrollLeft(mainSliderRef.current.scrollLeft);
-  };
-  const handleMouseLeave = () => setIsDown(false);
-  const handleMouseUp = () => setIsDown(false);
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDown || !mainSliderRef.current) return;
-    e.preventDefault();
-    const x = e.pageX - mainSliderRef.current.offsetLeft;
-    const walk = (x - startX) * 2; 
-    mainSliderRef.current.scrollLeft = scrollLeft - walk;
-  };
-
-  // Specs
-  const specs = useMemo(() => {
+  // ── Specs ────────────────────────────────────────────────────────────────
+  const specs = useMemo<Record<string, string>>(() => {
     if (!product.specifications) return {};
     if (typeof product.specifications === 'string') {
       try { return JSON.parse(product.specifications); } catch { return {}; }
     }
-    return product.specifications as Record<string, string>;
+    return product.specifications;
   }, [product.specifications]);
-  const dimensions = specs?.dimensions?.trim() || specs?.Dimensions?.trim() || '';
-  const description = product.description || '';
 
-  // Price
+  const dimensions = (specs.dimensions ?? specs.Dimensions ?? '').trim();
   const price = product.base_price + (selVariant?.price_adjustment || 0);
 
-  // ── ViewContent ────────────────────────────────────────────────────────────
+  const reviewCount = approvedReviews.length;
+  const averageRating = reviewCount
+    ? approvedReviews.reduce((s, r) => s + r.rating, 0) / reviewCount
+    : 0;
+
+  // ── ViewContent ──────────────────────────────────────────────────────────
   // Fired per variant, because the variant id is what the Merchant feed
-  // publishes and therefore what a dynamic ad can retarget.
-  //
-  // The ref guard exists because React runs effects twice under StrictMode in
-  // development; without it every product view would be counted twice while
-  // testing. It also stops a re-render that doesn't change the variant from
-  // re-firing.
+  // publishes and therefore what a dynamic ad can retarget. The ref guard
+  // exists because React runs effects twice under StrictMode in development.
   const lastViewed = useRef<string | null>(null);
   useEffect(() => {
-    if (!selVariant) return;
-    if (lastViewed.current === selVariant.id) return;
+    if (!selVariant || lastViewed.current === selVariant.id) return;
     lastViewed.current = selVariant.id;
-    trackViewContent({
-      variantId: selVariant.id,
-      title: product.title,
-      price,
-      quantity: 1,
-    });
+    trackViewContent({ variantId: selVariant.id, title: product.title, price, quantity: 1 });
   }, [selVariant, price, product.title]);
 
-  // Add to cart
+  // ── Cart ─────────────────────────────────────────────────────────────────
+  const [added, setAdded] = useState(false);
   const handleAdd = useCallback(() => {
     if (!selVariant) return;
     addToCart({
@@ -574,774 +215,277 @@ export default function ProductPageClient({ product, initialWishlistState, varia
       price,
       title: product.title,
       color: `${selVariant.color ?? ''} ${selVariant.material ?? ''}`.trim(),
-      image_url: mainSliderImages[0]?.src || '/placeholder.svg',
+      image_url: images[0]?.src || '/placeholder.svg',
     });
     // Fired here rather than inside the cart reducer: the reducer runs inside a
     // setState updater, which React may invoke more than once.
-    trackAddToCart({
-      variantId: selVariant.id,
-      title: product.title,
-      price,
-      quantity: 1,
-    });
+    trackAddToCart({ variantId: selVariant.id, title: product.title, price, quantity: 1 });
     setAdded(true);
-    toast.success(`${product.title} added to cart!`, { icon: '🛋️', position: "top-center" });
+    toast.success(`${product.title} added to cart`, { icon: '🛋️', position: 'top-center' });
     setTimeout(() => setAdded(false), 2000);
-  }, [selVariant, price, product.title, mainSliderImages, addToCart]);
+  }, [selVariant, price, product.title, images, addToCart]);
 
-  const handleMatChange = (mat: string) => {
-    setSelMat(mat);
-    const cols = variants.filter(v => (v.material || 'Standard') === mat);
-    if (!cols.find(v => v.color === selColor)) setSelColor(cols[0]?.color ?? '');
-  };
+  // ── Wishlist ─────────────────────────────────────────────────────────────
+  const [inWishlist, setInWishlist] = useState(initialWishlistState);
+  const [wishlistBusy, setWishlistBusy] = useState(false);
+  const handleWishlist = useCallback(async () => {
+    setWishlistBusy(true);
+    const result = await toggleWishlist(product.id);
+    if (result.success) {
+      setInWishlist(result.isWishlisted ?? false);
+      toast.success(result.isWishlisted ? 'Added to wishlist' : 'Removed from wishlist');
+    } else {
+      toast.error(result.error || 'You must be logged in to modify your wishlist.');
+    }
+    setWishlistBusy(false);
+  }, [product.id]);
 
-  const { ref: reviewsRef, visible: reviewsVisible } = useReveal();
-  // Stock isn't tracked: sofas are made to order, so availability is controlled
-  // entirely by the product-level Active/Inactive switch in the admin panel.
-
-  // ── Helper to render the title block responsibly ──
-  const renderTitleBlock = (className?: string) => (
-    <div className={className} style={{ marginBottom: 16 }}>
-      {/* Only where the product's own origin is 'uk'. Anything else renders
-          nothing rather than making a claim we cannot evidence. */}
-      {product.origin === 'uk' && (
-        <div style={{
-          display: 'inline-flex', alignItems: 'center', gap: 6,
-          background: accentTint, border: `1px solid ${accent}33`,
-          borderRadius: 4, padding: '3px 10px', marginBottom: 10,
-        }}>
-          <div style={{ width: 5, height: 5, borderRadius: '50%', background: accent }} />
-          <span style={{ fontSize: 9, color: accent, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase' }}>
-            Made in the UK
-          </span>
-        </div>
-      )}
-
-      <h1 className="font-playfair" style={{ fontSize: 'clamp(22px,4vw,34px)', fontWeight: 700, color: '#1c1917', lineHeight: 1.1, letterSpacing: '-0.02em', marginBottom: 10 }}>
-        {product.title}
-      </h1>
-
-      {/* Rating row */}
-      {approvedReviews.length > 0 && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-          <StarRow rating={Math.round(approvedReviews.reduce((s, r) => s + r.rating, 0) / approvedReviews.length)} accent={accent} />
-          <span style={{ fontSize: 11, color: '#78716c' }}>
-            {(approvedReviews.reduce((s, r) => s + r.rating, 0) / approvedReviews.length).toFixed(1)} · {approvedReviews.length} {approvedReviews.length === 1 ? 'review' : 'reviews'}
-          </span>
-        </div>
-      )}
-
-      {/* Price */}
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginTop: 8 }}>
-        <span className="font-playfair" style={{ fontSize: 30, fontWeight: 700, color: '#1c1917', lineHeight: 1 }}>
-          £{price.toFixed(0)}
-        </span>
-        {selVariant?.price_adjustment !== 0 && (
-          <span style={{ fontSize: 12, color: '#a8a29e' }}>
-            (base £{product.base_price.toFixed(0)} + variant adjustment)
-          </span>
-        )}
-      </div>
-    </div>
-  );
-
-  // ── WhatsApp Component ──
-  const whatsappNumber = WHATSAPP_NUMBER; 
-  const whatsappText = encodeURIComponent(`Hi, I have a query about your product: ${product.title}`);
+  // ── Enquiry links ────────────────────────────────────────────────────────
+  const agentHref = whatsAppHref(`Hi, I have a query about your product: ${product.title}`);
 
   // Structured so a made-to-order enquiry arrives with the answers already
   // prompted, rather than as an open-ended message.
-  const customEnquiryLink = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(
-    `Hi, I'd like a made-to-order ${product.title}.
-
-` +
-    `Colour:
-` +
-    `Fabric / material:
-` +
-    `Size or layout:
-` +
-    `Anything else:
-`
-  )}`;
-  
-  const WhatsAppCard = () => (
-    <a 
-      href={`https://wa.me/${whatsappNumber}?text=${whatsappText}`} 
-      target="_blank" 
-      rel="noopener noreferrer"
-      className="group hover:bg-stone-800"
-      style={{
-        display: 'flex', alignItems: 'center', gap: 10, 
-        background: '#1c1917', padding: '8px 12px',
-        borderRadius: 8, textDecoration: 'none', 
-        marginTop: 10,
-        boxShadow: '0 4px 12px rgba(0,0,0,0.1)', 
-        transition: 'background 0.2s ease', 
-        width: '100%', cursor: 'pointer'
-      }}
-    >
-      <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#25D366', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-        </svg>
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column' }}>
-        <span style={{ fontSize: 11, fontWeight: 700, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-          Talk to an agent instead
-        </span>
-        <span style={{ fontSize: 10, color: '#a8a29e', fontWeight: 500, lineHeight: 1.2, marginTop: 1 }}>
-          Want custom seats or size? Contact us directly.
-        </span>
-      </div>
-    </a>
+  const customEnquiryHref = whatsAppHref(
+    `Hi, I'd like a made-to-order ${product.title}.\n\nColour:\nFabric / material:\nSize or layout:\nAnything else:\n`,
   );
+
+  const [showCustomSize, setShowCustomSize] = useState(false);
+
+  // ── When the bar comes up ────────────────────────────────────────────────
+  // Once the real add-to-cart button has left the top of the viewport, and not
+  // before: a toolbar over the first screenful of a product page is covering
+  // the product.
+  const ctaRef = useRef<HTMLDivElement>(null);
+  const [pastCta, setPastCta] = useState(false);
+  useEffect(() => {
+    const el = ctaRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      ([entry]) => setPastCta(!entry.isIntersecting && entry.boundingClientRect.top < 0),
+      { threshold: 0 },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  const crumbCategory = titleCase(categoryName || categorySlug);
 
   return (
     <>
-      <style>{`
-        @keyframes fadeIn    { from{opacity:0}  to{opacity:1}  }
-        @keyframes slideUp   { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
-        @keyframes spin      { to{transform:rotate(360deg)} }
-        @keyframes imgFade   { from{opacity:0;transform:scale(1.02)} to{opacity:1;transform:scale(1)} }
-        @keyframes pulseDot  { 0%,100%{transform:scale(1)} 50%{transform:scale(1.4)} }
-      `}</style>
+      {/* A div, not a <main>: the root layout already renders one, and two
+          main landmarks in a document is invalid and leaves a screen reader
+          with two "main" regions to choose between. */}
+      <div className="grad-calico grain-light relative bg-calico-50" style={accent}>
+        {/* ── Breadcrumb ───────────────────────────────────────────────────
+            The category link used to print the URL slug with its first letter
+            capitalised, so it read "Corner-sofas". It carries the category's
+            real name now, resolved on the server.
 
-      <main style={{ minHeight: '100vh', background: pageBg, transition: 'background 0.7s cubic-bezier(.16,1,.3,1)' }}>
-        
-        {/* ── Breadcrumb ── */}
-        <div style={{ maxWidth: 1100, margin: '0 auto', padding: '14px 16px 0', animation: 'slideUp 0.5s ease' }}>
-          <nav style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+            One line that scrolls, not four items that wrap. With a long
+            product title at the end this was wrapping to two rows on a 375px
+            phone — 58px of trail above the photograph, on the one screen where
+            every pixel belongs to the sofa. The scroll is hidden and the fade
+            at the right edge is what says it continues. */}
+        <div
+          className="relative mx-auto max-w-shell pt-3"
+          style={{ ['--fade-from' as string]: 'var(--color-calico-50)' }}
+        >
+        <nav
+          aria-label="Breadcrumb"
+          className="no-scrollbar overflow-x-auto px-4 sm:px-6"
+        >
+          <ol className="m-0 flex list-none flex-nowrap items-center gap-2 whitespace-nowrap p-0">
             {[
-              { href: '/',                    label: 'Home'         },
-              { href: '/shop/all',            label: 'Shop'         },
-              { href: `/shop/${categorySlug}`, label: categorySlug.charAt(0).toUpperCase() + categorySlug.slice(1) },
+              { href: '/', label: 'Home' },
+              { href: '/shop/all', label: 'Shop' },
+              { href: `/shop/${encodeURIComponent(categorySlug)}`, label: crumbCategory },
             ].map(({ href, label }, i) => (
-              <span key={href} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                {i > 0 && <ChevronRight style={{ width: 10, height: 10, color: '#a8a29e' }} />}
-                <Link href={href} style={{ fontSize: 11, color: '#a8a29e', textDecoration: 'none', transition: 'color 0.2s' }}
-                  className="hover:text-stone-700">{label}</Link>
-              </span>
+              <li key={href} className="flex items-center gap-2">
+                {i > 0 && <ChevronRight aria-hidden="true" className="h-3 w-3 text-ink-400" />}
+                <Link href={href} className="hover-link text-caption text-ink-500 no-underline">{label}</Link>
+              </li>
             ))}
-            <ChevronRight style={{ width: 10, height: 10, color: '#a8a29e' }} />
-            <span style={{ fontSize: 11, color: accent, fontWeight: 600 }}>{product.title}</span>
-          </nav>
+            <li className="flex items-center gap-2 pr-6">
+              <ChevronRight aria-hidden="true" className="h-3 w-3 shrink-0 text-ink-400" />
+              <span aria-current="page" className="text-caption font-semibold text-[var(--pdp-accent-text)]">
+                {product.title}
+              </span>
+            </li>
+          </ol>
+        </nav>
+          {/* Outside the scroller, so it stays pinned to the right edge
+              instead of travelling with the trail it is fading. */}
+          <span aria-hidden="true" className="rail-fade rail-fade-end" />
         </div>
 
-        {/* ── Main product grid ── */}
-        <div className="px-4 pt-1 pb-10 md:pt-4" style={{ maxWidth: 1100, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 32, alignItems: 'start' }}>
-          
-          {/* ════ LEFT: IMAGE GALLERY ════ */}
-          <div className="relative md:sticky md:top-[70px]" style={{ animation: 'slideUp 0.55s ease 0.05s both' }}>
-            {renderTitleBlock('md:hidden')}
-            
-            {/* MAIN IMAGE SLIDER */}
-            <div className="relative group/main-slider" onMouseEnter={checkScroll}>
-              
-              {/* Translucent Arrows */}
-              {mainSliderImages.length > 1 && (
-                <>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); mainSliderRef.current?.scrollBy({ left: -300, behavior: 'smooth' }); }}
-                    className={`absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/70 backdrop-blur shadow-md border border-stone-200 flex items-center justify-center text-stone-700 hover:bg-white z-20 transition-all duration-300 ${canScrollLeft ? 'opacity-0 group-hover/main-slider:opacity-100' : 'opacity-0 pointer-events-none'}`}
-                  >
-                    <ChevronLeft className="w-6 h-6" />
-                  </button>
-                  
-                  <button
-                    onClick={(e) => { e.stopPropagation(); mainSliderRef.current?.scrollBy({ left: 300, behavior: 'smooth' }); }}
-                    className={`absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/70 backdrop-blur shadow-md border border-stone-200 flex items-center justify-center text-stone-700 hover:bg-white z-20 transition-all duration-300 ${canScrollRight ? 'opacity-80 group-hover/main-slider:opacity-100' : 'opacity-0 pointer-events-none'}`}
-                  >
-                    <ChevronRight className="w-6 h-6" />
-                  </button>
-                </>
-              )}
-
-              {/* The Sliding Container */}
-              <div
-                ref={mainSliderRef}
-                onMouseDown={handleMouseDown}
-                onMouseLeave={handleMouseLeave}
-                onMouseUp={handleMouseUp}
-                onMouseMove={handleMouseMove}
-                onScroll={checkScroll}
-                className={`flex flex-nowrap overflow-x-auto snap-x snap-mandatory scroll-smooth [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] ${mainSliderImages.length > 1 ? 'cursor-grab active:cursor-grabbing' : ''}`}
-                style={{ borderRadius: 14, background: accentTint, boxShadow: `0 24px 60px ${accent}22, 0 4px 16px rgba(0,0,0,0.06)` }}
-              >
-                {mainSliderImages.map((img, i) => (
-                  <div 
-                    key={`${img.src}-${i}`} 
-                    className="relative flex-shrink-0 w-full aspect-square md:aspect-[4/5] snap-start overflow-hidden"
-                    onClick={() => setZoomImage(img.src)}
-                    style={{ cursor: 'zoom-in' }}
-                  >
-                    <Image 
-                      src={img.src} 
-                      alt={`${product.title} in ${selColor || ''} ${selMat || ''} - View ${i + 1}`}
-                      fill 
-                      priority={i === 0} 
-                      sizes="(max-width:768px) 100vw, 50vw" 
-                      style={{ objectFit: 'cover', pointerEvents: 'none', animation: i === 0 && imgLoaded ? 'imgFade 0.5s ease' : 'none' }} 
-                      onLoad={() => i === 0 && setImgLoaded(true)} 
-                    />
-                    
-                    {/* Status Overlays (Only show on the first image) */}
-                    {i === 0 && (
-                      <>
-                        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: accent, transition: 'background 0.7s ease' }} />
-                      </>
-                    )}
-                  </div>
-                ))}
-              </div>
-              
-              {/* Zoom overlay floating on top */}
-              <div className="pointer-events-none" style={{ position: 'absolute', bottom: 12, right: 12, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(6px)', borderRadius: 6, padding: '5px 8px', display: 'flex', alignItems: 'center', gap: 5, color: '#fff', fontSize: 10, letterSpacing: '0.06em' }}>
-                <ZoomIn style={{ width: 11, height: 11 }} /> Zoom
-              </div>
-            </div>
-
-            {/* COLOR VARIANT THUMBNAILS (Displayed underneath) */}
-            {variantThumbnails.length > 1 && (
-              <div className="flex gap-2.5 mt-3 flex-wrap">
-                {variantThumbnails.map((v) => (
-                  <button
-                    key={v.variantId}
-                    onClick={() => setSelColor(v.color)}
-                    className={`relative w-[60px] h-[60px] shrink-0 rounded-lg overflow-hidden transition-all duration-200 border-2 ${
-                      selColor === v.color 
-                        ? 'scale-[1.05] shadow-[0_4px_12px_rgba(0,0,0,0.1)] z-10' 
-                        : 'border-transparent opacity-70 hover:opacity-100 hover:scale-[1.02]'
-                    }`}
-                    style={{ borderColor: selColor === v.color ? accent : 'transparent' }}
-                  >
-                    <Image src={v.src} alt={`${product.title} - ${v.color} variant`} fill className="object-cover" sizes="60px" />
-                  </button>
-                ))}
-              </div>
-            )}
+        {/* ── Hero ──────────────────────────────────────────────────────────
+            Two grid items, placed by `order` rather than by being rendered
+            twice. On a phone this stacks gallery → swatches → buy box, which
+            is the reading order the page needs; at md the same two items sit
+            side by side and the gallery pins. The <h1> lives in the buy box
+            and is rendered exactly once at both widths. */}
+        <div className="mx-auto grid max-w-shell grid-cols-1 items-start gap-x-10 gap-y-7 px-4 pb-10 pt-3 sm:px-6 md:grid-cols-2 md:items-stretch md:gap-y-8 md:pb-12 md:pt-4">
+          <div className="order-1 md:col-start-1 md:row-start-1">
+            <Gallery
+              productId={product.id}
+              title={product.title}
+              images={images}
+              swatches={swatches}
+              selectedColor={selColor}
+              onSelectColor={setSelColor}
+              material={selMat === 'Standard' ? '' : selMat}
+            />
           </div>
 
-          {/* ════ RIGHT: PRODUCT INFO ════ */}
-          <div style={{ animation: 'slideUp 0.55s ease 0.1s both' }}>
-            {renderTitleBlock('hidden md:block')}
+          {/* The buy box pins. Two things make that work, and both are in
+              the markup rather than in a comment somewhere else:
 
-            {/* ── SUBGROUP / STYLE SELECTOR (only when the group uses one) ── */}
-            {subgroups.length > 1 && (
-              <div style={{ marginBottom: 18 }}>
-                <div style={{ fontSize: 10, color: '#78716c', textTransform: 'uppercase', letterSpacing: '0.18em', fontWeight: 600, marginBottom: 8 }}>
-                  {subgroupTitle || 'Style'} — <span style={{ color: '#1c1917', fontWeight: 700 }}>{currentSubgroup || '—'}</span>
-                </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
-                  {subgroups.map(sub => {
-                    const isActive = sub === currentSubgroup;
-                    const targetSlug = targetForSubgroup(sub);
-                    if (!targetSlug) return null;
-                    return (
-                      <Link
-                        key={sub}
-                        href={`/shop/${categorySlug}/${targetSlug}`}
-                        style={{
-                          padding: '7px 14px',
-                          borderRadius: 6,
-                          fontSize: 11,
-                          fontWeight: 600,
-                          textDecoration: 'none',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s ease',
-                          background: isActive ? accent : 'white',
-                          color: isActive ? textOnAccent : '#57534e',
-                          border: `1.5px solid ${isActive ? accent : '#e7e5e4'}`,
-                          transform: isActive ? 'scale(1.03)' : 'scale(1)',
-                          display: 'inline-block'
-                        }}
-                      >
-                        {sub}
-                      </Link>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
+              The grid item spans both desktop rows and is left to STRETCH, so
+              its area is as tall as the whole left column. The inner div is
+              what is sticky, and it travels inside that area — an item sized
+              to its own content would have nowhere to go, which is exactly why
+              this did nothing when it was one div.
 
-            {/* ── SIZE VARIANTS & CUSTOM SIZE ── */}
-            <div style={{ marginBottom: 18 }}>
-              <div style={{ fontSize: 10, color: '#78716c', textTransform: 'uppercase', letterSpacing: '0.18em', fontWeight: 600, marginBottom: 8 }}>
-                Size / Configuration
-              </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
-                {sizesInSubgroup.map(sv => {
-                  const isActive = sv.slug === product.slug;
-                  return (
-                    <Link
-                      key={sv.id}
-                      href={`/shop/${categorySlug}/${sv.slug}`}
-                      style={{
-                        padding: '7px 14px',
-                        borderRadius: 6,
-                        fontSize: 11,
-                        fontWeight: 600,
-                        textDecoration: 'none',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                        background: isActive ? accent : 'white',
-                        color: isActive ? textOnAccent : '#57534e',
-                        border: `1.5px solid ${isActive ? accent : '#e7e5e4'}`,
-                        transform: isActive ? 'scale(1.03)' : 'scale(1)',
-                        display: 'inline-block'
-                      }}
-                    >
-                      {sv.size_label}
-                    </Link>
-                  );
-                })}
-                
-                {/* ── NEW: CUSTOM SIZE BUTTON ── */}
-                <button 
-                  onClick={() => setShowCustomSize(true)}
-                  className="group"
-                  style={{
-                    padding: '7px 14px',
-                    borderRadius: 6,
-                    fontSize: 11,
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    background: 'transparent',
-                    color: accent,
-                    border: `1.5px dashed ${accent}`,
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 5
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = accentTint)}
-                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-                >
-                  <Sparkles style={{ width: 13, height: 13 }} />
-                  Custom Size
-                </button>
-              </div>
-            </div>
-
-            {/* ── Material selector ── */}
-            {uniqueMaterials.length > 0 && (
-              <div style={{ marginBottom: 18 }}>
-                <div style={{ fontSize: 10, color: '#78716c', textTransform: 'uppercase', letterSpacing: '0.18em', fontWeight: 600, marginBottom: 8 }}>
-                  Material — <span style={{ color: '#1c1917', fontWeight: 700 }}>{selMat}</span>
-                </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
-                  {uniqueMaterials.map(m => (
-                    <button key={m} onClick={() => handleMatChange(m)} style={{ padding: '7px 14px', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s ease', background: selMat === m ? accent : 'white', color: selMat === m ? textOnAccent : '#57534e', border: `1.5px solid ${selMat === m ? accent : '#e7e5e4'}`, transform: selMat === m ? 'scale(1.03)' : 'scale(1)' }}>{m}</button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* ── Color selector ── */}
-            {filtered.length > 0 && (
-              <div style={{ marginBottom: 20 }}>
-                <div style={{ fontSize: 10, color: '#78716c', textTransform: 'uppercase', letterSpacing: '0.18em', fontWeight: 600, marginBottom: 10 }}>
-                  Colour — <span style={{ color: '#1c1917', fontWeight: 700 }}>{selColor || '—'}</span>
-                </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-                  {filtered.map(v => {
-                    const hex = v.color_hex || '#e7e5e4';
-                    const active = selColor === v.color;
-                    return (
-                      <button key={v.id} onClick={() => setSelColor(v.color ?? '')} title={v.color ?? ''} style={{ position: 'relative', width: active ? 42 : 36, height: active ? 42 : 36, borderRadius: '50%', background: hex, border: `3px solid ${active ? accent : 'transparent'}`, outline: active ? `3px solid ${accentTint}` : 'none', outlineOffset: 2, cursor: 'pointer', padding: 0, transition: 'all 0.25s cubic-bezier(.16,1,.3,1)', boxShadow: active ? `0 0 0 4px ${accent}30, 0 4px 12px ${hex}55` : `0 2px 6px ${hex}44`, transform: active ? 'scale(1.08)' : 'scale(1)' }}>
-                        {active && <Check style={{ position: 'absolute', inset: 0, margin: 'auto', width: 13, height: 13, color: getTextColor(hex), filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))' }} />}
-                      </button>
-                    );
-                  })}
-                </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px', marginTop: 8 }}>
-                  {filtered.map(v => (
-                    <span key={v.id} style={{ fontSize: 10, color: selColor === v.color ? accent : '#a8a29e', fontWeight: selColor === v.color ? 700 : 400, transition: 'color 0.3s' }}>
-                      {v.color}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* ── Tabs: Description / Specs / Delivery ── */}
-            <div style={{ marginBottom: 18 }}>
-              <div style={{ display: 'flex', gap: 0, borderBottom: '1px solid #e7e5e4', marginBottom: 14 }}>
-                {(['description','specs','delivery'] as const).map(tab => (
-                  <button key={tab} onClick={() => setActiveTab(tab)} style={{ padding: '8px 14px', fontSize: 11, fontWeight: 600, textTransform: 'capitalize', letterSpacing: '0.04em', background: 'none', border: 'none', cursor: 'pointer', color: activeTab === tab ? accent : '#78716c', borderBottom: `2px solid ${activeTab === tab ? accent : 'transparent'}`, marginBottom: -1, transition: 'color 0.2s ease, border-color 0.2s ease' }}>{tab}</button>
-                ))}
-              </div>
-
-              {activeTab === 'description' && (
-                <div>
-                  <p style={{ fontSize: 12, color: '#57534e', lineHeight: 1.75, overflow: 'hidden', maxHeight: descExpanded ? 'none' : 80, transition: 'max-height 0.4s ease' }}>
-                    {description || 'No description available.'}
-                  </p>
-                  {description.length > 200 && (
-                    <button onClick={() => setDescExpanded(e => !e)} style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 6, background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: accent, fontWeight: 600, padding: 0 }}>
-                      {descExpanded ? <><ChevronUp style={{ width: 13, height: 13 }} />Show less</> : <><ChevronDown style={{ width: 13, height: 13 }} />Read more</>}
-                    </button>
-                  )}
-                </div>
-              )}
-
-              {activeTab === 'specs' && (
-                <div>
-                  {Object.keys(specs).length > 0 ? (
-                    Object.entries(specs).map(([k, v], i) => (
-                      <div key={k} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '8px 0', fontSize: 12, borderBottom: i < Object.keys(specs).length - 1 ? '1px solid #f5f5f4' : 'none', gap: 16 }}>
-                        <span style={{ color: '#a8a29e', fontWeight: 600, textTransform: 'capitalize', flexShrink: 0 }}>{k}</span>
-                        <span style={{ color: '#1c1917', textAlign: 'right' }}>{String(v)}</span>
-                      </div>
-                    ))
-                  ) : (
-                    <p style={{ fontSize: 12, color: '#a8a29e' }}>No specifications available.</p>
-                  )}
-                </div>
-              )}
-
-              {activeTab === 'delivery' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {[
-                    { icon: Truck,       title: PROMISES.delivery.label,  sub: PROMISES.delivery.long  },
-                    { icon: Wallet,      title: PROMISES.payment.label,   sub: PROMISES.payment.long   },
-                    { icon: ShieldCheck, title: PROMISES.guarantee.label, sub: PROMISES.guarantee.long },
-                  ].map(({ icon: Icon, title, sub }) => (
-                    <div key={title} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                      <div style={{ width: 32, height: 32, borderRadius: 7, flexShrink: 0, background: accentTint, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Icon style={{ width: 14, height: 14, color: accent }} />
-                      </div>
-                      <div>
-                        <div style={{ fontSize: 12, fontWeight: 700, color: '#1c1917' }}>{title}</div>
-                        <div style={{ fontSize: 11, color: '#78716c', lineHeight: 1.5, marginTop: 2 }}>{sub}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {dimensions && (
-              <button 
-                onClick={() => setShowDims(true)} 
-                className="group mb-24 md:mb-4" 
-                style={{ 
-                  display: 'inline-flex', 
-                  alignItems: 'center', 
-                  gap: 7, 
-                  padding: '8px 16px', 
-                  borderRadius: 7, 
-                  background: midTint, 
-                  border: `1px solid ${accent}30`, 
-                  fontSize: 11, 
-                  fontWeight: 600, 
-                  color: accent, 
-                  cursor: 'pointer', 
-                  transition: 'all 0.2s ease' 
-                }}
-              >
-                <Ruler style={{ width: 13, height: 13 }} /> View Dimensions
-              </button>
-            )}
-
-            {/* ── Made to your specification ──
-                Only on products flagged custom_made in the admin panel. Carries
-                the Consumer Contracts Regulations exemption HERE, at the point
-                the customer decides, rather than buried in the terms page. */}
-            {product.custom_made && (
-              <div style={{ border: `1.5px solid ${accent}40`, background: accentTint, borderRadius: 12, padding: '16px 18px', marginBottom: 16 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                  <Ruler style={{ width: 15, height: 15, color: accent, flexShrink: 0 }} />
-                  <span style={{ fontSize: 10, color: accent, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase' }}>
-                    Made to Order
-                  </span>
-                </div>
-
-                <h3 className="font-playfair" style={{ fontSize: 19, fontWeight: 700, color: '#1c1917', marginBottom: 7, lineHeight: 1.25 }}>
-                  Want this in a different colour, fabric or size?
-                </h3>
-                <p style={{ fontSize: 13, color: '#57534e', lineHeight: 1.7, margin: '0 0 12px' }}>
-                  We make our fabric sofas to order. Tell us what you have in mind and we&apos;ll
-                  work it through with you — including the price and how long it will take.
-                </p>
-
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
-                  {['Any colour', 'Your choice of fabric', 'Custom size or layout'].map(t => (
-                    <span key={t} style={{ fontSize: 11, fontWeight: 600, color: '#57534e', background: '#fff', border: '1px solid #e7e5e4', borderRadius: 20, padding: '5px 11px' }}>
-                      {t}
-                    </span>
-                  ))}
-                </div>
-
-                <div style={{ display: 'flex', gap: 9, alignItems: 'flex-start', background: '#fff', border: '1px solid #e7e5e4', borderRadius: 8, padding: '11px 13px', marginBottom: 14 }}>
-                  <AlertTriangle style={{ width: 15, height: 15, color: '#b45309', flexShrink: 0, marginTop: 1 }} />
-                  <p style={{ fontSize: 12, color: '#57534e', lineHeight: 1.65, margin: 0 }}>
-                    <strong style={{ color: '#1c1917' }}>Before you order a made-to-measure sofa:</strong>{' '}
-                    because it&apos;s built to your own specification, the 14-day right to change
-                    your mind doesn&apos;t apply — that&apos;s the standard exemption under the Consumer
-                    Contracts Regulations. Faulty or damaged items are still covered exactly as normal.
-                  </p>
-                </div>
-
-                <a
-                  href={customEnquiryLink}
-                  target="_blank" rel="noopener noreferrer"
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '12px', background: '#25D366', color: '#fff', borderRadius: 8, fontSize: 13, fontWeight: 700, textDecoration: 'none' }}
-                  className="hover:brightness-95"
-                >
-                  <svg viewBox="0 0 24 24" className="w-5 h-5 fill-white">
-                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-                  </svg>
-                  Design yours on WhatsApp
-                </a>
-                <p style={{ fontSize: 11, color: '#a8a29e', textAlign: 'center', margin: '8px 0 0' }}>
-                  Opens WhatsApp with this sofa&apos;s details already filled in.
-                </p>
-              </div>
-            )}
-            {/* ── Add to cart & Wishlist ── (sticky on mobile) */}
-            <div 
-              className="flex flex-col md:hidden" 
-              style={{ 
-                position: 'fixed', 
-                bottom: 'calc(env(safe-area-inset-bottom) - 56px)', 
-                left: 0, right: 0, zIndex: 50, 
-                background: 'rgba(255,255,255,0.95)', 
-                backdropFilter: 'blur(12px)', 
-                borderTop: `2px solid ${accent}22`, 
-                padding: '10px 16px' 
-              }}
-            >
-              
-              {/* Top Row: Price, Wishlist, Add to Cart */}
-              <div style={{ display: 'flex', width: '100%', gap: 10, alignItems: 'center' }}>
-                <div>
-                  <div className="font-playfair" style={{ fontSize: 17, fontWeight: 700, color: '#1c1917' }}>£{price.toFixed(0)}</div>
-                  <div style={{ fontSize: 10, color: '#78716c' }}>{selColor} {selMat}</div>
-                </div>
-                
-                <button onClick={handleWishlistToggle} disabled={wishlistLoading} style={{ width: 44, height: 44, borderRadius: 8, background: '#fff', border: '1px solid #e7e5e4', display: 'flex', alignItems: 'center', justifyContent: 'center', marginLeft: 'auto' }}>
-                  <Heart style={{ width: 18, height: 18, fill: inWishlist ? accent : 'transparent', color: inWishlist ? accent : '#78716c' }} />
-                </button>
-
-                <button onClick={handleAdd} disabled={added} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '12px 0', borderRadius: 8, border: 'none', background: added ? '#16a34a' : accent, color: added ? '#fff' : textOnAccent, fontSize: 12, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer', transition: 'background 0.3s ease' }}>
-                  {added ? <><Check style={{ width: 14, height: 14 }} /> Added!</>  : <><ShoppingBag style={{ width: 14, height: 14 }} /> Add to Cart</>}
-                </button>
-              </div>
-
-              {/* Bottom Row: WhatsApp Button */}
-              <WhatsAppCard />
-            </div>
-
-            {/* Desktop add-to-cart & Wishlist */}
-            <div className="hidden md:block">
-              <div style={{ display: 'flex', gap: 10 }}>
-                <button onClick={handleAdd} disabled={added} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '14px 0', borderRadius: 10, border: 'none', background: added ? '#16a34a' : accent, color: added ? '#fff' : textOnAccent, fontSize: 12, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', cursor: 'pointer', transition: 'all 0.3s ease', transform: added ? 'scale(0.99)' : 'scale(1)', boxShadow: added ? 'none' : `0 6px 24px ${accent}44` }}>
-                  {added ? <><Check style={{ width: 15, height: 15 }} /> Added to Cart!</>  : <><ShoppingBag style={{ width: 15, height: 15 }} /> Add to Cart — £{price.toFixed(0)}</>}
-                </button>
-                
-                <button onClick={handleWishlistToggle} disabled={wishlistLoading} style={{ width: 50, height: 50, borderRadius: 10, background: '#fff', border: '2px solid #e7e5e4', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s ease' }} className="hover:border-stone-300">
-                  <Heart style={{ width: 22, height: 22, fill: inWishlist ? accent : 'transparent', color: inWishlist ? accent : '#a8a29e', transition: 'all 0.2s' }} />
-                </button>
-              </div>
-
-              <WhatsAppCard />
-
-              {/* Trust row */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 1, marginTop: 12, border: `1px solid ${accent}20`, borderRadius: 10, overflow: 'hidden' }}>
-                {[{ icon: Truck, label: PROMISES.delivery.label }, { icon: Gem, label: PROMISES.payment.label }, { icon: ShieldCheck, label: PROMISES.guarantee.label }].map(({ icon: Icon, label }) => (
-                  <div key={label} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, padding: '10px 8px', background: accentTint, transition: 'background 0.7s ease' }}>
-                    <Icon style={{ width: 14, height: 14, color: accent }} />
-                    <span style={{ fontSize: 9, color: '#78716c', fontWeight: 600, textAlign: 'center', letterSpacing: '0.06em' }}>{label}</span>
-                  </div>
-                ))}
-              </div>
+              And nothing follows the buy box in this column. A sibling after a
+              sticky element scrolls over it from the instant it pins; the
+              made-to-order and WhatsApp blocks are in the left column now. */}
+          <div className="order-2 md:col-start-2 md:row-start-1 md:row-span-3">
+            <div className="md:sticky md:top-[76px]">
+              <BuyBox
+                product={product}
+                price={price}
+                reviewCount={reviewCount}
+                averageRating={averageRating}
+                estimate={deliveryEstimate}
+                categorySlug={categorySlug}
+                subgroups={subgroups}
+                subgroupTitle={subgroupTitle || 'Style'}
+                currentSubgroup={currentSubgroup}
+                hrefForSubgroup={hrefForSubgroup}
+                sizes={sizes}
+                onCustomSize={() => setShowCustomSize(true)}
+                materials={materials}
+                selectedMaterial={selMat}
+                onSelectMaterial={handleMaterial}
+                added={added}
+                onAdd={handleAdd}
+                inWishlist={inWishlist}
+                wishlistBusy={wishlistBusy}
+                onWishlist={handleWishlist}
+                ctaRef={ctaRef}
+              />
             </div>
           </div>
 
-        </div>
-
-        {/* ════ REVIEWS SECTION ════ */}
-        <div ref={reviewsRef} style={{ maxWidth: 1100, margin: '0 auto', padding: '0 16px 80px', opacity: reviewsVisible ? 1 : 0, transform: reviewsVisible ? 'translateY(0)' : 'translateY(30px)', transition: 'opacity 0.7s ease, transform 0.7s ease' }}>
-          
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16, paddingTop: 32, paddingBottom: 24, borderTop: `1px solid ${accent}22` }}>
-            <div>
-              <div style={{ fontSize: 9, color: accent, textTransform: 'uppercase', letterSpacing: '0.2em', fontWeight: 700 }}>Customer Reviews</div>
-              <h2 className="font-playfair" style={{ fontSize: 24, fontWeight: 700, color: '#1c1917', marginTop: 2 }}>What Our Customers Say</h2>
-            </div>
-            {approvedReviews.length > 0 && (
-              <div style={{ marginLeft: 'auto', textAlign: 'center', background: accentTint, border: `1px solid ${accent}30`, borderRadius: 10, padding: '10px 16px' }}>
-                <div className="font-playfair" style={{ fontSize: 28, fontWeight: 700, color: accent, lineHeight: 1 }}>{(approvedReviews.reduce((s, r) => s + r.rating, 0) / approvedReviews.length).toFixed(1)}</div>
-                <StarRow rating={Math.round(approvedReviews.reduce((s, r) => s + r.rating, 0) / approvedReviews.length)} size={10} accent={accent} />
-                <div style={{ fontSize: 10, color: '#a8a29e', marginTop: 3 }}>{approvedReviews.length} reviews</div>
-              </div>
-            )}
+          {/* Under the photograph on desktop, after the buy box on a phone —
+              which is the reading order either way, because on one column
+              `order` puts it third. */}
+          <div className="order-3 md:col-start-1 md:row-start-2">
+            <SecondaryActions
+              customMade={Boolean(product.custom_made)}
+              customEnquiryHref={customEnquiryHref}
+              agentHref={agentHref}
+            />
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 32 }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              {approvedReviews.length > 0 ? approvedReviews.map((r, i) => (
-                <div key={r.id} style={{ background: '#fff', borderRadius: 10, padding: 16, borderLeft: `3px solid ${accent}`, boxShadow: '0 1px 6px rgba(0,0,0,0.05)', animation: `slideUp 0.4s ease ${i * 60}ms both` }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-                    <div style={{ width: 34, height: 34, borderRadius: '50%', background: accent, color: textOnAccent, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, flexShrink: 0, transition: 'background 0.7s ease' }}>
-                      {r.customer_name ? r.customer_name.charAt(0).toUpperCase() : 'V'}
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: '#1c1917' }}>{r.customer_name || 'Verified Buyer'}</div>
-                      <StarRow rating={r.rating} size={11} accent={accent} />
-                    </div>
-                    <span style={{ marginLeft: 'auto', fontSize: 10, color: '#a8a29e', flexShrink: 0 }}>
-                      {new Date(r.created_at).toLocaleDateString('en-GB')}
-                    </span>
-                  </div>
-                  
-                  <p style={{ fontSize: 12, color: '#57534e', lineHeight: 1.7, margin: 0 }}>{r.comment}</p>
-                  
-                  {r.image_url && (
-                    <div style={{ marginTop: 12 }}>
-                      <img 
-                        src={r.image_url} 
-                        alt="Customer photo" 
-                        style={{ 
-                          width: 80, 
-                          height: 80, 
-                          objectFit: 'cover', 
-                          borderRadius: 8, 
-                          border: `1px solid ${accent}30`,
-                          boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
-                        }} 
-                      />
-                    </div>
-                  )}
-                </div>
-              )) : (
-                <div style={{ background: accentTint, border: `1px dashed ${accent}44`, borderRadius: 10, padding: '28px 20px', textAlign: 'center' }}>
-                  <p style={{ fontSize: 13, color: '#78716c' }}>No reviews yet. Be the first!</p>
-                </div>
-              )}
-            </div>
-
-            <div className="relative md:sticky" style={{ top: 80 }}>
-              <div style={{ background: '#fff', borderRadius: 10, padding: 20, borderTop: `3px solid ${accent}`, boxShadow: '0 4px 20px rgba(0,0,0,0.05)', transition: 'border-color 0.7s ease' }}>
-                <ReviewForm productId={product.id} accent={accent} accentTint={accentTint} isLoggedIn={isLoggedIn} />
-              </div>
-            </div>
+          {/* The accordion is what gives the pin its travel. The buy box is
+              877px tall and the photograph is 643px, so without something
+              below it the left column is the SHORTER one and a sticky buy box
+              has nowhere to go — which is exactly what happened the first time
+              this was built. Details here makes the left column ~1,265px and
+              the pin real. */}
+          <div className="order-4 md:col-start-1 md:row-start-3">
+            <Details
+              description={product.description || ''}
+              specs={specs}
+              dimensions={dimensions}
+            />
           </div>
         </div>
-        
 
-        {/* ════ SIMILAR PRODUCTS SECTION ════ */}
-        {similarProducts && similarProducts.length > 0 && (
-          <div style={{ maxWidth: 1100, margin: '0 auto', padding: '20px 16px 80px' }}>
-            <h2 className="font-playfair" style={{ fontSize: 24, fontWeight: 700, color: '#1c1917', marginBottom: 24, borderBottom: `2px solid ${accent}30`, paddingBottom: 12 }}>
-              Similar Products
-            </h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-              {similarProducts.map((sp) => (
-                <Link key={sp.id} href={`/shop/${categorySlug}/${sp.slug}`} className="group" style={{ textDecoration: 'none' }}>
-                  <div style={{ background: '#fff', borderRadius: 12, overflow: 'hidden', border: '1px solid #e7e5e4', transition: 'all 0.3s ease' }} className="hover:shadow-lg hover:border-stone-300">
-                    <div style={{ position: 'relative', width: '100%', aspectRatio: '1', background: '#f5f5f4', overflow: 'hidden' }}>
-                      <Image 
-                        src={sp.image_url} 
-                        alt={sp.title} 
-                        fill 
-                        className="object-cover group-hover:scale-105 transition-transform duration-500" 
-                        sizes="(max-width: 768px) 50vw, 25vw" 
-                      />
-                    </div>
-                    <div style={{ padding: 12 }}>
-                      <h3 style={{ fontSize: 13, fontWeight: 700, color: '#1c1917', lineHeight: 1.3, marginBottom: 4 }} className="line-clamp-2">
-                        {sp.title}
-                      </h3>
-                      <p className="font-playfair" style={{ fontSize: 15, fontWeight: 700, color: accent }}>
-                        £{sp.base_price.toFixed(0)}
-                      </p>
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
-        )}
-
-      </main>
-
-      {zoomImage && <ZoomModal src={zoomImage} alt={`${product.title} in ${selColor || ''} ${selMat || ''} - Zoomed View`} onClose={() => setZoomImage(null)} />}
-
-      {/* ── DIMENSIONS MODAL ── */}
-      {showDims && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, animation: 'fadeIn 0.2s ease' }} onClick={() => setShowDims(false)}>
-          <div style={{ background: '#fff', borderRadius: 14, width: '100%', maxWidth: 420, overflow: 'hidden', boxShadow: '0 30px 80px rgba(0,0,0,0.2)', animation: 'slideUp 0.3s ease' }} onClick={e => e.stopPropagation()}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', borderBottom: `3px solid ${accent}`, background: accentTint }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Ruler style={{ width: 15, height: 15, color: accent }} />
-                <span style={{ fontSize: 13, fontWeight: 700, color: '#1c1917' }}>Product Dimensions</span>
-              </div>
-              <button onClick={() => setShowDims(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#78716c' }}>
-                <X style={{ width: 15, height: 15 }} />
-              </button>
-            </div>
-            <div style={{ padding: '18px', fontSize: 13, color: '#57534e', lineHeight: 1.8, whiteSpace: 'pre-wrap', fontWeight: 500 }}>{dimensions}</div>
-            <div style={{ padding: '12px 18px', borderTop: '1px solid #f5f5f4' }}>
-              <button onClick={() => setShowDims(false)} style={{ width: '100%', padding: '10px 0', borderRadius: 7, border: 'none', background: accent, color: textOnAccent, fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', cursor: 'pointer', transition: 'opacity 0.2s' }}>Close</button>
-            </div>
-          </div>
+        <div className="relative mx-auto max-w-shell px-4 pb-12 sm:px-6 lg:pb-16">
+          <Reviews productId={product.id} reviews={approvedReviews} isLoggedIn={isLoggedIn} />
         </div>
-      )}
 
-      {/* ── NEW: CUSTOM SIZE MODAL ── */}
+        {/* Both rows run the full width on Calico 100. The change of ground is
+            what separates them from the product detail above — no rule needed,
+            and nothing to line up when one of the two is absent. */}
+        <Similar products={similarProducts} categorySlug={categorySlug} />
+        <RecentlyViewed
+          id={product.id}
+          title={product.title}
+          href={`/shop/${categorySlug}/${product.slug}`}
+          image={images[0]?.src ?? null}
+          price={price}
+        />
+
+        {/* Clears the sticky bar, which is fixed and out of the flow. */}
+        <div aria-hidden="true" className="h-[76px] md:hidden" />
+      </div>
+
+      <StickyBar
+        image={images[0]?.src ?? null}
+        title={product.title}
+        price={price}
+        visible={pastCta}
+        added={added}
+        onAdd={handleAdd}
+      />
+
       {showCustomSize && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, animation: 'fadeIn 0.2s ease' }} onClick={() => setShowCustomSize(false)}>
-          <div style={{ background: '#fff', borderRadius: 14, width: '100%', maxWidth: 420, overflow: 'hidden', boxShadow: '0 30px 80px rgba(0,0,0,0.2)', animation: 'slideUp 0.3s ease' }} onClick={e => e.stopPropagation()}>
-            
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', borderBottom: `3px solid ${accent}`, background: accentTint }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Sparkles style={{ width: 15, height: 15, color: accent }} />
-                <span style={{ fontSize: 13, fontWeight: 700, color: '#1c1917' }}>Custom Configuration</span>
-              </div>
-              <button onClick={() => setShowCustomSize(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#78716c' }}>
-                <X style={{ width: 15, height: 15 }} />
-              </button>
-            </div>
-
-            <div style={{ padding: '24px 18px', textAlign: 'center' }}>
-              <h3 className="font-playfair" style={{ fontSize: 20, fontWeight: 700, color: '#1c1917', marginBottom: 8 }}>
-                Need more seats?
-              </h3>
-              <p style={{ fontSize: 13, color: '#57534e', lineHeight: 1.6, marginBottom: 20 }}>
-                Want a custom number of seats or a unique layout? Contact our agents directly to build your perfect layout. It is often much cheaper than adding individual pieces one by one!
-              </p>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {/* WhatsApp Action */}
-                <a
-                  href={`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(`Hi, I'm interested in a custom configuration for the ${product.title}. Can you help me out?`)}`}
-                  target="_blank" rel="noopener noreferrer"
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '12px', background: '#25D366', color: '#fff', borderRadius: 8, fontSize: 13, fontWeight: 700, textDecoration: 'none', transition: 'transform 0.2s', boxShadow: '0 4px 12px rgba(37,211,102,0.2)' }}
-                  className="hover:scale-[1.02]"
-                >
-                  <svg viewBox="0 0 24 24" className="w-5 h-5 fill-white">
-                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-                  </svg>
-                  Chat on WhatsApp
-                </a>
-                
-                {/* Phone Call Action */}
-                <a
-                  href={PHONE_HREF}
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '12px', background: '#1c1917', color: '#fff', borderRadius: 8, fontSize: 13, fontWeight: 700, textDecoration: 'none', transition: 'transform 0.2s', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                  className="hover:scale-[1.02]"
-                >
-                  <Phone className="w-4 h-4" />
-                  Call Us Directly
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
+        <CustomSizeModal
+          title={product.title}
+          accent={accent}
+          onClose={() => setShowCustomSize(false)}
+        />
       )}
-
-      <div className="md:hidden" style={{ height: 72 }} />
     </>
+  );
+}
+
+// ─── Custom size ─────────────────────────────────────────────────────────────
+//
+// The shell — role, aria-modal, Escape, the Tab trap, the scroll lock and the
+// focus handover — is the shared Modal now. This panel had the scroll lock and
+// Escape and neither of the last two, so Tab walked out of it and into the
+// page behind, which is still there, just invisible.
+function CustomSizeModal({ title, accent, onClose }: {
+  title: string; accent: React.CSSProperties; onClose: () => void;
+}) {
+  return (
+    <Modal
+      title="Custom configuration"
+      onClose={onClose}
+      size="sm"
+      style={accent}
+      icon={<Sparkles aria-hidden="true" className="h-4 w-4 shrink-0 text-[var(--pdp-accent-text)]" />}
+    >
+      <div className="text-center">
+        <p className="m-0 font-display text-h3 font-semibold text-ink-900">Need more seats?</p>
+        <p className="m-0 mt-2 text-body-sm leading-relaxed text-ink-500">
+          Want a different number of seats, or a layout that isn&apos;t listed? Talk to us and
+          we&apos;ll build it around your room. It is usually cheaper than adding pieces one by one.
+        </p>
+
+        <div className="mt-5 flex flex-col gap-3">
+          <a
+            href={whatsAppHref(`Hi, I'm interested in a custom configuration for the ${title}. Can you help me out?`)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover-btn flex h-12 items-center justify-center gap-2 rounded-sm bg-whatsapp text-body-sm font-semibold text-calico-50 no-underline"
+          >
+            <WhatsAppIcon className="h-5 w-5" />
+            Chat on WhatsApp
+          </a>
+          <a
+            href={PHONE_HREF}
+            className="hover-btn hover-btn-dark flex h-12 items-center justify-center gap-2 rounded-sm bg-ink-900 text-body-sm font-semibold text-calico-50 no-underline"
+          >
+            <Phone aria-hidden="true" className="h-4 w-4" />
+            Call us directly
+          </a>
+        </div>
+      </div>
+    </Modal>
   );
 }

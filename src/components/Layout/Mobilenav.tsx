@@ -1,129 +1,100 @@
 'use client';
+// src/components/Layout/Mobilenav.tsx
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Grid2X2, Star, ShoppingBag, User } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { House, Grid2X2, Star, ShoppingBag, User } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
+import { DUR, EASE } from '@/components/Motion/tokens';
+import { useReducedMotionSafe } from '@/components/Motion/useReducedMotionSafe';
 
-const ACCENT = '#d4871a';
 
 const tabs = [
-  { href: '/',           icon: Home,       label: 'Home'    },
-  { href: '/shop/all',   icon: Grid2X2,    label: 'Shop'    },
-  { href: '/reviews',    icon: Star,       label: 'Reviews' },
-  { href: '/checkout',   icon: ShoppingBag,label: 'Cart',  isCart: true },
-  { href: '/account',    icon: User,       label: 'Account' },
+  { href: '/',         icon: House,       label: 'Home' },
+  { href: '/shop/all', icon: Grid2X2,     label: 'Shop' },
+  { href: '/reviews',  icon: Star,        label: 'Reviews' },
+  { href: '/checkout', icon: ShoppingBag, label: 'Cart', isCart: true },
+  { href: '/account',  icon: User,        label: 'Account' },
 ];
 
 export default function MobileNav() {
-  const pathname  = usePathname();
+  const pathname = usePathname();
   const { itemCount } = useCart();
+  const reduced = useReducedMotionSafe();
 
-  
-
-  // Hide on admin pages
   if (pathname.startsWith('/admin')) return null;
 
   return (
     <nav
-      className="lg:hidden fixed bottom-0 left-0 right-0 z-50 no-select"
-      style={{
-        background: 'rgba(255,255,255,0.97)',
-        backdropFilter: 'blur(16px)',
-        WebkitBackdropFilter: 'blur(16px)',
-        borderTop: '1px solid rgba(0,0,0,0.08)',
-        paddingBottom: 'env(safe-area-inset-bottom)',
-        boxShadow: '0 -4px 20px rgba(0,0,0,0.06)',
-      }}
+      aria-label="Primary"
+      /**
+       * z-bottom-nav (40) sits above z-sticky-bar (30).
+       *
+       * Both used to be a hardcoded z-50, and with the tie broken by DOM order
+       * the product page's add-to-cart bar rendered later and won — so on every
+       * product page the bar covered the navigation entirely.
+       */
+      className="no-select fixed inset-x-0 bottom-0 z-bottom-nav border-t border-calico-300 bg-calico-50/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_20px_rgba(25,28,27,0.06)] backdrop-blur-lg lg:hidden"
     >
-      <div style={{ display: 'flex', alignItems: 'stretch', height: 56 }}>
+      <ul className="m-0 flex h-14 list-none items-stretch p-0">
         {tabs.map(({ href, icon: Icon, label, isCart }) => {
-          const active = pathname === href ||
-            (href === '/shop/all' && pathname.startsWith('/shop'));
+          const active = pathname === href || (href === '/shop/all' && pathname.startsWith('/shop'));
+          // The cart reads as full whenever it holds something, not only when
+          // you happen to be standing on the cart tab.
+          const filled = isCart ? itemCount > 0 : active;
 
           return (
-            <Link
-              key={href}
-              href={href}
-              className="btn-press"
-              style={{
-                flex: 1,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 3,
-                textDecoration: 'none',
-                position: 'relative',
-                minHeight: 44,
-              }}
-            >
-              {/* Active indicator — top pill */}
-              <div style={{
-                position: 'absolute',
-                top: 0,
-                left: '50%',
-                transform: 'translateX(-50%)',
-                width: active ? 24 : 0,
-                height: 2,
-                background: ACCENT,
-                borderRadius: '0 0 3px 3px',
-                transition: 'width 0.25s cubic-bezier(.16,1,.3,1)',
-              }} />
-
-              {/* Icon wrapper */}
-              <div style={{
-                position: 'relative',
-                width: 24, height: 24,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-                <Icon
-                  style={{
-                    width: 20, height: 20,
-                    color: active ? ACCENT : '#a8a29e',
-                    transition: 'color 0.2s ease, transform 0.2s ease',
-                    transform: active ? 'scale(1.1)' : 'scale(1)',
-                    ...(isCart && active ? { fill: ACCENT } : {}),
-                  }}
-                  strokeWidth={active ? 2.2 : 1.8}
-                />
-
-                {/* Cart badge */}
-                {isCart && itemCount > 0 && (
-                  <span style={{
-                    position: 'absolute',
-                    top: -5, right: -6,
-                    minWidth: 16, height: 16,
-                    background: ACCENT,
-                    color: '#fff',
-                    fontSize: 9,
-                    fontWeight: 800,
-                    borderRadius: 8,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    padding: '0 3px',
-                    border: '2px solid #fff',
-                    lineHeight: 1,
-                  }}>
-                    {itemCount > 9 ? '9+' : itemCount}
-                  </span>
+            <li key={href} className="flex-1">
+              <Link
+                href={href}
+                data-press
+                aria-current={active ? 'page' : undefined}
+                aria-label={isCart && itemCount > 0 ? `Cart, ${itemCount} item${itemCount === 1 ? '' : 's'}` : undefined}
+                className="relative flex h-full min-h-11 flex-col items-center justify-center gap-1 no-underline"
+              >
+                {/* One element shared across all five tabs, so it slides from
+                    the old tab to the new one instead of shrinking to nothing
+                    and growing back somewhere else. */}
+                {active && (
+                  <motion.span
+                    layoutId={reduced ? undefined : 'bottom-nav-indicator'}
+                    aria-hidden="true"
+                    className="absolute inset-x-0 top-0 mx-auto h-0.5 w-6 rounded-b-sm bg-ember-500"
+                    transition={{ duration: DUR.base, ease: EASE.out }}
+                  />
                 )}
-              </div>
 
-              {/* Label */}
-              <span style={{
-                fontSize: 9,
-                fontWeight: active ? 700 : 500,
-                letterSpacing: '0.04em',
-                color: active ? ACCENT : '#a8a29e',
-                transition: 'color 0.2s ease',
-                lineHeight: 1,
-              }}>
-                {label}
-              </span>
-            </Link>
+                <span className="relative grid h-6 w-6 place-items-center">
+                  <Icon
+                    aria-hidden="true"
+                    strokeWidth={active ? 2.2 : 1.8}
+                    className={`h-5 w-5 transition-colors duration-swift ${
+                      active ? 'text-ember-700' : 'text-ink-500'
+                    } ${filled ? 'fill-ember-500' : 'fill-none'}`}
+                  />
+                  {isCart && itemCount > 0 && (
+                    <span
+                      key={itemCount}
+                      className="cart-pop absolute -right-2 -top-1.5 grid min-w-4 place-items-center rounded-pill border-2 border-calico-50 bg-ember-500 px-1 font-data text-caption font-bold leading-none text-ink-900"
+                    >
+                      {itemCount > 9 ? '9+' : itemCount}
+                    </span>
+                  )}
+                </span>
+
+                <span
+                  className={`text-caption leading-none transition-colors duration-swift ${
+                    active ? 'font-bold text-ember-700' : 'font-medium text-ink-500'
+                  }`}
+                >
+                  {label}
+                </span>
+              </Link>
+            </li>
           );
         })}
-      </div>
+      </ul>
     </nav>
   );
 }

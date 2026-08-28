@@ -1,9 +1,8 @@
+// src/app/terms/page.tsx
 import type { Metadata } from 'next'
-
-
-// ─── TERMS PAGE  →  src/app/terms/page.tsx ────────────────────────────────────
-import { FileText, Link } from 'lucide-react'
-
+import Link from 'next/link'
+import EditorialHero from '@/components/Editorial/EditorialHero'
+import EditorialLayout, { LastUpdated } from '@/components/Editorial/EditorialLayout'
 
 export const metadata: Metadata = {
   title: 'Terms & Conditions',
@@ -12,56 +11,117 @@ export const metadata: Metadata = {
   alternates: { canonical: '/terms' },
 }
 
-const ACCENT = '#d18b41'
+/**
+ * Set by hand, on purpose.
+ *
+ * This was `new Date()`, which rendered today's date on every request — so the
+ * page claimed the terms had been revised this morning, every morning, whether
+ * a word had changed or not. On a document whose whole function is to say what
+ * was agreed and when, that is a false statement rather than a cosmetic bug.
+ * Change it when the terms change; not otherwise.
+ */
+const LAST_UPDATED = '2026-08-27'
 
-const termsSections = [
-  { num: '1.', title: 'Introduction', body: 'These Terms and Conditions govern your use of uksofashop.co.uk and the purchase of goods from UK Sofa Shop. By placing an order you confirm that you have read, understood, and agree to these terms.' },
-  { num: '2.', title: 'Placing an Order', body: 'When you submit an order, you are making an offer to purchase. We will send an acknowledgement email upon receipt. This is not an acceptance. The contract is formed when we dispatch the goods.' },
-  { num: '3.', title: 'Pricing and Payment', body: 'All prices are inclusive of VAT at the current rate. Payment is due in full on delivery, either in cash to the delivery driver or by bank transfer completed at the point of delivery. We do not accept card payments. No payment is taken at the time of ordering.' },
-  { num: '4.', title: 'Delivery', body: 'Delivery is free to UK Mainland addresses with no minimum order value, to the ground floor or a ground-floor room of your choice. Delivery dates are estimates. Delays may occasionally occur due to unforeseen factors. We will notify you of any significant delays.' },
-  { num: '5.', title: 'Returns and Cancellations', body: 'Under the Consumer Contracts Regulations you have 14 days from delivery to cancel your order. Return carriage is arranged and paid for by the customer. Faulty or damaged items are collected free of charge - see our Delivery & Returns page for the full process.' },
-  { num: '6.', title: 'Guarantees', body: 'All sofas include a 1-year structural guarantee covering the frame and springs. This excludes wear and tear, accidental damage, and fabric fading.' },
-  { num: '7.', title: 'Limitation of Liability', body: 'We are not liable for indirect or consequential losses arising from use of our products or services. Our liability is limited to the purchase price of the affected goods.' },
-  { num: '8.', title: 'Governing Law', body: 'These terms are governed by the laws of England and Wales. Any disputes will be subject to the exclusive jurisdiction of the courts of England and Wales.' },
+const TOC = [
+  { id: 'introduction', label: 'Introduction' },
+  { id: 'orders', label: 'Placing an order' },
+  { id: 'pricing', label: 'Pricing and payment' },
+  { id: 'delivery', label: 'Delivery' },
+  { id: 'cancelling', label: 'Returns and cancellations' },
+  { id: 'guarantees', label: 'Guarantees' },
+  { id: 'liability', label: 'Limitation of liability' },
+  { id: 'law', label: 'Governing law' },
 ]
 
-function TermsPage() {
+export default function TermsPage() {
   return (
-    <div style={{ minHeight: '100vh', background: '#f8f6f2' }}>
-      <div style={{ background: '#0c0c0b', borderBottom: `2px solid ${ACCENT}` }}>
-        <div style={{ maxWidth: 800, margin: '0 auto', padding: '36px 16px 28px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
-            <div style={{ width: 40, height: 40, borderRadius: 10, background: `${ACCENT}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <FileText style={{ width: 18, height: 18, color: ACCENT }} />
-            </div>
-            <div>
-              <div style={{ fontSize: 9, color: ACCENT, textTransform: 'uppercase', letterSpacing: '0.22em', fontWeight: 700, marginBottom: 4 }}>Legal</div>
-              <h1 className="font-playfair" style={{ fontSize: 'clamp(22px,4vw,36px)', fontWeight: 700, color: '#fff' }}>Terms &amp; Conditions</h1>
-            </div>
-          </div>
-          <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginLeft: 52 }}>Last updated: {new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
-        </div>
-      </div>
+    <div className="min-h-screen bg-calico-50">
+      <EditorialHero
+        eyebrow="Legal"
+        title="Terms & conditions"
+        lede="What you are agreeing to when you order from us, in the plainest language we can put it in."
+        breadcrumb={[{ label: 'Home', href: '/' }]}
+        meta={<LastUpdated date={LAST_UPDATED} />}
+      />
 
-      <div style={{ maxWidth: 800, margin: '0 auto', padding: '32px 16px 60px' }}>
-        <div style={{ background: '#fff', borderRadius: 14, padding: '28px 24px', border: '1px solid #f0ede8', boxShadow: '0 2px 12px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column', gap: 0 }}>
-          {termsSections.map(({ num, title, body }, i) => (
-            <div key={num} style={{ paddingBottom: i < termsSections.length - 1 ? 24 : 0, marginBottom: i < termsSections.length - 1 ? 24 : 0, borderBottom: i < termsSections.length - 1 ? '1px solid #f5f5f4' : 'none' }}>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 8 }}>
-                <span style={{ fontSize: 10, color: ACCENT, fontWeight: 700, letterSpacing: '0.1em', flexShrink: 0 }}>{num}</span>
-                <h2 style={{ fontSize: 15, fontWeight: 700, color: '#1c1917' }}>{title}</h2>
-              </div>
-              <p style={{ paddingLeft: 28, fontSize: 13, color: '#57534e', lineHeight: 1.8, margin: 0 }}>{body}</p>
-            </div>
-          ))}
+      <EditorialLayout toc={TOC}>
+        <h2 id="introduction">1. Introduction</h2>
+        <p>
+          These terms govern your use of uksofashop.co.uk and the purchase of goods from UK Sofa
+          Shop. By placing an order you confirm that you have read, understood and agree to them.
+        </p>
 
-          <div style={{ paddingTop: 20, borderTop: '1px solid #f5f5f4', marginTop: 4, display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 11, color: '#a8a29e' }}>Questions about these terms?</span>
-            <Link href="/contact" style={{ fontSize: 11, color: ACCENT, fontWeight: 700, textDecoration: 'none' }}>Contact our team →</Link>
-          </div>
-        </div>
-      </div>
+        <h2 id="orders">2. Placing an order</h2>
+        <p>
+          When you submit an order you are making an offer to purchase. We send an acknowledgement
+          email on receipt — that acknowledgement is <strong>not</strong> an acceptance. The
+          contract between us is formed when we dispatch the goods.
+        </p>
+
+        <h2 id="pricing">3. Pricing and payment</h2>
+        <p>
+          All prices include VAT at the current rate. Payment is due in full on delivery, either in
+          cash to the driver or by bank transfer completed at the door. We do not accept card
+          payments of any kind, and no payment is taken at the time of ordering.
+        </p>
+        <p>
+          Optional services — upstairs delivery, assembly, removal of your old sofa — are added at
+          checkout and paid on the same day, in the same way.
+        </p>
+
+        <h2 id="delivery">4. Delivery</h2>
+        <p>
+          Delivery is free to UK Mainland addresses with no minimum order value, to the ground
+          floor or a ground-floor room of your choice. Delivery dates are estimates. Delays
+          occasionally occur for reasons outside our control, and we will tell you about any
+          significant one as soon as we know.
+        </p>
+        <p>
+          Once a delivery slot has been confirmed with you, a missed delivery means the journey has
+          to be made again and a £50 re-delivery charge applies. Full detail is on our{' '}
+          <Link href="/delivery-returns">delivery and returns page</Link>.
+        </p>
+
+        <h2 id="cancelling">5. Returns and cancellations</h2>
+        <p>
+          Under the Consumer Contracts Regulations you have 14 days from delivery to cancel your
+          order, for any reason or none. For a change-of-mind return you arrange and pay for the
+          return carriage. Faulty or damaged items are collected free of charge.
+        </p>
+        <p>
+          The 14-day right does not apply to bespoke or made-to-measure items built to your own
+          specification. This is the standard exemption in the Regulations, and it does not affect
+          your rights if such an item turns out to be faulty.
+        </p>
+
+        <h2 id="guarantees">6. Guarantees</h2>
+        <p>
+          All sofas carry a 1-year structural guarantee covering the frame and the springs. It
+          excludes wear and tear, accidental damage and fabric fading. The guarantee sits alongside
+          your statutory rights under the Consumer Rights Act 2015 rather than replacing them.
+        </p>
+
+        <h2 id="liability">7. Limitation of liability</h2>
+        <p>
+          We are not liable for indirect or consequential losses arising from the use of our
+          products or services, and our liability is limited to the purchase price of the affected
+          goods. Nothing in these terms limits our liability for death or personal injury caused by
+          negligence, for fraud, or for anything else that cannot lawfully be limited.
+        </p>
+
+        <h2 id="law">8. Governing law</h2>
+        <p>
+          These terms are governed by the laws of England and Wales, and any dispute is subject to
+          the exclusive jurisdiction of the courts of England and Wales.
+        </p>
+
+        <hr />
+
+        <p className="fine">
+          Questions about any of this? <Link href="/contact">Contact us</Link> — we would rather
+          explain a clause than have you agree to something you are unsure about.
+        </p>
+      </EditorialLayout>
     </div>
   )
 }
-export default TermsPage

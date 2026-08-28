@@ -1,141 +1,186 @@
 // src/app/care-guide/page.tsx
-import { Metadata } from 'next';
-import Link from 'next/link';
-import { Sparkles, Droplets, Sun, Wind, Brush, Phone, ArrowRight, ShieldCheck } from 'lucide-react';
-
-const ACCENT = '#d4871a';
+import type { Metadata } from 'next'
+import Link from 'next/link'
+import { Phone } from 'lucide-react'
+import EditorialHero from '@/components/Editorial/EditorialHero'
+import EditorialLayout, { Note, PullQuote } from '@/components/Editorial/EditorialLayout'
+import { PHONE_DISPLAY, PHONE_HREF } from '@/constants/contact'
 
 export const metadata: Metadata = {
   alternates: { canonical: '/care-guide' },
   title: 'Sofa Care & Cleaning Guide',
-  description: 'Expert tips on how to maintain, clean and protect your fabric or leather sofa for years to come.',
-};
+  description:
+    'How to keep a fabric or leather sofa looking right: weekly upkeep, what to do about a spill in the first thirty seconds, and the products that will ruin it.',
+}
+
+const TOC = [
+  { id: 'basics', label: 'The three basics' },
+  { id: 'fabric', label: 'Fabric sofas' },
+  { id: 'leather', label: 'Leather sofas' },
+  { id: 'spills', label: 'Spills, in order' },
+  { id: 'never', label: 'What never to use' },
+  { id: 'help', label: 'Ask us first' },
+]
 
 export default function CareGuidePage() {
   return (
-    <div className="min-h-screen bg-[#f8f6f2]">
-      
-      {/* ════ HERO SECTION ════ */}
-      <div className="bg-[#0c0c0b] border-b-2" style={{ borderColor: ACCENT }}>
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
-          <div className="text-[10px] uppercase tracking-[0.2em] font-bold mb-4" style={{ color: ACCENT }}>
-            Maintenance & Protection
-          </div>
-          <h1 className="font-playfair text-4xl md:text-6xl font-bold text-white leading-tight mb-6">
-            Sofa Care Guide
-          </h1>
-          <p className="text-white/60 max-w-xl text-lg leading-relaxed">
-            Our sofas are built to last. With a little care and regular maintenance, you can keep your fabric or leather upholstery looking as immaculate as the day it arrived.
+    <div className="min-h-screen bg-calico-50">
+      <EditorialHero
+        eyebrow="Maintenance & protection"
+        title="Looking after it"
+        lede="A sofa is a ten-year purchase looked after and a three-year one otherwise. Most of the difference is a soft brush and thirty seconds after a spill."
+        breadcrumb={[{ label: 'Home', href: '/' }]}
+      />
+
+      <EditorialLayout toc={TOC}>
+        <p>
+          None of this is difficult, and almost none of it costs anything. The parts that matter
+          are the ones people skip: vacuuming a fabric that looks clean, and blotting rather than
+          rubbing when something goes over.
+        </p>
+
+        <h2 id="basics">The three basics</h2>
+        <p>These apply to every sofa we sell, in every material.</p>
+
+        <h3>Plump the cushions</h3>
+        <p>
+          Fibre and feather-filled cushions need plumping daily — a shake and a firm pat down after
+          an evening on them. It is not fussiness: the filling migrates to the edges under weight,
+          and a cushion left flat stays flat. Ten seconds a night is the whole job.
+        </p>
+
+        <h3>Keep it out of direct sun</h3>
+        <p>
+          Prolonged UV fades both fabric and leather, and it fades unevenly — the arm nearest the
+          window goes first, which is far more noticeable than an overall change. If the only place
+          for the sofa is by a window, rotate the cushions every few months so it fades evenly.
+        </p>
+
+        <h3>Keep it away from the radiator</h3>
+        <p>
+          At least 30cm. Localised dry heat cracks leather and can warp a wooden frame over a
+          winter or two. This is the single most common avoidable damage we see.
+        </p>
+
+        <h2 id="fabric">Fabric sofas</h2>
+        <p>
+          <strong>Vacuum weekly</strong> with the soft brush attachment. This is the one that feels
+          unnecessary and is not: grit works its way into the weave and then abrades the fibres from
+          the inside every time somebody sits down. A fabric sofa that is vacuumed does not wear
+          out where you sit; one that is not, does.
+        </p>
+        <p>
+          <strong>Do not machine wash the covers</strong> unless the label explicitly says you can.
+          Most upholstery fabric shrinks, and a cover that has shrunk 3% will never go back on.
+        </p>
+        <p>
+          <strong>Get it professionally cleaned</strong> once a year, or after anything major. An
+          upholstery cleaner has extraction equipment that lifts what a cloth pushes further in.
+        </p>
+
+        <h2 id="leather">Leather sofas</h2>
+        <p>
+          <strong>Dust it weekly</strong> with a soft microfibre cloth, lightly dampened with plain
+          water. Nothing else on the cloth.
+        </p>
+        <p>
+          <strong>Condition it every six to twelve months</strong> with a proper leather
+          conditioner. Leather is a skin and it dries out; conditioning is what stops the creases
+          across the seat turning into cracks. This is the difference between leather that looks
+          better at year five and leather that looks worse.
+        </p>
+
+        <PullQuote>
+          Blot, never rub. Rubbing pushes a spill through the surface and into the filling, and
+          turns a mark you could have lifted into one you cannot.
+        </PullQuote>
+
+        <h2 id="spills">Spills, in order</h2>
+        <ol>
+          <li>
+            <strong>Get to it now.</strong> The first thirty seconds decide almost everything. A
+            fresh spill sits on the surface; a five-minute-old one has wicked into the padding.
+          </li>
+          <li>
+            <strong>Blot with a clean, dry, uncoloured cloth.</strong> White or cream — a coloured
+            cloth can transfer its own dye into damp fabric. Press down and lift. Do not scrub.
+          </li>
+          <li>
+            <strong>Work from the outside in.</strong> Starting at the edge of the mark and moving
+            inward stops you spreading it into a bigger, fainter ring.
+          </li>
+          <li>
+            <strong>Let it dry on its own,</strong> away from direct heat. A hairdryer sets some
+            stains permanently.
+          </li>
+          <li>
+            <strong>If it is still there, stop and ask</strong> before reaching for anything
+            stronger. That is what the next section is about.
+          </li>
+        </ol>
+
+        <h2 id="never">What never to use</h2>
+        <p>
+          On leather especially, this list is short and absolute. Every one of these strips the
+          protective topcoat, and once that has gone the dye goes with it — permanently, and
+          usually in a patch exactly the shape of the cloth.
+        </p>
+        <ul>
+          <li>Baby wipes — the most common cause of ruined leather we hear about</li>
+          <li>Multi-purpose or kitchen sprays</li>
+          <li>Bleach, or anything containing it</li>
+          <li>Solvents, white spirit, nail varnish remover</li>
+          <li>Washing-up liquid, on leather</li>
+        </ul>
+
+        <Note title="Test it somewhere hidden">
+          <p>
+            Whatever you use, try it first on the underside of the sofa or the back of a cushion —
+            somewhere that never shows. Give it an hour and look again. If the colour has moved at
+            all, it will do the same on the seat.
           </p>
-        </div>
-      </div>
+        </Note>
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
-        
-        {/* ════ GENERAL MAINTENANCE ════ */}
-        <div className="mb-20">
-          <div className="flex items-center gap-4 mb-8">
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: `${ACCENT}15` }}>
-              <ShieldCheck className="w-6 h-6" style={{ color: ACCENT }} />
-            </div>
-            <h2 className="font-playfair text-3xl font-bold text-[#1c1917]">General Care Rules</h2>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-white p-8 rounded-2xl border border-[#e7e5e4] shadow-sm">
-              <Wind className="w-8 h-8 mb-4 text-[#a8a29e]" />
-              <h3 className="text-lg font-bold text-[#1c1917] mb-2">Plump Regularly</h3>
-              <p className="text-[#57534e] text-sm leading-relaxed">
-                Feather and fibre-filled cushions need daily plumping to maintain their shape and comfort. Give them a good shake and pat down after an evening of lounging.
-              </p>
-            </div>
-            <div className="bg-white p-8 rounded-2xl border border-[#e7e5e4] shadow-sm">
-              <Sun className="w-8 h-8 mb-4 text-[#a8a29e]" />
-              <h3 className="text-lg font-bold text-[#1c1917] mb-2">Avoid Direct Sunlight</h3>
-              <p className="text-[#57534e] text-sm leading-relaxed">
-                Prolonged exposure to direct UV sunlight can cause both fabrics and leathers to fade over time. Try to position your sofa away from direct, harsh window light.
-              </p>
-            </div>
-            <div className="bg-white p-8 rounded-2xl border border-[#e7e5e4] shadow-sm">
-              <Droplets className="w-8 h-8 mb-4 text-[#a8a29e]" />
-              <h3 className="text-lg font-bold text-[#1c1917] mb-2">Mind the Radiator</h3>
-              <p className="text-[#57534e] text-sm leading-relaxed">
-                Keep your sofa at least 30cm away from radiators or heat sources. Extreme localized heat can dry out leather, causing it to crack, and can warp wooden internal frames.
-              </p>
-            </div>
-          </div>
-        </div>
+        <h2 id="help">Ask us first</h2>
+        <p>
+          If you have a stain you are unsure about, send us a photograph before you try anything.
+          We would much rather spend two minutes telling you what is safe than deal with the damage
+          from the wrong product — which, unlike the original stain, is not something we can put
+          right.
+        </p>
 
-        {/* ════ MATERIAL SPECIFIC CARE ════ */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-20">
-          
-          {/* Fabric Care */}
-          <div className="bg-white rounded-3xl p-8 md:p-10 border border-[#e7e5e4] shadow-sm relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-[#f4f0ea] rounded-bl-full -z-0 opacity-50"></div>
-            <div className="relative z-10">
-              <Brush className="w-10 h-10 mb-6" style={{ color: ACCENT }} />
-              <h2 className="font-playfair text-2xl font-bold text-[#1c1917] mb-6">Fabric Sofa Care</h2>
-              <ul className="space-y-6">
-                <li>
-                  <strong className="block text-[#1c1917] text-sm mb-1">Weekly Vacuuming</strong>
-                  <span className="text-[#57534e] text-sm leading-relaxed block">Use the soft brush attachment on your vacuum to gently remove dust and crumbs. This prevents dirt from grinding into the woven fibres.</span>
-                </li>
-                <li>
-                  <strong className="block text-[#1c1917] text-sm mb-1">Spill Management</strong>
-                  <span className="text-[#57534e] text-sm leading-relaxed block">If you spill a liquid, act fast! <strong>Blot</strong> the area immediately with a clean, dry, uncoloured cloth. Never rub or scrub, as this pushes the liquid deeper and ruins the fabric pile.</span>
-                </li>
-                <li>
-                  <strong className="block text-[#1c1917] text-sm mb-1">Professional Cleaning</strong>
-                  <span className="text-[#57534e] text-sm leading-relaxed block">For heavily soiled areas or an annual refresh, we always recommend hiring a professional upholstery cleaner. Do not machine wash cushion covers unless explicitly stated on the label.</span>
-                </li>
-              </ul>
-            </div>
-          </div>
-
-          {/* Leather Care */}
-          <div className="bg-white rounded-3xl p-8 md:p-10 border border-[#e7e5e4] shadow-sm relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-[#f4f0ea] rounded-bl-full -z-0 opacity-50"></div>
-            <div className="relative z-10">
-              <Sparkles className="w-10 h-10 mb-6" style={{ color: ACCENT }} />
-              <h2 className="font-playfair text-2xl font-bold text-[#1c1917] mb-6">Leather Sofa Care</h2>
-              <ul className="space-y-6">
-                <li>
-                  <strong className="block text-[#1c1917] text-sm mb-1">Routine Dusting</strong>
-                  <span className="text-[#57534e] text-sm leading-relaxed block">Wipe your leather down weekly with a clean, soft, lightly dampened microfibre cloth to remove surface dust and prevent build-up.</span>
-                </li>
-                <li>
-                  <strong className="block text-[#1c1917] text-sm mb-1">Leather Conditioning</strong>
-                  <span className="text-[#57534e] text-sm leading-relaxed block">Leather is a natural skin that needs moisturizing. Apply a high-quality, specialized leather conditioner every 6 to 12 months to keep it soft, supple, and crack-free.</span>
-                </li>
-                <li>
-                  <strong className="block text-[#1c1917] text-sm mb-1">Avoid Harsh Chemicals</strong>
-                  <span className="text-[#57534e] text-sm leading-relaxed block">Never use baby wipes, multi-purpose cleaners, bleach, or solvents on your leather sofa. These will strip the protective topcoat and permanently damage the dye.</span>
-                </li>
-              </ul>
-            </div>
-          </div>
-
-        </div>
-
-        {/* ════ CTA: CONTACT FOR HELP ════ */}
-        <div className="bg-[#1c1917] rounded-3xl p-8 md:p-12 flex flex-col md:flex-row items-center justify-between gap-8 shadow-xl">
-          <div className="max-w-xl">
-            <h2 className="font-playfair text-2xl md:text-3xl font-bold text-white mb-3">
+        <div className="my-8 flex flex-wrap items-center gap-5 rounded-md border border-ink-700 bg-ink-900 p-6">
+          <div className="min-w-0 flex-1">
+            <p className="m-0 font-display text-h3 font-semibold text-calico-50">
               Dealing with a stubborn stain?
-            </h2>
-            <p className="text-[#a8a29e] text-sm md:text-base leading-relaxed">
-              Don&apos;t risk making it worse with the wrong cleaning product. Our care team is always happy to advise you on the safest way to treat specific spills and blemishes.
+            </p>
+            <p className="m-0 mt-2 text-body-sm leading-relaxed text-calico-300">
+              Send us a photograph and tell us what went on it. We will tell you what is safe to
+              try, and what to leave to a professional.
             </p>
           </div>
-          <Link 
-            href="/contact" 
-            className="shrink-0 flex items-center justify-center gap-2 bg-white text-[#1c1917] px-8 py-4 rounded-xl font-bold hover:bg-gray-100 transition active:scale-95 w-full md:w-auto"
-          >
-            <Phone className="w-5 h-5" /> Ask Our Experts
-          </Link>
+          <div className="flex shrink-0 flex-wrap gap-3">
+            <a
+              href={PHONE_HREF}
+              className="hover-btn hover-btn-dark flex h-12 items-center gap-2 rounded-sm border border-calico-50/25 px-5 font-data text-eyebrow font-bold uppercase tracking-[0.1em] text-calico-50 no-underline"
+            >
+              <Phone aria-hidden="true" className="h-4 w-4" />
+              {PHONE_DISPLAY}
+            </a>
+            <Link
+              href="/contact"
+              className="hover-btn flex h-12 items-center rounded-sm bg-ember-500 px-5 font-data text-eyebrow font-bold uppercase tracking-[0.1em] text-ink-900 no-underline"
+            >
+              Send a photo
+            </Link>
+          </div>
         </div>
 
-      </div>
+        <p className="fine">
+          Structural problems — a frame or a spring — are covered by the 1-year guarantee and are a
+          different conversation. See <Link href="/delivery-returns">delivery and returns</Link>.
+        </p>
+      </EditorialLayout>
     </div>
-  );
+  )
 }

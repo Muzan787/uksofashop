@@ -1,131 +1,99 @@
 'use client';
+// src/components/Layout/Footer.tsx
 
-import { useState, useRef, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
-  ArrowRight, Phone, Mail, MapPin, Clock,
-  Facebook, Instagram,
-  Shield, Truck, Gem, Ruler,
-  ChevronDown, ChevronUp,
+  ArrowRight, ArrowUp, Phone, Mail, MapPin, Clock,
+  Facebook, Instagram, Shield, Truck, Gem, Ruler, Loader2, Check,
 } from 'lucide-react';
 import { TRUST_POINTS } from '@/constants/promises';
 import { subscribeToNewsletter } from '@/app/actions/newsletter';
 import { openCookiePreferences } from '@/utils/consent';
-import { SOCIAL_PROFILES, PHONE_DISPLAY, PHONE_HREF } from '@/constants/contact';
+import {
+  SOCIAL_PROFILES, PHONE_DISPLAY, PHONE_HREF, SUPPORT_EMAIL, ADDRESS, OPENING_HOURS,
+} from '@/constants/contact';
 import TikTokIcon from '@/components/UI/TikTokIcon';
+import { useCategories } from '@/hooks/useCategories';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-interface Category { id: string; name: string; slug: string; }
-interface Props { categories: Category[]; }
+/**
+ * ─────────────────────────────────────────────────────────────────────────────
+ *  THE FOOTER
+ * ─────────────────────────────────────────────────────────────────────────────
+ *
+ * Same surface as the hero and the closing panel: the ink gradient, three
+ * drifting washes of light, and grain over the top. That matters more here than
+ * anywhere else on the page, because the footer follows the closing call to
+ * action and both are dark — on a flat ink-900 fill the two ran together into
+ * one long black stretch with no edge between them. The gradient gives the
+ * footer its own tonal shape, and an ember hairline across the top says where
+ * one ends and the other starts.
+ *
+ * Everything else is borrowed from the homepage so the two read as one
+ * document: column headings are the eyebrow-and-rule used by every section
+ * heading, the trust cells carry the ember-led rule from the figures band, the
+ * newsletter sits in the same glass panel as the hero badge, and the sign-up
+ * button is the same ember gradient as every other primary action.
+ */
 
-// ─── Static data ──────────────────────────────────────────────────────────────
 const supportLinks = [
-  { href: '/contact',          label: 'Contact Us'        },
+  { href: '/contact',          label: 'Contact Us' },
   { href: '/delivery-returns', label: 'Delivery & Returns' },
-  { href: '/faq',              label: 'FAQs'              },
-  { href: '/track-order',      label: 'Track Your Order'  },
-  { href: '/size-guide',       label: 'Size Guide'        },
-  { href: '/care-guide',       label: 'Care Guide'        },
+  { href: '/faq',              label: 'FAQs' },
+  { href: '/track-order',      label: 'Track Your Order' },
+  { href: '/size-guide',       label: 'Size Guide' },
+  { href: '/care-guide',       label: 'Care Guide' },
 ];
 
 const companyLinks = [
-  { href: '/about',     label: 'Our Story'    },
-  { href: '/showroom',  label: 'Showroom'     },
-  { href: '/journal',      label: 'Journal'      },
-  { href: '/careers',   label: 'Careers'      },
-  { href: '/sitemap',   label: 'Sitemap'      },
+  { href: '/about',    label: 'Our Story' },
+  { href: '/showroom', label: 'Showroom' },
+  { href: '/journal',  label: 'Journal' },
+  { href: '/careers',  label: 'Careers' },
+  { href: '/sitemap',  label: 'Sitemap' },
 ];
 
-// Driven by SOCIAL_PROFILES, which is also what feeds the `sameAs` array in
-// structured data - one list, so the footer and the markup cannot disagree
-// about which accounts exist.
-//
-// These were previously four icons all pointing at href="#": they looked like
-// working links, did nothing but jump to the top of the page, and claimed a
-// Twitter and YouTube presence that was never set up. Only the platforms in
-// SOCIAL_PROFILES render now.
-const SOCIAL_ICONS = { facebook: Facebook, instagram: Instagram, tiktok: TikTokIcon } as const
-const SOCIAL_LABELS = { facebook: 'Facebook', instagram: 'Instagram', tiktok: 'TikTok' } as const
+const legalLinks = [
+  { href: '/terms',   label: 'Terms' },
+  { href: '/privacy', label: 'Privacy' },
+  { href: '/cookies', label: 'Cookies' },
+];
+
+const SOCIAL_ICONS = { facebook: Facebook, instagram: Instagram, tiktok: TikTokIcon } as const;
+const SOCIAL_LABELS = { facebook: 'Facebook', instagram: 'Instagram', tiktok: 'TikTok' } as const;
 
 const socials = SOCIAL_PROFILES.map(({ platform, url }) => ({
-  icon: SOCIAL_ICONS[platform],
+  Icon: SOCIAL_ICONS[platform],
   href: url,
   label: SOCIAL_LABELS[platform],
-}))
-
-// Copy lives in src/constants/promises.ts; only the icons are chosen here.
-// NOTE: the "British Made / Since 1995" cell that used to sit here was removed
-// with the 30-day returns claim. Origin claims are handled separately - some
-// ranges are UK-made and recliners are not, so it can't be a sitewide badge.
-const TRUST_ICONS = [Truck, Gem, Ruler, Shield];
-const trust = TRUST_POINTS.map((p, i) => ({
-  icon: TRUST_ICONS[i] ?? Shield,
-  label: p.label,
-  sub: p.sub,
 }));
 
-// ─── Accordion section (mobile) ───────────────────────────────────────────────
-function AccordionSection({ title, children }: { title: string; children: React.ReactNode }) {
-  const [open, setOpen] = useState(false);
+const TRUST_ICONS = [Truck, Gem, Ruler, Shield];
+const trust = TRUST_POINTS.map((p, i) => ({ Icon: TRUST_ICONS[i] ?? Shield, ...p }));
+
+/**
+ * Column heading — one style, so the four columns cannot drift apart.
+ *
+ * The ember rule in front of the label is the same mark the homepage section
+ * headings carry. It is what makes a footer column read as belonging to the
+ * page above it rather than to a different template.
+ */
+function ColumnHeading({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-      <button
-        onClick={() => setOpen(o => !o)}
-        style={{
-          width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '14px 0', background: 'none', border: 'none', cursor: 'pointer',
-          color: '#e7e5e0',
-        }}
-      >
-        <span style={{ fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 600 }}>
-          {title}
-        </span>
-        {open
-          ? <ChevronUp style={{ width: 13, height: 13, color: '#d4871a' }} />
-          : <ChevronDown style={{ width: 13, height: 13, color: '#78716c' }} />
-        }
-      </button>
-      <div
-        style={{
-          maxHeight: open ? 400 : 0,
-          overflow: 'hidden',
-          transition: 'max-height 0.4s cubic-bezier(.16,1,.3,1)',
-        }}
-      >
-        <div style={{ paddingBottom: 14 }}>{children}</div>
-      </div>
-    </div>
+    <h2 className="eyebrow m-0 mb-4 flex items-center gap-2.5 text-ember-300">
+      <span aria-hidden="true" className="block h-px w-5 bg-ember-500" />
+      {children}
+    </h2>
   );
 }
 
-// ─── Link list shared helper ──────────────────────────────────────────────────
 function FooterLinks({ links }: { links: { href: string; label: string }[] }) {
   return (
-    <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+    <ul className="m-0 flex list-none flex-col gap-1 p-0">
       {links.map(({ href, label }) => (
         <li key={href}>
-          <Link
-            href={href}
-            className="group"
-            style={{
-              display: 'flex', alignItems: 'center', gap: 6,
-              padding: '5px 0',
-              fontSize: 12, color: '#78716c',
-              textDecoration: 'none',
-              transition: 'color 0.2s ease',
-            }}
-          >
-            <span
-              style={{
-                display: 'inline-block', width: 12, height: 1,
-                background: '#d4871a', flexShrink: 0,
-                transform: 'scaleX(0)',
-                transformOrigin: 'left',
-                transition: 'transform 0.25s ease',
-              }}
-              className="group-hover:[transform:scaleX(1)]"
-            />
-            <span className="group-hover:text-[#d4871a] transition-colors">{label}</span>
+          <Link href={href} className="hover-link inline-flex min-h-11 items-center py-1 text-body-sm text-calico-300 no-underline">
+            {label}
           </Link>
         </li>
       ))}
@@ -133,12 +101,79 @@ function FooterLinks({ links }: { links: { href: string; label: string }[] }) {
   );
 }
 
-// ─── Newsletter form ──────────────────────────────────────────────────────────
-function Newsletter() {
-  const [email, setEmail]     = useState('');
-  const [status, setStatus]   = useState<'idle'|'loading'|'success'|'error'>('idle');
-  const [focused, setFocused] = useState(false);
+/**
+ * The oversized wordmark.
+ *
+ * It fills the container width with `clamp` sized against the viewport, sits in
+ * an overflow-hidden band so the descenders clip at the baseline, and rises out
+ * of that band when it scrolls into view. The band is masked so the letterforms
+ * fade out toward the foot rather than being sliced off by a hard edge — the
+ * same fade the product rails use where they run off the side of the screen.
+ *
+ * The rise is a CSS transition driven by an IntersectionObserver rather than a
+ * Framer primitive, because the wordmark must be readable if the JavaScript
+ * never arrives — so it renders in its final position and the observer only
+ * adds the attribute that drops it below the baseline to rise from.
+ *
+ * THE OBSERVER WATCHES THE BAND, NOT THE WORDMARK. Watching the wordmark
+ * deadlocked exactly the way SplitText did: the effect pushes it a full height
+ * below the baseline, the band clips it completely, and a fully clipped element
+ * reports an intersection ratio of zero — so the callback that was supposed to
+ * bring it back never fired and the wordmark stayed permanently hidden. The
+ * band is clipped by nothing, so it is a trigger that can actually be true.
+ */
+function BigWordmark() {
+  const band = useRef<HTMLDivElement>(null);
+  const mark = useRef<HTMLSpanElement>(null);
 
+  useEffect(() => {
+    const bandNode = band.current;
+    const markNode = mark.current;
+    if (!bandNode || !markNode) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    // Written straight to the DOM rather than held in state. The markup ships
+    // in its FINAL position, so a visitor whose JavaScript never runs sees the
+    // wordmark rather than a blank band; only once JS is live does it drop
+    // below the baseline, and the observer then lets it rise.
+    markNode.dataset.down = 'true';
+
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) return;
+        delete markNode.dataset.down;
+        io.disconnect();
+      },
+      { threshold: 0.2 },
+    );
+    io.observe(bandNode);
+    return () => io.disconnect();
+  }, []);
+
+  return (
+    <div
+      ref={band}
+      aria-hidden="true"
+      className="relative overflow-hidden px-4 pt-8 lg:pt-12"
+      style={{
+        maskImage: 'linear-gradient(to bottom, #000 55%, transparent 100%)',
+        WebkitMaskImage: 'linear-gradient(to bottom, #000 55%, transparent 100%)',
+      }}
+    >
+      <span
+        ref={mark}
+        className="mx-auto block max-w-shell translate-y-0 whitespace-nowrap text-center font-display font-semibold leading-[0.78] tracking-tight text-calico-50/12 transition-transform duration-cinematic ease-out-expo data-[down=true]:translate-y-full"
+        style={{ fontSize: 'clamp(56px, 15.5vw, 232px)' }}
+      >
+        UK Sofa<span className="text-ember-500/30">Shop</span>
+      </span>
+    </div>
+  );
+}
+
+function Newsletter() {
+  const [email, setEmail] = useState('');
+  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState('');
 
   const submit = async (e: React.FormEvent) => {
@@ -147,7 +182,6 @@ function Newsletter() {
     setMessage('');
 
     const res = await subscribeToNewsletter(email);
-
     if (res?.error) {
       setStatus('error');
       setMessage(res.error);
@@ -159,354 +193,274 @@ function Newsletter() {
   };
 
   return (
-    <div>
-      <div style={{ fontSize: 9, letterSpacing: '0.22em', color: '#d4871a', textTransform: 'uppercase', fontWeight: 600, marginBottom: 6 }}>
-        Join the Family
-      </div>
-      <p className="font-playfair font-bold text-white" style={{ fontSize: 20, lineHeight: 1.2, marginBottom: 8 }}>
-        Get Exclusive<br />
-        <em style={{ color: '#d4871a', fontStyle: 'normal' }}>Offers & Inspiration</em>
-      </p>
-      <p style={{ fontSize: 11, color: '#57534e', lineHeight: 1.6, marginBottom: 16 }}>
-        Interior design tips, early access to new collections, and subscriber-only discounts.
-      </p>
+    /* The one panel in the footer, and the only thing in it with a background
+       of its own. A sign-up form that is just more text in a column of text
+       gets ignored; the glass lifts it off the ground without making it loud,
+       and the ember ring ties it to the badge in the hero. */
+    <div className="ring-gradient glass-dark-panel rounded-md p-5">
+      <ColumnHeading>Join the family</ColumnHeading>
 
       {status === 'success' ? (
-        <div
-          style={{
-            display: 'flex', alignItems: 'center', gap: 8,
-            padding: '12px 16px',
-            background: 'rgba(212,135,26,0.1)', border: '1px solid rgba(212,135,26,0.25)',
-            borderRadius: 7, color: '#d4871a', fontSize: 12,
-          }}
-        >
-          <span style={{ fontSize: 16 }}>✓</span>
-          <span>{message}</span>
-        </div>
+        <p className="m-0 flex items-start gap-2 text-body-sm text-ember-300">
+          <Check aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
+          {message}
+        </p>
       ) : (
-        <form onSubmit={submit}>
-          <div
-            style={{
-              display: 'flex',
-              border: `1px solid ${focused ? '#d4871a' : 'rgba(255,255,255,0.1)'}`,
-              borderRadius: 7, overflow: 'hidden',
-              transition: 'border-color 0.25s ease',
-            }}
-          >
-            <input
-              type="email"
-              placeholder="your@email.com"
-              value={email}
-              onChange={e => { setEmail(e.target.value); setStatus('idle'); }}
-              onFocus={() => setFocused(true)}
-              onBlur={() => setFocused(false)}
-              style={{
-                flex: 1, padding: '10px 14px',
-                background: 'rgba(255,255,255,0.04)', border: 'none',
-                color: '#fff', fontSize: 12, outline: 'none',
-                minWidth: 0,
-              }}
-            />
-            <button
-              type="submit"
-              className="group"
-              disabled={status === 'loading'}
-              style={{
-                padding: '0 16px',
-                background: status === 'loading' ? '#78716c' : '#d4871a',
-                border: 'none', cursor: status === 'loading' ? 'wait' : 'pointer',
-                color: '#fff', flexShrink: 0,
-                transition: 'background 0.2s ease',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}
-            >
-              {status === 'loading'
-                ? <div style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
-                : <ArrowRight style={{ width: 14, height: 14 }} className="group-hover:translate-x-0.5 transition-transform" />
-              }
-            </button>
-          </div>
-          {status === 'error' && (
-            <p style={{ fontSize: 11, color: '#f87171', marginTop: 5 }}>{message || 'Please enter a valid email address.'}</p>
-          )}
-          <p style={{ fontSize: 10, color: '#3f3f3f', marginTop: 8 }}>
-            We&apos;ll email you to confirm first. No spam, and one-click unsubscribe on every message.
+        <>
+          <p className="m-0 mb-5 max-w-[38ch] text-body-sm text-calico-300">
+            Early access to new ranges, and the occasional note on looking after
+            what you already own.
           </p>
-        </form>
+
+          <form onSubmit={submit}>
+            <label htmlFor="footer-email" className="sr-only">Email address</label>
+            {/* One line, ember underline, no box — the same field as the search
+                overlay, so the two places you type into this site match. */}
+            <div className="relative flex items-center gap-3">
+              <input
+                id="footer-email"
+                type="email"
+                required
+                value={email}
+                onChange={(e) => { setEmail(e.target.value); setStatus('idle'); }}
+                placeholder="your@email.com"
+                className="focus-ring-inset min-w-0 flex-1 appearance-none rounded-sm border-0 bg-transparent pb-2 text-body text-calico-50 placeholder:text-calico-50/30"
+              />
+              <button
+                type="submit"
+                disabled={status === 'loading'}
+                aria-label="Subscribe"
+                className="hover-btn btn-ember group grid h-11 w-11 shrink-0 place-items-center rounded-pill bg-ember-500 text-ink-900 disabled:cursor-wait"
+              >
+                {status === 'loading'
+                  ? <Loader2 aria-hidden="true" className="h-5 w-5 animate-spin" />
+                  : <ArrowRight aria-hidden="true" className="h-5 w-5 transition-transform duration-swift ease-out-expo group-hover:translate-x-1" />}
+              </button>
+              <span aria-hidden="true" className="absolute inset-x-0 bottom-0 h-px bg-ember-500" />
+            </div>
+
+            {status === 'error' && (
+              <p role="alert" className="mt-2 text-caption text-rust-300">
+                {message || 'Please enter a valid email address.'}
+              </p>
+            )}
+            <p className="m-0 mt-3 text-caption text-calico-300/70">
+              We&apos;ll email you to confirm first. No spam, and one-click
+              unsubscribe on every message.
+            </p>
+          </form>
+        </>
       )}
     </div>
   );
 }
 
-// ─── Back to top ──────────────────────────────────────────────────────────────
 function BackToTop() {
   const [visible, setVisible] = useState(false);
+
   useEffect(() => {
-    const fn = () => setVisible(window.scrollY > 400);
-    window.addEventListener('scroll', fn, { passive: true });
-    return () => window.removeEventListener('scroll', fn);
+    const onScroll = () => setVisible(window.scrollY > 400);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
   }, []);
+
   return (
     <button
+      type="button"
       onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
       aria-label="Back to top"
-      style={{
-        width: 34, height: 34, borderRadius: '50%',
-        background: 'rgba(212,135,26,0.15)',
-        border: '1px solid rgba(212,135,26,0.3)',
-        color: '#d4871a', cursor: 'pointer',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        flexShrink: 0,
-        opacity: visible ? 1 : 0,
-        transform: visible ? 'translateY(0)' : 'translateY(10px)',
-        transition: 'opacity 0.3s ease, transform 0.3s ease, background 0.2s ease',
-        pointerEvents: visible ? 'auto' : 'none',
-      }}
-      className="hover:bg-[#d4871a]/30"
+      className={`hover-icon-dark glass-dark-panel grid h-11 w-11 place-items-center rounded-pill text-calico-300 transition-opacity duration-base ease-out-expo ${
+        visible ? 'opacity-100' : 'pointer-events-none opacity-0'
+      }`}
     >
-      <ChevronUp style={{ width: 14, height: 14 }} />
+      <ArrowUp aria-hidden="true" className="h-4 w-4" />
     </button>
   );
 }
 
-// ─── Main export ──────────────────────────────────────────────────────────────
-export default function FooterClient({ categories }: Props) {
+export default function Footer() {
+  // Was `categories={[]}`, hardcoded in the layout wrapper — so the Shop
+  // column has never once listed a category since it was written.
+  const categories = useCategories();
+  const year = new Date().getFullYear();
+
   const shopLinks = [
     { href: '/shop/all', label: 'All Sofas' },
-    { href: '/collection', label: 'Collections' }, // <-- NEW
-    ...categories.map(c => ({ href: `/shop/${c.slug}`, label: c.name })),
-    { href: '/new-arrivals', label: 'New Arrivals' },
+    { href: '/collection', label: 'Collections' },
+    ...categories.map((c) => ({ href: `/shop/${c.slug}`, label: c.name })),
+    // '/new-arrivals' used to sit here and returns a 404. The newest products
+    // are the top of /shop/all, which is where this now goes.
   ];
 
   return (
-    <footer style={{ background: '#0c0c0b', color: '#78716c' }}>
+    <footer
+      data-ground="dark"
+      className="grad-ink grain relative isolate overflow-hidden bg-ink-900 text-calico-300"
+    >
+      {/* The seam. The closing panel above is also ink, so without a marked
+          edge the two blocks merge into one unbroken dark field and the page
+          appears to have no footer at all — just more of the same. This is the
+          same fading ember hairline the section headings use. */}
+      <span
+        aria-hidden="true"
+        className="absolute inset-x-0 top-0 h-px"
+        style={{ backgroundImage: 'var(--grad-rule)' }}
+      />
 
-      {/* ── Trust bar ── */}
-      <div style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 16px' }}>
-          <div
-            className="grid grid-cols-2 sm:grid-cols-4"
-            style={{ gap: 1, background: 'rgba(255,255,255,0.05)' }}
-          >
-            {trust.map(({ icon: Icon, label, sub }) => (
-              <div
-                key={label}
-                className="group cursor-default"
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 10,
-                  padding: '14px 16px',
-                  background: '#0c0c0b',
-                  transition: 'background 0.2s ease',
-                }}
-                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(212,135,26,0.04)')}
-                onMouseLeave={e => (e.currentTarget.style.background = '#0c0c0b')}
-              >
-                <Icon
-                  style={{ width: 14, height: 14, color: '#d4871a', flexShrink: 0 }}
-                  className="group-hover:scale-110 transition-transform duration-200"
-                />
-                <div>
-                  <div style={{ fontSize: 11, color: '#e7e5e0', fontWeight: 600, lineHeight: 1 }}>{label}</div>
-                  <div style={{ fontSize: 10, marginTop: 2 }}>{sub}</div>
-                </div>
-              </div>
-            ))}
+      {/* Warm and low only. The indigo wash belongs to the one cool section on
+          the homepage; running it here would give the footer a second
+          temperature it has no reason to have. */}
+      <div aria-hidden="true" className="aurora">
+        <span className="aurora__warm" />
+        <span className="aurora__deep" />
+      </div>
+
+      {/* ── Trust bar ────────────────────────────────────────────────────────
+          Each cell carries its own ember-led rule rather than the row carrying
+          dividers between cells — the same construction as the figures band on
+          the homepage, and for the same reason: the captions run to one line or
+          two, so a vertical divider between them would never line up. */}
+      <div className="relative border-b border-calico-50/10">
+        <div className="mx-auto grid max-w-shell grid-cols-2 gap-x-5 gap-y-6 px-4 py-8 sm:grid-cols-4 sm:gap-x-8 sm:px-6 lg:py-10">
+          {trust.map(({ Icon, label, sub }) => (
+            <div key={label}>
+              <span aria-hidden="true" className="mb-3 flex w-full">
+                <span className="block h-px w-6 bg-ember-500" />
+                <span className="block h-px flex-1 bg-calico-50/12" />
+              </span>
+              <Icon aria-hidden="true" className="mb-2 h-5 w-5 shrink-0 stroke-[1.5] text-ember-300" />
+              <p className="m-0 text-body-sm font-semibold leading-tight text-calico-50">{label}</p>
+              <p className="m-0 mt-1 text-caption leading-snug text-calico-300">{sub}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="relative">
+        <BigWordmark />
+      </div>
+
+      {/* ── Columns ──────────────────────────────────────────────────────── */}
+      <div className="relative mx-auto max-w-shell px-4 pb-9 pt-8 sm:px-6 lg:pb-12 lg:pt-10">
+        <div className="grid grid-cols-2 gap-x-8 gap-y-8 lg:grid-cols-5 lg:gap-y-10">
+          <nav aria-label="Shop">
+            <ColumnHeading>Shop</ColumnHeading>
+            <FooterLinks links={shopLinks} />
+          </nav>
+
+          <nav aria-label="Support">
+            <ColumnHeading>Support</ColumnHeading>
+            <FooterLinks links={supportLinks} />
+          </nav>
+
+          <nav aria-label="Company">
+            <ColumnHeading>Company</ColumnHeading>
+            <FooterLinks links={companyLinks} />
+          </nav>
+
+          {/* ── The showroom. A real address is the strongest local-trust
+                signal this business has, and it was buried on /showroom. ── */}
+          <div className="col-span-2 lg:col-span-1">
+            <ColumnHeading>Blackburn showroom</ColumnHeading>
+            <address className="not-italic">
+              <p className="m-0 flex items-start gap-2 text-body-sm text-calico-300">
+                <MapPin aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-ember-300" />
+                <span>
+                  {ADDRESS.street}
+                  <br />
+                  {ADDRESS.locality}
+                  <br />
+                  <span className="font-data tabular-nums">{ADDRESS.postcode}</span>
+                </span>
+              </p>
+
+              <p className="m-0 mt-3 flex items-start gap-2 text-body-sm">
+                <Clock aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-ember-300" />
+                <span className="text-calico-300">
+                  {OPENING_HOURS.map((h) => (
+                    <span key={h.label} className="block">
+                      {h.label}{' '}
+                      <span className="font-data tabular-nums text-calico-50">{h.display}</span>
+                    </span>
+                  ))}
+                  <span className="mt-1 block text-caption text-calico-300/70">By appointment</span>
+                </span>
+              </p>
+
+              <p className="m-0 mt-3 flex items-center gap-2 text-body-sm">
+                <Phone aria-hidden="true" className="h-4 w-4 shrink-0 text-ember-300" />
+                <a href={PHONE_HREF} className="hover-link font-data tabular-nums text-calico-50 no-underline">
+                  {PHONE_DISPLAY}
+                </a>
+              </p>
+              <p className="m-0 mt-2 flex items-center gap-2 text-body-sm">
+                <Mail aria-hidden="true" className="h-4 w-4 shrink-0 text-ember-300" />
+                <a href={`mailto:${SUPPORT_EMAIL}`} className="hover-link break-all text-calico-300 no-underline">
+                  {SUPPORT_EMAIL}
+                </a>
+              </p>
+            </address>
+          </div>
+
+          <div className="col-span-2 lg:col-span-1">
+            <Newsletter />
           </div>
         </div>
       </div>
 
-      {/* ── Main body ── */}
-      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 16px' }}>
+      {/* ── Base ─────────────────────────────────────────────────────────────
+          THE BOTTOM PADDING IS LOAD-BEARING ON A PHONE.
 
-        {/* Desktop: 4-col grid */}
-        <div
-          className="hidden lg:grid"
-          style={{ gridTemplateColumns: '1.4fr 1fr 1fr 1fr', gap: 40, padding: '40px 0 32px' }}
-        >
-          {/* Brand col */}
-          <div>
-            <Link href="/" style={{ textDecoration: 'none', display: 'block', marginBottom: 14 }}>
-              <div className="font-playfair font-bold text-white" style={{ fontSize: 20 }}>
-                UK Sofa<span style={{ color: '#d4871a' }}>Shop</span>
-              </div>
-              <div style={{ fontSize: 8, letterSpacing: '0.2em', color: '#3f3f3f', textTransform: 'uppercase', marginTop: 3 }}>
-                Free UK Mainland Delivery
-              </div>
-            </Link>
-            <p style={{ fontSize: 12, lineHeight: 1.7, marginBottom: 20, maxWidth: 220 }}>
-              Quality sofas delivered free across UK Mainland, and you pay only when they arrive.
-            </p>
+          The fixed bottom navigation covers the last 68px of the viewport, and
+          this row — copyright, the three legal links, the social icons and back
+          to top — sat underneath it: rendered, tabbable, and impossible to see
+          or tap. The clearance used to live on <main>, which is the wrong
+          element for it twice over. It did not protect this row, because the
+          footer is <main>'s sibling and comes after it. And because <main> has
+          no background of its own, those 68px painted in the page ground —
+          a bright calico strip driven between the ink closing panel and this
+          ink footer, which was the most visible seam on the whole page.
 
-            {/* Contact */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
-              {[
-                { icon: Phone, text: PHONE_DISPLAY, href: PHONE_HREF },
-                { icon: Mail,  text: 'uksofashop.co.uk@gmail.com', href: 'mailto:uksofashop.co.uk@gmail.com' },
-                { icon: Clock, text: 'Mon–Fri 9am–6pm · Sat 10am–4pm', href: null },
-              ].map(({ icon: Icon, text, href }) => (
-                <div key={text} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                  <Icon style={{ width: 12, height: 12, color: '#d4871a', flexShrink: 0, marginTop: 1 }} />
-                  {href
-                    ? <a href={href} style={{ fontSize: 11, color: '#57534e', textDecoration: 'none', transition: 'color 0.2s' }}
-                        className="hover:text-[#d4871a]">{text}</a>
-                    : <span style={{ fontSize: 11 }}>{text}</span>
-                  }
-                </div>
-              ))}
-            </div>
-
-            {/* Socials */}
-            {socials.length > 0 && (
-            <div style={{ display: 'flex', gap: 8 }}>
-              {socials.map(({ icon: Icon, href, label }) => (
-                <a
-                  key={label} href={href} aria-label={label}
-                  target="_blank" rel="noopener noreferrer"
-                  className="group"
-                  style={{
-                    width: 30, height: 30, borderRadius: 6,
-                    background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(255,255,255,0.07)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    transition: 'all 0.2s ease',
-                  }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#d4871a'; (e.currentTarget as HTMLElement).style.borderColor = '#d4871a'; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.07)'; }}
-                >
-                  <Icon style={{ width: 12, height: 12, color: '#57534e', transition: 'color 0.2s' }}
-                    className="group-hover:text-white" />
-                </a>
-              ))}
-            </div>
-            )}
-          </div>
-
-          {/* Shop */}
-          <div>
-            <div style={{ fontSize: 9, letterSpacing: '0.2em', color: '#d4871a', textTransform: 'uppercase', fontWeight: 600, marginBottom: 14 }}>
-              Shop
-            </div>
-            <FooterLinks links={shopLinks} />
-          </div>
-
-          {/* Support */}
-          <div>
-            <div style={{ fontSize: 9, letterSpacing: '0.2em', color: '#d4871a', textTransform: 'uppercase', fontWeight: 600, marginBottom: 14 }}>
-              Support
-            </div>
-            <FooterLinks links={supportLinks} />
-          </div>
-
-          {/* Newsletter */}
-          <div>
-            <Newsletter />
-          </div>
-        </div>
-
-        {/* Mobile: accordion */}
-        <div className="lg:hidden" style={{ padding: '24px 0 0' }}>
-          {/* Brand */}
-          <div style={{ paddingBottom: 24, marginBottom: 4, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-            <div className="font-playfair font-bold text-white" style={{ fontSize: 20, marginBottom: 6 }}>
-              UK Sofa<span style={{ color: '#d4871a' }}>Shop</span>
-            </div>
-            <p style={{ fontSize: 12, lineHeight: 1.7, maxWidth: 280 }}>
-              Quality sofas, delivered free across UK Mainland.
-            </p>
-            {socials.length > 0 && (
-            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-              {socials.map(({ icon: Icon, href, label }) => (
-                <a key={label} href={href} aria-label={label} target="_blank" rel="noopener noreferrer"
-                  style={{
-                    width: 30, height: 30, borderRadius: 6,
-                    background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(255,255,255,0.07)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>
-                  <Icon style={{ width: 12, height: 12, color: '#57534e' }} />
-                </a>
-              ))}
-            </div>
-            )}
-          </div>
-
-          {/* Newsletter */}
-          <div style={{ padding: '20px 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-            <Newsletter />
-          </div>
-
-          <AccordionSection title="Shop">
-            <FooterLinks links={shopLinks} />
-          </AccordionSection>
-          <AccordionSection title="Support">
-            <FooterLinks links={supportLinks} />
-          </AccordionSection>
-          <AccordionSection title="Company">
-            <FooterLinks links={companyLinks} />
-          </AccordionSection>
-
-          {/* Contact */}
-          <div style={{ padding: '16px 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {[
-                { icon: Phone, text: PHONE_DISPLAY, href: PHONE_HREF },
-                { icon: Mail,  text: 'uksofashop.co.uk@gmail.com', href: 'mailto:uksofashop.co.uk@gmail.com' },
-                { icon: MapPin, text: 'Unit 02, Waverledge Street, Blackburn, BB6 7LS', href: null },
-              ].map(({ icon: Icon, text, href }) => (
-                <div key={text} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <Icon style={{ width: 12, height: 12, color: '#d4871a', flexShrink: 0 }} />
-                  {href
-                    ? <a href={href} style={{ fontSize: 12, color: '#57534e', textDecoration: 'none' }}>{text}</a>
-                    : <span style={{ fontSize: 12 }}>{text}</span>
-                  }
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* ── Bottom bar ── */}
-        <div
-          style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            flexWrap: 'wrap', gap: 10,
-            padding: '14px 0',
-            borderTop: '1px solid rgba(255,255,255,0.05)',
-          }}
-        >
-          <p style={{ fontSize: 10, color: '#3f3f3f', margin: 0 }}>
-            © {new Date().getFullYear()} UK Sofa Shop. All rights reserved.
+          It belongs on the last element in the document, which is this one. */}
+      <div className="pb-bottom-nav relative border-t border-calico-50/10">
+        <div className="mx-auto flex max-w-shell flex-col gap-4 px-4 py-4 sm:flex-row sm:items-center sm:px-6 lg:py-5">
+          <p className="m-0 text-caption text-calico-300">
+            © <span className="font-data tabular-nums">{year}</span> UK Sofa Shop. All rights reserved.
           </p>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-            {[['/terms','Terms'],['/privacy','Privacy'],['/cookies','Cookies']].map(([href, label]) => (
-              <Link key={href as string} href={href as string}
-                style={{ fontSize: 11, color: '#57534e', textDecoration: 'none', transition: 'color 0.2s' }}
-                className="hover:text-[#d4871a]">
-                {label as string}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 sm:ml-auto">
+            {legalLinks.map(({ href, label }) => (
+              <Link key={href} href={href} className="hover-link inline-flex min-h-11 items-center text-caption text-calico-300 no-underline">
+                {label}
               </Link>
             ))}
-
-            {/* Reopens the consent banner so a visitor can change an answer
-                they already gave - UK GDPR wants withdrawing consent to be as
-                easy as giving it. */}
             <button
               type="button"
               onClick={openCookiePreferences}
-              style={{ fontSize: 11, color: '#57534e', background: 'none', border: 'none', padding: 0, cursor: 'pointer', textDecoration: 'none', transition: 'color 0.2s' }}
-              className="hover:text-[#d4871a]"
+              className="hover-link min-h-11 text-caption text-calico-300"
             >
               Cookie preferences
             </button>
+          </div>
+
+          <div className="flex items-center gap-2 sm:ml-2">
+            {socials.map(({ Icon, href, label }) => (
+              <a
+                key={label}
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={label}
+                className="hover-icon-dark glass-dark-panel grid h-11 w-11 place-items-center rounded-pill text-calico-300"
+              >
+                <Icon aria-hidden="true" className="h-4 w-4" />
+              </a>
+            ))}
             <BackToTop />
           </div>
         </div>
       </div>
-
-      {/* Spin keyframe for newsletter loader */}
-      <style>{`
-        @keyframes spin { to { transform: rotate(360deg); } }
-      `}</style>
     </footer>
   );
 }

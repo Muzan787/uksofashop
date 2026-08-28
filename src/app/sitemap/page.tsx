@@ -4,7 +4,8 @@ import Link from 'next/link';
 import { Map, ChevronRight } from 'lucide-react';
 import { createClient } from '@/utils/supabase/server';
 
-const ACCENT = '#d4871a';
+const ACCENT = 'var(--color-ember-500)';      // fills: buttons, rules, icons, badges
+const ACCENT_TEXT = 'var(--color-ember-700)'; // letterforms on a light ground
 
 export const metadata: Metadata = {
   title: 'Sitemap',
@@ -89,31 +90,31 @@ export default async function HTMLSitemapPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#f8f6f2]">
+    <div className="min-h-screen bg-calico-50">
       
       {/* ════ HERO SECTION ════ */}
-      <div className="bg-[#0c0c0b] border-b-2" style={{ borderColor: ACCENT }}>
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24 text-center">
-          <div className="flex items-center justify-center gap-2 text-[10px] uppercase tracking-[0.2em] font-bold mb-4" style={{ color: ACCENT }}>
+      <div className="bg-ink-900 border-b-2" style={{ borderColor: ACCENT }}>
+        <div className="max-w-shell mx-auto px-4 sm:px-6 lg:px-8 section-y text-center">
+          <div className="flex items-center justify-center gap-2 eyebrow tracking-[0.2em] font-bold mb-4 text-ember-300">
             <Map className="w-4 h-4" /> Directory
           </div>
-          <h1 className="font-playfair text-4xl md:text-5xl font-bold text-white leading-tight mb-4">
+          <h1 className="font-display text-h1 md:text-display-l font-bold text-white leading-tight mb-4">
             Site Map
           </h1>
-          <p className="text-white/60 text-base max-w-lg mx-auto">
+          <p className="text-white/60 text-body max-w-lg mx-auto">
             A complete overview of our website. Find exactly what you are looking for.
           </p>
         </div>
       </div>
 
       {/* ════ DIRECTORY GRID ════ */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
+      <div className="max-w-shell mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
         {/* Changed from 4 columns to 5 so products get their own dedicated column */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-12 lg:gap-8">
           
           {sections.map((section, idx) => (
             <div key={idx}>
-              <h2 className="font-playfair text-xl font-bold text-[#1c1917] mb-6 border-b border-[#e7e5e4] pb-3">
+              <h2 className="font-display text-h3 font-bold text-ink-900 mb-6 border-b border-calico-300 pb-3">
                 {section.title}
               </h2>
               <ul className="space-y-4">
@@ -121,9 +122,9 @@ export default async function HTMLSitemapPage() {
                   <li key={linkIdx}>
                     <Link 
                       href={link.href} 
-                      className="group flex items-start text-[#57534e] hover:text-[#d4871a] transition-colors text-sm font-medium"
+                      className="group flex items-start text-ink-500 hover:text-ember-700 transition-colors text-body-sm font-medium"
                     >
-                      <ChevronRight className="w-3.5 h-3.5 mr-1.5 mt-0.5 opacity-0 -ml-5 group-hover:opacity-100 group-hover:ml-0 transition-all duration-300 shrink-0" style={{ color: ACCENT }} />
+                      <ChevronRight className="w-3.5 h-3.5 mr-2 mt-1 opacity-0 -ml-4 group-hover:opacity-100 group-hover:ml-0 transition-all duration-base shrink-0" style={{ color: ACCENT_TEXT }} />
                       <span className="leading-snug">{link.name}</span>
                     </Link>
                   </li>

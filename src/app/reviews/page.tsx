@@ -30,16 +30,16 @@ export default async function ReviewsPage() {
   const { data: { user } } = await supabase.auth.getUser()
 
   return (
-    <div className="min-h-screen bg-[#f8f6f2] pt-24 pb-20 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-calico-50 pt-24 pb-16 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-shell mx-auto">
         
         {/* Header Section */}
         <div className="flex flex-col md:flex-row justify-between items-center mb-12 gap-6">
           <div>
-            <h1 className="text-4xl font-playfair font-bold text-[#1c1917] mb-2">
+            <h1 className="text-h1 font-display font-bold text-ink-900 mb-2">
               Customer Reviews
             </h1>
-            <p className="text-[#57534e]">See what our customers are saying about UK Sofa Shop.</p>
+            <p className="text-ink-500">See what our customers are saying about UK Sofa Shop.</p>
           </div>
           
           <ReviewFormModal isLoggedIn={!!user} />
@@ -53,7 +53,7 @@ export default async function ReviewsPage() {
               const displayName = review.customer_name || 'Anonymous Customer';
 
               return (
-                <div key={review.id} className="break-inside-avoid bg-white p-6 rounded-xl border border-[#f0ede8] shadow-sm">
+                <div key={review.id} className="break-inside-avoid bg-white p-6 rounded-sm border border-calico-300 shadow-e1">
                   
                   {/* Rating & User */}
                   <div className="flex justify-between items-start mb-4">
@@ -61,12 +61,17 @@ export default async function ReviewsPage() {
                       {/* Stars */}
                       <div className="flex gap-1 mb-2">
                         {[...Array(5)].map((_, i) => (
-                          <Star key={i} className={`w-4 h-4 ${i < review.rating ? 'fill-[#d4871a] text-[#d4871a]' : 'text-gray-300'}`} />
+                          <Star
+                            key={i}
+                            aria-hidden="true"
+                            className={`w-4 h-4 ${i < review.rating ? 'fill-ember-500 text-ember-700' : 'fill-none text-calico-300'}`}
+                          />
                         ))}
+                        <span className="sr-only">Rated {review.rating} out of 5</span>
                       </div>
                       
                       {/* Customer Name & Verified Badge */}
-                      <p className="text-base font-bold text-[#1c1917]">
+                      <p className="text-body font-bold text-ink-900">
                         {displayName}
                       </p>
                       {/* Only where the review is genuinely tied to a delivered
@@ -76,9 +81,9 @@ export default async function ReviewsPage() {
                           practice. review.order_id is set only by the signed
                           link in the post-delivery email. */}
                       {review.order_id && (
-                        <div className="flex items-center gap-1 mt-0.5">
+                        <div className="flex items-center gap-1 mt-1">
                           <BadgeCheck className="w-3.5 h-3.5 text-green-500" />
-                          <span className="text-[11px] font-bold text-green-600 uppercase tracking-wide">
+                          <span className="eyebrow font-bold text-green-600 tracking-wide">
                             Verified Buyer
                           </span>
                         </div>
@@ -86,27 +91,27 @@ export default async function ReviewsPage() {
                     </div>
                     
                     {/* Date */}
-                    <span className="text-xs text-[#a8a29e] mt-1">
+                    <span className="text-caption text-ink-500 mt-1">
                       {new Date(review.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                     </span>
                   </div>
 
                   {/* Comment */}
                   {review.comment && (
-                    <p className="text-[#44403c] text-sm leading-relaxed mb-4 italic">&quot;{review.comment}&quot;</p>
+                    <p className="text-ink-700 text-body-sm leading-relaxed mb-4 italic">&quot;{review.comment}&quot;</p>
                   )}
 
                   {/* Optional Image */}
                   {review.image_url && (
-                    <div className="mb-4 rounded-lg overflow-hidden border border-gray-100">
+                    <div className="mb-4 rounded-sm overflow-hidden border border-gray-100">
                       <img src={review.image_url} alt="Customer review" className="w-full h-auto object-cover" />
                     </div>
                   )}
 
                   {/* Product Link Snippet */}
                   {review.product && (
-                    <div className="pt-4 mt-4 border-t border-[#f0ede8]">
-                      <Link href={`/shop/all/${(review.product as any).slug}`} className="text-xs font-semibold text-[#d4871a] hover:underline flex items-center gap-1">
+                    <div className="pt-4 mt-4 border-t border-calico-300">
+                      <Link href={`/shop/all/${(review.product as any).slug}`} className="text-caption font-semibold text-ember-700 hover:underline flex items-center gap-1">
                         View {(review.product as any).title} →
                       </Link>
                     </div>
@@ -116,26 +121,26 @@ export default async function ReviewsPage() {
             })}
           </div>
         ) : (
-          <div className="text-center py-20 px-6 bg-white rounded-xl border border-[#f0ede8]">
-            <div className="w-14 h-14 rounded-full bg-[#fef9f0] border border-[#d4871a]/20 flex items-center justify-center mx-auto mb-5">
-              <Star className="w-6 h-6 text-[#d4871a]" />
+          <div className="text-center py-16 px-6 bg-white rounded-sm border border-calico-300">
+            <div className="w-14 h-14 rounded-pill bg-calico-100 border border-ember-500/20 flex items-center justify-center mx-auto mb-4">
+              <Star className="w-6 h-6 text-ember-700" />
             </div>
-            <h2 className="text-xl font-playfair font-bold text-[#1c1917] mb-2">
+            <h2 className="text-h3 font-display font-bold text-ink-900 mb-2">
               No reviews yet
             </h2>
-            <p className="text-[#57534e] text-sm max-w-sm mx-auto leading-relaxed mb-6">
+            <p className="text-ink-500 text-body-sm max-w-sm mx-auto leading-relaxed mb-6">
               We&apos;re a new shop, so this page is genuinely empty — every review here
               will come from a real customer. If you&apos;ve bought from us, yours would
               be the first.
             </p>
             {user ? (
-              <p className="text-xs text-[#a8a29e]">
+              <p className="text-caption text-ink-500">
                 Use the button above to write the first one.
               </p>
             ) : (
               <Link
                 href="/login"
-                className="inline-flex items-center gap-2 bg-[#d4871a] text-white px-6 py-3 rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-[#b67316] transition-colors"
+                className="inline-flex items-center gap-2 bg-ember-500 text-ink-900 px-6 py-3 rounded-sm eyebrow font-bold tracking-widest hover:bg-ember-700 hover:text-calico-50 transition-colors"
               >
                 Sign in to leave a review
               </Link>

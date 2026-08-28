@@ -10,12 +10,17 @@ import {
   parsePageParam,
   hasActiveFilters,
   countMatchingProducts,
+  parseSort,
+  parsePrice,
+  SORT_LABELS,
+  categoryPriceRange,
 } from './productQuery'
 import ProductGrid from './ProductGrid'
 import CategoryFilters from './CategoryFilters'
 import { ProductGridSkeleton, FilterSidebarSkeleton } from './Skeletons'
-import Link from 'next/link'
-import Image from 'next/image'
+import CategoryHero, { type CategoryChip } from '@/components/Category/CategoryHero'
+import SortSelect from '@/components/Category/SortSelect'
+import ActiveFilterChips, { type Chip } from '@/components/Category/ActiveFilterChips'
 
 type Params       = Promise<{ category: string }>
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>
@@ -43,7 +48,13 @@ export async function generateMetadata(
   const style    = typeof sp.style === 'string' ? sp.style : undefined
   const material = typeof sp.material === 'string' ? sp.material : undefined
   const color    = typeof sp.color === 'string' ? sp.color : undefined
-  const filtered = hasActiveFilters({ style, material, color })
+  const minPrice = parsePrice(sp.min)
+  const maxPrice = parsePrice(sp.max)
+  // A sorted listing is the same rows in a different order, which is a
+  // duplicate as far as an index is concerned — so it is kept out of one
+  // exactly like a filtered view is.
+  const sorted = parseSort(sp.sort) !== 'featured'
+  const filtered = hasActiveFilters({ style, material, color, minPrice, maxPrice }) || sorted
 
   const basePath = `/shop/${decodedCategory}`
 
@@ -114,6 +125,9 @@ export default async function CategoryPage(props: { params: Params; searchParams
   const style    = typeof sp.style === 'string' ? sp.style : undefined
   const material = typeof sp.material === 'string' ? sp.material : undefined
   const color    = typeof sp.color === 'string' ? sp.color : undefined
+  const minPrice = parsePrice(sp.min)
+  const maxPrice = parsePrice(sp.max)
+  const sort     = parseSort(sp.sort)
 
   // Anything that is not a positive integer becomes page 1 rather than being
   // handed to range() as NaN or a negative number.
@@ -132,14 +146,58 @@ export default async function CategoryPage(props: { params: Params; searchParams
       style,
       material,
       color,
+      minPrice,
+      maxPrice,
     })
     const lastPage = Math.max(1, Math.ceil(total / ITEMS_PER_PAGE))
     if (currentPage > lastPage) notFound()
   }
+  // ── What the hero says about this category ──────────────────────────────
+  // The count and range describe the CATEGORY, not the filtered view: a hero
+  // that changed its own summary every time a facet was ticked would be
+  // describing the results rather than the section.
+  const heroFilters = { categoryId: categoryData?.id ?? null }
+
+  const [heroCount, heroRange, siblingRows] = await Promise.all([
+    countMatchingProducts(supabase, heroFilters),
+    categoryPriceRange(supabase, heroFilters),
+    supabase.from('categories').select('slug, name, parent_id').order('name'),
+  ])
+
+  // Categories alongside this one — the same level of the tree, so the row
+  // offers a sideways move rather than a jump up or down it.
+  const allCategories = (siblingRows.data ?? []) as { slug: string; name: string; parent_id: string | null }[]
+  const currentRow = allCategories.find(c => c.slug === decodedCategory)
+  const level = currentRow?.parent_id ?? null
+
+  const siblings: CategoryChip[] = [
+    { slug: 'all', name: 'All sofas' },
+    ...allCategories
+      .filter(c => (c.parent_id ?? null) === level)
+      .map(c => ({ slug: c.slug, name: c.name })),
+  ]
 
   // Re-fetching on a filter change should show the skeleton again rather than
   // freezing the old results, so the boundary is keyed on what it depends on.
-  const gridKey = [decodedCategory, currentPage, style, material, color].join('|')
+  const gridKey = [decodedCategory, currentPage, style, material, color, minPrice, maxPrice, sort].join('|')
+
+  // Everything narrowing the listing, as one list, so the chip row and the
+  // hrefs that remove them come from a single description of the state.
+  const basePath = `/shop/${encodeURIComponent(decodedCategory)}`
+  const chips: Chip[] = []
+  if (style) chips.push({ keys: ['style'], params: [['style', style]], label: style })
+  if (material) chips.push({ keys: ['material'], params: [['material', material]], label: material })
+  if (color) chips.push({ keys: ['color'], params: [['color', color]], label: color })
+  if (minPrice !== undefined || maxPrice !== undefined) {
+    const pairs: [string, string][] = []
+    if (minPrice !== undefined) pairs.push(['min', String(minPrice)])
+    if (maxPrice !== undefined) pairs.push(['max', String(maxPrice)])
+    chips.push({
+      keys: ['min', 'max'],
+      params: pairs,
+      label: `£${minPrice ?? heroRange.from ?? 0} – £${maxPrice ?? heroRange.to ?? 0}`,
+    })
+  }
 
   // Matches the visual breadcrumb rendered below, which had no markup behind it.
   const breadcrumbLd = breadcrumbSchema(
@@ -153,53 +211,55 @@ export default async function CategoryPage(props: { params: Params; searchParams
   )
 
   return (
-    <div className="min-h-screen bg-[#f8f6f2]">
+    <div className="min-h-screen bg-calico-50">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(breadcrumbLd) }} />
 
-      {/* Hero banner */}
-      <div className="relative bg-[#0c0c0b] overflow-hidden">
-        {categoryData?.image_url && (
-          <Image src={categoryData.image_url} alt={pageTitle} fill className="object-cover opacity-30" sizes="100vw" />
-        )}
-        <div className="relative max-w-[1100px] mx-auto px-4 pt-10 pb-8">
-          <nav className="flex items-center gap-1.5 mb-3.5 flex-wrap">
-            {[['/', 'Home'], ['/shop/all', 'Shop']].map(([href, label]) => (
-              <span key={href} className="flex items-center gap-1.5">
-                <Link href={href} className="text-[11px] text-white/40 no-underline hover:text-white transition-colors">
-                  {label}
-                </Link>
-                <span className="text-white/20 text-[10px]">›</span>
-              </span>
-            ))}
-            <span className="text-[11px] text-[#d4871a] font-semibold">{pageTitle}</span>
-          </nav>
-          <div className="flex items-baseline justify-between flex-wrap gap-2.5">
-            <div>
-              <div className="text-[9px] text-[#d4871a] uppercase tracking-[0.22em] font-bold mb-1.5">
-                Collection
-              </div>
-              <h1 className="font-playfair text-[clamp(26px,5vw,44px)] font-bold text-white leading-tight">
-                {pageTitle}
-              </h1>
-            </div>
-          </div>
-        </div>
-        <div className="h-[2px] bg-[#d4871a]" />
-      </div>
+      <CategoryHero
+        title={pageTitle}
+        slug={decodedCategory}
+        image={categoryData?.image_url ?? null}
+        count={heroCount}
+        priceFrom={heroRange.from}
+        priceTo={heroRange.to}
+        siblings={siblings}
+      />
 
       {/* Main content */}
-      <div className="max-w-[1100px] mx-auto px-4 py-8 pb-20">
+      <div className="max-w-shell mx-auto px-4 py-8 pb-16">
 
         {/* BULLETPROOF GRID: Sidebar is exactly 200px, Product grid gets the remaining 1fr */}
         <div className="grid grid-cols-1 lg:grid-cols-[200px_1fr] gap-6 lg:gap-8 items-start">
 
           <div className="w-full">
             <Suspense fallback={<FilterSidebarSkeleton />}>
-              <CategoryFilters categoryId={categoryData?.id ?? null} />
+              <CategoryFilters
+                categoryId={categoryData?.id ?? null}
+                style={style}
+                material={material}
+                color={color}
+                minPrice={minPrice}
+                maxPrice={maxPrice}
+              />
             </Suspense>
           </div>
 
           <div className="w-full min-w-0">
+            {/* Sort sits with the results rather than with the filters: it
+                does not change WHICH sofas are shown, and putting it inside
+                the filter sheet would hide it from everyone on a phone. */}
+            <div className="mb-5 flex items-center justify-between gap-4">
+              <p className="m-0 font-data text-caption tabular-nums text-ink-500">
+                {SORT_LABELS[sort]}
+              </p>
+              <SortSelect value={sort} />
+            </div>
+
+            <ActiveFilterChips
+              basePath={basePath}
+              chips={chips}
+              sort={sort === 'featured' ? undefined : sort}
+            />
+
             <Suspense key={gridKey} fallback={<ProductGridSkeleton />}>
               <ProductGrid
                 categoryId={categoryData?.id ?? null}
@@ -208,12 +268,14 @@ export default async function CategoryPage(props: { params: Params; searchParams
                 style={style}
                 material={material}
                 color={color}
+                minPrice={minPrice}
+                maxPrice={maxPrice}
+                sort={sort}
               />
             </Suspense>
           </div>
         </div>
       </div>
-      <style>{`@keyframes fadeUp { from { opacity:0; transform:translateY(16px) } to { opacity:1; transform:translateY(0) } }`}</style>
     </div>
   )
 }

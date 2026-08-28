@@ -1,113 +1,169 @@
-'use client'
+'use client';
 // src/app/reviews/ReviewFormModal.tsx
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { submitGlobalReview } from '@/app/actions/reviews'
-import { uploadToCloudinary } from '@/app/actions/upload'
-import { Star, X, Loader2, ImagePlus } from 'lucide-react'
 
+import { useState } from 'react';
+import { Star } from 'lucide-react';
+import { submitGlobalReview } from '@/app/actions/reviews';
+import { uploadToCloudinary } from '@/app/actions/upload';
+import Modal from '@/components/UI/Modal';
+import Field, { SubmitButton } from '@/components/UI/Field';
+
+/**
+ * The one dialog on the site that had no dialog in it.
+ *
+ * It was a plain fixed div: no role, no aria-modal, no focus trap, no Escape,
+ * no scroll lock and no focus restore — so a screen reader never announced it
+ * had opened, Tab walked straight out of it into the page behind, and the
+ * page behind kept scrolling under the scrim. All of that is `Modal` now.
+ *
+ * The form beneath it was six hand-styled controls on `gray-*` and `red-*`
+ * classes that predate the palette. Same fields, shared `Field`.
+ */
 export default function ReviewFormModal({ isLoggedIn }: { isLoggedIn: boolean }) {
-  const router = useRouter()
-  const [isOpen, setIsOpen] = useState(false)
-  const [rating, setRating] = useState(5)
-  const [file, setFile] = useState<File | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [message, setMessage] = useState({ text: '', type: '' })
+  const [open, setOpen] = useState(false);
+  const [rating, setRating] = useState(5);
+  const [hovered, setHovered] = useState<number | null>(null);
+  const [file, setFile] = useState<File | null>(null);
+  const [state, setState] = useState<'idle' | 'pending' | 'done'>('idle');
+  const [error, setError] = useState('');
 
-  const handleOpen = () => {
-    if (!isLoggedIn) {
-      router.push('/login')
-      return
-    }
-    setIsOpen(true)
+  // No longer a redirect to /login. submitGlobalReview accepts guests now, so
+  // sending them away to make an account was turning away the review AND the
+  // reviewer. Signed in or not, the form opens.
+  function close() {
+    setOpen(false);
+    setState('idle');
+    setError('');
   }
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    setLoading(true)
-    setMessage({ text: '', type: '' })
+  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setState('pending');
+    setError('');
 
-    const formData = new FormData(e.currentTarget)
-    formData.append('rating', rating.toString())
+    const formData = new FormData(e.currentTarget);
+    formData.append('rating', String(rating));
 
     try {
-      let imageUrl = null;
-      if (file) {
-        imageUrl = await uploadToCloudinary(file)
-      }
+      // Photos are signed-in only: uploadToCloudinary signs a write to our own
+      // Cloudinary account with the API secret and refuses guests.
+      const imageUrl = file ? await uploadToCloudinary(file) : null;
+      const result = await submitGlobalReview(formData, imageUrl);
 
-      const result = await submitGlobalReview(formData, imageUrl)
-      
       if (result.error) {
-        setMessage({ text: result.error, type: 'error' })
+        setError(result.error);
+        setState('idle');
       } else {
-        setMessage({ text: 'Thank you! Your review is pending approval.', type: 'success' })
-        setTimeout(() => setIsOpen(false), 3000) // Close after 3 seconds
+        setState('done');
+        setTimeout(close, 3000);
       }
-    } catch (err) {
-      setMessage({ text: 'Something went wrong. Please try again.', type: 'error' })
-    } finally {
-      setLoading(false)
+    } catch {
+      setError('Something went wrong. Please try again.');
+      setState('idle');
     }
   }
+
+  // The star the row is currently showing — the hovered one while a pointer is
+  // over it, the chosen one otherwise.
+  const shown = hovered ?? rating;
 
   return (
     <>
-      <button onClick={handleOpen} className="bg-[#1c1917] text-white px-6 py-3 rounded-lg text-sm font-bold tracking-wider uppercase hover:bg-[#d4871a] transition-colors">
-        Write a Review
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="hover-btn hover-btn-dark flex h-12 items-center justify-center rounded-sm bg-ink-900 px-6 font-data text-eyebrow font-bold uppercase tracking-[0.1em] text-calico-50"
+      >
+        Write a review
       </button>
 
-      {isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-xl w-full max-w-lg p-6 relative shadow-2xl">
-            <button onClick={() => setIsOpen(false)} className="absolute top-4 right-4 text-gray-400 hover:text-black">
-              <X className="w-5 h-5" />
-            </button>
-            
-            <h2 className="text-2xl font-playfair font-bold mb-6">Share Your Experience</h2>
-            
-            {message.text && (
-              <div className={`p-3 mb-4 rounded-lg text-sm ${message.type === 'error' ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-green-50 text-green-700 border border-green-200'}`}>
-                {message.text}
-              </div>
+      {open && (
+        <Modal title="Share your experience" onClose={close} size="md">
+          <form onSubmit={onSubmit} className="flex flex-col gap-5">
+            {state === 'done' && (
+              <p
+                role="status"
+                className="m-0 rounded-sm border border-sage-700 bg-sage-50 px-4 py-3 text-body-sm text-sage-700"
+              >
+                Thank you — your review is with us and will appear once it has been checked.
+              </p>
+            )}
+            {error && (
+              <p
+                role="alert"
+                className="m-0 rounded-sm border border-rust-700 bg-rust-50 px-4 py-3 text-body-sm text-rust-700"
+              >
+                {error}
+              </p>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Star Rating */}
-              <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Rating</label>
-                <div className="flex gap-2">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <button key={star} type="button" onClick={() => setRating(star)} className="focus:outline-none">
-                      <Star className={`w-8 h-8 ${star <= rating ? 'fill-[#d4871a] text-[#d4871a]' : 'text-gray-200'}`} />
-                    </button>
-                  ))}
-                </div>
+            <fieldset className="m-0 border-0 p-0">
+              <legend className="mb-2 p-0 font-data text-caption uppercase tracking-[0.12em] text-ink-500">
+                Rating
+              </legend>
+              <div className="flex gap-1" onMouseLeave={() => setHovered(null)}>
+                {[1, 2, 3, 4, 5].map(star => (
+                  <button
+                    key={star}
+                    type="button"
+                    aria-label={`${star} ${star === 1 ? 'star' : 'stars'}`}
+                    aria-pressed={rating === star}
+                    onClick={() => setRating(star)}
+                    onMouseEnter={() => setHovered(star)}
+                    onFocus={() => setHovered(star)}
+                    onBlur={() => setHovered(null)}
+                    className="flex h-11 w-11 items-center justify-center rounded-sm transition-transform duration-press ease-out-expo hover:scale-110"
+                  >
+                    <Star
+                      aria-hidden="true"
+                      className={`h-7 w-7 transition-colors duration-press ${
+                        star <= shown ? 'fill-ember-500 text-ember-700' : 'fill-none text-calico-300'
+                      }`}
+                    />
+                  </button>
+                ))}
               </div>
+            </fieldset>
 
-              {/* Comment */}
-              <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Your Review</label>
-                <textarea name="comment" required rows={4} className="w-full border border-gray-200 rounded-lg p-3 text-sm focus:ring-2 focus:ring-[#d4871a] outline-none" placeholder="What did you love about your purchase?" />
-              </div>
+            {!isLoggedIn && (
+              <Field
+                label="Your name"
+                name="customerName"
+                maxLength={80}
+                hint="How you would like to be credited."
+                autoComplete="name"
+              />
+            )}
 
-              {/* Image Upload */}
-              <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Add a Photo (Optional)</label>
-                <label className="flex items-center gap-3 border border-dashed border-gray-300 rounded-lg p-4 cursor-pointer hover:bg-gray-50 transition-colors">
-                  <ImagePlus className="text-gray-400 w-6 h-6" />
-                  <span className="text-sm text-gray-500">{file ? file.name : 'Click to upload an image'}</span>
-                  <input type="file" accept="image/*" className="hidden" onChange={(e) => setFile(e.target.files?.[0] || null)} />
-                </label>
-              </div>
+            <Field
+              label="Your review"
+              name="comment"
+              type="textarea"
+              rows={5}
+              required
+              hint="What did you love about it?"
+            />
 
-              <button type="submit" disabled={loading} className="w-full bg-[#d4871a] text-white py-3 rounded-lg font-bold tracking-wider uppercase text-sm hover:bg-[#b8721a] transition-colors flex justify-center items-center gap-2 mt-4">
-                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Submit Review'}
-              </button>
-            </form>
-          </div>
-        </div>
+            {isLoggedIn && (
+              <Field
+                label="Add a photo"
+                name="photo"
+                type="file"
+                file={file}
+                onFile={setFile}
+                hint="Optional. A picture of it in your room helps more than anything we could write."
+              />
+            )}
+
+            <SubmitButton
+              idle="Submit review"
+              pending="Sending"
+              done="Sent"
+              state={state}
+            />
+          </form>
+        </Modal>
       )}
     </>
-  )
+  );
 }

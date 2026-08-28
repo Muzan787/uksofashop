@@ -6,10 +6,12 @@
 // itself stays a server component.
 
 import { useState } from 'react'
-import { Star, Loader2, CheckCircle } from 'lucide-react'
+import { Star, CheckCircle } from 'lucide-react'
+import Field, { SubmitButton } from '@/components/UI/Field'
 import { submitGuestReview } from '@/app/actions/guest-review'
 
-const ACCENT = '#d4871a'
+const ACCENT = 'var(--color-ember-500)'      // fills: buttons, rules, icons, badges
+const ACCENT_TEXT = 'var(--color-ember-700)' // letterforms on a light ground
 
 export default function GuestReviewForm({
   token,
@@ -46,11 +48,11 @@ export default function GuestReviewForm({
   if (done) {
     return (
       <div className="text-center py-6">
-        <div className="w-12 h-12 rounded-full bg-[#fef9f0] border border-[#d4871a]/20 flex items-center justify-center mx-auto mb-4">
-          <CheckCircle className="w-6 h-6" style={{ color: ACCENT }} />
+        <div className="w-12 h-12 rounded-pill bg-calico-100 border border-ember-500/20 flex items-center justify-center mx-auto mb-4">
+          <CheckCircle className="w-6 h-6" style={{ color: ACCENT_TEXT }} />
         </div>
-        <p className="text-[17px] font-bold text-[#1c1917] mb-2">Thank you</p>
-        <p className="text-[14px] text-[#57534e] leading-relaxed">
+        <p className="text-body font-bold text-ink-900 mb-2">Thank you</p>
+        <p className="text-body-sm text-ink-500 leading-relaxed">
           We read every review. Yours will appear on the site once it has been
           checked.
         </p>
@@ -59,12 +61,12 @@ export default function GuestReviewForm({
   }
 
   return (
-    <form action={handle} className="flex flex-col gap-5">
+    <form action={handle} className="flex flex-col gap-4">
       <div>
-        <label className="block text-[10px] font-bold uppercase tracking-[0.16em] text-[#57534e] mb-3">
+        <label className="block eyebrow font-bold tracking-[0.16em] text-ink-500 mb-3">
           How would you rate it?
         </label>
-        <div className="flex gap-1.5" onMouseLeave={() => setHovered(0)}>
+        <div className="flex gap-2" onMouseLeave={() => setHovered(0)}>
           {[1, 2, 3, 4, 5].map(n => (
             <button
               key={n}
@@ -79,7 +81,7 @@ export default function GuestReviewForm({
                 className="w-8 h-8 transition-colors"
                 style={{
                   fill: n <= (hovered || rating) ? ACCENT : 'transparent',
-                  color: n <= (hovered || rating) ? ACCENT : '#d6d3d1',
+                  color: n <= (hovered || rating) ? ACCENT_TEXT : 'var(--color-calico-300)',
                 }}
               />
             </button>
@@ -87,51 +89,33 @@ export default function GuestReviewForm({
         </div>
       </div>
 
-      <div>
-        <label
-          htmlFor="customerName"
-          className="block text-[10px] font-bold uppercase tracking-[0.16em] text-[#57534e] mb-2"
-        >
-          Your name
-        </label>
-        <input
-          id="customerName"
-          name="customerName"
-          type="text"
-          maxLength={80}
-          placeholder="How you would like to be shown"
-          className="w-full border-[1.5px] border-[#e7e5e4] rounded-lg px-3.5 py-3 text-[15px] outline-none focus:border-[#d4871a] transition-colors"
-        />
-      </div>
+      <Field
+        label="Your name"
+        name="customerName"
+        maxLength={80}
+        hint="How you would like to be shown. Leave it blank to appear as Anonymous."
+      />
 
-      <div>
-        <label
-          htmlFor="comment"
-          className="block text-[10px] font-bold uppercase tracking-[0.16em] text-[#57534e] mb-2"
-        >
-          Your review
-        </label>
-        <textarea
-          id="comment"
-          name="comment"
-          rows={5}
-          maxLength={4000}
-          placeholder={`What do you think of the ${productTitle}? Comfort, quality, how the delivery went — whatever would have helped you decide.`}
-          className="w-full border-[1.5px] border-[#e7e5e4] rounded-lg px-3.5 py-3 text-[15px] outline-none focus:border-[#d4871a] transition-colors resize-y"
-        />
-      </div>
+      <Field
+        label="Your review"
+        name="comment"
+        type="textarea"
+        rows={5}
+        maxLength={4000}
+        hint={`Comfort, quality, how the delivery went — whatever would have helped you decide about the ${productTitle}.`}
+      />
 
       {error && (
-        <p className="text-[13px] text-red-600" role="alert">{error}</p>
+        <p className="text-body-sm text-rust-700" role="alert">{error}</p>
       )}
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="inline-flex items-center justify-center gap-2 bg-[#1c1917] text-white px-6 py-3.5 rounded-xl font-bold text-sm hover:bg-black active:scale-[0.98] transition disabled:opacity-60"
-      >
-        {pending ? (<><Loader2 className="w-4 h-4 animate-spin" /> Sending…</>) : 'Post my review'}
-      </button>
+      <SubmitButton
+        idle="Post my review"
+        pending="Sending"
+        done="Sent"
+        state={pending ? 'pending' : 'idle'}
+        className="!bg-ink-900 !text-calico-50"
+      />
     </form>
   )
 }

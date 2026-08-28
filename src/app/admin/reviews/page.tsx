@@ -28,7 +28,7 @@ export default async function AdminReviewsPage() {
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-xl flex items-start gap-3">
+        <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-sm flex items-start gap-3">
           <AlertCircle className="w-5 h-5 mt-0.5 shrink-0" />
           <div>
             <p className="font-bold text-sm">Database Error</p>
@@ -42,7 +42,7 @@ export default async function AdminReviewsPage() {
           const isLive = review.is_approved === true || review.status === 'approved'
 
           return (
-            <div key={review.id} className="bg-white rounded-2xl p-5 sm:p-6 shadow-sm border border-stone-200 flex flex-col sm:flex-row gap-4 sm:gap-6">
+            <div key={review.id} className="bg-white rounded-md p-5 sm:p-6 shadow-sm border border-stone-200 flex flex-col sm:flex-row gap-4 sm:gap-6">
               
               <div className="flex-1 space-y-3">
                 <div className="flex justify-between items-start">
@@ -55,9 +55,9 @@ export default async function AdminReviewsPage() {
                         ))}
                       </div>
                       {isLive ? (
-                        <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-widest">Live</span>
+                        <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded-sm text-[10px] font-bold uppercase tracking-widest">Live</span>
                       ) : (
-                        <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-widest">Pending</span>
+                        <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-sm text-[10px] font-bold uppercase tracking-widest">Pending</span>
                       )}
                     </div>
 
@@ -91,13 +91,13 @@ export default async function AdminReviewsPage() {
                 </div>
 
                 {/* Review Text */}
-                <div className="bg-stone-50 p-4 rounded-xl text-sm text-stone-700 italic border border-stone-100">
+                <div className="bg-stone-50 p-4 rounded-sm text-sm text-stone-700 italic border border-stone-100">
                   &quot;{review.comment}&quot;
                 </div>
 
                 {/* Optional Image */}
                 {review.image_url && (
-                  <a href={review.image_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-blue-100 transition">
+                  <a href={review.image_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 bg-blue-50 text-blue-600 px-3 py-1.5 rounded-sm text-xs font-bold hover:bg-blue-100 transition">
                     <ImageIcon className="w-4 h-4" /> View Customer Photo
                   </a>
                 )}
@@ -108,7 +108,7 @@ export default async function AdminReviewsPage() {
                 {!isLive && (
                   <form action={approveReview} className="flex-1 sm:flex-none">
                     <input type="hidden" name="reviewId" value={review.id} />
-                    <button type="submit" className="w-full flex items-center justify-center gap-2 bg-stone-900 text-white px-4 py-3 rounded-xl text-sm font-bold shadow-md hover:bg-stone-800 active:scale-95 transition">
+                    <button type="submit" className="w-full flex items-center justify-center gap-2 bg-stone-900 text-white px-4 py-3 rounded-sm text-sm font-bold shadow-md hover:bg-stone-800 active:scale-95 transition">
                       <Check className="w-4 h-4" /> Approve
                     </button>
                   </form>
@@ -116,7 +116,7 @@ export default async function AdminReviewsPage() {
                 
                 <form action={deleteReview} className="flex-1 sm:flex-none">
                   <input type="hidden" name="reviewId" value={review.id} />
-                  <button type="submit" className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-bold transition active:scale-95 ${isLive ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-stone-100 text-stone-600 hover:bg-stone-200'}`}>
+                  <button type="submit" className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-sm text-sm font-bold transition active:scale-95 ${isLive ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-stone-100 text-stone-600 hover:bg-stone-200'}`}>
                     <Trash2 className="w-4 h-4" /> Delete
                   </button>
                 </form>
@@ -127,7 +127,7 @@ export default async function AdminReviewsPage() {
         })}
 
         {(!reviews || reviews.length === 0) && !error && (
-          <div className="py-16 flex flex-col items-center justify-center bg-white rounded-3xl border border-stone-200 shadow-sm">
+          <div className="py-16 flex flex-col items-center justify-center bg-white rounded-lg border border-stone-200 shadow-sm">
             <MessageSquare className="w-12 h-12 text-stone-300 mb-4" />
             <p className="text-xl font-bold text-stone-900">No reviews yet</p>
             <p className="text-stone-500 mt-1">Customer feedback will appear here for moderation.</p>

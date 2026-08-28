@@ -1,7 +1,7 @@
 // src/context/CartContext.tsx
 'use client'
 
-import { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { CartItem } from '@/app/actions/checkout'
 
 export interface DisplayCartItem extends CartItem {
@@ -32,39 +32,61 @@ const CartContext = createContext<CartContextType | undefined>(undefined)
 
 export function CartProvider({ children }: { children: ReactNode }) {
   /**
-   * Read synchronously on the first render rather than in an effect.
+   * THE CART STARTS EMPTY ON BOTH SIDES, AND IS LOADED AFTER MOUNT.
    *
-   * The old shape was two effects: one that loaded from localStorage, one that
-   * saved on every change. Between the first render and the load effect
-   * committing, the save effect fired with the initial empty array and wrote
-   * `[]` over a real stored cart - so closing the tab in that window emptied
-   * the basket. Doing the read in the initialiser removes the window entirely,
-   * and the guard below stops the save running before a load has happened.
+   * This has been through two shapes and both were wrong in opposite ways.
    *
-   * The function form only runs once, and it is guarded for the server render
-   * where localStorage does not exist.
+   * It began as two effects — one loading from localStorage, one saving on
+   * every change. Between the first render and the load effect committing, the
+   * save effect fired with the initial empty array and wrote `[]` over a real
+   * stored cart, so closing the tab in that window emptied the basket.
+   *
+   * The fix for that read localStorage synchronously in the state initialiser.
+   * It removed the window, and introduced a hydration mismatch on every page of
+   * the site: the server has no localStorage and renders an empty cart, while
+   * the client's FIRST render already has the stored one. Anyone with something
+   * in their basket got "server rendered HTML didn't match the client", React
+   * discarded the tree and re-rendered everything, and the page rendered wrong
+   * on the way through. The header badge, the mobile menu's "Cart (n)" and the
+   * checkout total all differed between the two renders.
+   *
+   * So: start empty, which is exactly what the server sends, and load one
+   * commit later. The mismatch cannot happen because the first client render is
+   * identical to the server's by construction.
+   *
+   * `loaded` is STATE, not a ref, and that is the part that keeps the original
+   * bug from coming back. A ref would already be true by the time the save
+   * effect ran in the same commit, so the save would fire with the still-empty
+   * array and overwrite the stored cart — the exact failure this started with.
+   * As state it forces a second render, and the save below only ever runs on
+   * that render, by which point `cartItems` holds what was loaded.
    */
-  const [cartItems, setCartItems] = useState<DisplayCartItem[]>(() => {
-    if (typeof window === 'undefined') return []
+  const [cartItems, setCartItems] = useState<DisplayCartItem[]>([])
+  const [loaded, setLoaded] = useState(false)
+
+  /* eslint-disable react-hooks/set-state-in-effect --
+   * The rule is right in general and wrong for this case, which is the one it
+   * names as legitimate: reading initial state out of an external system the
+   * server cannot see. localStorage is that system. There is nowhere else this
+   * read can go — in the initialiser it breaks hydration, and during render it
+   * is a side effect. usePointerFine, PageFade and CountUp all sit here for the
+   * same reason.
+   */
+  useEffect(() => {
     try {
       const saved = window.localStorage.getItem('uksofashop_cart')
-      return saved ? (JSON.parse(saved) as DisplayCartItem[]) : []
+      if (saved) setCartItems(JSON.parse(saved) as DisplayCartItem[])
     } catch {
-      return []
+      // A corrupt or unreadable basket is an empty one, not a crash.
     }
-  })
+    setLoaded(true)
+  }, [])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
-  // Skips the very first run. On the server render the state starts empty
-  // regardless of what is stored, and writing that back on hydration would
-  // reintroduce the bug the initialiser above just removed.
-  const hasLoaded = useRef(false)
   useEffect(() => {
-    if (!hasLoaded.current) {
-      hasLoaded.current = true
-      return
-    }
+    if (!loaded) return
     localStorage.setItem('uksofashop_cart', JSON.stringify(cartItems))
-  }, [cartItems])
+  }, [cartItems, loaded])
 
   /**
    * No analytics call in here. It previously sat after `return [...prev, newItem]`

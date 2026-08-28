@@ -1,131 +1,105 @@
-    // src/app/journal/page.tsx
-import { Metadata } from 'next';
-import Link from 'next/link';
-import { BookOpen, PenTool, ArrowRight, Calendar, Clock, Newspaper } from 'lucide-react';
-
-const ACCENT = '#d4871a';
+// src/app/journal/page.tsx
+import type { Metadata } from 'next'
+import Link from 'next/link'
+import { BookOpen, PenTool } from 'lucide-react'
+import EditorialHero from '@/components/Editorial/EditorialHero'
+import EditorialLayout from '@/components/Editorial/EditorialLayout'
+import EmptyState from '@/components/UI/EmptyState'
 
 export const metadata: Metadata = {
   alternates: { canonical: '/journal' },
   title: 'The Journal',
-  description: 'Interior design inspiration, sofa styling tips, and the latest news from UK Sofa Shop.',
-};
+  description:
+    'Notes on choosing, measuring and living with a sofa. Nothing published yet — in the meantime, our guides answer most of it.',
+  // Nothing to index until something is written. Removing this line is part of
+  // publishing the first article.
+  robots: { index: false, follow: true },
+}
 
-// Placeholder data for your initial blog posts
-const articles = [
-  {
-    id: 1,
-    title: 'How to Style a Corner Sofa in a Compact Living Room',
-    excerpt: 'Maximize your seating without overwhelming your space. Discover our expert tips for positioning and accessorizing large corner units.',
-    category: 'Styling Guide',
-    date: 'October 12, 2026',
-    readTime: '5 min read',
-  },
-  {
-    id: 2,
-    title: 'Leather vs. Fabric: Choosing the Perfect Finish',
-    excerpt: 'Struggling to decide between rich top-grain leather and soft woven fabric? We break down the pros, cons, and lifestyle factors for both.',
-    category: 'Material Focus',
-    date: 'September 28, 2026',
-    readTime: '4 min read',
-  },
-  {
-    id: 3,
-    title: 'What’s Inside a Well-Made Sofa',
-    excerpt: 'Hardwood frames, spring systems and foam densities — the parts you can’t see are the ones that decide whether a sofa is still comfortable in ten years.',
-    category: 'Buying Guide',
-    date: 'September 15, 2026',
-    readTime: '6 min read',
-  },
-];
-
+/**
+ * Nothing published yet, and it says so.
+ *
+ * This page previously listed three articles — "How to Style a Corner Sofa",
+ * "Leather vs. Fabric" and "What's Inside a Well-Made Sofa" — with bylines,
+ * dates in October 2026, and read times. None of them existed. There is no
+ * /journal/[id] route, so all three cards linked to a 404, and the dates were
+ * in the future because they were placeholders nobody came back to.
+ *
+ * Three invented articles that 404 is worse than an honest empty page: it
+ * costs a visitor a click to find out, and it is the kind of thing that makes
+ * somebody wonder what else on the site is not real. When there are articles,
+ * this becomes a grid again.
+ */
 export default function JournalPage() {
   return (
-    <div className="min-h-screen bg-[#f8f6f2]">
-      
-      {/* ════ HERO SECTION ════ */}
-      <div className="bg-[#0c0c0b] border-b-2" style={{ borderColor: ACCENT }}>
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24 text-center md:text-left">
-          <div className="flex items-center justify-center md:justify-start gap-2 text-[10px] uppercase tracking-[0.2em] font-bold mb-4" style={{ color: ACCENT }}>
-            <BookOpen className="w-4 h-4" /> Inspiration & News
-          </div>
-          <h1 className="font-playfair text-4xl md:text-6xl font-bold text-white leading-tight mb-6">
-            The Journal
-          </h1>
-          <p className="text-white/60 max-w-xl text-lg leading-relaxed mx-auto md:mx-0">
-            Explore our latest thoughts on interior design trends, deep dives into our craftsmanship, and expert tips for looking after your furniture.
-          </p>
-        </div>
-      </div>
+    <div className="min-h-screen bg-calico-50">
+      <EditorialHero
+        eyebrow="Inspiration & notes"
+        title="The Journal"
+        lede="Notes on choosing, measuring and living with a sofa. We are writing the first ones now."
+        breadcrumb={[{ label: 'Home', href: '/' }]}
+      />
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
-        
-        {/* ════ ARTICLE GRID ════ */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-20">
-          {articles.map((article) => (
-            <Link 
-              key={article.id} 
-              href={`/journal/${article.id}`} 
-              className="group flex flex-col bg-white rounded-2xl border border-[#e7e5e4] overflow-hidden shadow-sm hover:shadow-md transition duration-300"
-            >
-              {/* Image Placeholder */}
-              <div className="h-48 bg-[#f4f0ea] relative overflow-hidden flex items-center justify-center">
-                <Newspaper className="w-10 h-10 text-[#d4871a] opacity-20 group-hover:scale-110 transition duration-500" />
-                <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider text-[#1c1917]">
-                  {article.category}
-                </div>
-              </div>
-              
-              {/* Content */}
-              <div className="p-6 flex flex-col flex-grow">
-                <h2 className="font-playfair text-xl font-bold text-[#1c1917] mb-3 group-hover:text-[#d4871a] transition">
-                  {article.title}
-                </h2>
-                <p className="text-[#57534e] text-sm leading-relaxed mb-6 flex-grow">
-                  {article.excerpt}
-                </p>
-                
-                <div className="flex items-center justify-between text-[#a8a29e] text-xs font-semibold pt-4 border-t border-[#f5f5f4]">
-                  <div className="flex items-center gap-1.5">
-                    <Calendar className="w-3.5 h-3.5" /> {article.date}
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <Clock className="w-3.5 h-3.5" /> {article.readTime}
-                  </div>
-                </div>
-              </div>
-            </Link>
-          ))}
-        </div>
+      <EditorialLayout>
+        <EmptyState
+          icon={BookOpen}
+          heading="Nothing published yet"
+          line="We would rather write three pieces worth reading than thirty that are not."
+          action={{ label: 'Read the guides instead', href: '/size-guide' }}
+          secondary={{ label: 'Or browse the sofas', href: '/shop/all' }}
+          className="not-prose"
+        />
 
-        {/* ════ COLLABORATION / PRESS CTA ════ */}
-        <div className="bg-white rounded-3xl p-8 md:p-12 border border-[#e7e5e4] shadow-sm flex flex-col md:flex-row items-center justify-between gap-10 relative overflow-hidden">
-          {/* Decorative Background Element */}
-          <div className="absolute -right-10 -bottom-10 w-64 h-64 bg-[#f8f6f2] rounded-full opacity-50 pointer-events-none"></div>
-          
-          <div className="max-w-2xl relative z-10 text-center md:text-left">
-            <div className="flex items-center justify-center md:justify-start gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: `${ACCENT}15` }}>
-                <PenTool className="w-5 h-5" style={{ color: ACCENT }} />
-              </div>
-              <h2 className="font-playfair text-2xl md:text-3xl font-bold text-[#1c1917]">
-                Write for Us / Press Inquiries
-              </h2>
-            </div>
-            <p className="text-[#57534e] text-base leading-relaxed mb-0">
-              Are you an interior designer, home lifestyle blogger, or journalist? We love collaborating with passionate voices in the design community. Whether you want to feature our products or contribute an article to The Journal, our team would love to hear from you.
+        <h2>What we would rather do first</h2>
+        <p>
+          Most of what a journal would cover, we have already written where it is actually
+          useful — on the page where the question comes up rather than in an archive somebody has
+          to go looking for.
+        </p>
+        <ul>
+          <li>
+            <Link href="/size-guide">Will it fit?</Link> — measuring doorways, hallways and the
+            turn at the bottom of the stairs, with a calculator that answers it directly.
+          </li>
+          <li>
+            <Link href="/care-guide">Looking after it</Link> — what to do in the first thirty
+            seconds of a spill, and the five products that will ruin leather.
+          </li>
+          <li>
+            <Link href="/delivery-returns">Delivery and returns</Link> — how long it takes to
+            reach you, what everything costs, and what happens if it turns up damaged.
+          </li>
+          <li>
+            <Link href="/faq">The questions we actually get asked</Link> — searchable, and honest
+            about the awkward ones.
+          </li>
+        </ul>
+
+        <h2>Writing for us</h2>
+        <p>
+          If you are an interior designer, a home writer or a journalist and you would like to
+          contribute something — or you want to feature our sofas in a piece of your own — we
+          would like to hear from you. We are a small operation and we read everything.
+        </p>
+
+        <div className="my-8 flex flex-wrap items-center gap-5 rounded-md border border-calico-300 bg-calico-100 p-6">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-sm bg-ember-500/12">
+            <PenTool aria-hidden="true" className="h-5 w-5 text-ember-700" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="m-0 text-body font-semibold text-ink-900">Pitches and press</p>
+            <p className="m-0 mt-1 text-body-sm leading-relaxed text-ink-500">
+              Tell us what you have in mind. A paragraph is plenty.
             </p>
           </div>
-
-          <Link 
-            href="/contact" 
-            className="shrink-0 flex items-center justify-center gap-2 bg-[#1c1917] text-white px-8 py-4 rounded-xl font-bold hover:bg-black transition active:scale-95 w-full md:w-auto relative z-10 shadow-md"
+          <Link
+            href="/contact"
+            className="hover-btn flex h-12 shrink-0 items-center rounded-sm bg-ink-900 px-5 font-data text-eyebrow font-bold uppercase tracking-[0.1em] text-calico-50 no-underline"
           >
-            Get in Touch <ArrowRight className="w-4 h-4" />
+            Get in touch
           </Link>
         </div>
-
-      </div>
+      </EditorialLayout>
     </div>
-  );
+  )
 }

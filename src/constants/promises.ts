@@ -32,6 +32,12 @@ export const PROMISES = {
     short: 'Cash on delivery available',
     long: 'Pay cash or by bank transfer when your furniture arrives - nothing upfront.',
   },
+  returns: {
+    label: '14-Day Returns',
+    sub: 'Change your mind',
+    short: '14 days to change your mind',
+    long: 'You have 14 days from delivery to change your mind, under the Consumer Contracts Regulations. Made-to-measure sofas are the standard exemption, because we cannot resell a sofa built to your specification.',
+  },
   custom: {
     label: 'Made to Order',
     sub: 'Your fabric and size',
@@ -45,15 +51,6 @@ export const ANNOUNCEMENTS = [
   'Free Delivery to UK Mainland',
   'Fabric Sofas Made to Your Own Size and Colour',
   'Cash on Delivery Available Nationwide',
-  'Delivered in 2-4 Working Days',
-] as const
-
-/** Scrolling marquee on the homepage hero. */
-export const MARQUEE_ITEMS = [
-  'Free UK Mainland Delivery',
-  'Cash on Delivery Available',
-  'Fabric Sofas Made to Order',
-  '1-Year Frame Guarantee',
   'Delivered in 2-4 Working Days',
 ] as const
 

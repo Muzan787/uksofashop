@@ -1,0 +1,102 @@
+// src/app/faq/faqData.ts
+//
+// The questions themselves, kept out of the page so both the server component
+// (which emits the FAQPage schema) and the client accordion can read them
+// without the client bundle pulling in the page.
+
+import { ASSEMBLY_FEE, SOFA_REMOVAL_FEE, UPSTAIRS_FIRST_FLOOR } from '@/constants/delivery'
+
+export const SUPPORT_EMAIL = 'uksofashop.co.uk@gmail.com'
+
+export interface Faq { q: string; a: string }
+export interface FaqGroup { group: string; items: Faq[] }
+
+export const faqGroups: FaqGroup[] = [
+  {
+    group: 'Delivery',
+    items: [
+      {
+        q: 'How long does delivery take?',
+        a: 'Most orders reach UK Mainland addresses within 2–4 working days of purchase. Wales, Scotland and certain postcodes can take 5–7 working days — we can’t confirm which at the point of ordering, so if there’s any delay on yours we’ll let you know straight away, as soon as we’ve received the order. Around 90% of orders arrive within the stated period, unless you’ve asked us to hold it back.',
+      },
+      {
+        q: 'Where do you deliver?',
+        a: 'We deliver across UK Mainland, and it’s free — there’s no minimum order value. Our drivers bring your sofa to the ground floor, or to a ground-floor room of your choice.',
+      },
+      {
+        q: 'Do you deliver to Northern Ireland or the Scottish Islands?',
+        a: `Yes, we do — we just can’t quote for it automatically on the website. Get in touch before you order, at ${SUPPORT_EMAIL} or on 07476 616022, and we’ll arrange it with you directly.`,
+      },
+      {
+        q: 'Do you deliver upstairs?',
+        a: `As standard we deliver to the ground floor, or a ground-floor room of your choice. We can take it upstairs for a fee, starting at £${UPSTAIRS_FIRST_FLOOR}, which you can add at checkout. If you’re not sure how many floors are involved or whether it will fit up your stairwell, please check with us before you buy rather than on the day.`,
+      },
+      {
+        q: 'Do you assemble the sofa?',
+        a: `Yes — assembly in the room costs £${ASSEMBLY_FEE}, and you can add it when you check out. Like everything else, you pay for it on delivery rather than upfront.`,
+      },
+      {
+        q: 'Can you take my old sofa away?',
+        a: `Yes. Old sofa removal is £${SOFA_REMOVAL_FEE} and you can add it at checkout. For very large or unusual items the charge may be a little different — if so, we’ll tell you as soon as we’ve received your order, well before delivery day.`,
+      },
+      {
+        q: 'What happens if I miss my delivery?',
+        a: 'Once we’ve confirmed a delivery slot with you, a missed delivery means the whole trip has to be made again, so a £50 re-delivery charge applies. If the day stops working for you, just tell us as early as you can and we’ll rearrange it.',
+      },
+      {
+        q: 'Will my sofa fit through my door?',
+        a: 'Every product page lists the dimensions, so start by measuring your doorways, hallway and any turns on the way in. Our size guide has a doorway calculator that will narrow the range down for you. If you’re at all unsure, talk to us — our team does this every day and will happily walk you through it.',
+      },
+    ],
+  },
+  {
+    group: 'Paying',
+    items: [
+      {
+        q: 'How do I pay?',
+        a: 'You pay when your sofa arrives, not before. Either hand the driver cash, or make a bank transfer at the door — the driver gives you our account details and waits for the payment to come through. We don’t accept card payments of any kind.',
+      },
+      {
+        q: 'Do I pay anything upfront?',
+        a: 'No. Nothing is taken when you place your order. Everything — the sofa, assembly, upstairs delivery, old sofa removal — is paid on the day it arrives, once you’ve seen it and you’re happy with it.',
+      },
+    ],
+  },
+  {
+    group: 'Your order',
+    items: [
+      {
+        q: 'Can I change or cancel my order?',
+        a: `Email us within 2 working days of placing your order, at ${SUPPORT_EMAIL}, with your order number, your name and your full postcode. That gives us time to catch it before the order is prepared for dispatch.`,
+      },
+      {
+        q: 'Can I return a sofa if I change my mind?',
+        a: 'Yes. You have 14 days from delivery to cancel, as required by the Consumer Contracts Regulations, and you don’t need to give a reason. For a change-of-mind return you arrange and pay for the return carriage — worth getting a quote first, as sofas are awkward to move. If the sofa comes back damaged we’ll charge a fee accordingly and deduct it from your refund. This is separate from faulty goods, which we collect ourselves free of charge.',
+      },
+    ],
+  },
+  {
+    group: 'Choosing your sofa',
+    items: [
+      {
+        q: 'Can I choose my own fabric, colour or size?',
+        a: 'On our fabric sofas, yes — we make them to order in a colour, material or size of your choosing. Look for the “Made to order” block on the product page and tap “Design yours on WhatsApp”: it opens a message with that sofa’s details already filled in, and you just add what you want changed. We’ll come back to you with the price and how long it will take. Our recliner ranges aren’t made this way, so those come as listed. One thing to know before you commit: made-to-measure orders are exempt from the 14-day change-of-mind return, because they’re built specifically for you. Faulty items are still covered as normal.',
+      },
+    ],
+  },
+  {
+    group: 'Guarantee and problems',
+    items: [
+      {
+        q: 'What does the 1-year guarantee cover?',
+        a: 'Every sofa carries a 1-year guarantee covering structural faults — the wooden frame and the springs. It doesn’t cover general wear and tear, fabric fading, or accidental damage. If you think something structural has gone wrong, contact us with photographs and we’ll look at it.',
+      },
+      {
+        q: 'What if my sofa arrives damaged?',
+        a: `Because you pay on delivery, check your sofa properly while the driver is still there and only pay once you’re happy with it. If you do find transit damage afterwards, email ${SUPPORT_EMAIL} within 24 hours with photographs. If the damage is minor and the sofa is usable, we’ll log an incident report with your photos. If it’s considerable, we’ll offer a replacement. If it can’t be repaired and is deemed faulty, we’ll collect it and issue a full refund.`,
+      },
+    ],
+  },
+]
+
+export const allFaqs = faqGroups.flatMap(g => g.items)

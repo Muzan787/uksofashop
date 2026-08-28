@@ -36,59 +36,59 @@ export default async function CollectionsIndexPage() {
   const collectionsData = summariseCollections(groupsData);
 
   return (
-    <div className="min-h-screen bg-[#f8f6f2]">
+    <div className="min-h-screen bg-calico-50">
       
       {/* ── HEADER SECTION ── */}
-      <div className="relative bg-[#0c0c0b] overflow-hidden">
+      <div className="relative bg-ink-900 overflow-hidden">
         <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-stone-600 via-stone-900 to-black" />
         
-        <div className="relative max-w-[1100px] mx-auto px-4 pt-10 pb-10 sm:py-16">
-          <nav className="flex items-center gap-1.5 mb-4 flex-wrap">
+        <div className="relative max-w-shell mx-auto px-4 pt-8 pb-8 sm:py-16">
+          <nav className="flex items-center gap-2 mb-4 flex-wrap">
             {[['/', 'Home'], ['/shop/all', 'Shop']].map(([href, label]) => (
-              <span key={href} className="flex items-center gap-1.5">
-                <Link href={href} className="text-[11px] text-white/40 no-underline hover:text-white transition-colors">
+              <span key={href} className="flex items-center gap-2">
+                <Link href={href} className="text-caption text-calico-300 no-underline hover:text-calico-50 transition-colors">
                   {label}
                 </Link>
-                <span className="text-white/20 text-[10px]">›</span>
+                <span className="text-calico-300/50 text-caption">›</span>
               </span>
             ))}
-            <span className="text-[11px] text-[#d4871a] font-semibold">Collections</span>
+            <span className="text-caption text-ember-300 font-semibold">Collections</span>
           </nav>
           
-          <div className="text-[9px] text-[#d4871a] uppercase tracking-[0.22em] font-bold mb-2">
+          <div className="eyebrow text-ember-300 tracking-[0.22em] font-bold mb-2">
             Curated Sets
           </div>
-          <h1 className="font-playfair text-[clamp(28px,6vw,48px)] font-bold text-white leading-tight">
+          <h1 className="font-display text-h1 font-bold text-white leading-tight">
             All Collections
           </h1>
-          <p className="text-white/50 text-xs sm:text-sm mt-3 max-w-md leading-relaxed">
+          <p className="text-white/50 text-caption sm:text-body-sm mt-3 max-w-md leading-relaxed">
             Discover our curated sets. Designed to completely transform your living space.
           </p>
         </div>
-        <div className="h-[2px] bg-[#d4871a]" />
+        <div className="h-[2px] bg-ember-500" />
       </div>
 
       {/* ── COLLECTIONS GRID ── */}
-      <div className="max-w-[1100px] mx-auto px-4 py-10 pb-24">
+      <div className="max-w-shell mx-auto px-4 py-8 pb-24">
         {collectionsData && collectionsData.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
             {collectionsData.map((collection, i) => (
               <div 
                 key={collection.id}
-                style={{ opacity: 0, animation: `fadeUp 0.4s ease ${i * 50}ms forwards` }}
+                style={{ opacity: 0, animation: `fadeUp var(--dur-base) var(--ease-out-expo) ${i * 50}ms forwards` }}
               >
                 <CollectionCard {...collection} />
               </div>
             ))}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center py-16 px-5 text-center bg-white rounded-xl border border-[#f0ede8]">
-            <PackageSearch className="w-9 h-9 text-stone-300 mb-3.5" />
-            <h3 className="text-[17px] font-bold text-stone-900 mb-2">No collections available</h3>
-            <p className="text-xs text-stone-500 max-w-[300px] mb-5 leading-relaxed">
+          <div className="flex flex-col items-center justify-center py-16 px-4 text-center bg-white rounded-sm border border-calico-300">
+            <PackageSearch className="w-9 h-9 text-stone-300 mb-4" />
+            <h2 className="text-body font-bold text-ink-900 mb-2">No collections available</h2>
+            <p className="text-caption text-stone-500 max-w-[300px] mb-4 leading-relaxed">
               We are currently designing new sets. Please check back soon.
             </p>
-            <Link href="/shop/all" className="inline-flex items-center gap-1.5 bg-[#d4871a] text-white px-5 py-2.5 rounded-lg text-[11px] font-bold no-underline tracking-widest uppercase hover:bg-[#b67316] transition-colors">
+            <Link href="/shop/all" className="inline-flex items-center gap-2 bg-ember-500 text-ink-900 px-4 py-3 rounded-sm eyebrow font-bold no-underline tracking-widest hover:bg-ember-700 hover:text-calico-50 transition-colors">
               Shop Individual Sofas <ChevronRight className="w-3 h-3" />
             </Link>
           </div>

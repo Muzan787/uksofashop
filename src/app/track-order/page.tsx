@@ -1,100 +1,52 @@
 'use client'
 // src/app/track-order/page.tsx
-import { useState, useEffect, useRef, Suspense } from 'react'
-import { Package, Search, Clock, Truck, CheckCircle, XCircle, Loader2, ArrowRight, MapPin, Hash } from 'lucide-react'
+
+import { Suspense, useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
+import { ArrowRight, Loader2, Search } from 'lucide-react'
 import { trackOrder } from '@/app/actions/orders'
 import type { TrackedOrder, TrackedOrderItem } from '@/types/orders'
 import { useSearchParams } from 'next/navigation'
-import Link from 'next/link'
+import Timeline from '@/components/UI/Timeline'
+import { STATUS } from '@/utils/orderStatus'
+import { PHONE_DISPLAY, PHONE_HREF } from '@/constants/contact'
 
-const ACCENT = '#d4871a'
-
-const STATUS_MAP: Record<string, { icon: typeof Package; color: string; bg: string; label: string; desc: string; step: number }> = {
-  pending_cod: { icon: Clock,        color: '#d97706', bg: '#fffbeb', label: 'Awaiting Confirmation', desc: 'Please check your email and confirm your order to begin processing.', step: 1 },
-  confirmed:   { icon: CheckCircle,  color: ACCENT,    bg: '#fef9f0', label: 'Order Confirmed',        desc: 'Great! Your order is confirmed and queued for preparation.',          step: 2 },
-  processing:  { icon: Package,      color: '#2563eb', bg: '#eff6ff', label: 'Being Prepared',         desc: 'Your sofa is being quality-checked and wrapped for delivery.',        step: 3 },
-  shipped:     { icon: Truck,        color: '#7c3aed', bg: '#f5f3ff', label: 'Out for Delivery',       desc: 'Your sofa is on its way! Our team will call before arrival.',          step: 4 },
-  delivered:   { icon: CheckCircle,  color: '#16a34a', bg: '#f0fdf4', label: 'Delivered',              desc: 'Your order has been delivered. Enjoy your new sofa!',                 step: 5 },
-  cancelled:   { icon: XCircle,      color: '#dc2626', bg: '#fef2f2', label: 'Cancelled',              desc: 'This order has been cancelled. Contact us if you need help.',          step: 0 },
-}
-
-const STEPS = ['Confirmed', 'Preparing', 'Dispatched', 'Delivered']
-
-function StatusBadge({ status }: { status: string }) {
-  const cfg = STATUS_MAP[status] ?? { icon: Package, color: '#78716c', bg: '#f5f5f4', label: 'Unknown', desc: '', step: 0 }
-  const Icon = cfg.icon
-  return (
-    <div style={{ background: cfg.bg, border: `1px solid ${cfg.color}22`, borderRadius: 12, padding: '20px', marginBottom: 20 }}>
-      <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', marginBottom: 20 }}>
-        <div style={{ width: 42, height: 42, borderRadius: 10, background: `${cfg.color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-          <Icon style={{ width: 20, height: 20, color: cfg.color }} />
-        </div>
-        <div>
-          <div style={{ fontSize: 10, color: cfg.color, textTransform: 'uppercase', letterSpacing: '0.18em', fontWeight: 700, marginBottom: 4 }}>Current Status</div>
-          <div style={{ fontSize: 16, fontWeight: 700, color: '#1c1917' }}>{cfg.label}</div>
-          <div style={{ fontSize: 12, color: '#78716c', marginTop: 4, lineHeight: 1.5 }}>{cfg.desc}</div>
-        </div>
-      </div>
-
-      {cfg.step > 0 && status !== 'cancelled' && (
-        <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-            {STEPS.map((s, i) => (
-              <div key={s} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
-                <div style={{
-                  width: 22, height: 22, borderRadius: '50%',
-                  background: cfg.step > i + 1 ? cfg.color : cfg.step === i + 1 ? cfg.color : '#e7e5e4',
-                  border: `2px solid ${cfg.step > i + 1 ? cfg.color : cfg.step === i + 1 ? cfg.color : '#e7e5e4'}`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  marginBottom: 4, transition: 'all 0.4s ease',
-                  boxShadow: cfg.step === i + 1 ? `0 0 0 4px ${cfg.color}22` : 'none',
-                }}>
-                  {cfg.step > i + 1 && <span style={{ color: '#fff', fontSize: 10, fontWeight: 900 }}>✓</span>}
-                  {cfg.step === i + 1 && <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#fff' }} />}
-                </div>
-                <span style={{ fontSize: 9, color: cfg.step >= i + 1 ? cfg.color : '#a8a29e', fontWeight: cfg.step >= i + 1 ? 700 : 400, textAlign: 'center', letterSpacing: '0.08em' }}>
-                  {s}
-                </span>
-              </div>
-            ))}
-          </div>
-          <div style={{ position: 'relative', height: 2, background: '#e7e5e4', borderRadius: 2, margin: '-42px 11px 22px', zIndex: 0 }}>
-            <div style={{ height: '100%', borderRadius: 2, background: cfg.color, width: `${Math.max(0, (cfg.step - 1) / (STEPS.length - 1)) * 100}%`, transition: 'width 0.6s ease' }} />
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
+/**
+ * Where is it.
+ *
+ * The lookup used to be a card of two boxed inputs under a 42px icon tile —
+ * a form pretending to be a dashboard. It is one question, so it is asked
+ * once, large, with the reference on an ember rule and nothing else competing
+ * with it.
+ *
+ * The status display is the confirmation page's timeline now, not the private
+ * five-step diagram this page had. Somebody arriving from the confirmation
+ * email should recognise the picture they were shown when they ordered.
+ */
 function TrackInterface() {
   const sp = useSearchParams()
   // `code` is the parameter older status emails used, kept so links already
   // sitting in customers' inboxes still fill the field in.
   const [reference, setReference] = useState(sp.get('ref') || sp.get('code') || '')
-  const [postcode, setPostcode]   = useState(sp.get('postcode') || '')
+  const [postcode, setPostcode] = useState(sp.get('postcode') || '')
   // Starts true when the URL already carries both values, so the spinner is
   // correct on first paint and the effect below never has to set it.
   const [searching, setSearching] = useState(
     () => Boolean((sp.get('ref') || sp.get('code')) && sp.get('postcode'))
   )
-  const [error, setError]         = useState('')
-  const [order, setOrder]         = useState<TrackedOrder | null>(null)
-  const [focused, setFocused]     = useState<'ref' | 'postcode' | null>(null)
-  const autoRan                   = useRef(false)
+  const [error, setError] = useState('')
+  const [order, setOrder] = useState<TrackedOrder | null>(null)
+  const autoRan = useRef(false)
 
   const canSubmit = reference.replace(/[^0-9a-fA-F]/g, '').length === 8
     && postcode.replace(/[^a-zA-Z0-9]/g, '').length >= 5
 
-  const track = async (ref: string, pc: string) => {
+  async function track() {
+    if (!canSubmit) return
     setSearching(true); setError(''); setOrder(null)
-
-    const res = await trackOrder(ref, pc)
-    if (res.error) {
-      setError(res.error)
-    } else if (res.order) {
-      setOrder(res.order)
-    }
+    const res = await trackOrder(reference, postcode)
+    if (res.error) setError(res.error)
+    else if (res.order) setOrder(res.order)
     setSearching(false)
   }
 
@@ -119,195 +71,237 @@ function TrackInterface() {
     return () => { cancelled = true }
   }, [sp])
 
-  const inputStyle = (isFocused: boolean) => ({
-    width: '100%', padding: '12px 16px 12px 42px',
-    fontSize: 16, fontFamily: 'monospace', fontWeight: 700,
-    letterSpacing: '0.12em', textTransform: 'uppercase' as const,
-    border: `1.5px solid ${isFocused ? ACCENT : '#e7e5e4'}`, borderRadius: 8, outline: 'none',
-    background: '#fafaf9', color: '#1c1917', boxSizing: 'border-box' as const,
-    transition: 'border-color 0.2s ease',
-  })
-
   return (
-    <div style={{ maxWidth: 640, width: '100%' }}>
-
-      {/* Search card */}
-      <div style={{ background: '#fff', borderRadius: 14, padding: '24px', border: '1px solid #f0ede8', boxShadow: '0 2px 16px rgba(0,0,0,0.05)', marginBottom: order || error ? 16 : 0 }}>
-        <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start', marginBottom: 20 }}>
-          <div style={{ width: 42, height: 42, borderRadius: 10, background: `${ACCENT}14`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <Package style={{ width: 20, height: 20, color: ACCENT }} />
-          </div>
-          <div>
-            <h1 className="font-playfair" style={{ fontSize: 24, fontWeight: 700, color: '#1c1917', lineHeight: 1.1 }}>Track Your Order</h1>
-            <p style={{ fontSize: 13, color: '#78716c', marginTop: 4, lineHeight: 1.5 }}>
-              Enter your order reference and the delivery postcode. Both are on your confirmation email.
-            </p>
-          </div>
-        </div>
-
-        {/* Order reference */}
-        <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#57534e', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 6 }}>
-          Order Reference
+    <div className="w-full max-w-[640px]">
+      <form
+        onSubmit={e => { e.preventDefault(); track() }}
+        className="motion-safe:animate-[fadeUp_var(--dur-settle)_var(--ease-out-expo)_both]"
+      >
+        <label htmlFor="track-ref" className="block font-data text-eyebrow uppercase tracking-[0.16em] text-ink-500">
+          Order reference
         </label>
-        <div style={{ position: 'relative', marginBottom: 14 }}>
-          <Hash style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', width: 15, height: 15, color: focused === 'ref' ? ACCENT : '#a8a29e', pointerEvents: 'none', zIndex: 1 }} />
+        {/* The one big field. An ember rule under it rather than a box: this is
+            the only thing on the screen being asked for, and a box would put
+            three more edges around it to say so. */}
+        <div className="group relative mt-3">
           <input
+            id="track-ref"
             value={reference}
             onChange={e => setReference(e.target.value.toUpperCase())}
-            onFocus={() => setFocused('ref')} onBlur={() => setFocused(null)}
-            onKeyDown={e => e.key === 'Enter' && canSubmit && track(reference, postcode)}
             placeholder="5D786B72"
             maxLength={9}
             autoComplete="off"
             spellCheck={false}
-            aria-label="Order reference"
-            style={inputStyle(focused === 'ref')}
+            className="w-full border-0 bg-transparent pb-3 font-display text-h1 font-semibold uppercase tracking-[0.06em] tabular-nums text-ink-900 focus-ring-inset rounded-sm placeholder:text-ink-400"
+          />
+          <span aria-hidden="true" className="absolute inset-x-0 bottom-0 h-px bg-calico-300" />
+          {/* Draws in from the left on focus. */}
+          <span
+            aria-hidden="true"
+            className="absolute inset-x-0 bottom-0 h-0.5 origin-left scale-x-0 bg-ember-500 transition-transform duration-base ease-out-expo group-focus-within:scale-x-100"
           />
         </div>
 
-        {/* Postcode */}
-        <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#57534e', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 6 }}>
-          Delivery Postcode
+        <label htmlFor="track-postcode" className="mt-8 block font-data text-eyebrow uppercase tracking-[0.16em] text-ink-500">
+          Delivery postcode
         </label>
-        <div style={{ position: 'relative', marginBottom: 16 }}>
-          <MapPin style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', width: 15, height: 15, color: focused === 'postcode' ? ACCENT : '#a8a29e', pointerEvents: 'none', zIndex: 1 }} />
+        <div className="group relative mt-3">
           <input
+            id="track-postcode"
             value={postcode}
             onChange={e => setPostcode(e.target.value.toUpperCase())}
-            onFocus={() => setFocused('postcode')} onBlur={() => setFocused(null)}
-            onKeyDown={e => e.key === 'Enter' && canSubmit && track(reference, postcode)}
             placeholder="BB6 7LS"
             maxLength={9}
             autoComplete="postal-code"
             spellCheck={false}
-            aria-label="Delivery postcode"
-            style={inputStyle(focused === 'postcode')}
+            className="w-full border-0 bg-transparent pb-3 font-data text-lead font-bold uppercase tracking-[0.12em] text-ink-900 focus-ring-inset rounded-sm placeholder:text-ink-400"
           />
-          {searching && <Loader2 style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', width: 16, height: 16, color: ACCENT, animation: 'spin 0.8s linear infinite' }} />}
+          <span aria-hidden="true" className="absolute inset-x-0 bottom-0 h-px bg-calico-300" />
+          <span
+            aria-hidden="true"
+            className="absolute inset-x-0 bottom-0 h-0.5 origin-left scale-x-0 bg-ember-500 transition-transform duration-base ease-out-expo group-focus-within:scale-x-100"
+          />
         </div>
 
-        <button onClick={() => track(reference, postcode)} disabled={searching || !canSubmit}
-          style={{
-            width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            padding: '13px 0', borderRadius: 8, border: 'none',
-            background: !canSubmit ? '#e7e5e4' : ACCENT,
-            color: !canSubmit ? '#a8a29e' : '#fff',
-            fontSize: 12, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase',
-            cursor: !canSubmit ? 'not-allowed' : 'pointer',
-            transition: 'all 0.2s ease',
-          }}
+        <p className="m-0 mt-3 text-caption text-ink-500">
+          Eight characters, like the example. Both are on your confirmation email.
+        </p>
+
+        <button
+          type="submit"
+          disabled={searching || !canSubmit}
+          className={`hover-btn mt-8 flex h-14 w-full items-center justify-center gap-2 rounded-sm font-data text-eyebrow font-bold uppercase tracking-[0.1em] transition-colors duration-swift ease-out-expo ${
+            canSubmit ? 'bg-ember-500 text-ink-900' : 'cursor-not-allowed bg-calico-200 text-ink-400'
+          }`}
         >
-          <Search style={{ width: 14, height: 14 }} />
-          {searching ? 'Searching…' : 'Track My Order'}
+          {searching
+            ? <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
+            : <Search aria-hidden="true" className="h-4 w-4" />}
+          {searching ? 'Looking' : 'Find my order'}
         </button>
+      </form>
+
+      {error && (
+        <div
+          role="alert"
+          className="mt-6 rounded-sm border border-rust-700 bg-rust-50 px-4 py-3 text-body-sm leading-relaxed text-rust-700 motion-safe:animate-[fadeUp_var(--dur-base)_var(--ease-out-expo)]"
+        >
+          {error}
+          <span className="mt-2 block text-caption text-ink-500">
+            Still stuck? Call us on{' '}
+            <a href={PHONE_HREF} className="hover-link font-semibold text-ember-700 no-underline">
+              {PHONE_DISPLAY}
+            </a>.
+          </span>
+        </div>
+      )}
+
+      {order && <Result order={order} />}
+    </div>
+  )
+}
+
+// ─── The answer ──────────────────────────────────────────────────────────────
+function Result({ order }: { order: TrackedOrder }) {
+  const cfg = STATUS[order.status] ?? STATUS.pending_cod
+  const Icon = cfg.icon
+  const reference = order.id.split('-')[0].toUpperCase()
+  const deliveryTotal = Number(order.delivery_total ?? 0)
+
+  return (
+    <div className="mt-8 overflow-hidden rounded-md border border-calico-300 bg-calico-50 shadow-e1 motion-safe:animate-[fadeUp_var(--dur-settle)_var(--ease-out-expo)]">
+      <div className="flex items-center justify-between gap-4 border-b-2 border-ember-500 bg-ember-500/8 px-5 py-4">
+        <div className="min-w-0">
+          <p className="m-0 font-data text-body font-bold tracking-[0.1em] tabular-nums text-ink-900">
+            #{reference}
+          </p>
+          <p className="m-0 mt-1 text-caption text-ink-500">
+            Placed {new Date(order.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+          </p>
+        </div>
+        <p className="m-0 shrink-0 font-data text-body font-bold tabular-nums text-ink-900">
+          £{Number(order.total_amount).toFixed(0)}
+        </p>
       </div>
 
-      {/* Error */}
-      {error && (
-        <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, padding: '14px 16px', fontSize: 13, color: '#dc2626', marginBottom: 16, lineHeight: 1.5 }}>
-          {error}
-        </div>
-      )}
-
-      {/* Result */}
-      {order && (
-        <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #f0ede8', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
-
-          <div style={{ padding: '16px 20px', background: `${ACCENT}08`, borderBottom: `2px solid ${ACCENT}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-            <div>
-              <div style={{ fontFamily: 'monospace', fontSize: 16, fontWeight: 900, color: '#1c1917', letterSpacing: '0.1em', marginBottom: 4 }}>
-                #{order.id.split('-')[0].toUpperCase()}
-              </div>
-              <div style={{ fontSize: 12, color: '#78716c' }}>
-                Placed {new Date(order.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
-              </div>
-            </div>
-            <div style={{ fontSize: 15, fontWeight: 800, color: '#1c1917' }}>£{Number(order.total_amount).toFixed(0)}</div>
+      <div className="px-5 py-5">
+        <div className="flex items-start gap-3">
+          <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-sm ${cfg.pill}`}>
+            <Icon aria-hidden="true" className="h-5 w-5" />
+          </span>
+          <div className="min-w-0">
+            <p className="m-0 font-data text-eyebrow uppercase tracking-[0.16em] text-ink-500">
+              Where it is
+            </p>
+            <p className="m-0 mt-1 text-body font-semibold text-ink-900">{cfg.label}</p>
+            <p className="m-0 mt-1 text-caption leading-relaxed text-ink-500">{cfg.note}</p>
           </div>
+        </div>
 
-          <div style={{ padding: '20px' }}>
-            <StatusBadge status={order.status} />
+        {cfg.stage >= 0 && (
+          <div className="mt-6">
+            {/* The current dot pulses. Progress here is real and ongoing —
+                unlike the confirmation page, where the order is seconds old
+                and nothing has started moving yet. */}
+            <Timeline current={cfg.stage} pulse={cfg.stage < 3} />
+          </div>
+        )}
 
-            <div style={{ fontSize: 10, color: '#a8a29e', textTransform: 'uppercase', letterSpacing: '0.16em', fontWeight: 700, marginBottom: 10 }}>Items</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
-              {order.order_items?.map((item: TrackedOrderItem, i: number) => (
-                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, padding: '10px 14px', background: '#fafaf9', borderRadius: 7, fontSize: 13 }}>
-                  <span style={{ color: '#57534e' }}>
-                    <span style={{ fontWeight: 700, color: '#1c1917', marginRight: 6 }}>{item.quantity}×</span>
-                    {item.product_variants?.products?.title ?? 'Product'}
-                    {item.product_variants?.color && <span style={{ color: '#a8a29e' }}> · {item.product_variants.color}</span>}
-                  </span>
-                  <span style={{ fontWeight: 700, color: '#1c1917', flexShrink: 0 }}>£{Number(item.price_at_time_of_purchase).toFixed(2)}</span>
-                </div>
-              ))}
-            </div>
+        <p className="m-0 mt-7 font-data text-eyebrow uppercase tracking-[0.16em] text-ink-500">Items</p>
+        <ul className="m-0 mt-3 flex list-none flex-col gap-2 p-0">
+          {order.order_items?.map((item: TrackedOrderItem, i: number) => (
+            <li
+              key={i}
+              className="flex items-center justify-between gap-3 rounded-sm bg-calico-100 px-3 py-2.5 text-body-sm"
+            >
+              <span className="min-w-0 text-ink-700">
+                <span className="mr-2 font-data font-bold tabular-nums text-ink-900">{item.quantity}×</span>
+                {item.product_variants?.products?.title ?? 'Product'}
+                {item.product_variants?.color && (
+                  <span className="text-ink-500"> · {item.product_variants.color}</span>
+                )}
+              </span>
+              <span className="shrink-0 font-data font-semibold tabular-nums text-ink-900">
+                £{Number(item.price_at_time_of_purchase).toFixed(2)}
+              </span>
+            </li>
+          ))}
+        </ul>
 
-            <div style={{ padding: '14px 16px', background: '#0c0c0b', borderRadius: 8, display: 'flex', flexDirection: 'column', gap: 7 }}>
-              {Number(order.delivery_total ?? 0) > 0 && (
-                <>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'rgba(255,255,255,0.55)' }}>
-                    <span>Your order</span>
-                    <span>£{Number(order.items_subtotal ?? order.total_amount).toFixed(2)}</span>
-                  </div>
-                  {Number(order.fee_upstairs ?? 0) > 0 && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'rgba(255,255,255,0.55)' }}>
-                      <span>Upstairs delivery{order.delivery_has_lift ? ' (lift)' : order.delivery_floor ? ` (${order.delivery_floor} up)` : ''}</span>
-                      <span>£{Number(order.fee_upstairs).toFixed(2)}</span>
-                    </div>
-                  )}
-                  {Number(order.fee_assembly ?? 0) > 0 && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'rgba(255,255,255,0.55)' }}>
-                      <span>Assembly</span>
-                      <span>£{Number(order.fee_assembly).toFixed(2)}</span>
-                    </div>
-                  )}
-                  {Number(order.fee_sofa_removal ?? 0) > 0 && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'rgba(255,255,255,0.55)' }}>
-                      <span>Old sofa removal</span>
-                      <span>£{Number(order.fee_sofa_removal).toFixed(2)}</span>
-                    </div>
-                  )}
-                  <div style={{ height: 1, background: 'rgba(255,255,255,0.1)', margin: '2px 0' }} />
-                </>
+        <div className="mt-5 flex flex-col gap-2 rounded-sm bg-ink-900 px-4 py-4">
+          {deliveryTotal > 0 && (
+            <>
+              <Line label="Your order" value={Number(order.items_subtotal ?? order.total_amount)} />
+              {Number(order.fee_upstairs ?? 0) > 0 && (
+                <Line
+                  label={`Upstairs delivery${order.delivery_has_lift ? ' (lift)' : order.delivery_floor ? ` (${order.delivery_floor} up)` : ''}`}
+                  value={Number(order.fee_upstairs)}
+                />
               )}
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.6)' }}>Total due on delivery</span>
-                <span style={{ fontSize: 15, fontWeight: 800, color: ACCENT }}>£{Number(order.total_amount).toFixed(2)}</span>
-              </div>
-            </div>
+              {Number(order.fee_assembly ?? 0) > 0 && <Line label="Assembly" value={Number(order.fee_assembly)} />}
+              {Number(order.fee_sofa_removal ?? 0) > 0 && <Line label="Old sofa removal" value={Number(order.fee_sofa_removal)} />}
+              <span aria-hidden="true" className="my-1 h-px bg-calico-50/10" />
+            </>
+          )}
+          <div className="flex items-baseline justify-between gap-4">
+            <span className="text-body-sm font-semibold text-calico-300">
+              {order.status === 'delivered' ? 'Paid on delivery' : 'Due on delivery'}
+            </span>
+            {/* Ember 300, not Ember 700. On Ink 900 the dark ember is 2.4:1. */}
+            <span className="font-data text-body font-bold tabular-nums text-ember-300">
+              £{Number(order.total_amount).toFixed(2)}
+            </span>
           </div>
         </div>
-      )}
+      </div>
+    </div>
+  )
+}
 
-      <style>{`
-        @keyframes spin { to { transform: rotate(360deg); } }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-      `}</style>
+function Line({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="flex items-baseline justify-between gap-4 text-caption text-calico-300">
+      <span>{label}</span>
+      <span className="font-data tabular-nums">£{value.toFixed(2)}</span>
     </div>
   )
 }
 
 export default function TrackOrderPage() {
   return (
-    <div style={{ minHeight: '100vh', background: '#f8f6f2' }}>
-      {/* Dark header */}
-      <div style={{ background: '#0c0c0b', borderBottom: `2px solid ${ACCENT}`, padding: '14px 16px' }}>
-        <div style={{ maxWidth: 640, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Link href="/" style={{ textDecoration: 'none' }}>
-            <span className="font-playfair" style={{ fontSize: 18, fontWeight: 700, color: '#fff' }}>
-              UK Sofa <span style={{ color: ACCENT }}>Shop</span>
+    <div className="min-h-screen bg-calico-50">
+      <div className="border-b-2 border-ember-500 bg-ink-900 px-4 py-4">
+        <div className="mx-auto flex max-w-[640px] items-center justify-between gap-4">
+          <Link href="/" className="no-underline">
+            <span className="font-body text-lead font-bold text-calico-50">
+              UK Sofa <span className="text-ember-300">Shop</span>
             </span>
           </Link>
-          <Link href="/shop/all" style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: 'rgba(255,255,255,0.5)', textDecoration: 'none' }}
-            className="hover:text-white transition-colors">
-            Shop <ArrowRight style={{ width: 11, height: 11 }} />
+          <Link
+            href="/shop/all"
+            className="hover-link flex items-center gap-1.5 text-caption text-calico-300 no-underline"
+          >
+            Shop <ArrowRight aria-hidden="true" className="h-3 w-3" />
           </Link>
         </div>
       </div>
-      <div style={{ maxWidth: 640, margin: '0 auto', padding: '28px 16px 60px', display: 'flex', justifyContent: 'center' }}>
-        <Suspense fallback={<div style={{ width: '100%', height: 300, background: '#fff', borderRadius: 14 }} />}>
-          <TrackInterface />
-        </Suspense>
+
+      <div className="mx-auto max-w-[640px] px-4 pb-24 pt-12 sm:pt-16">
+        <p className="m-0 font-data text-eyebrow uppercase tracking-[0.16em] text-ember-700">
+          Track an order
+        </p>
+        <h1 className="m-0 mt-3 font-display text-display-l font-semibold leading-[1.05] text-ink-900">
+          Where is it?
+        </h1>
+        <p className="m-0 mt-4 max-w-[46ch] text-body leading-relaxed text-ink-500">
+          Two things and we will tell you exactly where your sofa has got to.
+        </p>
+
+        <div className="mt-10">
+          <Suspense fallback={<div className="h-[420px] rounded-md bg-calico-100" />}>
+            <TrackInterface />
+          </Suspense>
+        </div>
       </div>
     </div>
   )

@@ -30,6 +30,12 @@ export interface CollectionSummary {
   minPrice: number
   maxPrice: number
   images: string[]
+  /**
+   * How many active pieces the set contains. It is the one thing a customer
+   * genuinely wants to know about a collection before opening it, and the card
+   * had no way to say it.
+   */
+  pieceCount: number
 }
 
 const MAX_IMAGES = 3
@@ -87,6 +93,7 @@ export function summariseCollections(
       minPrice: Math.min(...prices),
       maxPrice: Math.max(...prices),
       images: pickImages(active),
+      pieceCount: active.length,
     })
   }
 

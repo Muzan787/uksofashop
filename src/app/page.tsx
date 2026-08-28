@@ -21,12 +21,39 @@ export default async function HomePage() {
     .order('name')
     .limit(6);
 
-  const categoriesData = categories?.map(cat => ({ ...cat, image_url: cat.image_url ?? undefined })) ?? [];
+  // Cheapest active product and how many there are, per category. One pass
+  // over the active products rather than a query each — the tiles need a
+  // price anchor and a count, and neither is worth six round trips.
+  const { data: categoryStats } = await supabase
+    .from('products')
+    .select('base_price, product_categories!inner(category_id)')
+    .eq('is_active', true);
+
+  const stats = new Map<string, { fromPrice: number; count: number }>();
+  for (const row of categoryStats ?? []) {
+    const price = Number(row.base_price);
+    if (!Number.isFinite(price)) continue;
+    for (const pc of row.product_categories ?? []) {
+      const id = pc.category_id;
+      if (!id) continue;
+      const seen = stats.get(id);
+      stats.set(id, seen
+        ? { fromPrice: Math.min(seen.fromPrice, price), count: seen.count + 1 }
+        : { fromPrice: price, count: 1 });
+    }
+  }
+
+  const categoriesData = categories?.map(cat => ({
+    ...cat,
+    image_url: cat.image_url ?? undefined,
+    fromPrice: stats.get(cat.id)?.fromPrice ?? null,
+    productCount: stats.get(cat.id)?.count ?? 0,
+  })) ?? [];
 
   // 2. Fetch Featured Products
   const { data: featuredProducts } = await supabase
     .from('products')
-    .select('*, product_variants(image_url, priority), product_categories(categories(slug, name))')
+    .select('id, title, slug, base_price, gallery_images, average_rating, review_count, product_variants(id, image_url, color, color_hex, price_adjustment, priority), product_categories(categories(slug, name))')
     .eq('is_active', true)
     .order('created_at', { ascending: false })
     .order('priority', { referencedTable: 'product_variants', ascending: true })
@@ -35,8 +62,11 @@ export default async function HomePage() {
   const productsData = (featuredProducts ?? []).map(product => ({
     ...product,
     product_variants: (product.product_variants ?? []).map(variant => ({
-      image_url: variant.image_url ?? undefined
-    }))
+      id: variant.id,
+      image_url: variant.image_url ?? undefined,
+      color: variant.color,
+      color_hex: variant.color_hex,
+    })),
   }));
 
   // 3. Fetch Collections with Smart Image Selection
@@ -58,6 +88,32 @@ export default async function HomePage() {
 
   const collectionsData = summariseCollections(groupsData);
 
+  // 4. How many sofas are actually live. head:true means the rows are counted
+  //    server-side and none of them are transferred.
+  const { count: sofaCount } = await supabase
+    .from('products')
+    .select('id', { count: 'exact', head: true })
+    .eq('is_active', true);
+
+  // 5. The most recent approved reviews, for the homepage ticker. order_id
+  //    is what makes a review a verified purchase rather than an open comment.
+  const { data: reviewRows } = await supabase
+    .from('reviews')
+    .select('id, rating, comment, customer_name, order_id, products ( title )')
+    .eq('is_approved', true)
+    .not('comment', 'is', null)
+    .order('created_at', { ascending: false })
+    .limit(12);
+
+  const reviews = (reviewRows ?? []).map(r => ({
+    id: r.id,
+    rating: r.rating,
+    comment: r.comment,
+    customerName: r.customer_name,
+    verified: Boolean(r.order_id),
+    productTitle: r.products?.title ?? null,
+  }));
+
   return (
     <>
       {/* Organization is referenced by @id from the Product offers, so the
@@ -69,6 +125,8 @@ export default async function HomePage() {
         categories={categoriesData}
         products={productsData}
         collections={collectionsData}
+        sofaCount={sofaCount ?? 0}
+        reviews={reviews}
       />
     </>
   );

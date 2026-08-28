@@ -1,0 +1,506 @@
+/* src/styles/tokens.css
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ *  MILL & VELVET — the single source of truth for every design decision.
+ * ─────────────────────────────────────────────────────────────────────────────
+ *
+ * Nothing in src/ may hardcode a colour, size, radius, shadow, duration or
+ * easing value. If a value is needed and it is not in this file, it is not part
+ * of the system and the answer is to add it here, once, rather than inline it.
+ *
+ * Two blocks below, and the difference matters:
+ *
+ *   @theme  — Tailwind v4 reads these and generates utilities from them.
+ *             `--color-calico-100` becomes bg-calico-100 / text-calico-100 /
+ *             border-calico-100, `--radius-card` becomes rounded-card, and so
+ *             on. Tailwind also emits every one of them to :root, so they are
+ *             available to hand-written CSS as var(--color-ink-900) too.
+ *
+ *   :root   — tokens with no matching Tailwind namespace (durations, z-index,
+ *             section rhythm) plus a small semantic layer. These are paired
+ *             with @utility declarations at the foot of the file so they are
+ *             reachable as utilities as well.
+ *
+ * Deliberately NOT touched here: Tailwind's stock --radius-sm/md/lg ramp. It is
+ * used 225 times across 37 files today and redefining it would silently restyle
+ * every one of them. Work order 04 collapses the site onto the four radii below
+ * and retires the stock ramp in the same pass, where the change can be seen.
+ */
+
+@theme static {
+  /* ═══════════════════════════════════════════════════════════════════════
+     COLOUR
+     Four families. Calico is the ground, Ink is the type, Ember is the brand,
+     and Indigo/Sage/Rust are used sparingly and only for what they mean.
+     ═══════════════════════════════════════════════════════════════════════ */
+
+  /* Calico — unbleached cotton. Cool and slightly green, never a yellow cream. */
+  --color-calico-50:  #FBFAF7;   /* page ground */
+  --color-calico-100: #F3F1EA;   /* alternating sections, cards */
+  --color-calico-200: #E6E3D9;   /* image wells, placeholders, skeletons */
+  --color-calico-300: #D6D2C6;   /* the one hairline weight, borders, dividers */
+
+  /* Ink — dyed cloth. A near-black with a green cast, not a neutral grey. */
+  --color-ink-400: #8C8478;      /* disabled states and borders ONLY, never text */
+  --color-ink-500: #5F574C;      /* secondary copy, captions      — 7.1:1 on calico-50 */
+  --color-ink-700: #3B352E;      /* body copy                     — 11.8:1 on calico-50 */
+  --color-ink-900: #191C1B;      /* headings, dark sections       — 16.9:1 on calico-50 */
+
+  /* Ember — the brand. 500 is a FILL, 700 is a TEXT colour. See the note below. */
+  --color-ember-300: #F5C784;    /* ember text on dark grounds */
+  --color-ember-500: #D4871A;    /* fills, CTAs, icons, rules, badges */
+  --color-ember-700: #8F570D;    /* ember text on light grounds   — 5.5:1 on calico-50 */
+  --color-ember-900: #4E2F06;    /* pressed states, shadow tint */
+
+  /* The rule that makes the palette hold together:
+   *   Ember 500 touching a light ground as LETTERFORMS is 2.9:1 and fails AA.
+   *   So amber text on light is always ember-700, and an ember-500 button
+   *   always carries ink-900 text (6.6:1), never white (2.9:1). */
+
+  /* Indigo — the mill dye. The cool counterweight. One section, one job. */
+  --color-indigo-50:  #EDF1F6;   /* panel tint on light grounds */
+  --color-indigo-300: #8FA9CC;   /* indigo text on dark grounds */
+  --color-indigo-700: #2B3A52;
+
+  /* Sage — free, confirmed, in stock, delivered. */
+  --color-sage-50:  #EDF1E9;     /* success panel on light grounds */
+  --color-sage-300: #A8BC96;     /* sage text on dark grounds — 8.7:1 on ink-900 */
+  --color-sage-700: #465241;
+
+  /* Rust — errors and destructive actions. Never decorative. */
+  --color-rust-50:  #F9EEEC;     /* error panel fill */
+  --color-rust-200: #E8C4BD;     /* error panel border */
+  --color-rust-300: #D98A7A;     /* rust text on dark grounds — 6.5:1 on ink-900 */
+  --color-rust-700: #8C2F22;
+
+  /* An ember tint for panels and wells that need to read as branded rather
+   * than neutral. Cheaper and more predictable than an alpha overlay, which
+   * changes colour depending on what is behind it. */
+  --color-ember-50: #FBF3E7;
+
+  /* WhatsApp. Not ours — these are the brand's own values and they are fixed.
+   * Held here so no component has to know them. */
+  --color-whatsapp:      #25D366;
+  --color-whatsapp-dark: #128C7E;
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     TYPEFACES
+     The next/font variables these point at are wired up in work order 03.
+     Until then each stack falls through to its system fallback, which is why
+     registering them now changes nothing on screen.
+     ═══════════════════════════════════════════════════════════════════════ */
+
+  --font-display: var(--font-fraunces), "Iowan Old Style", Georgia, serif;
+  --font-body:    var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+  --font-data:    var(--font-geist-mono), ui-monospace, "SF Mono", Menlo, monospace;
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     TYPE SCALE
+     Fluid, so there is no tablet dead zone. Line height and tracking travel
+     with the size — text-h1 sets all three at once.
+
+     The floor is 12px. Nothing on the storefront goes below --text-caption.
+     ═══════════════════════════════════════════════════════════════════════ */
+
+  --text-display-xl: clamp(2.75rem, 11vw, 8rem);            /*  44 → 128px  */
+  --text-display-xl--line-height: 0.92;
+  --text-display-xl--letter-spacing: -0.035em;
+
+  --text-display-l: clamp(2.25rem, 7vw, 5rem);              /*  36 →  80px  */
+  --text-display-l--line-height: 0.98;
+  --text-display-l--letter-spacing: -0.03em;
+
+  --text-h1: clamp(1.875rem, 5vw, 3.25rem);                 /*  30 →  52px  */
+  --text-h1--line-height: 1.05;
+  --text-h1--letter-spacing: -0.025em;
+
+  --text-h2: clamp(1.625rem, 4vw, 2.5rem);                  /*  26 →  40px  */
+  --text-h2--line-height: 1.1;
+  --text-h2--letter-spacing: -0.02em;
+
+  --text-h3: 1.25rem;                                       /*        20px  */
+  --text-h3--line-height: 1.25;
+  --text-h3--letter-spacing: -0.01em;
+
+  --text-lead: clamp(1.0625rem, 2vw, 1.3125rem);            /*  17 →  21px  */
+  --text-lead--line-height: 1.6;
+
+  --text-body: 1rem;                                        /*        16px  */
+  --text-body--line-height: 1.68;
+
+  --text-body-sm: 0.875rem;                                 /*        14px  */
+  --text-body-sm--line-height: 1.6;
+
+  --text-caption: 0.75rem;                                  /*        12px — the floor */
+  --text-caption--line-height: 1.4;
+
+  --text-eyebrow: 0.75rem;                                  /*        12px  */
+  --text-eyebrow--line-height: 1;
+  --text-eyebrow--letter-spacing: 0.2em;
+  --text-eyebrow--font-weight: 500;
+
+  --text-data: 0.875rem;                                    /*        14px  */
+  --text-data--line-height: 1.45;
+  --text-data--letter-spacing: 0.02em;
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     RADIUS
+     Four, by role rather than by t-shirt size, so the name says where it goes.
+     ═══════════════════════════════════════════════════════════════════════ */
+
+  /* The mobile bottom navigation's full rendered height — 56px of content
+   * plus its 1px top border. Six components clear this bar (the sticky
+   * add-to-cart, the WhatsApp button, the cookie sheet, bottom sheets, the
+   * checkout total bar and the toaster) and each carried its own copy of the
+   * number 56, which was one pixel short of the truth in every one of them. */
+  --bottom-nav: 57px;
+
+  --radius-sm:   8px;     /* inputs, buttons, chips, swatches, small wells */
+  --radius-md:   16px;    /* cards, image wells, panels */
+  --radius-lg:   24px;    /* sheets, modals, drawers */
+  --radius-pill: 999px;   /* pills, badges, avatars, circles */
+
+  /* Tailwind's remaining radius steps are retired so there is no fifth option
+   * to drift back to. rounded-xs / xl / 2xl / 3xl / 4xl no longer exist on the
+   * storefront; the admin panel is unaffected because it was migrated with the
+   * rest of this order. */
+  --radius-xs:  initial;
+  --radius-xl:  initial;
+  --radius-2xl: initial;
+  --radius-3xl: initial;
+  --radius-4xl: initial;
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     ELEVATION
+     Tinted with ink, never with grey. A grey shadow on a warm ground reads as
+     dirt; a warm shadow reads as depth.
+     ═══════════════════════════════════════════════════════════════════════ */
+
+  --shadow-e1: 0 1px 2px rgba(25, 28, 27, 0.04), 0 2px 8px rgba(25, 28, 27, 0.04);
+  --shadow-e2: 0 4px 12px rgba(25, 28, 27, 0.06), 0 12px 32px rgba(25, 28, 27, 0.06);
+  --shadow-e3: 0 12px 32px rgba(25, 28, 27, 0.10), 0 32px 64px rgba(25, 28, 27, 0.10);
+  --shadow-ember: 0 16px 48px rgba(212, 135, 26, 0.26);   /* primary CTAs only */
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     EASING
+     A sofa is heavy. Nothing overshoots, nothing springs, nothing bounces.
+     ═══════════════════════════════════════════════════════════════════════ */
+
+  --ease-out-expo:      cubic-bezier(0.16, 1, 0.3, 1);    /* anything entering */
+  --ease-in-out-quart:  cubic-bezier(0.76, 0, 0.24, 1);   /* anything that leaves and returns */
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     CONTAINERS
+     --spacing is left at Tailwind's 0.25rem, which already yields exactly the
+     4pt scale the system calls for: p-1 4px, p-2 8px, p-3 12px, p-4 16px,
+     p-6 24px, p-8 32px, p-12 48px, p-16 64px, p-24 96px, p-32 128px.
+     ═══════════════════════════════════════════════════════════════════════ */
+
+  --container-shell: 1100px;   /* max-w-shell — the site's content width */
+  --container-read:  68ch;     /* max-w-read  — prose measure */
+}
+
+/* ═════════════════════════════════════════════════════════════════════════
+   Tokens with no Tailwind namespace, plus the semantic layer.
+   ═════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ── Duration ────────────────────────────────────────────────────────────
+     Five steps, and nothing between them. Anything under 200ms other than a
+     press reads as a glitch rather than a movement. */
+
+  --dur-press:     120ms;   /* :active depress, checkbox, tap feedback */
+  --dur-swift:     220ms;   /* hover colour, underline draw, icon slide */
+  --dur-base:      380ms;   /* drawers, accordions, tabs, chips, sheets */
+  --dur-settle:    640ms;   /* scroll reveals, image fades, card lift */
+  --dur-cinematic: 1000ms;  /* page transitions, hero sequence, curtains */
+
+  --stagger-step:  70ms;    /* per child, capped at 6 children */
+
+  /* ── Z-index ─────────────────────────────────────────────────────────────
+     One stack for the whole site. The ordering encodes two rules that are
+     currently broken in the codebase: the bottom navigation sits ABOVE the
+     product page's sticky add-to-cart bar, and the cookie banner sits below
+     both so it can never cover them. */
+
+  --z-base:        0;
+  --z-raised:      10;
+  --z-sticky-bar:  30;   /* product page add-to-cart */
+  --z-bottom-nav:  40;
+  --z-header:      50;
+  --z-scroll-rail: 55;   /* above the header, below anything that opens over it */
+  --z-consent:     60;
+  --z-drawer:      70;   /* mobile menu, filter sheet, mega menu */
+  --z-modal:       80;   /* dialogs, lightbox */
+  --z-toast:       90;
+  --z-cursor:      100;  /* desktop custom cursor */
+  --z-entrance:    120;  /* the once-per-session curtain, above everything */
+
+  /* ── Section rhythm ──────────────────────────────────────────────────────
+     One vertical rhythm for every storefront section. */
+
+  /* 56px on a phone, down from 64. Ten sections of 64px top and bottom is
+   * 1,280px of nothing — a screen and a half of a 812px phone spent on gaps,
+   * which on the homepage read as the page having been left unfinished rather
+   * than as breathing room. Desktop is untouched: at 96px the same rhythm is
+   * a fifth of the viewport rather than most of it. */
+  --section-y:        3.5rem; /* 56px — mobile */
+  --section-y-lg:     6rem;   /* 96px — desktop */
+  --section-gap:      1.5rem; /* 24px — gap between blocks inside a section */
+
+  /* ── Semantic layer ──────────────────────────────────────────────────────
+     Role names for hand-written CSS. Deliberately not registered as Tailwind
+     colours: a token called `text` would collide with the text-* font-size
+     namespace and resolve unpredictably. In components, use the ramp
+     (text-ink-700); in raw CSS, either works. */
+
+  --bg:            var(--color-calico-50);
+  --bg-alt:        var(--color-calico-100);
+  --well:          var(--color-calico-200);
+  --line:          var(--color-calico-300);
+
+  --fg:            var(--color-ink-900);   /* headings */
+  --fg-body:       var(--color-ink-700);   /* body copy */
+  --fg-muted:      var(--color-ink-500);   /* secondary copy */
+  --fg-disabled:   var(--color-ink-400);   /* never used for readable text */
+
+  --accent:        var(--color-ember-500); /* fills */
+  --accent-text:   var(--color-ember-700); /* letterforms on light grounds */
+  --accent-on:     var(--color-ink-900);   /* what sits ON an ember fill */
+  --accent-dark:   var(--color-ember-300); /* ember text on dark grounds */
+
+  --focus:         var(--color-ember-700); /* 5.5:1 — the ring must be legible */
+  --positive:      var(--color-sage-700);
+  --negative:      var(--color-rust-700);
+
+  /* ── Depth stops ─────────────────────────────────────────────────────────
+     Two shades either side of the ramp that exist only so a gradient has
+     somewhere to travel to. They are never used as flat fills — a surface is
+     ink-900 or calico-50; these are the ends of a ramp, not colours in it. */
+
+  --ink-deep:   color-mix(in oklab, var(--color-ink-900) 78%, #000);
+  --ink-lift:   color-mix(in oklab, var(--color-ink-900) 88%, var(--color-calico-50));
+  --calico-lift: color-mix(in oklab, var(--color-calico-50) 92%, var(--color-ember-500));
+
+  /* ── Gradients ───────────────────────────────────────────────────────────
+     Six, and no component may compose its own. A gradient is a surface
+     decision like a fill is, so it belongs here for the same reason ember-500
+     does: one place decides what "the brand gradient" means.
+
+     Angles are all in the 100-165 degree band. A gradient that runs along a
+     different diagonal in every section reads as five unrelated designs. */
+
+  /* The brand. CTAs, rules, the marquee band, anything that must be ember and
+     must not be flat. Ink 900 is still what sits on top of it — the contrast
+     rule does not relax because the fill moved. */
+  --grad-ember: linear-gradient(135deg,
+      var(--color-ember-300) 0%,
+      var(--color-ember-500) 46%,
+      var(--color-ember-700) 100%);
+
+  /* The dark stage. The hero, the stats band, the closing panel. Lifted at the
+     top and deepened at the foot so a full-height section has somewhere to go
+     rather than sitting as one flat black rectangle. */
+  --grad-ink: linear-gradient(165deg,
+      var(--ink-lift) 0%,
+      var(--color-ink-900) 52%,
+      var(--ink-deep) 100%);
+
+  /* The light ground, warmed. Section backgrounds that would otherwise be a
+     flat calico-50 and read as unpainted. */
+  --grad-calico: linear-gradient(165deg,
+      var(--color-calico-50) 0%,
+      var(--calico-lift) 58%,
+      var(--color-calico-100) 100%);
+
+  /* The cool counterweight, for the one indigo section. */
+  --grad-indigo: linear-gradient(160deg,
+      color-mix(in oklab, var(--color-indigo-700) 82%, var(--color-calico-50)) 0%,
+      var(--color-indigo-700) 55%,
+      color-mix(in oklab, var(--color-indigo-700) 76%, #000) 100%);
+
+  /* Letterforms. Panned slowly by .text-shimmer, static everywhere else. */
+  --grad-text: linear-gradient(100deg,
+      var(--color-ember-300) 0%,
+      var(--color-ember-500) 26%,
+      color-mix(in oklab, var(--color-ember-300) 55%, #FFF) 50%,
+      var(--color-ember-500) 74%,
+      var(--color-ember-300) 100%);
+
+  /* A hairline that fades out at both ends, for rules that run to the edge. */
+  /* The same idea for letterforms on a LIGHT ground, and it is a different
+   * ramp rather than the same one flipped.
+   *
+   * --grad-text runs up through ember-300 to near-white, which is the point of
+   * it on ink and is illegible on calico — ember-300 is 1.8:1 there. Nor can
+   * this one simply pass through ember-500: at 2.76:1 it misses even the 3:1
+   * that large text is held to, and a gradient is only as legible as its worst
+   * stop. So the light-ground shimmer travels between ember-700 and ember-900,
+   * both of which clear 5.5:1, and reads as a sheen crossing a dark word rather
+   * than as a highlight. */
+  --grad-text-ink: linear-gradient(100deg,
+      var(--color-ember-700) 0%,
+      var(--color-ember-900) 24%,
+      var(--color-ember-700) 50%,
+      var(--color-ember-900) 76%,
+      var(--color-ember-700) 100%);
+
+  --grad-rule: linear-gradient(90deg,
+      transparent 0%,
+      var(--color-ember-500) 18%,
+      var(--color-ember-500) 82%,
+      transparent 100%);
+
+  /* ── Glows ───────────────────────────────────────────────────────────────
+     Radial washes, not blurred boxes. A `filter: blur()` on a 600px element is
+     a full-size offscreen buffer repainted every frame it moves; a radial
+     gradient is already soft and costs the compositor nothing, which is what
+     makes the hero's aurora affordable on a phone. */
+
+  --glow-ember: radial-gradient(closest-side,
+      color-mix(in srgb, var(--color-ember-500) 62%, transparent) 0%,
+      color-mix(in srgb, var(--color-ember-500) 22%, transparent) 46%,
+      transparent 100%);
+
+  --glow-indigo: radial-gradient(closest-side,
+      color-mix(in srgb, var(--color-indigo-300) 40%, transparent) 0%,
+      transparent 100%);
+
+  /* The pool a floating object sits in. Wider than it is tall, so it reads as
+     light falling on a floor rather than a halo around a sticker. */
+  --glow-floor: radial-gradient(closest-side ellipse,
+      color-mix(in srgb, var(--color-ember-500) 46%, transparent) 0%,
+      color-mix(in srgb, var(--color-ember-700) 18%, transparent) 52%,
+      transparent 100%);
+
+  /* The contact shadow directly beneath it. Ink, tight, and separate from the
+     glow above — one is the light, the other is the absence of it. */
+  --glow-contact: radial-gradient(closest-side ellipse,
+      rgba(6, 8, 7, 0.72) 0%,
+      rgba(6, 8, 7, 0.28) 48%,
+      transparent 100%);
+
+  /* ── Grain ───────────────────────────────────────────────────────────────
+     Fractal noise, 160px and tiled. Laid over gradients at low opacity it
+     breaks up the banding a wide dark gradient shows on an 8-bit panel, and
+     gives the dark sections the tooth of a printed page rather than the
+     flatness of a screen fill. */
+  --noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
+
+  /* ── Elevation, continued ────────────────────────────────────────────────
+     e1-e3 are for things resting ON the page. These two are for things that
+     have left it. */
+
+  /* A cut-out object hovering over its own shadow. Two stops: a near shadow
+     that keeps it attached to the composition, and a far one that gives it
+     the room to be floating at all. */
+  --shadow-float: 0 24px 48px rgba(6, 8, 7, 0.28), 0 64px 120px rgba(6, 8, 7, 0.34);
+
+  /* Glass. An inner top highlight so the panel has an edge catching the light,
+     over an ordinary drop shadow. */
+  --shadow-glass:
+      inset 0 1px 0 rgba(251, 250, 247, 0.22),
+      0 8px 32px rgba(6, 8, 7, 0.22);
+
+  /* ── WhatsApp ────────────────────────────────────────────────────────────
+   * The colour belongs to WhatsApp and is fixed. How it is PRESENTED is ours,
+   * and it should be presented the way every other surface on this site is:
+   * a 135-degree gradient and a shadow tinted with its own colour rather than
+   * with grey.
+   *
+   * The range is deliberately narrow — a couple of steps either side of the
+   * brand green rather than a travel down to a deep teal. That is a contrast
+   * decision, not a taste one. Ink 900 sits on this button (see the note in
+   * the button itself for why it is not white), and ink against the darkest
+   * stop has to stay above 4.5:1 for the label to be legible. Mixed 88% with
+   * black it measures about 7.6:1; a full whatsapp-dark stop would have taken
+   * it to 4.3:1, which fails for text at this size.
+   */
+  --grad-whatsapp: linear-gradient(135deg,
+      color-mix(in oklab, var(--color-whatsapp) 90%, #FFF) 0%,
+      var(--color-whatsapp) 52%,
+      color-mix(in oklab, var(--color-whatsapp) 88%, #000) 100%);
+
+  /* Same construction as --shadow-ember: the glow is the fill's own colour, so
+   * the button reads as lit rather than as sitting on a grey smudge. */
+  --shadow-whatsapp: 0 12px 32px rgba(37, 211, 102, 0.28), 0 4px 10px rgba(18, 140, 126, 0.22);
+
+}
+
+/* ═════════════════════════════════════════════════════════════════════════
+   Utilities for the tokens Tailwind has no namespace for, so motion and
+   stacking are written the same way as everything else rather than reaching
+   for arbitrary values.
+   ═════════════════════════════════════════════════════════════════════════ */
+
+/* Two styles that are more than a font size, so they get to be one class each
+ * rather than three utilities the caller has to remember to keep together. */
+
+/* Uppercase mono label. Section eyebrows, field labels, badges, table heads. */
+@utility eyebrow {
+  font-family: var(--font-data);
+  font-size: var(--text-eyebrow);
+  line-height: var(--text-eyebrow--line-height);
+  letter-spacing: var(--text-eyebrow--letter-spacing);
+  font-weight: var(--text-eyebrow--font-weight);
+  text-transform: uppercase;
+}
+
+/* Anything that is a measurement rather than a sentence: prices, dimensions,
+ * order numbers, delivery dates, quantities. tabular-nums is the load-bearing
+ * part — without it a price changes width when the variant changes, and the
+ * layout twitches. */
+@utility data {
+  font-family: var(--font-data);
+  font-size: var(--text-data);
+  line-height: var(--text-data--line-height);
+  letter-spacing: var(--text-data--letter-spacing);
+  font-variant-numeric: tabular-nums;
+}
+
+/* For figures that need to be big — a price, a review average, an amount due —
+ * where only the numeral treatment should carry over. */
+@utility tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+@utility duration-press     { transition-duration: var(--dur-press); }
+@utility duration-swift     { transition-duration: var(--dur-swift); }
+@utility duration-base      { transition-duration: var(--dur-base); }
+@utility duration-settle    { transition-duration: var(--dur-settle); }
+@utility duration-cinematic { transition-duration: var(--dur-cinematic); }
+
+@utility z-base       { z-index: var(--z-base); }
+@utility z-raised     { z-index: var(--z-raised); }
+@utility z-sticky-bar { z-index: var(--z-sticky-bar); }
+@utility z-bottom-nav { z-index: var(--z-bottom-nav); }
+@utility z-header      { z-index: var(--z-header); }
+@utility z-scroll-rail { z-index: var(--z-scroll-rail); }
+@utility z-consent    { z-index: var(--z-consent); }
+@utility z-drawer     { z-index: var(--z-drawer); }
+@utility z-modal      { z-index: var(--z-modal); }
+@utility z-toast      { z-index: var(--z-toast); }
+@utility z-cursor     { z-index: var(--z-cursor); }
+
+@utility section-y {
+  padding-block: var(--section-y);
+
+  @media (width >= 64rem) {
+    padding-block: var(--section-y-lg);
+  }
+}
+
+/* The gradient surfaces, as utilities, so a section says `grad-ink` the same
+ * way it would have said `bg-ink-900`. Written against background-image rather
+ * than background, so a flat fallback colour can be declared alongside for the
+ * one frame before the gradient paints. */
+@utility grad-ember  { background-image: var(--grad-ember); }
+@utility grad-ink    { background-image: var(--grad-ink); }
+@utility grad-calico { background-image: var(--grad-calico); }
+@utility grad-indigo { background-image: var(--grad-indigo); }
+
+@utility shadow-float { box-shadow: var(--shadow-float); }
+@utility shadow-glass { box-shadow: var(--shadow-glass); }
+
+@utility grad-whatsapp   { background-image: var(--grad-whatsapp); }
+@utility shadow-whatsapp { box-shadow: var(--shadow-whatsapp); }

@@ -33,7 +33,7 @@ export default function AdminSidebarClient() {
             const active = href === '/admin' ? pathname === href : pathname.startsWith(href)
             return (
               <Link key={href} href={href}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all ${
+                className={`flex items-center gap-3 px-4 py-3 rounded-sm font-medium transition-all ${
                   active ? 'bg-orange-500/10 text-orange-500' : 'text-zinc-400 hover:text-white hover:bg-white/5'
                 }`}
               >
@@ -46,7 +46,7 @@ export default function AdminSidebarClient() {
 
         <div className="p-4 border-t border-white/10">
           <form action={logout}>
-            <button type="submit" className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-400 font-medium hover:bg-red-500/10 transition-colors">
+            <button type="submit" className="w-full flex items-center gap-3 px-4 py-3 rounded-sm text-red-400 font-medium hover:bg-red-500/10 transition-colors">
               <LogOut className="w-5 h-5" />
               Sign Out
             </button>
@@ -63,7 +63,7 @@ export default function AdminSidebarClient() {
             const active = href === '/admin' ? pathname === href : pathname.startsWith(href)
             return (
               <Link key={href} href={href} className="flex flex-col items-center p-2 w-16">
-                <div className={`p-1.5 rounded-full transition-colors ${active ? 'bg-orange-500/10 text-orange-500' : 'text-zinc-400'}`}>
+                <div className={`p-1.5 rounded-pill transition-colors ${active ? 'bg-orange-500/10 text-orange-500' : 'text-zinc-400'}`}>
                   <Icon className="w-6 h-6" />
                 </div>
                 <span className={`text-[10px] mt-1 font-medium ${active ? 'text-orange-500' : 'text-zinc-500'}`}>

@@ -5,6 +5,7 @@ import { canonicalProductPath } from '@/utils/productUrl';
 import { socialImageUrl, leadVariantImage, ogImage } from '@/utils/socialImage';
 import { productSchema, breadcrumbSchema, jsonLd } from '@/utils/schema';
 import { createClient } from '@/utils/supabase/server';
+import { deliveryWindow } from '@/utils/delivery';
 import ProductPageClient from '../../../../components/Product/ProductPageClient';
 
 type Params = Promise<{ slug: string; category: string }>;
@@ -231,7 +232,10 @@ export default async function ProductPage(props: { params: Params, searchParams:
       image_url: r.image_url || null,
       rating: r.rating,
       comment: r.comment ?? '',                             
-      created_at: r.created_at ?? new Date().toISOString(), 
+      created_at: r.created_at ?? new Date().toISOString(),
+      // Present only where the review came in against a real order - either
+      // through the tokenised link in the delivery email, or matched later.
+      order_id: r.order_id ?? null,
       status: r.status ?? (r.is_approved ? 'approved' : 'pending'),                       
     }));
 
@@ -287,6 +291,8 @@ export default async function ProductPage(props: { params: Params, searchParams:
       approvedReviews={approvedReviews}
       similarProducts={safeSimilarProducts} 
       categorySlug={category}
+      categoryName={categoryName}
+      deliveryEstimate={deliveryWindow()}
       initialWishlistState={initialWishlistState}
       isLoggedIn={!!user}
       sizeVariants={sizeVariants}

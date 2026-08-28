@@ -1,7 +1,9 @@
 // src/components/Product/CollectionCard.tsx
+
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowUpRight } from 'lucide-react';
+import { ArrowUpRight, Sofa } from 'lucide-react';
+import { blurDataURL } from '@/utils/cloudinary';
 
 interface CollectionCardProps {
   name: string;
@@ -9,85 +11,113 @@ interface CollectionCardProps {
   minPrice: number;
   maxPrice: number;
   images: string[];
+  /** Active pieces in the set. */
+  pieceCount?: number;
 }
 
-export default function CollectionCard({ name, slug, minPrice, maxPrice, images }: CollectionCardProps) {
-  // Format price range (If a collection only has 1 item, it just shows one price)
-  const priceDisplay = minPrice === maxPrice 
-    ? `£${minPrice.toFixed(0)}` 
-    : `£${minPrice.toFixed(0)} - £${maxPrice.toFixed(0)}`;
+const money = (n: number) => `£${Math.round(n).toLocaleString('en-GB')}`;
 
-  // Ensure we have exactly 3 images for the collage format. 
-  // If the collection has fewer than 3 images, it safely repeats the available ones.
-  const displayImages = [
-    images[0] || '/placeholder.svg',
-    images[1] || images[0] || '/placeholder.svg',
-    images[2] || images[0] || '/placeholder.svg'
-  ];
+/**
+ * One panel of the collage.
+ *
+ * Falls back to a sofa silhouette rather than /placeholder.svg. Pointing an
+ * <Image> at a file to say "there is no image" costs a request to render an
+ * empty box; drawing it inline costs nothing and reads as deliberate.
+ */
+function Panel({
+  src, alt, className, scale,
+}: { src?: string; alt: string; className: string; scale: string }) {
+  return (
+    <div className={`relative overflow-hidden bg-calico-200 ${className}`}>
+      {src ? (
+        <Image
+          src={src}
+          alt={alt}
+          fill
+          sizes="(max-width: 768px) 90vw, 33vw"
+          placeholder="blur"
+          blurDataURL={blurDataURL(src)}
+          className={`object-cover transition-transform duration-settle ease-out-expo ${scale}`}
+        />
+      ) : (
+        <div className="absolute inset-0 grid place-items-center">
+          <Sofa aria-hidden="true" className="h-8 w-8 text-calico-300" strokeWidth={1.5} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * The collection collage.
+ *
+ * The idea was right and the execution was not: a square frame with a 1px gap
+ * made three photographs read as one broken image. It is 5:4 now — landscape,
+ * like the sofas — and the gap is 2px of the page ground, so the panels read
+ * as three separate pictures of a set.
+ *
+ * The three panels scale at slightly different rates on hover, with the last
+ * one lagging 75ms, so the collage moves as a group rather than as one flat
+ * plane. This is why the card does not use the shared `.hover-card` treatment.
+ */
+export default function CollectionCard({
+  name, slug, minPrice, maxPrice, images, pieceCount,
+}: CollectionCardProps) {
+  const priceDisplay = minPrice === maxPrice
+    ? money(minPrice)
+    : `${money(minPrice)} – ${money(maxPrice)}`;
 
   return (
-    <Link 
-      href={`/collection/${slug}`} 
-      className="group relative block w-full aspect-square rounded-[14px] overflow-hidden bg-stone-100 shadow-sm active:scale-[0.98] transition-transform duration-200"
+    <Link
+      href={`/collection/${slug}`}
+      data-cursor="view"
+      className="group relative block aspect-[5/4] w-full overflow-hidden rounded-md bg-calico-50 no-underline shadow-e1"
     >
-      {/* ── COLLAGE GRID ── */}
-      <div className="grid grid-cols-3 grid-rows-2 gap-1 h-full w-full bg-white">
-        
-        {/* Main Large Image (Left 2/3) */}
-        <div className="col-span-2 row-span-2 relative h-full w-full overflow-hidden bg-stone-100">
-          <Image 
-            src={displayImages[0]} 
-            alt={`${name} main`} 
-            fill 
-            className="object-cover group-hover:scale-105 transition-transform duration-700"
-            sizes="(max-width: 768px) 66vw, 33vw"
-          />
-        </div>
-        
-        {/* Top Right Small Image */}
-        <div className="col-span-1 row-span-1 relative h-full w-full overflow-hidden bg-stone-100">
-          <Image 
-            src={displayImages[1]} 
-            alt={`${name} detail 1`} 
-            fill 
-            className="object-cover group-hover:scale-110 transition-transform duration-700"
-            sizes="(max-width: 768px) 33vw, 16vw"
-          />
-        </div>
-        
-        {/* Bottom Right Small Image */}
-        <div className="col-span-1 row-span-1 relative h-full w-full overflow-hidden bg-stone-100">
-          <Image 
-            src={displayImages[2]} 
-            alt={`${name} detail 2`} 
-            fill 
-            className="object-cover group-hover:scale-110 transition-transform duration-700 delay-75"
-            sizes="(max-width: 768px) 33vw, 16vw"
-          />
-        </div>
-
+      {/* 2/3 + 1/3, split by 2px of the page ground. */}
+      <div className="grid h-full w-full grid-cols-3 grid-rows-2 gap-0.5 bg-calico-50">
+        <Panel
+          src={images[0]}
+          alt=""
+          className="col-span-2 row-span-2"
+          scale="group-hover:scale-105"
+        />
+        <Panel
+          src={images[1] ?? images[0]}
+          alt=""
+          className="col-span-1 row-span-1"
+          scale="group-hover:scale-[1.08]"
+        />
+        <Panel
+          src={images[2] ?? images[0]}
+          alt=""
+          className="col-span-1 row-span-1 [&_img]:delay-[75ms]"
+          scale="group-hover:scale-[1.08]"
+        />
       </div>
 
-      {/* ── GRADIENT OVERLAY ── */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/10 to-transparent opacity-90 group-hover:opacity-100 transition-opacity duration-300" />
+      <span
+        aria-hidden="true"
+        className="absolute inset-0 bg-gradient-to-t from-ink-900 via-ink-900/25 to-transparent"
+      />
 
-      {/* ── TEXT & CTA ── */}
-      <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-5 flex items-end justify-between">
-        <div className="pr-4">
-          <h3 className="font-playfair text-white text-[19px] sm:text-2xl font-bold leading-tight tracking-wide drop-shadow-md">
+      <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-4 p-5">
+        <div className="min-w-0">
+          <h3 className="m-0 font-display text-[24px] font-semibold leading-tight text-calico-50">
             {name}
           </h3>
-          <div className="flex items-center gap-2 mt-1.5">
-            <span className="text-[#d4871a] font-bold text-[13px] sm:text-sm tracking-wide">
-              {priceDisplay}
-            </span>
-          </div>
+          <p className="m-0 mt-1.5 font-data text-data tabular-nums text-ember-300">
+            {priceDisplay}
+          </p>
+          {typeof pieceCount === 'number' && pieceCount > 0 && (
+            <p className="m-0 mt-0.5 font-data text-caption tabular-nums text-calico-300">
+              {pieceCount} {pieceCount === 1 ? 'piece' : 'pieces'} in the set
+            </p>
+          )}
         </div>
-        
-        {/* Little interactive arrow button */}
-        <div className="w-8 h-8 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white shrink-0 group-hover:bg-[#d4871a] group-hover:text-white transition-all duration-300 group-hover:scale-110">
-          <ArrowUpRight className="w-4 h-4" />
-        </div>
+
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-pill border border-calico-50/25 bg-calico-50/10 text-calico-50 transition-[background-color,color,rotate,border-color] duration-base ease-out-expo group-hover:rotate-45 group-hover:border-ember-500 group-hover:bg-ember-500 group-hover:text-ink-900">
+          <ArrowUpRight aria-hidden="true" className="h-5 w-5" />
+        </span>
       </div>
     </Link>
   );

@@ -7,8 +7,31 @@ const withPWA = withPWAInit({
   disable: process.env.NODE_ENV === "development", // Keep disabled in dev mode
 });
 
+const isProduction = process.env.NODE_ENV === 'production'
+
 const nextConfig: NextConfig = {
   reactCompiler: true,
+
+  /**
+   * View Transitions.
+   *
+   * The flag is on because that is where Next is heading, but it does nothing
+   * on its own today: it routes the app through the experimental app-page
+   * runtime, and neither the installed React 19.2.3 nor the copy Next vendors
+   * alongside it exports `unstable_ViewTransition` yet. Verified, not assumed.
+   *
+   * So the transitions in src/components/Motion/ViewTransitions.tsx are driven
+   * straight against the browser's `document.startViewTransition`. That turns
+   * out to be the better place for them regardless: it is what lets us decide
+   * per navigation whether a transition should happen at all, which a
+   * framework-level wrapper would not.
+   *
+   * When React ships ViewTransition on the stable channel, this flag is what
+   * lets us move to it.
+   */
+  experimental: {
+    viewTransition: true,
+  },
 
   /**
    * Apex -> www, permanently (308).
@@ -72,12 +95,29 @@ const nextConfig: NextConfig = {
       // api.homedata.co.uk is the postcode -> address lookup in checkout, and
       // api.cloudinary.com receives review photo uploads.
       "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com https://connect.facebook.net https://graph.facebook.com https://vitals.vercel-insights.com https://api.homedata.co.uk https://api.cloudinary.com https://res.cloudinary.com https://images.pexels.com",
-      "frame-src 'self' https://www.facebook.com",
+      // openstreetmap.org is the showroom locator map. An <iframe> is the
+      // only way to embed a real, pannable map without shipping a mapping
+      // library and a tile key - and OSM needs no key and sets no cookies,
+      // which a Google Maps embed does before the visitor has agreed to any.
+      "frame-src 'self' https://www.facebook.com https://www.openstreetmap.org",
       "object-src 'none'",
       "base-uri 'self'",
       "form-action 'self'",
       "frame-ancestors 'none'",
-      'upgrade-insecure-requests',
+      // PRODUCTION ONLY.
+      //
+      // This rewrites every http:// request to https://. Browsers exempt
+      // localhost, because it counts as a trustworthy origin - but they do NOT
+      // exempt a LAN address like 192.168.x.x. So running `next dev` and
+      // opening the network link on a phone meant every asset was upgraded to
+      // https://192.168.x.x:3000, which has no TLS, and the page rendered
+      // broken while localhost looked perfect.
+      //
+      // Testing on a real phone over the network link is the only way to check
+      // the mobile experience honestly, so this directive must not get in the
+      // way of it. In production everything is already served over https and
+      // the directive costs nothing.
+      ...(isProduction ? ['upgrade-insecure-requests'] : []),
     ].join('; ')
 
     return [
@@ -85,8 +125,10 @@ const nextConfig: NextConfig = {
         source: '/:path*',
         headers: [
           { key: 'Content-Security-Policy', value: csp },
-          // Two years, subdomains included, and preload-eligible.
-          { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
+          // Two years, subdomains included, preload-eligible. Production only:
+          // it does nothing over plain http, and a cached policy pinned to a
+          // dev hostname is unpleasant to undo.
+          ...(isProduction ? [{ key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' }] : []),
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'X-Frame-Options', value: 'DENY' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },

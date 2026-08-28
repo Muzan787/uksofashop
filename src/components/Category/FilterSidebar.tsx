@@ -1,86 +1,118 @@
 'use client'
 // src/components/Category/FilterSidebar.tsx
-import { useRouter, useSearchParams, usePathname } from 'next/navigation'
+
 import { useCallback, useState } from 'react'
-import { SlidersHorizontal, X } from 'lucide-react'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { Check, SlidersHorizontal } from 'lucide-react'
+import PriceRange from './PriceRange'
+import Sheet from '@/components/UI/Sheet'
 
-const ACCENT = '#d4871a'
-
-interface Props { 
-  availableStyles: string[]; 
-  availableMaterials: string[];
-  availableColors: string[];
+export interface FilterOption {
+  value: string
+  /** How many products in this category would match. */
+  count: number
 }
 
-export default function FilterSidebar({ availableStyles, availableMaterials, availableColors }: Props) {
-  const router   = useRouter()
+interface Props {
+  styles: FilterOption[]
+  materials: FilterOption[]
+  colors: FilterOption[]
+  /** The category's own price bounds, and where the handles sit now. */
+  priceFloor: number
+  priceCeiling: number
+  priceFrom: number
+  priceTo: number
+  /** Matching the current selection — the number on the sheet's button. */
+  resultCount: number
+}
+
+export default function FilterSidebar({
+  styles, materials, colors,
+  priceFloor, priceCeiling, priceFrom, priceTo,
+  resultCount,
+}: Props) {
+  const router = useRouter()
   const pathname = usePathname()
-  const sp       = useSearchParams()
+  const sp = useSearchParams()
+
   const [open, setOpen] = useState(false)
 
   const toggle = useCallback((key: string, val: string) => {
     const params = new URLSearchParams(sp.toString())
-    params.get(key) === val ? params.delete(key) : params.set(key, val)
+    if (params.get(key) === val) params.delete(key)
+    else params.set(key, val)
     params.delete('page')
-    router.push(params.toString() ? `${pathname}?${params.toString()}` : pathname, { scroll: false })
+    const qs = params.toString()
+    router.push(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
   }, [sp, router, pathname])
 
-  const hasFilters = sp.get('style') || sp.get('material') || sp.get('color')
+  const clearAll = useCallback(() => {
+    // Sort survives: it is how the customer wants to read the shop, not a
+    // narrowing of it, and throwing it away with the filters is a surprise.
+    const params = new URLSearchParams()
+    const sort = sp.get('sort')
+    if (sort) params.set('sort', sort)
+    const qs = params.toString()
+    router.push(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
+  }, [sp, router, pathname])
 
-  const clearAll = () => {
-    router.push(pathname, { scroll: false })
-  }
+  const activeCount =
+    (sp.get('style') ? 1 : 0) +
+    (sp.get('material') ? 1 : 0) +
+    (sp.get('color') ? 1 : 0) +
+    (sp.get('min') || sp.get('max') ? 1 : 0)
 
-  // Added 'color' to the filter groups
   const groups = [
-    { key: 'style',    label: 'Style',    options: availableStyles    },
-    { key: 'material', label: 'Material', options: availableMaterials },
-    { key: 'color',    label: 'Colour',   options: availableColors    },
+    { key: 'style', label: 'Style', options: styles },
+    { key: 'material', label: 'Material', options: materials },
+    { key: 'color', label: 'Colour', options: colors },
   ].filter(g => g.options.length > 0)
 
-  const inner = (
-    <div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: ACCENT }}>
-          Filters
-        </span>
-        {hasFilters && (
-          <button onClick={clearAll}
-            style={{ fontSize: 10, color: '#a8a29e', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>
-            Clear all
-          </button>
-        )}
-      </div>
+  const controls = (
+    <div className="flex flex-col gap-7">
+      {priceCeiling > priceFloor && (
+        <div>
+          <p className="eyebrow mb-3 text-ink-500">Price</p>
+          <PriceRange floor={priceFloor} ceiling={priceCeiling} from={priceFrom} to={priceTo} />
+        </div>
+      )}
 
       {groups.map(({ key, label, options }) => (
-        <div key={key} style={{ marginBottom: 22 }}>
-          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#78716c', marginBottom: 10 }}>
-            {label}
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {options.map(opt => {
-              const active = sp.get(key) === opt.toLowerCase()
+        <div key={key}>
+          <p className="eyebrow mb-2 text-ink-500">{label}</p>
+          <div className="flex flex-col">
+            {options.map(({ value, count }) => {
+              const active = sp.get(key) === value.toLowerCase()
               return (
-                <button key={opt} onClick={() => toggle(key, opt.toLowerCase())}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 10,
-                    border: 'none', cursor: 'pointer',
-                    padding: '6px 10px', borderRadius: 6, textAlign: 'left',
-                    background: active ? `${ACCENT}12` : 'transparent',
-                    transition: 'background 0.2s',
-                  }}
+                <button
+                  key={value}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => toggle(key, value.toLowerCase())}
+                  // 44px minimum. These were 8px-padded 12px rows — under every
+                  // touch-target guideline there is, and the main control on
+                  // the page for narrowing a listing.
+                  className={`flex min-h-11 w-full items-center gap-3 rounded-sm px-2 text-left transition-colors duration-swift ease-out-expo ${
+                    active ? 'bg-ember-500/10' : 'hover:bg-calico-100'
+                  }`}
                 >
-                  <span style={{
-                    width: 14, height: 14, borderRadius: 3, flexShrink: 0,
-                    border: `1.5px solid ${active ? ACCENT : '#d6d3d1'}`,
-                    background: active ? ACCENT : 'transparent',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    transition: 'all 0.2s',
-                  }}>
-                    {active && <span style={{ color: '#fff', fontSize: 9, fontWeight: 900 }}>✓</span>}
+                  <span
+                    aria-hidden="true"
+                    className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-sm border-2 transition-colors duration-swift ${
+                      active ? 'border-ember-500 bg-ember-500' : 'border-calico-300'
+                    }`}
+                  >
+                    {active && <Check className="h-3 w-3 text-ink-900" strokeWidth={3} />}
                   </span>
-                  <span style={{ fontSize: 12, color: active ? '#1c1917' : '#57534e', fontWeight: active ? 600 : 400 }}>
-                    {opt}
+
+                  <span className={`flex-1 text-body-sm ${active ? 'font-semibold text-ink-900' : 'text-ink-700'}`}>
+                    {value}
+                  </span>
+
+                  {/* How many you would be left with. Without it the only way
+                      to find out an option returns nothing is to try it. */}
+                  <span className="font-data text-caption tabular-nums text-ink-500">
+                    {count}
                   </span>
                 </button>
               )
@@ -93,57 +125,82 @@ export default function FilterSidebar({ availableStyles, availableMaterials, ava
 
   return (
     <>
-      {/* Mobile toggle */}
+      {/* ── The trigger, phones only ─────────────────────────────────────── */}
       <button
+        type="button"
         onClick={() => setOpen(true)}
-        className="w-full lg:hidden"
-        style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
-          padding: '11px 16px', borderRadius: 8,
-          border: `1.5px solid ${hasFilters ? ACCENT : '#e7e5e4'}`,
-          background: hasFilters ? `${ACCENT}10` : '#fff',
-          fontSize: 13, fontWeight: 600,
-          color: hasFilters ? ACCENT : '#57534e',
-          cursor: 'pointer', marginBottom: 16,
-        }}
+        aria-expanded={open}
+        aria-haspopup="dialog"
+        className={`mb-4 flex h-12 w-full items-center justify-center gap-2 rounded-sm border text-body-sm font-semibold transition-colors duration-swift ease-out-expo lg:hidden ${
+          activeCount
+            ? 'border-ember-500 bg-ember-500/10 text-ember-700'
+            : 'border-calico-300 bg-calico-50 text-ink-700'
+        }`}
       >
-        <SlidersHorizontal style={{ width: 14, height: 14 }} />
-        Filters {hasFilters && '•'}
+        <SlidersHorizontal aria-hidden="true" className="h-4 w-4" />
+        Filters
+        {activeCount > 0 && (
+          <span className="flex h-5 min-w-5 items-center justify-center rounded-pill bg-ember-500 px-1.5 font-data text-caption font-bold tabular-nums text-ink-900">
+            {activeCount}
+          </span>
+        )}
       </button>
 
-      {/* Mobile drawer */}
+      {/* ── The sheet ─────────────────────────────────────────────────────
+          A bottom sheet, not a 290px side drawer. A drawer that narrow put
+          the controls in a column too tight for a 44px row, and it arrived
+          from the side — the direction a phone's own sheets never come from. */}
       {open && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 80, display: 'flex' }}>
-          <div style={{ flex: 1, background: 'rgba(0,0,0,0.4)' }} onClick={() => setOpen(false)} />
-          <div style={{
-            width: 290, background: '#fff', 
-            display: 'flex', flexDirection: 'column', height: '100%',
-            animation: 'slideInRight 0.3s ease',
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 20px 14px', borderBottom: '1px solid #f5f5f4' }}>
-              <span style={{ fontSize: 14, fontWeight: 700, color: '#1c1917' }}>Filters</span>
-              <button onClick={() => setOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
-                <X style={{ width: 16, height: 16, color: '#78716c' }} />
+        <Sheet
+          title="Filters"
+          onClose={() => setOpen(false)}
+          className="lg:hidden"
+          footer={
+            <div className="flex gap-3">
+              {activeCount > 0 && (
+                <button
+                  type="button"
+                  onClick={clearAll}
+                  className="hover-btn h-12 shrink-0 rounded-sm border border-calico-300 px-4 text-body-sm font-semibold text-ink-700"
+                >
+                  Clear
+                </button>
+              )}
+              {/* It used to say "Apply Filters", which it never did — every
+                  tap had already applied. Now it says what pressing it
+                  actually gets you. */}
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="hover-btn h-12 flex-1 rounded-sm bg-ember-500 text-body-sm font-bold text-ink-900"
+              >
+                {resultCount === 0
+                  ? 'No sofas match'
+                  : `Show ${resultCount} ${resultCount === 1 ? 'sofa' : 'sofas'}`}
               </button>
             </div>
-            <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px 24px' }}>
-              {inner}
-            </div>
-            <div style={{ padding: '14px 20px', borderTop: '1px solid #f5f5f4', background: '#fff' }}>
-              <button onClick={() => setOpen(false)}
-                style={{ width: '100%', padding: '12px 0', borderRadius: 8, border: 'none', background: ACCENT, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', boxShadow: '0 -4px 12px rgba(0,0,0,0.02)' }}>
-                Apply Filters
-              </button>
-            </div>
-          </div>
-        </div>
+          }
+        >
+          {controls}
+        </Sheet>
       )}
 
-      {/* Desktop sidebar */}
-      <aside className="hidden lg:block" style={{ width: 200, flexShrink: 0, paddingRight: 28 }}>
-        {inner}
+      {/* ── The desktop sidebar ──────────────────────────────────────────── */}
+      <aside className="hidden lg:block">
+        <div className="mb-4 flex items-center justify-between">
+          <span className="eyebrow text-ember-700">Filters</span>
+          {activeCount > 0 && (
+            <button
+              type="button"
+              onClick={clearAll}
+              className="hover-link text-caption text-ink-500"
+            >
+              Clear all
+            </button>
+          )}
+        </div>
+        {controls}
       </aside>
-      <style>{`@keyframes slideInRight { from { transform: translateX(100%) } to { transform: translateX(0) } }`}</style>
     </>
   )
 }

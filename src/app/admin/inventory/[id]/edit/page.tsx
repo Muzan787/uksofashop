@@ -30,7 +30,7 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex items-center gap-4">
-        <Link href="/admin/inventory" className="p-2 hover:bg-stone-100 rounded-lg transition text-stone-500">
+        <Link href="/admin/inventory" className="p-2 hover:bg-stone-100 rounded-sm transition text-stone-500">
           <ArrowLeft className="w-5 h-5" />
         </Link>
         <h1 className="text-3xl font-bold text-stone-900">Edit Product: {product.title}</h1>

@@ -1,12 +1,15 @@
+// src/app/wishlist/page.tsx
+import type { Metadata } from 'next'
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
-import WishlistClient from './WishlistClient'
-import { Metadata } from 'next'
+import { Heart } from 'lucide-react'
+import EmptyState from '@/components/UI/EmptyState'
+import WishlistGrid, { type WishlistCardItem } from '@/components/Account/WishlistGrid'
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
-  title: 'My Wishlist',
-  description: 'View and manage your saved luxury sofas and furniture.',
+  title: 'Saved sofas',
+  description: 'The sofas you have saved for later.',
 }
 
 export default async function WishlistPage() {
@@ -17,23 +20,18 @@ export default async function WishlistPage() {
     redirect('/login?redirectTo=/wishlist')
   }
 
-  // Fetch wishlist joined with product and variant data to display images and prices
-  const { data: wishlistData, error } = await supabase
+  // The variant comes back too, so the card can add to the cart without
+  // sending somebody to the product page to make a choice they have made.
+  const { data, error } = await supabase
     .from('wishlist')
     .select(`
-      id,
       product_id,
       products (
-        id,
         title,
         slug,
         base_price,
-        categories!products_category_id_fkey (
-          slug
-        ),
-        product_variants (
-          image_url
-        )
+        categories!products_category_id_fkey ( slug ),
+        product_variants ( id, color, image_url, price_adjustment, priority )
       )
     `)
     .eq('user_id', user.id)
@@ -43,33 +41,56 @@ export default async function WishlistPage() {
     console.error('Failed to fetch wishlist items:', error)
   }
 
-  // Flatten and format the relational data for the client component
-  const formattedItems = (wishlistData || []).map((item: any) => {
-    // Handle potential array returns from Supabase joins
-    const product = Array.isArray(item.products) ? item.products[0] : item.products;
-    const category = Array.isArray(product?.categories) ? product.categories[0] : product?.categories;
-    const variant = Array.isArray(product?.product_variants) ? product.product_variants[0] : product?.product_variants;
+  const one = <T,>(v: T | T[] | null | undefined): T | null =>
+    Array.isArray(v) ? (v[0] ?? null) : (v ?? null)
+
+  const items: WishlistCardItem[] = (data ?? []).map(row => {
+    const product = one(row.products)
+    const category = one(product?.categories)
+    // The same variant the product page opens on, so the price on the card is
+    // the price in the cart.
+    const variants = [...(product?.product_variants ?? [])]
+      .sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0))
+    const variant = variants[0] ?? null
 
     return {
-      productId: item.product_id,
-      title: product?.title || 'Unavailable Product',
-      slug: product?.slug || '',
-      categorySlug: category?.slug || 'sofas',
-      price: product?.base_price || 0,
-      imageUrl: variant?.image_url || '/placeholder.svg'
+      productId: row.product_id,
+      title: product?.title ?? 'Unavailable product',
+      slug: product?.slug ?? '',
+      categorySlug: category?.slug ?? 'sofas',
+      price: Number(product?.base_price ?? 0) + Number(variant?.price_adjustment ?? 0),
+      image: variant?.image_url ?? null,
+      variantId: variant?.id ?? null,
+      color: variant?.color ?? null,
     }
   })
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 min-h-[60vh]">
-      <div className="border-b border-gray-200 pb-5 mb-8">
-        <h1 className="text-3xl font-playfair font-bold text-gray-900">My Wishlist</h1>
-        <p className="mt-2 text-sm text-gray-500">
-          Items you&apos;ve saved for later. Prices and availability are subject to change.
-        </p>
+    <div className="min-h-[60vh] bg-calico-50 px-4 pb-16 pt-24 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-shell">
+        <div className="mb-8 border-b border-calico-300 pb-8">
+          <p className="m-0 font-data text-eyebrow uppercase tracking-[0.16em] text-ember-700">
+            Your account
+          </p>
+          <h1 className="m-0 mt-2 font-display text-h1 font-semibold text-ink-900">Saved sofas</h1>
+          <p className="m-0 mt-2 max-w-[52ch] text-body-sm leading-relaxed text-ink-500">
+            Nothing here is reserved — prices and availability can move. When you are ready,
+            you can add one straight to your cart.
+          </p>
+        </div>
+
+        {items.length > 0 ? (
+          <WishlistGrid items={items} />
+        ) : (
+          <EmptyState
+            icon={Heart}
+            heading="Nothing saved yet"
+            line="Tap the heart on anything you like and it will wait for you here."
+            action={{ label: 'See the newest arrivals', href: '/shop/all?sort=newest' }}
+            secondary={{ label: 'Or browse everything', href: '/shop/all' }}
+          />
+        )}
       </div>
-      
-      <WishlistClient initialItems={formattedItems} />
     </div>
   )
 }

@@ -11,6 +11,7 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import { verifyReviewToken } from '@/utils/reviewToken'
 import { canonicalProductPath } from '@/utils/productUrl'
 import GuestReviewForm from './GuestReviewForm'
+import { blurDataURL } from '@/utils/cloudinary'
 
 export const metadata: Metadata = {
   title: 'Leave a Review',
@@ -49,21 +50,24 @@ export default async function ReviewPage(props: { searchParams: SearchParams }) 
     .find(v => v.image_url)?.image_url
 
   return (
-    <div className="min-h-screen bg-[#f8f6f2] px-5 py-12 sm:py-16">
+    <div className="min-h-screen bg-calico-50 px-4 py-12 sm:py-16">
       <div className="max-w-lg mx-auto">
-        <div className="bg-white rounded-2xl border border-[#f0ede8] shadow-sm p-6 sm:p-8">
+        <div className="bg-white rounded-md border border-calico-300 shadow-e1 p-6 sm:p-8">
 
-          <div className="flex items-center gap-4 mb-6 pb-6 border-b border-[#f0ede8]">
+          <div className="flex items-center gap-4 mb-6 pb-6 border-b border-calico-300">
             {image && (
-              <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-[#ede8df] shrink-0">
-                <Image src={image} alt="" fill sizes="64px" className="object-cover" />
+              <div className="relative w-16 h-16 rounded-sm overflow-hidden bg-calico-200 shrink-0">
+                <Image src={image} alt="" fill sizes="64px" className="object-cover"
+            placeholder="blur"
+            blurDataURL={blurDataURL(image)}
+           />
               </div>
             )}
             <div className="min-w-0">
-              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#a8a29e] mb-1">
+              <p className="eyebrow font-bold tracking-[0.16em] text-ink-500 mb-1">
                 Your purchase
               </p>
-              <h1 className="text-[17px] font-bold text-[#1c1917] leading-snug">
+              <h1 className="text-body font-bold text-ink-900 leading-snug">
                 {product.title}
               </h1>
             </div>
@@ -71,16 +75,16 @@ export default async function ReviewPage(props: { searchParams: SearchParams }) 
 
           {existing ? (
             <div className="text-center py-6">
-              <p className="text-[15px] font-semibold text-[#1c1917] mb-2">
+              <p className="text-body font-semibold text-ink-900 mb-2">
                 You have already reviewed this — thank you.
               </p>
-              <p className="text-[14px] text-[#57534e] leading-relaxed mb-6">
+              <p className="text-body-sm text-ink-500 leading-relaxed mb-6">
                 Reviews are checked before they appear, so yours may not be on the
                 site just yet.
               </p>
               <Link
                 href={canonicalProductPath(product)}
-                className="inline-flex items-center justify-center bg-[#1c1917] text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-black transition"
+                className="inline-flex items-center justify-center bg-ink-900 text-white px-6 py-3 rounded-sm font-bold text-body-sm hover:bg-black transition"
               >
                 View the product
               </Link>
@@ -90,7 +94,7 @@ export default async function ReviewPage(props: { searchParams: SearchParams }) 
           )}
         </div>
 
-        <p className="text-center text-[12px] text-[#a8a29e] mt-6 leading-relaxed">
+        <p className="text-center text-caption text-ink-500 mt-6 leading-relaxed">
           Something not right with your order? Please call us on 07476 616022
           rather than leaving it here — we would much rather fix it.
         </p>

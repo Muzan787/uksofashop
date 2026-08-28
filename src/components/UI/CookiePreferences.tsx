@@ -14,7 +14,7 @@ import {
   CONSENT_CHANGED_EVENT, type ConsentValue,
 } from '@/utils/consent'
 
-const ACCENT = '#d4871a'
+const ACCENT = 'var(--color-ember-500)'      // fills: buttons, rules, icons, badges
 
 export default function CookiePreferences() {
   // null until the effect has read localStorage, so the server and client
@@ -35,30 +35,30 @@ export default function CookiePreferences() {
     : 'You haven’t chosen yet'
 
   const tone =
-    consent === 'granted' ? '#16a34a'
-    : consent === 'denied' ? '#57534e'
+    consent === 'granted' ? 'var(--color-sage-700)'
+    : consent === 'denied' ? 'var(--color-ink-500)'
     : ACCENT
 
   return (
-    <div style={{ background: '#fff', border: '1px solid #f0ede8', borderRadius: 14, padding: '22px 20px' }}>
-      <h2 className="font-playfair" style={{ fontSize: 20, fontWeight: 700, color: '#1c1917', marginBottom: 6 }}>
+    <div style={{ background: 'var(--color-calico-50)', border: '1px solid var(--color-calico-300)', borderRadius: 'var(--radius-md)', padding: '24px 16px' }}>
+      <h2 className="font-display" style={{ fontSize: 'var(--text-h3)', fontWeight: 700, color: 'var(--color-ink-900)', marginBottom: 8 }}>
         Your choice
       </h2>
-      <p style={{ fontSize: 13.5, color: '#57534e', lineHeight: 1.75, margin: '0 0 16px' }}>
+      <p style={{ fontSize: 'var(--text-body-sm)', color: 'var(--color-ink-500)', lineHeight: 1.75, margin: '0 0 16px' }}>
         You can change this whenever you like, and as easily as you set it. Turning the
         optional cookies off also deletes the ones already on this device.
       </p>
 
       <div
         style={{
-          display: 'flex', alignItems: 'center', gap: 9,
-          background: '#fafaf9', border: '1px solid #e7e5e4', borderRadius: 9,
-          padding: '11px 14px', marginBottom: 14,
+          display: 'flex', alignItems: 'center', gap: 8,
+          background: 'var(--color-calico-50)', border: '1px solid var(--color-calico-300)', borderRadius: 'var(--radius-sm)',
+          padding: '12px 16px', marginBottom: 16,
         }}
         aria-live="polite"
       >
-        <span style={{ width: 8, height: 8, borderRadius: '50%', background: tone, flexShrink: 0 }} />
-        <span style={{ fontSize: 13, fontWeight: 600, color: '#1c1917' }}>{status}</span>
+        <span style={{ width: 8, height: 8, borderRadius: 'var(--radius-pill)', background: tone, flexShrink: 0 }} />
+        <span style={{ fontSize: 'var(--text-body-sm)', fontWeight: 600, color: 'var(--color-ink-900)' }}>{status}</span>
       </div>
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -66,10 +66,10 @@ export default function CookiePreferences() {
           onClick={() => grantConsent()}
           disabled={consent === 'granted' || consent === 'loading'}
           style={{
-            flex: '1 1 150px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7,
-            padding: '12px 16px', borderRadius: 8, border: 'none', fontSize: 12.5, fontWeight: 700,
-            background: consent === 'granted' ? '#e7e5e4' : ACCENT,
-            color: consent === 'granted' ? '#a8a29e' : '#fff',
+            flex: '1 1 150px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            padding: '12px 16px', borderRadius: 'var(--radius-sm)', border: 'none', fontSize: 'var(--text-caption)', fontWeight: 700,
+            background: consent === 'granted' ? 'var(--color-calico-300)' : ACCENT,
+            color: consent === 'granted' ? 'var(--color-ink-500)' : 'var(--color-calico-50)',
             cursor: consent === 'granted' || consent === 'loading' ? 'default' : 'pointer',
           }}
         >
@@ -80,11 +80,11 @@ export default function CookiePreferences() {
           onClick={() => revokeConsent()}
           disabled={consent === 'denied' || consent === 'loading'}
           style={{
-            flex: '1 1 150px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7,
-            padding: '12px 16px', borderRadius: 8, fontSize: 12.5, fontWeight: 700,
-            background: '#fff',
-            border: `1px solid ${consent === 'denied' ? '#e7e5e4' : '#d6d3d1'}`,
-            color: consent === 'denied' ? '#a8a29e' : '#1c1917',
+            flex: '1 1 150px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            padding: '12px 16px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--text-caption)', fontWeight: 700,
+            background: 'var(--color-calico-50)',
+            border: `1px solid ${consent === 'denied' ? 'var(--color-calico-300)' : 'var(--color-calico-300)'}`,
+            color: consent === 'denied' ? 'var(--color-ink-500)' : 'var(--color-ink-900)',
             cursor: consent === 'denied' || consent === 'loading' ? 'default' : 'pointer',
           }}
         >
@@ -93,7 +93,7 @@ export default function CookiePreferences() {
       </div>
 
       {consent === 'granted' && (
-        <p style={{ display: 'flex', alignItems: 'flex-start', gap: 7, fontSize: 11.5, color: '#a8a29e', margin: '12px 0 0', lineHeight: 1.6 }}>
+        <p style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 'var(--text-caption)', color: 'var(--color-ink-500)', margin: '12px 0 0', lineHeight: 1.6 }}>
           <RotateCcw style={{ width: 12, height: 12, flexShrink: 0, marginTop: 2 }} />
           Turning these off reloads the page — analytics scripts can’t be stopped once
           they’ve started, so we load a clean page without them.

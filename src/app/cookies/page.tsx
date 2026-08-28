@@ -1,10 +1,9 @@
 // src/app/cookies/page.tsx
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { Cookie, ArrowRight, ShieldCheck } from 'lucide-react'
+import EditorialHero from '@/components/Editorial/EditorialHero'
+import EditorialLayout, { LastUpdated } from '@/components/Editorial/EditorialLayout'
 import CookiePreferences from '@/components/UI/CookiePreferences'
-
-const ACCENT = '#d4871a'
 
 export const metadata: Metadata = {
   title: 'Cookies',
@@ -12,6 +11,11 @@ export const metadata: Metadata = {
     'Exactly which cookies and browser storage UK Sofa Shop uses, what each one is for, and how to change your choice at any time.',
   alternates: { canonical: '/cookies' },
 }
+
+/** Set by hand. See the note in src/app/terms/page.tsx. */
+const LAST_UPDATED = '2026-08-27'
+
+const SUPPORT_EMAIL = 'uksofashop.co.uk@gmail.com'
 
 interface Entry {
   name: string
@@ -64,26 +68,46 @@ const optional: Entry[] = [
   },
 ]
 
-function Table({ entries }: { entries: Entry[] }) {
+const TOC = [
+  { id: 'choice', label: 'Your choice' },
+  { id: 'essential', label: 'Essential' },
+  { id: 'optional', label: 'Analytics and ads' },
+  { id: 'browser', label: 'Managing them yourself' },
+]
+
+function Table({ entries, caption }: { entries: Entry[]; caption: string }) {
   return (
-    <div style={{ overflowX: 'auto', border: '1px solid #f0ede8', borderRadius: 12, background: '#fff' }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 520 }}>
+    <div className="my-6 overflow-x-auto rounded-md border border-calico-300">
+      <table className="w-full min-w-[560px] border-collapse text-left">
+        <caption className="sr-only">{caption}</caption>
         <thead>
-          <tr style={{ background: '#fafaf9' }}>
+          <tr className="border-b border-calico-300 bg-calico-100">
             {['Name', 'Type', 'What it’s for', 'How long'].map(h => (
-              <th key={h} style={{ textAlign: 'left', padding: '11px 14px', fontSize: 10.5, fontWeight: 700, color: '#78716c', textTransform: 'uppercase', letterSpacing: '0.12em', borderBottom: '1px solid #f0ede8' }}>
+              <th
+                key={h}
+                scope="col"
+                className="px-4 py-3 font-data text-eyebrow font-bold uppercase tracking-[0.12em] text-ink-500"
+              >
                 {h}
               </th>
             ))}
           </tr>
         </thead>
         <tbody>
-          {entries.map((e, i) => (
-            <tr key={e.name} style={{ borderBottom: i < entries.length - 1 ? '1px solid #f5f5f4' : 'none' }}>
-              <td style={{ padding: '13px 14px', fontSize: 12.5, fontFamily: 'monospace', color: '#1c1917', fontWeight: 600, whiteSpace: 'nowrap' }}>{e.name}</td>
-              <td style={{ padding: '13px 14px', fontSize: 12.5, color: '#78716c', whiteSpace: 'nowrap' }}>{e.type}</td>
-              <td style={{ padding: '13px 14px', fontSize: 13, color: '#57534e', lineHeight: 1.6, minWidth: 240 }}>{e.purpose}</td>
-              <td style={{ padding: '13px 14px', fontSize: 12.5, color: '#78716c', whiteSpace: 'nowrap' }}>{e.duration}</td>
+          {entries.map(e => (
+            <tr key={e.name} className="border-b border-calico-100 last:border-b-0">
+              <th scope="row" className="whitespace-nowrap px-4 py-3 align-top font-data text-caption font-semibold text-ink-900">
+                {e.name}
+              </th>
+              <td className="whitespace-nowrap px-4 py-3 align-top text-caption text-ink-500">
+                {e.type}
+              </td>
+              <td className="min-w-[240px] px-4 py-3 align-top text-body-sm leading-relaxed text-ink-700">
+                {e.purpose}
+              </td>
+              <td className="whitespace-nowrap px-4 py-3 align-top text-caption text-ink-500">
+                {e.duration}
+              </td>
             </tr>
           ))}
         </tbody>
@@ -94,91 +118,64 @@ function Table({ entries }: { entries: Entry[] }) {
 
 export default function CookiesPage() {
   return (
-    <div style={{ minHeight: '100vh', background: '#f8f6f2' }}>
+    <div className="min-h-screen bg-calico-50">
+      <EditorialHero
+        eyebrow="Policies"
+        title="Cookies"
+        lede="Every cookie and piece of browser storage this site sets, what each one actually does, and how to change your mind whenever you like."
+        breadcrumb={[{ label: 'Home', href: '/' }]}
+        meta={<LastUpdated date={LAST_UPDATED} />}
+      />
 
-      <div style={{ background: '#0c0c0b', borderBottom: `2px solid ${ACCENT}` }}>
-        <div style={{ maxWidth: 900, margin: '0 auto', padding: '40px 16px 32px' }}>
-          <div style={{ width: 46, height: 46, borderRadius: 11, background: `${ACCENT}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 }}>
-            <Cookie style={{ width: 21, height: 21, color: ACCENT }} />
-          </div>
-          <div style={{ fontSize: 10, color: ACCENT, textTransform: 'uppercase', letterSpacing: '0.22em', fontWeight: 700, marginBottom: 8 }}>Policies</div>
-          <h1 className="font-playfair" style={{ fontSize: 'clamp(26px,4vw,42px)', fontWeight: 700, color: '#fff', lineHeight: 1.1, marginBottom: 10 }}>
-            Cookies
-          </h1>
-          <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.55)', maxWidth: 540, lineHeight: 1.75 }}>
-            Every cookie and piece of browser storage this site uses, what each one actually
-            does, and how to change your mind whenever you want.
-          </p>
-        </div>
-      </div>
+      <EditorialLayout toc={TOC}>
+        <h2 id="choice">Your choice</h2>
+        <p>
+          You can change this at any time, and changing it takes effect immediately — if you turn
+          the optional ones off, we delete the ones already on your device rather than just
+          stopping new ones.
+        </p>
 
-      <div style={{ maxWidth: 900, margin: '0 auto', padding: '28px 16px 60px' }}>
-
-        <div style={{ marginBottom: 28 }}>
+        <div className="my-8">
           <CookiePreferences />
         </div>
 
-        <section style={{ marginBottom: 28 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-            <ShieldCheck style={{ width: 16, height: 16, color: ACCENT }} />
-            <h2 className="font-playfair" style={{ fontSize: 20, fontWeight: 700, color: '#1c1917' }}>
-              Essential — always on
-            </h2>
-          </div>
-          <p style={{ fontSize: 13.5, color: '#57534e', lineHeight: 1.75, margin: '0 0 14px', maxWidth: 620 }}>
-            These make the site work. Without them your basket would empty itself and you
-            couldn’t stay signed in, so there’s no option to turn them off. None of them
-            track you or go to anyone else.
-          </p>
-          <Table entries={essential} />
-        </section>
+        <h2 id="essential">Essential — always on</h2>
+        <p>
+          These make the site work. Without them your basket would empty itself and you could not
+          stay signed in, so there is no option to turn them off. None of them track you, and none
+          of them go to anybody else.
+        </p>
 
-        <section style={{ marginBottom: 28 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-            <Cookie style={{ width: 16, height: 16, color: ACCENT }} />
-            <h2 className="font-playfair" style={{ fontSize: 20, fontWeight: 700, color: '#1c1917' }}>
-              Analytics and advertising — only if you say yes
-            </h2>
-          </div>
-          <p style={{ fontSize: 13.5, color: '#57534e', lineHeight: 1.75, margin: '0 0 14px', maxWidth: 620 }}>
-            These are set by Google and Meta, and only ever after you’ve chosen “Accept all”.
-            If you choose “Essential only”, they’re never loaded at all — and if you change
-            your mind later, we delete the ones already on your device.
-          </p>
-          <Table entries={optional} />
-        </section>
+        <Table entries={essential} caption="Essential cookies and browser storage, which cannot be turned off" />
 
-        <section style={{ background: '#fff', border: '1px solid #f0ede8', borderRadius: 14, padding: '22px 20px', marginBottom: 24 }}>
-          <h2 className="font-playfair" style={{ fontSize: 20, fontWeight: 700, color: '#1c1917', marginBottom: 10 }}>
-            Managing cookies in your browser
-          </h2>
-          <p style={{ fontSize: 13.5, color: '#57534e', lineHeight: 1.75, margin: '0 0 10px' }}>
-            Whatever you choose here, your browser can block or delete cookies for any site.
-            It’s usually under Settings → Privacy. Be aware that blocking everything will
-            stop your basket working, on our site and on most others.
-          </p>
-          <p style={{ fontSize: 13.5, color: '#57534e', lineHeight: 1.75, margin: 0 }}>
-            If you’d like to know what we hold about you, or want it deleted, email{' '}
-            <a href="mailto:uksofashop.co.uk@gmail.com" style={{ color: ACCENT, fontWeight: 600 }}>
-              uksofashop.co.uk@gmail.com
-            </a>{' '}
-            and we’ll sort it out. You can also read our{' '}
-            <Link href="/privacy" style={{ color: ACCENT, fontWeight: 600 }}>privacy policy</Link>.
-          </p>
-        </section>
+        <h2 id="optional">Analytics and advertising — only if you say yes</h2>
+        <p>
+          These are set by Google and Meta, and only ever after you have chosen “Accept all”. If
+          you choose “Essential only” they are never loaded at all — not loaded and ignored,
+          genuinely never requested.
+        </p>
 
-        <div style={{ background: '#0c0c0b', borderRadius: 12, padding: '20px', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', border: '1px solid rgba(255,255,255,0.06)' }}>
-          <div style={{ flex: 1, minWidth: 200 }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: '#fff', marginBottom: 4 }}>Anything unclear?</div>
-            <div style={{ fontSize: 13, color: '#78716c', lineHeight: 1.6 }}>
-              Ask us and we’ll explain it in plain English.
-            </div>
-          </div>
-          <Link href="/contact" style={{ display: 'flex', alignItems: 'center', gap: 6, background: ACCENT, color: '#fff', padding: '11px 20px', borderRadius: 8, fontSize: 12, fontWeight: 700, textDecoration: 'none', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-            Contact Us <ArrowRight style={{ width: 12, height: 12 }} />
-          </Link>
-        </div>
-      </div>
+        <Table entries={optional} caption="Optional analytics and advertising cookies, set only with consent" />
+
+        <h2 id="browser">Managing them yourself</h2>
+        <p>
+          Whatever you choose here, your browser can block or delete cookies for any site — it is
+          usually under Settings, then Privacy. Be aware that blocking everything will stop your
+          basket working, on our site and on most others.
+        </p>
+        <p>
+          If you would like to know what we hold about you, or want it deleted, email{' '}
+          <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a> and we will sort it out. Our{' '}
+          <Link href="/privacy">privacy policy</Link> covers the rest of what we do with data.
+        </p>
+
+        <hr />
+
+        <p className="fine">
+          Anything unclear? <Link href="/contact">Ask us</Link> and we will explain it in plain
+          English.
+        </p>
+      </EditorialLayout>
     </div>
   )
 }

@@ -31,7 +31,7 @@ export default async function InventoryPage() {
         </div>
         <Link 
           href="/admin/inventory/new" 
-          className="flex items-center justify-center gap-2 bg-orange-500 text-white px-6 py-3.5 rounded-xl font-bold shadow-md hover:bg-orange-600 active:scale-95 transition"
+          className="flex items-center justify-center gap-2 bg-orange-500 text-white px-6 py-3.5 rounded-sm font-bold shadow-md hover:bg-orange-600 active:scale-95 transition"
         >
           <Plus className="w-5 h-5" /> Add New Sofa
         </Link>
@@ -41,11 +41,11 @@ export default async function InventoryPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-6">
         
         {(!products || products.length === 0) && (
-          <div className="col-span-full py-16 flex flex-col items-center justify-center bg-white rounded-3xl border border-stone-200 shadow-sm">
+          <div className="col-span-full py-16 flex flex-col items-center justify-center bg-white rounded-lg border border-stone-200 shadow-sm">
             <LayoutGrid className="w-12 h-12 text-stone-300 mb-4" />
             <p className="text-xl font-bold text-stone-900">Catalog is empty</p>
             <p className="text-stone-500 text-sm mt-2 mb-6">Start building your storefront catalog.</p>
-            <Link href="/admin/inventory/new" className="bg-stone-900 text-white px-6 py-3 rounded-xl font-bold hover:bg-stone-800 transition">
+            <Link href="/admin/inventory/new" className="bg-stone-900 text-white px-6 py-3 rounded-sm font-bold hover:bg-stone-800 transition">
               Create First Product
             </Link>
           </div>
@@ -58,7 +58,7 @@ export default async function InventoryPage() {
           return (
             <div 
               key={product.id} 
-              className={`bg-white rounded-2xl p-5 shadow-sm border border-stone-200 flex flex-col transition-all ${
+              className={`bg-white rounded-md p-5 shadow-sm border border-stone-200 flex flex-col transition-all ${
                 !product.is_active ? 'opacity-70 bg-stone-50 grayscale-[0.3]' : 'hover:shadow-md hover:border-stone-300'
               }`}
             >
@@ -69,11 +69,11 @@ export default async function InventoryPage() {
                 </h3>
                 <div className="shrink-0 mt-1">
                   {product.is_active ? (
-                    <span className="bg-green-100 text-green-700 border border-green-200 px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-widest">
+                    <span className="bg-green-100 text-green-700 border border-green-200 px-2 py-1 rounded-sm text-[10px] font-bold uppercase tracking-widest">
                       Active
                     </span>
                   ) : (
-                    <span className="bg-stone-200 text-stone-600 border border-stone-300 px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-widest">
+                    <span className="bg-stone-200 text-stone-600 border border-stone-300 px-2 py-1 rounded-sm text-[10px] font-bold uppercase tracking-widest">
                       Hidden
                     </span>
                   )}
@@ -94,7 +94,7 @@ export default async function InventoryPage() {
               <div className="mt-auto pt-4 border-t border-stone-100 flex gap-2">
                 <Link 
                   href={`/admin/inventory/${product.id}/edit`} 
-                  className="flex-1 flex items-center justify-center gap-2 bg-stone-100 text-stone-900 px-4 py-3 rounded-xl text-sm font-bold hover:bg-stone-200 active:scale-95 transition"
+                  className="flex-1 flex items-center justify-center gap-2 bg-stone-100 text-stone-900 px-4 py-3 rounded-sm text-sm font-bold hover:bg-stone-200 active:scale-95 transition"
                 >
                   <Edit3 className="w-4 h-4" /> Edit
                 </Link>
@@ -109,7 +109,7 @@ export default async function InventoryPage() {
                     <button 
                       type="submit" 
                       title="Hide Product from Storefront"
-                      className="flex items-center justify-center bg-red-50 text-red-600 w-12 h-full rounded-xl hover:bg-red-100 active:scale-95 transition"
+                      className="flex items-center justify-center bg-red-50 text-red-600 w-12 h-full rounded-sm hover:bg-red-100 active:scale-95 transition"
                     >
                       <EyeOff className="w-4 h-4" />
                     </button>
@@ -123,7 +123,7 @@ export default async function InventoryPage() {
                     <button 
                       type="submit" 
                       title="Show Product on Storefront"
-                      className="flex items-center justify-center bg-green-50 text-green-600 w-12 h-full rounded-xl hover:bg-green-100 active:scale-95 transition"
+                      className="flex items-center justify-center bg-green-50 text-green-600 w-12 h-full rounded-sm hover:bg-green-100 active:scale-95 transition"
                     >
                       <Eye className="w-4 h-4" />
                     </button>

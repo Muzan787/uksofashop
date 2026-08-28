@@ -1,5 +1,6 @@
 import { MetadataRoute } from 'next'
 import { META_DESCRIPTION } from '@/constants/promises'
+import { PALETTE } from '@/constants/palette'
 
 /**
  * The customer-facing installable app.
@@ -19,8 +20,8 @@ export default function manifest(): MetadataRoute.Manifest {
     start_url: '/',
     scope: '/',
     display: 'standalone',
-    background_color: '#0c0c0b',
-    theme_color: '#d4871a',
+    background_color: PALETTE.ink900,
+    theme_color: PALETTE.ember500,
     lang: 'en-GB',
     categories: ['shopping', 'lifestyle'],
     icons: [

@@ -1,54 +1,89 @@
 // src/app/careers/page.tsx
-import { Metadata } from 'next';
-import Link from 'next/link';
-import { Briefcase, ArrowLeft, Users } from 'lucide-react';
+import type { Metadata } from 'next'
+import Link from 'next/link'
+import { Briefcase } from 'lucide-react'
+import EditorialHero from '@/components/Editorial/EditorialHero'
+import EditorialLayout, { Note } from '@/components/Editorial/EditorialLayout'
+import EmptyState from '@/components/UI/EmptyState'
 
 export const metadata: Metadata = {
   alternates: { canonical: '/careers' },
   title: 'Careers',
-  description: 'Explore career opportunities and join the team at UK Sofa Shop.',
-};
+  description:
+    'No open roles at UK Sofa Shop right now. If you upholster, drive, or know furniture, write to us anyway.',
+  // No roles listed, so there is nothing here for a jobs crawler to index.
+  robots: { index: false, follow: true },
+}
+
+const SUPPORT_EMAIL = 'uksofashop.co.uk@gmail.com'
 
 export default function CareersPage() {
   return (
-    <div className="min-h-[75vh] bg-[#f8f6f2] flex flex-col items-center justify-center px-4 py-20 text-center animate-in fade-in duration-700">
-      
-      {/* Icon Badge */}
-      <div className="w-20 h-20 bg-white rounded-full shadow-sm border border-[#e7e5e4] flex items-center justify-center mb-6 text-[#d4871a]">
-        <Briefcase className="w-10 h-10" />
-      </div>
-      
-      <h1 className="text-4xl md:text-6xl font-playfair font-bold text-[#1c1917] mb-4">
-        Join Our Team
-      </h1>
-      
-      <div className="flex items-center justify-center gap-2 text-[#d4871a] font-bold text-sm tracking-widest uppercase mb-6">
-        <Users className="w-4 h-4" /> Careers Portal Coming Soon
-      </div>
+    <div className="min-h-screen bg-calico-50">
+      <EditorialHero
+        eyebrow="Working here"
+        title="Careers"
+        lede="We are a small team in Blackburn. There is nothing advertised at the moment, but that is not the same as nothing available."
+        breadcrumb={[{ label: 'Home', href: '/' }]}
+      />
 
-      <p className="text-lg text-[#57534e] max-w-2xl mx-auto mb-10 leading-relaxed">
-        Whether your expertise lies in upholstery, customer service or digital innovation, we are always looking for passionate talent to join us.
-        <br /><br />
-        We are currently building our dedicated careers portal to showcase open roles. Please check back in the near future for updates on how you can help us shape the future of premium furniture.
-      </p>
-      
-      {/* Action Buttons */}
-      <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto justify-center">
-        <Link 
-          href="/contact" 
-          className="flex items-center justify-center gap-2 bg-[#1c1917] text-white px-8 py-4 rounded-xl font-bold hover:bg-black transition active:scale-95 shadow-md"
-        >
-          Contact Us Directly
-        </Link>
+      <EditorialLayout>
+        <EmptyState
+          icon={Briefcase}
+          heading="No open roles right now"
+          line="When there are, they will be listed here rather than only on a job board."
+          action={{ label: 'Write to us anyway', href: '/contact' }}
+          className="not-prose"
+        />
 
-        <Link 
-          href="/" 
-          className="flex items-center justify-center gap-2 bg-white border border-[#e7e5e4] text-[#1c1917] px-8 py-4 rounded-xl font-bold hover:bg-stone-50 transition active:scale-95 shadow-sm"
-        >
-          <ArrowLeft className="w-5 h-5" /> Return Home
-        </Link>
-      </div>
+        <h2>Write to us anyway</h2>
+        <p>
+          We are small enough that we do not really recruit on a schedule — we take people on when
+          the right one turns up, which means a speculative email is genuinely worth sending. It
+          gets read by someone who can act on it, not filtered by a system.
+        </p>
+        <p>The kinds of work that come up here:</p>
+        <ul>
+          <li>
+            <strong>Upholstery and making.</strong> We build to order on the fabric ranges, so
+            hands-on experience counts for more than a CV does.
+          </li>
+            <li>
+            <strong>Delivery and installation.</strong> Two-person crews, mostly the North and
+            Midlands. This is the job that decides what customers think of us, so we care about it
+            more than the title suggests.
+          </li>
+          <li>
+            <strong>Customer help.</strong> Answering the phone and the messages, and being
+            straight with people about whether a sofa will fit. Knowing furniture matters; a
+            script does not.
+          </li>
+        </ul>
 
+        <Note title="What to send">
+          <p>
+            A paragraph about what you have done and what you are after. Attach a CV if you have
+            one to hand, but do not build one on our account — we would rather read the paragraph.
+            Email <a href={`mailto:${SUPPORT_EMAIL}`} className="font-semibold text-ember-700">{SUPPORT_EMAIL}</a>{' '}
+            or use the <Link href="/contact" className="font-semibold text-ember-700">contact form</Link>.
+          </p>
+        </Note>
+
+        <h2>What it is like</h2>
+        <p>
+          Honest version: it is a working unit, not an office. The team is small, so everybody
+          does a bit of everything and there is nowhere to hide a bad day. The upside of that is
+          that decisions happen in a conversation rather than a quarter, and the person you would
+          be working for is the person who owns the place.
+        </p>
+
+        <hr />
+
+        <p className="fine">
+          We reply to everyone, including to say no. If you have not heard back within a week,
+          chase us — it will be an oversight rather than an answer.
+        </p>
+      </EditorialLayout>
     </div>
-  );
+  )
 }

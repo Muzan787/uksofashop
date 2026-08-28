@@ -1,164 +1,149 @@
 // src/app/size-guide/page.tsx
-import { Metadata } from 'next';
-import { Ruler, DoorOpen, Home, ArrowRight, ArrowDownToLine, Maximize } from 'lucide-react';
-
-const ACCENT = '#d4871a';
+import type { Metadata } from 'next'
+import Link from 'next/link'
+import { createClient } from '@/utils/supabase/server'
+import EditorialHero from '@/components/Editorial/EditorialHero'
+import EditorialLayout, { Note, PullQuote } from '@/components/Editorial/EditorialLayout'
+import DoorwayCalculator, { type CalculatorProduct } from './DoorwayCalculator'
+import FitCheckForm from './FitCheckForm'
 
 export const metadata: Metadata = {
   alternates: { canonical: '/size-guide' },
   title: 'Sofa Size & Measurement Guide',
-  description: 'Ensure your perfect sofa fits perfectly. Use our measurement guide or submit your home dimensions for a complimentary fit check.',
-};
+  description:
+    'Work out whether a sofa will fit through your door before you order. A doorway calculator, how to measure, and a free fit check from our delivery team.',
+}
 
-export default function SizeGuidePage() {
+const TOC = [
+  { id: 'calculator', label: 'Doorway calculator' },
+  { id: 'measuring', label: 'How to measure' },
+  { id: 'doors', label: 'Doors and entrances' },
+  { id: 'hallways', label: 'Hallways and corners' },
+  { id: 'room', label: 'The room itself' },
+  { id: 'fit-check', label: 'Ask for a fit check' },
+]
+
+export default async function SizeGuidePage() {
+  const supabase = await createClient()
+
+  const { data } = await supabase
+    .from('products')
+    .select(`
+      title,
+      slug,
+      size_label,
+      specifications,
+      categories!products_category_id_fkey ( slug )
+    `)
+    .eq('is_active', true)
+    .order('title')
+
+  const one = <T,>(v: T | T[] | null | undefined): T | null =>
+    Array.isArray(v) ? (v[0] ?? null) : (v ?? null)
+
+  const products: CalculatorProduct[] = (data ?? []).map(p => {
+    const category = one(p.categories)
+    const specs = (p.specifications ?? {}) as Record<string, unknown>
+    return {
+      title: p.title,
+      href: `/shop/${category?.slug ?? 'all'}/${p.slug}`,
+      sizeLabel: p.size_label ?? null,
+      dimensions: typeof specs.dimensions === 'string' ? specs.dimensions : '',
+    }
+  })
+
   return (
-    <div className="min-h-screen bg-[#f8f6f2]">
-      
-      {/* ════ HERO SECTION ════ */}
-      <div className="bg-[#0c0c0b] border-b-2" style={{ borderColor: ACCENT }}>
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
-          <div className="text-[10px] uppercase tracking-[0.2em] font-bold mb-4" style={{ color: ACCENT }}>
-            Complimentary Service
-          </div>
-          <h1 className="font-playfair text-4xl md:text-6xl font-bold text-white leading-tight mb-6">
-            Will It Fit?
-          </h1>
-          <p className="text-white/60 max-w-xl text-lg leading-relaxed">
-            There is nothing worse than your dream sofa getting stuck in the hallway. Follow our measurement guide below, or send us your dimensions and our experts will verify the fit for you.
+    <div className="min-h-screen bg-calico-50">
+      <EditorialHero
+        eyebrow="Before you order"
+        title="Will it fit?"
+        lede="There is nothing worse than a sofa stuck in the hallway. Measure once, here, and we will tell you what goes in."
+        breadcrumb={[{ label: 'Home', href: '/' }]}
+      />
+
+      <EditorialLayout toc={TOC}>
+        <p>
+          Almost every delivery that goes wrong goes wrong at the front door, and almost all of
+          those were preventable with a tape measure and two minutes. This page is those two
+          minutes.
+        </p>
+
+        <h2 id="calculator">Start with the doorway</h2>
+        <p>
+          A sofa does not go through a door the way it sits in a room. It goes through on its
+          side, so the measurement that decides everything is not the length — it is the
+          cross-section, the smaller of the depth and the height.
+        </p>
+
+        <DoorwayCalculator products={products} />
+
+        <h2 id="measuring">How to measure</h2>
+        <p>
+          Three measurements, in the order the sofa meets them. Write them down as you go; you
+          will want them again when you talk to us.
+        </p>
+
+        <h3 id="doors">1. Doors and entrances</h3>
+        <p>
+          Open the door as wide as it goes and measure the <strong>narrowest point</strong> — from
+          the inside of the frame to the face of the open door, not the frame’s outer width. That
+          door leaf takes 40 to 50mm off the opening and it is the single most common reason a
+          measurement turns out to be optimistic. Measure the height of the frame too.
+        </p>
+        <p>
+          If the door lifts off its hinges, say so when you talk to us. It changes the answer more
+          than anything else on this page.
+        </p>
+
+        <h3 id="hallways">2. Hallways and corners</h3>
+        <p>
+          Measure the width of the hallway, noting anything that sticks out: radiators, skirting,
+          a meter cupboard, a light fitting at head height. Then find the turns. A straight run is
+          rarely the problem — the pivot at the bottom of the stairs usually is.
+        </p>
+        <p>
+          For a corner, what matters is the diagonal clearance: the space a long box needs to
+          swing through ninety degrees. If the hallway narrows at that exact point, that is where
+          it will stop.
+        </p>
+
+        <h3 id="room">3. The room itself</h3>
+        <p>
+          Mark the sofa’s footprint on the floor with masking tape or newspaper before you order.
+          It is a five-minute job and it settles the argument. Check you can still walk around it,
+          open the doors fully, reach the sockets, and draw the curtains.
+        </p>
+
+        <PullQuote>
+          Measure the narrowest point of the open doorway, not the frame. The door itself takes
+          two inches, and two inches is usually the whole argument.
+        </PullQuote>
+
+        <Note title="The legs come off">
+          <p>
+            Our sofas arrive in pieces and the feet unscrew, which takes around 10cm off the
+            height and makes a great many of them fit through a standard UK doorway that they
+            would not clear assembled. If the calculator says a sofa is tight, this is usually why
+            it still goes in.
           </p>
+        </Note>
+
+        <h2 id="fit-check">Ask us to check it for you</h2>
+        <p>
+          Send us your measurements and we will work through them with you — including the bits
+          that are hard to judge from a tape measure, like whether a turn is genuinely tight or
+          just looks it. It costs nothing and we would far rather do it now than on delivery day.
+        </p>
+
+        <div className="my-8 rounded-md border border-calico-300 bg-calico-100 p-5 sm:p-7">
+          <FitCheckForm />
         </div>
-      </div>
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24">
-          
-          {/* ════ LEFT COLUMN: HOW TO MEASURE ════ */}
-          <div>
-            <h2 className="font-playfair text-3xl font-bold text-[#1c1917] mb-8">
-              How to Measure
-            </h2>
-            
-            <div className="space-y-8">
-              {/* Step 1 */}
-              <div className="flex gap-5">
-                <div className="shrink-0 w-12 h-12 rounded-full flex items-center justify-center bg-white border border-[#e7e5e4] shadow-sm">
-                  <DoorOpen className="w-5 h-5" style={{ color: ACCENT }} />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-[#1c1917] mb-2">1. Front Doors & Entrances</h3>
-                  <p className="text-[#57534e] text-sm leading-relaxed">
-                    Open your door as wide as possible. Measure the narrowest point of the doorway (from the inside of the frame to the edge of the door). Don&apos;t forget to check the height of the door frame too.
-                  </p>
-                </div>
-              </div>
-
-              {/* Step 2 */}
-              <div className="flex gap-5">
-                <div className="shrink-0 w-12 h-12 rounded-full flex items-center justify-center bg-white border border-[#e7e5e4] shadow-sm">
-                  <ArrowDownToLine className="w-5 h-5" style={{ color: ACCENT }} />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-[#1c1917] mb-2">2. Hallways & Tight Corners</h3>
-                  <p className="text-[#57534e] text-sm leading-relaxed">
-                    Measure the width of your hallway, taking note of any radiators, skirting boards, or light fixtures that stick out. If there is a corner, measure the clearance space needed to pivot a large box.
-                  </p>
-                </div>
-              </div>
-
-              {/* Step 3 */}
-              <div className="flex gap-5">
-                <div className="shrink-0 w-12 h-12 rounded-full flex items-center justify-center bg-white border border-[#e7e5e4] shadow-sm">
-                  <Maximize className="w-5 h-5" style={{ color: ACCENT }} />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-[#1c1917] mb-2">3. The Final Room</h3>
-                  <p className="text-[#57534e] text-sm leading-relaxed">
-                    Map out the footprint of the sofa on your floor using masking tape or newspaper. Ensure there is enough room to walk around it and that it doesn&apos;t block doors, windows, or plug sockets.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-12 bg-white p-6 rounded-2xl border border-[#e7e5e4] shadow-sm flex items-start gap-4">
-              <Ruler className="w-8 h-8 shrink-0 mt-1" style={{ color: ACCENT }} />
-              <div>
-                <h4 className="font-bold text-[#1c1917] mb-1">Pro Tip</h4>
-                <p className="text-[#57534e] text-sm">
-                  Our sofas usually come in pieces, and the legs are removable! This makes them surprisingly easy to fit through standard UK doorways.
-                </p>
-              </div>
-            </div>
-          </div>
-
-
-          {/* ════ RIGHT COLUMN: DIMENSION SUBMISSION FORM ════ */}
-          <div>
-            <div className="bg-white rounded-3xl p-8 md:p-10 shadow-lg border border-[#e7e5e4]">
-              <div className="mb-8">
-                <h2 className="font-playfair text-2xl font-bold text-[#1c1917] mb-2">
-                  Request a Fit Check
-                </h2>
-                <p className="text-[#57534e] text-sm">
-                  Fill out the details below. Our delivery experts will review your dimensions and confirm if your chosen sofa will fit safely.
-                </p>
-              </div>
-
-              {/* NOTE: You can wire this form up to your existing contact action later */}
-              <form className="space-y-5">
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-[#a8a29e] uppercase tracking-wider">Your Name</label>
-                    <input type="text" required className="w-full bg-[#f8f6f2] border border-[#e7e5e4] rounded-xl p-3.5 text-sm outline-none focus:border-[#d4871a] transition" placeholder="John Doe" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-[#a8a29e] uppercase tracking-wider">Email Address</label>
-                    <input type="email" required className="w-full bg-[#f8f6f2] border border-[#e7e5e4] rounded-xl p-3.5 text-sm outline-none focus:border-[#d4871a] transition" placeholder="john@example.com" />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-[#a8a29e] uppercase tracking-wider">Which Sofa are you looking at?</label>
-                  <input type="text" className="w-full bg-[#f8f6f2] border border-[#e7e5e4] rounded-xl p-3.5 text-sm outline-none focus:border-[#d4871a] transition" placeholder="e.g. The Cloud Corner Sofa" />
-                </div>
-
-                <div className="pt-4 pb-2 border-b border-[#f5f5f4]">
-                  <h3 className="font-bold text-[#1c1917] text-sm">Your Dimensions (in cm)</h3>
-                </div>
-
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-[#a8a29e] uppercase tracking-wider">Door Width</label>
-                    <input type="number" className="w-full bg-[#f8f6f2] border border-[#e7e5e4] rounded-xl p-3 text-sm outline-none focus:border-[#d4871a] transition" placeholder="e.g. 80" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-[#a8a29e] uppercase tracking-wider">Hallway Width</label>
-                    <input type="number" className="w-full bg-[#f8f6f2] border border-[#e7e5e4] rounded-xl p-3 text-sm outline-none focus:border-[#d4871a] transition" placeholder="e.g. 100" />
-                  </div>
-                  <div className="space-y-2 col-span-2 md:col-span-1">
-                    <label className="text-[10px] font-bold text-[#a8a29e] uppercase tracking-wider">Ceiling Height</label>
-                    <input type="number" className="w-full bg-[#f8f6f2] border border-[#e7e5e4] rounded-xl p-3 text-sm outline-none focus:border-[#d4871a] transition" placeholder="e.g. 240" />
-                  </div>
-                </div>
-
-                <div className="space-y-2 pt-2">
-                  <label className="text-xs font-bold text-[#a8a29e] uppercase tracking-wider">Any obstacles? (Stairs, tight corners?)</label>
-                  <textarea rows={3} className="w-full bg-[#f8f6f2] border border-[#e7e5e4] rounded-xl p-3.5 text-sm outline-none focus:border-[#d4871a] transition resize-none" placeholder="Let us know if you live in a flat or have a winding staircase..."></textarea>
-                </div>
-
-                <button 
-                  type="button" 
-                  className="w-full flex items-center justify-center gap-2 bg-[#1c1917] text-white py-4 rounded-xl font-bold shadow-md hover:bg-black active:scale-[0.98] transition mt-4"
-                >
-                  Submit Dimensions <ArrowRight className="w-4 h-4" />
-                </button>
-
-              </form>
-            </div>
-          </div>
-
-        </div>
-      </div>
+        <p className="fine">
+          Prefer to talk? Call <a href="tel:+447476616022">07476 616022</a>, Mon–Fri 9am–6pm and
+          Sat 10am–4pm, or <Link href="/contact">send us a message</Link>.
+        </p>
+      </EditorialLayout>
     </div>
-  );
+  )
 }

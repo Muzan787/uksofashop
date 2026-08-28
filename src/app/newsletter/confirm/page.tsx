@@ -8,7 +8,8 @@ import Link from 'next/link'
 import { CheckCircle, AlertCircle, Mail, ArrowRight } from 'lucide-react'
 import { confirmNewsletter } from '@/app/actions/newsletter-confirm'
 
-const ACCENT = '#d4871a'
+const ACCENT = 'var(--color-ember-500)'      // fills: buttons, rules, icons, badges
+const ACCENT_TEXT = 'var(--color-ember-700)' // letterforms on a light ground
 
 export const metadata: Metadata = {
   title: 'Confirm your subscription',
@@ -19,8 +20,8 @@ type SearchParams = Promise<{ token?: string; status?: string }>
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ minHeight: '70vh', background: '#f8f6f2', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 16px' }}>
-      <div style={{ maxWidth: 480, width: '100%', background: '#fff', borderRadius: 14, border: '1px solid #f0ede8', padding: '32px 28px', textAlign: 'center' }}>
+    <div style={{ minHeight: '70vh', background: 'var(--color-calico-50)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px 16px' }}>
+      <div style={{ maxWidth: 480, width: '100%', background: 'var(--color-calico-50)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-calico-300)', padding: '32px 24px', textAlign: 'center' }}>
         {children}
       </div>
     </div>
@@ -28,19 +29,19 @@ function Shell({ children }: { children: React.ReactNode }) {
 }
 
 function Icon({ ok, neutral }: { ok?: boolean; neutral?: boolean }) {
-  const bg = neutral ? '#fef9f0' : ok ? '#f0fdf4' : '#fef2f2'
-  const bd = neutral ? `${ACCENT}33` : ok ? '#16a34a33' : '#dc262633'
+  const bg = neutral ? 'var(--color-calico-100)' : ok ? 'var(--color-sage-50)' : 'var(--color-rust-50)'
+  const bd = neutral ? `${ACCENT}33` : ok ? 'color-mix(in srgb, var(--color-sage-700) 20%, transparent)' : 'color-mix(in srgb, var(--color-rust-700) 20%, transparent)'
   const Cmp = neutral ? Mail : ok ? CheckCircle : AlertCircle
-  const col = neutral ? ACCENT : ok ? '#16a34a' : '#dc2626'
+  const col = neutral ? ACCENT : ok ? 'var(--color-sage-700)' : 'var(--color-rust-700)'
   return (
-    <div style={{ width: 56, height: 56, borderRadius: '50%', margin: '0 auto 18px', background: bg, border: `1px solid ${bd}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{ width: 56, height: 56, borderRadius: 'var(--radius-pill)', margin: '0 auto 16px', background: bg, border: `1px solid ${bd}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <Cmp style={{ width: 26, height: 26, color: col }} />
     </div>
   )
 }
 
-const H1: React.CSSProperties = { fontSize: 24, fontWeight: 700, color: '#1c1917', marginBottom: 10 }
-const P: React.CSSProperties = { fontSize: 14, color: '#57534e', lineHeight: 1.75, marginBottom: 24 }
+const H1: React.CSSProperties = { fontSize: 'var(--text-h2)', fontWeight: 700, color: 'var(--color-ink-900)', marginBottom: 12 }
+const P: React.CSSProperties = { fontSize: 'var(--text-body-sm)', color: 'var(--color-ink-500)', lineHeight: 1.75, marginBottom: 24 }
 
 export default async function NewsletterConfirmPage(props: { searchParams: SearchParams }) {
   const { token, status } = await props.searchParams
@@ -71,9 +72,9 @@ export default async function NewsletterConfirmPage(props: { searchParams: Searc
     return (
       <Shell>
         <Icon ok={ok} />
-        <h1 className="font-playfair" style={H1}>{c.title}</h1>
+        <h1 className="font-display" style={H1}>{c.title}</h1>
         <p style={P}>{c.body}</p>
-        <Link href="/shop/all" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: ACCENT, color: '#fff', padding: '11px 20px', borderRadius: 8, fontSize: 12, fontWeight: 700, textDecoration: 'none', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+        <Link href="/shop/all" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: ACCENT, color: 'var(--color-ink-900)', padding: '12px 16px', borderRadius: 'var(--radius-sm)', fontFamily: 'var(--font-data)', fontSize: 'var(--text-eyebrow)', fontWeight: 700, textDecoration: 'none', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
           Browse Sofas <ArrowRight style={{ width: 12, height: 12 }} />
         </Link>
       </Shell>
@@ -85,12 +86,12 @@ export default async function NewsletterConfirmPage(props: { searchParams: Searc
     return (
       <Shell>
         <Icon />
-        <h1 className="font-playfair" style={H1}>That link didn’t work</h1>
+        <h1 className="font-display" style={H1}>That link didn’t work</h1>
         <p style={P}>
           This confirmation link looks incomplete. Try opening it again from your email,
           or sign up afresh from the bottom of any page.
         </p>
-        <Link href="/" style={{ fontSize: 12, color: ACCENT, fontWeight: 700, textDecoration: 'none' }}>Back to the shop</Link>
+        <Link href="/" style={{ fontSize: 'var(--text-caption)', color: ACCENT_TEXT, fontWeight: 700, textDecoration: 'none' }}>Back to the shop</Link>
       </Shell>
     )
   }
@@ -98,7 +99,7 @@ export default async function NewsletterConfirmPage(props: { searchParams: Searc
   return (
     <Shell>
       <Icon neutral />
-      <h1 className="font-playfair" style={H1}>One last tap</h1>
+      <h1 className="font-display" style={H1}>One last tap</h1>
       <p style={P}>
         Press the button below to confirm you&apos;d like our occasional emails about new
         arrivals and offers. If you didn&apos;t sign up, simply close this page — nothing
@@ -108,7 +109,7 @@ export default async function NewsletterConfirmPage(props: { searchParams: Searc
         <input type="hidden" name="token" value={token} />
         <button
           type="submit"
-          style={{ width: '100%', background: ACCENT, color: '#fff', padding: '14px 20px', borderRadius: 8, fontSize: 13, fontWeight: 700, border: 'none', cursor: 'pointer', letterSpacing: '0.06em', textTransform: 'uppercase' }}
+          style={{ width: '100%', background: ACCENT, color: 'var(--color-ink-900)', padding: '16px 16px', borderRadius: 'var(--radius-sm)', fontFamily: 'var(--font-data)', fontSize: 'var(--text-eyebrow)', fontWeight: 700, border: 'none', cursor: 'pointer', letterSpacing: '0.06em', textTransform: 'uppercase' }}
         >
           Confirm my subscription
         </button>
