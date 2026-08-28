@@ -49,16 +49,19 @@ export default function ActiveFilterChips({ basePath, chips, sort }: Props) {
 
   return (
     <div className="mb-5 flex flex-wrap items-center gap-2">
-      <span className="eyebrow mr-1 text-ink-500">Filtered by</span>
+      <span className="eyebrow mr-1 flex items-center gap-2 text-ember-700">
+        <span aria-hidden="true" className="block h-px w-4 bg-ember-500" />
+        Filtered by
+      </span>
 
       {chips.map(chip => (
         <Link
           key={chip.keys.join('-')}
           href={hrefWithout(chip.keys)}
-          className="hover-btn inline-flex min-h-9 items-center gap-2 rounded-pill border border-calico-300 bg-calico-100 py-1 pl-3 pr-2.5 text-body-sm font-semibold text-ink-900 no-underline"
+          className="hover-btn inline-flex min-h-9 items-center gap-2 rounded-pill border border-ember-500/35 bg-ember-50 py-1 pl-3.5 pr-2.5 text-body-sm font-semibold text-ember-700 no-underline shadow-e1"
         >
           {chip.label}
-          <X aria-hidden="true" className="h-3.5 w-3.5 text-ink-500" />
+          <X aria-hidden="true" className="h-3.5 w-3.5 text-ember-700/70" />
           <span className="sr-only">— remove this filter</span>
         </Link>
       ))}

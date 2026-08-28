@@ -43,7 +43,7 @@ export default function SortSelect({ value }: { value: SortKey }) {
         id="sort"
         value={value}
         onChange={e => change(e.target.value)}
-        className="h-11 w-full appearance-none rounded-sm border border-calico-300 bg-calico-50 py-0 pl-3 pr-9 text-body-sm font-semibold text-ink-900 focus-ring-inset transition-colors duration-swift ease-out-expo focus:border-ember-700 sm:w-auto"
+        className="h-11 w-full appearance-none rounded-pill border border-calico-300 bg-calico-50 py-0 pl-4 pr-10 text-body-sm font-semibold text-ink-900 shadow-e1 focus-ring-inset transition-colors duration-swift ease-out-expo focus:border-ember-700 sm:w-auto"
       >
         {SORTS.map(key => (
           <option key={key} value={key}>{SORT_LABELS[key]}</option>
@@ -51,7 +51,7 @@ export default function SortSelect({ value }: { value: SortKey }) {
       </select>
       <ChevronDown
         aria-hidden="true"
-        className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-500"
+        className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ember-700"
       />
     </div>
   );

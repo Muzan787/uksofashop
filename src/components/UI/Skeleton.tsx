@@ -41,7 +41,11 @@ export default function Skeleton({ className = '' }: { className?: string }) {
 export function CardSkeleton() {
   return (
     <div className="w-full">
-      <Skeleton className="aspect-[4/5] w-full rounded-md" />
+      {/* Square, because the card is. These have to agree or the whole listing
+          jumps as the products arrive — which is exactly what happened when
+          the card moved to a square frame to match the photographs and this
+          was left at 4:5. */}
+      <Skeleton className="aspect-square w-full rounded-md" />
       <div className="mt-3">
         <Skeleton className="h-[15px] w-full rounded-sm" />
         <Skeleton className="mt-[7px] h-[15px] w-2/3 rounded-sm" />

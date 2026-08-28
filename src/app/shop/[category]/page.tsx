@@ -12,7 +12,6 @@ import {
   countMatchingProducts,
   parseSort,
   parsePrice,
-  SORT_LABELS,
   categoryPriceRange,
 } from './productQuery'
 import ProductGrid from './ProductGrid'
@@ -211,7 +210,7 @@ export default async function CategoryPage(props: { params: Params; searchParams
   )
 
   return (
-    <div className="min-h-screen bg-calico-50">
+    <div className="grad-calico grain-light relative min-h-screen bg-calico-50">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(breadcrumbLd) }} />
 
       <CategoryHero
@@ -225,10 +224,10 @@ export default async function CategoryPage(props: { params: Params; searchParams
       />
 
       {/* Main content */}
-      <div className="max-w-shell mx-auto px-4 py-8 pb-16">
+      <div className="relative mx-auto max-w-shell px-4 pb-12 pt-6 sm:px-6 lg:pb-16 lg:pt-8">
 
-        {/* BULLETPROOF GRID: Sidebar is exactly 200px, Product grid gets the remaining 1fr */}
-        <div className="grid grid-cols-1 lg:grid-cols-[200px_1fr] gap-6 lg:gap-8 items-start">
+        {/* Sidebar is exactly 220px, the grid takes the remaining 1fr. */}
+        <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[220px_1fr] lg:gap-8">
 
           <div className="w-full">
             <Suspense fallback={<FilterSidebarSkeleton />}>
@@ -246,11 +245,24 @@ export default async function CategoryPage(props: { params: Params; searchParams
           <div className="w-full min-w-0">
             {/* Sort sits with the results rather than with the filters: it
                 does not change WHICH sofas are shown, and putting it inside
-                the filter sheet would hide it from everyone on a phone. */}
-            <div className="mb-5 flex items-center justify-between gap-4">
-              <p className="m-0 font-data text-caption tabular-nums text-ink-500">
-                {SORT_LABELS[sort]}
-              </p>
+                the filter sheet would hide it from everyone on a phone.
+
+                The caption used to print SORT_LABELS[sort] — the same words
+                the select next to it already displayed, twice on one row. It
+                carries the section mark instead, so the controls row is
+                anchored the way every other heading on the site is. */}
+            <div className="mb-4 flex items-end justify-between gap-4 lg:mb-5">
+              <span className="min-w-0 flex-1">
+                <span className="eyebrow m-0 flex items-center gap-2.5 text-ember-700">
+                  <span aria-hidden="true" className="block h-px w-5 bg-ember-500" />
+                  Sort
+                </span>
+                <span
+                  aria-hidden="true"
+                  className="mt-2.5 block h-px w-full"
+                  style={{ backgroundImage: 'var(--grad-rule)', opacity: 0.4 }}
+                />
+              </span>
               <SortSelect value={sort} />
             </div>
 

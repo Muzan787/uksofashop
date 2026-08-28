@@ -53,7 +53,10 @@ export default function CategoryHero({
   title, slug, image, count, priceFrom, priceTo, siblings,
 }: Props) {
   return (
-    <section className="relative isolate h-[44vh] min-h-[320px] overflow-hidden bg-ink-900">
+    <section
+      data-ground="dark"
+      className="grain relative isolate h-[38vh] min-h-[280px] overflow-hidden bg-ink-900 lg:h-[44vh] lg:min-h-[320px]"
+    >
       {image && (
         // Oversized by 12% on every edge: the drift is ±10% of the frame's own
         // height, and without the overflow it would show the frame's edge at
@@ -75,24 +78,35 @@ export default function CategoryHero({
       <span aria-hidden="true" className="absolute inset-0 -z-10 bg-gradient-to-t from-ink-900 via-ink-900/70 to-ink-900/40" />
       <span aria-hidden="true" className="absolute inset-0 -z-10 bg-gradient-to-r from-ink-900 via-ink-900/60 to-transparent" />
 
+      {/* The same lighting as the homepage hero and the product stage. Warm and
+          low only: the indigo wash belongs to the one cool section on the
+          homepage, and a category header is not it. */}
+      <div aria-hidden="true" className="aurora -z-10">
+        <span className="aurora__warm" />
+        <span className="aurora__deep" />
+      </div>
+
       <div className="flex h-full flex-col">
         <div className="mx-auto flex w-full max-w-shell flex-1 flex-col justify-center px-4 sm:px-6">
-          <nav aria-label="Breadcrumb">
-            <ol className="m-0 flex list-none flex-wrap items-center gap-2 p-0">
+          {/* One line that scrolls, not a wrapping trail. A long category name
+              at the end of it took two rows on a phone, above a header that is
+              already competing for the first screen. */}
+          <nav aria-label="Breadcrumb" className="no-scrollbar -mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+            <ol className="m-0 flex list-none flex-nowrap items-center gap-2 whitespace-nowrap p-0">
               {[
                 { href: '/', label: 'Home' },
                 { href: '/shop/all', label: 'Shop' },
               ].map(({ href, label }, i) => (
                 <li key={href} className="flex items-center gap-2">
-                  {i > 0 && <ChevronRight aria-hidden="true" className="h-3 w-3 text-calico-50/40" />}
-                  <Link href={href} className="hover-link font-data text-[12px] tracking-[0.06em] text-calico-50/70 no-underline">
+                  {i > 0 && <ChevronRight aria-hidden="true" className="h-3 w-3 shrink-0 text-calico-50/40" />}
+                  <Link href={href} className="hover-link font-data text-caption tracking-[0.06em] text-calico-50/70 no-underline">
                     {label}
                   </Link>
                 </li>
               ))}
-              <li className="flex items-center gap-2">
-                <ChevronRight aria-hidden="true" className="h-3 w-3 text-calico-50/40" />
-                <span aria-current="page" className="font-data text-[12px] font-semibold tracking-[0.06em] text-ember-300">
+              <li className="flex items-center gap-2 pr-4">
+                <ChevronRight aria-hidden="true" className="h-3 w-3 shrink-0 text-calico-50/40" />
+                <span aria-current="page" className="font-data text-caption font-semibold tracking-[0.06em] text-ember-300">
                   {title}
                 </span>
               </li>
@@ -106,7 +120,16 @@ export default function CategoryHero({
             className="m-0 mt-4 font-display text-display-l font-semibold text-calico-50"
           />
 
-          <p className="m-0 mt-4 font-data text-data tabular-nums text-calico-300">
+          {/* The category, as a specification: an ember-led rule over a mono
+              figure. It is the mark the homepage figures band, the section
+              headings and the footer columns all carry, and it is what ties a
+              listing header to the rest of the site. */}
+          <span aria-hidden="true" className="mt-5 flex w-full max-w-[22rem]">
+            <span className="block h-px w-8 bg-ember-500" />
+            <span className="block h-px flex-1 bg-calico-50/20" />
+          </span>
+
+          <p className="m-0 mt-3 font-data text-data tabular-nums text-calico-300">
             {summarise(count, priceFrom, priceTo)}
           </p>
         </div>
@@ -124,10 +147,10 @@ export default function CategoryHero({
                     <Link
                       href={`/shop/${encodeURIComponent(sib.slug)}`}
                       aria-current={active ? 'page' : undefined}
-                      className={`hover-btn inline-flex min-h-11 items-center rounded-pill border px-4 py-2 text-body-sm font-semibold no-underline transition-colors duration-swift ease-out-expo ${
+                      className={`hover-btn inline-flex min-h-11 items-center rounded-pill px-4 py-2 text-body-sm font-semibold no-underline transition-colors duration-swift ease-out-expo ${
                         active
-                          ? 'border-ember-500 bg-ember-500 text-ink-900'
-                          : 'border-calico-50/25 text-calico-50 hover:border-calico-50/60'
+                          ? 'btn-ember shadow-ember border border-ember-500 bg-ember-500 text-ink-900'
+                          : 'hover-btn-dark glass-dark-panel text-calico-50'
                       }`}
                     >
                       {sib.name}

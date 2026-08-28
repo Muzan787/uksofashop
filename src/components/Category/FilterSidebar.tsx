@@ -131,10 +131,10 @@ export default function FilterSidebar({
         onClick={() => setOpen(true)}
         aria-expanded={open}
         aria-haspopup="dialog"
-        className={`mb-4 flex h-12 w-full items-center justify-center gap-2 rounded-sm border text-body-sm font-semibold transition-colors duration-swift ease-out-expo lg:hidden ${
+        className={`hover-btn mb-4 flex h-12 w-full items-center justify-center gap-2 rounded-pill border text-body-sm font-semibold transition-colors duration-swift ease-out-expo lg:hidden ${
           activeCount
-            ? 'border-ember-500 bg-ember-500/10 text-ember-700'
-            : 'border-calico-300 bg-calico-50 text-ink-700'
+            ? 'border-ember-500 bg-ember-500/10 text-ember-700 shadow-e1'
+            : 'border-calico-300 bg-calico-50 text-ink-700 shadow-e1'
         }`}
       >
         <SlidersHorizontal aria-hidden="true" className="h-4 w-4" />
@@ -161,7 +161,7 @@ export default function FilterSidebar({
                 <button
                   type="button"
                   onClick={clearAll}
-                  className="hover-btn h-12 shrink-0 rounded-sm border border-calico-300 px-4 text-body-sm font-semibold text-ink-700"
+                  className="hover-btn h-12 shrink-0 rounded-pill border border-calico-300 px-5 text-body-sm font-semibold text-ink-700"
                 >
                   Clear
                 </button>
@@ -172,7 +172,7 @@ export default function FilterSidebar({
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="hover-btn h-12 flex-1 rounded-sm bg-ember-500 text-body-sm font-bold text-ink-900"
+                className="hover-btn btn-ember shadow-ember h-12 flex-1 rounded-pill bg-ember-500 text-body-sm font-bold text-ink-900"
               >
                 {resultCount === 0
                   ? 'No sofas match'
@@ -187,17 +187,27 @@ export default function FilterSidebar({
 
       {/* ── The desktop sidebar ──────────────────────────────────────────── */}
       <aside className="hidden lg:block">
-        <div className="mb-4 flex items-center justify-between">
-          <span className="eyebrow text-ember-700">Filters</span>
-          {activeCount > 0 && (
-            <button
-              type="button"
-              onClick={clearAll}
-              className="hover-link text-caption text-ink-500"
-            >
-              Clear all
-            </button>
-          )}
+        <div className="mb-5">
+          <div className="flex items-center justify-between gap-3">
+            <span className="eyebrow flex items-center gap-2.5 text-ember-700">
+              <span aria-hidden="true" className="block h-px w-5 bg-ember-500" />
+              Filters
+            </span>
+            {activeCount > 0 && (
+              <button
+                type="button"
+                onClick={clearAll}
+                className="hover-link text-caption text-ink-500"
+              >
+                Clear all
+              </button>
+            )}
+          </div>
+          <span
+            aria-hidden="true"
+            className="mt-2.5 block h-px w-full"
+            style={{ backgroundImage: 'var(--grad-rule)', opacity: 0.4 }}
+          />
         </div>
         {controls}
       </aside>

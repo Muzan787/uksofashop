@@ -42,10 +42,23 @@ export default async function CategoryFilters({
   // specifications is a free-form jsonb column, so `style` genuinely might not
   // be there. Narrowing to Record<string, unknown> keeps the optional access
   // honest without claiming a shape the database does not enforce.
+  //
+  // THE KEY IS MATCHED CASE-INSENSITIVELY, and that is not defensive coding —
+  // it is what the data actually looks like. 25 of the 26 live products spell
+  // it "Style" and exactly one spells it "style". Reading only the lowercase
+  // key meant the Style facet was built from that single product: the sidebar
+  // offered one option nobody wanted, every real style was invisible, and
+  // picking the one on offer excluded the other 25 rows because their `style`
+  // read as undefined.
+  //
+  // The product page already does the same thing for the neighbouring key
+  // (`specs.dimensions ?? specs.Dimensions`), so the inconsistency was known —
+  // this file just never got the same treatment.
   const specStyle = (specs: unknown): string | undefined => {
     if (!specs || typeof specs !== 'object') return undefined
-    const value = (specs as Record<string, unknown>).style
-    return typeof value === 'string' ? value : undefined
+    const entry = Object.entries(specs as Record<string, unknown>)
+      .find(([key]) => key.toLowerCase() === 'style')
+    return typeof entry?.[1] === 'string' ? entry[1] : undefined
   }
 
   const notEmpty = (v: string | null | undefined): v is string => Boolean(v)
