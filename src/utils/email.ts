@@ -595,3 +595,106 @@ export async function sendReviewRequest(
     html: generateEmailHTML(content),
   })
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  FREE FABRIC SAMPLES
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface SwatchLine {
+  code: string
+  name: string
+  collection: string
+}
+
+/** The codes as one line, which is the whole picking list: "CH04, PL17, MB08". */
+const swatchCodes = (items: SwatchLine[]) => items.map(i => i.code).join(', ')
+
+const swatchRows = (items: SwatchLine[]) =>
+  items
+    .map(
+      i => `
+      <tr>
+        <td style="padding: 10px 0; border-bottom: 1px solid #e7e5e4; color: #1c1917; font-weight: 600;">${esc(i.collection)} ${esc(i.name)}</td>
+        <td style="padding: 10px 0; border-bottom: 1px solid #e7e5e4; text-align: right; color: #78716c; font-family: monospace;">${esc(i.code)}</td>
+      </tr>`,
+    )
+    .join('')
+
+export async function sendSwatchConfirmation(
+  email: string,
+  name: string,
+  items: SwatchLine[],
+) {
+  const content = `
+    <div style="text-align: left;">
+      <h2 style="margin: 0 0 16px 0; font-size: 22px; color: #1c1917;">Your samples are on their way</h2>
+      <p style="margin: 0 0 20px 0; color: #57534e; line-height: 1.6;">
+        Thanks ${esc(name)} — we're putting these in the post to you. There's nothing to pay
+        and nothing to send back.
+      </p>
+
+      <table style="width: 100%; border-collapse: collapse; margin: 24px 0;">
+        ${swatchRows(items)}
+      </table>
+
+      <p style="margin: 0 0 20px 0; color: #57534e; line-height: 1.6;">
+        Screens can't be trusted with colour, which is exactly why we send these. Hold them
+        against your own walls and floor, in daylight and at night, before you decide.
+      </p>
+
+      <div style="background-color: #fefaf3; padding: 16px; border-radius: 8px; border: 1px solid #f3e2c7;">
+        <p style="margin: 0; color: #57534e; line-height: 1.6; font-size: 14px;">
+          Once you've chosen, we build the sofa to order in that fabric. Give us a ring on
+          ${esc(PHONE_DISPLAY)} or just reply to this email and we'll take it from there.
+        </p>
+      </div>
+    </div>
+  `
+
+  await transporter.sendMail({
+    from: sender(),
+    to: email,
+    subject: 'Your free fabric samples',
+    html: generateEmailHTML(content),
+  })
+}
+
+export async function sendAdminSwatchNotification(
+  name: string,
+  email: string,
+  phone: string,
+  postcode: string,
+  address: string,
+  items: SwatchLine[],
+) {
+  const content = `
+    <div style="text-align: left;">
+      <h2 style="margin: 0 0 4px 0; font-size: 22px; color: #1c1917;">Swatch request</h2>
+      <p style="margin: 0 0 24px 0; color: #78716c; font-size: 14px;">Pull these and post them.</p>
+
+      <div style="background-color: #1c1917; padding: 20px; border-radius: 8px; margin: 0 0 24px 0; text-align: center;">
+        <p style="margin: 0 0 6px 0; color: #a8a29e; font-size: 12px; text-transform: uppercase; letter-spacing: 2px;">Picking list</p>
+        <p style="margin: 0; color: #ffffff; font-size: 24px; font-family: monospace; letter-spacing: 2px;">${esc(swatchCodes(items))}</p>
+      </div>
+
+      <table style="width: 100%; border-collapse: collapse; margin: 0 0 24px 0;">
+        ${swatchRows(items)}
+      </table>
+
+      <div style="background-color: #fafaf9; padding: 20px; border-radius: 8px; border: 1px solid #e7e5e4;">
+        <p style="margin: 0 0 8px 0; color: #78716c;"><strong>Name:</strong> ${esc(name)}</p>
+        <p style="margin: 0 0 8px 0; color: #78716c;"><strong>Email:</strong> <a href="mailto:${esc(email)}" style="color: #2563eb;">${esc(email)}</a></p>
+        <p style="margin: 0 0 8px 0; color: #78716c;"><strong>Phone:</strong> ${esc(phone) || 'Not given'}</p>
+        <p style="margin: 0; color: #78716c;"><strong>Post to:</strong> ${esc(address)}, ${esc(postcode)}</p>
+      </div>
+    </div>
+  `
+
+  await transporter.sendMail({
+    from: sender('UK Sofa Shop Swatches'),
+    to: MAIL_TO_ADMIN,
+    replyTo: email,
+    subject: `Swatches: ${esc(swatchCodes(items))} to ${esc(postcode)}`,
+    html: generateEmailHTML(content),
+  })
+}

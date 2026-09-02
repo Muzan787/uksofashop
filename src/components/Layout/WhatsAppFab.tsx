@@ -25,11 +25,16 @@ const COLLAPSE_AFTER = 2800;
  *
  * Two tests, because a bar can be inactive in two different ways:
  *
- *   `display` rather than offsetParent — the add-to-cart bar is `md:hidden`
- *   and the checkout bar `lg:hidden`, so both are still in the DOM on desktop
- *   with no layout box. offsetParent would have been the obvious check and it
- *   is always null for a fixed element, which would have read every bar as
- *   inactive at every width.
+ *   ITS RECTANGLE, not its computed `display`. Both bars are hidden by a
+ *   breakpoint — the add-to-cart bar is `md:hidden` on itself, but the
+ *   checkout bar sits inside an `lg:hidden` wrapper. Computed style is
+ *   resolved per element, so a bar whose PARENT is display:none still reports
+ *   `display: block` for itself, and reading that alone had the button
+ *   standing down on desktop checkout for a bar nobody could see. A rectangle
+ *   collapses to 0x0 anywhere in a hidden subtree, however far up it starts.
+ *
+ *   (offsetParent would have been the obvious check and is wrong twice over:
+ *   it is always null for a fixed element.)
  *
  *   `inert`, because the add-to-cart bar does not unmount when it is down. It
  *   translates off the bottom of the screen and marks itself inert, which is
@@ -39,7 +44,8 @@ function bottomBarShowing(): boolean {
   const bars = document.querySelectorAll<HTMLElement>('[data-bottom-bar]');
   for (const bar of bars) {
     if (bar.hasAttribute('inert')) continue;
-    if (getComputedStyle(bar).display === 'none') continue;
+    const rect = bar.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) continue;
     return true;
   }
   return false;

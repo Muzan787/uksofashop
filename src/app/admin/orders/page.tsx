@@ -70,6 +70,7 @@ export default async function AdminOrdersPage(props: { searchParams: SearchParam
       *,
       order_items (
         id, quantity, price_at_time_of_purchase,
+        fabric_code, fabric_name, fabric_collection,
         product_variants ( sku, color, products ( title ) )
       )
     `, { count: 'exact' })
@@ -129,6 +130,14 @@ export default async function AdminOrdersPage(props: { searchParams: SearchParam
                 )}
               </div>
               <StatusBadge status={order.status || 'pending_cod'} />
+              {/* Not a status of its own - see the note on orders.has_made_to_order.
+                  It is a reminder that this one needs a phone call before it is
+                  built, which the status machine has no opinion about. */}
+              {order.has_made_to_order && (
+                <span className="rounded-pill border border-amber-200 bg-amber-50 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-700 sm:text-xs">
+                  Call to confirm
+                </span>
+              )}
             </div>
 
             {/* Customer Details */}
@@ -210,6 +219,14 @@ export default async function AdminOrdersPage(props: { searchParams: SearchParam
                       <span className="text-stone-500 text-xs">
                         {item.product_variants?.color} • SKU: {item.product_variants?.sku}
                       </span>
+                      {/* What it actually gets built in. The code is the one
+                          the purchase order to R&S needs. */}
+                      {item.fabric_code && (
+                        <span className="mt-1 text-xs font-semibold text-amber-700">
+                          {item.fabric_collection} {item.fabric_name}
+                          <span className="ml-1 font-mono text-stone-400">{item.fabric_code}</span>
+                        </span>
+                      )}
                     </div>
                     <span className="font-medium text-stone-900">£{item.price_at_time_of_purchase.toFixed(2)}</span>
                   </div>

@@ -13,6 +13,8 @@ import { rateLimit, callerKey } from '@/utils/rateLimit'
 export interface CartItem {
   variant_id: string
   quantity: number
+  /** Made-to-order lines only. The database re-reads the name from this id. */
+  fabric_id?: string | null
 }
 
 const checkoutSchema = z.object({
@@ -35,6 +37,7 @@ const extrasSchema = z.object({
 const itemsSchema = z.array(z.object({
   variant_id: z.string().uuid(),
   quantity: z.number().int().min(1).max(99),
+  fabric_id: z.string().uuid().nullish(),
 })).min(1, 'Your cart is empty.')
 
 interface PlacedOrder {
@@ -94,6 +97,9 @@ export async function placeOrder(
     p_items: validatedItems.data.map(item => ({
       variant_id: item.variant_id,
       quantity: item.quantity,
+      // Just the id. The fabric's name and code are snapshotted onto the order
+      // by place_order, from the database's own row rather than the browser's.
+      fabric_id: item.fabric_id ?? null,
     })),
     p_expected_total: expectedTotal,
     p_delivery_floor: opts.floor,
@@ -114,6 +120,9 @@ export async function placeOrder(
     }
     if (message.includes('EMPTY_CART')) {
       return { error: 'Your cart is empty.' }
+    }
+    if (message.includes('UNAVAILABLE_FABRIC')) {
+      return { error: 'One of the fabrics in your basket is no longer available. Please choose another and try again.' }
     }
     return { error: 'We could not place your order. Please try again, or call us on 07476 616022.' }
   }

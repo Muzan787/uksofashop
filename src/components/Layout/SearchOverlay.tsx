@@ -199,24 +199,36 @@ export default function SearchOverlay({ open, onClose, categories, triggerRef }:
           on top of it — the same clipper-and-translate the mega menu uses, so
           the two overlays read as one family. */}
       <div
-        className={`h-full w-full bg-ink-900 transition-transform duration-base ease-in-out-quart ${
+        data-ground="dark"
+        className={`grad-ink grain relative isolate h-full w-full overflow-hidden bg-ink-900 transition-transform duration-base ease-in-out-quart ${
           open ? 'translate-y-0' : '-translate-y-full'
         }`}
       >
-        <span aria-hidden="true" className="block h-0.5 bg-ember-500" />
+        {/* The same lighting as every other dark surface on the site. */}
+        <div aria-hidden="true" className="aurora">
+          <span className="aurora__warm" />
+          <span className="aurora__deep" />
+        </div>
+
+        <span
+          aria-hidden="true"
+          className="relative block h-0.5"
+          style={{ backgroundImage: 'var(--grad-rule)' }}
+        />
 
         <button
           type="button"
           onClick={close}
           aria-label="Close search"
-          className="hover-icon-dark absolute right-4 top-5 grid h-11 w-11 place-items-center rounded-pill text-calico-50"
+          className="hover-icon-dark glass-dark-panel absolute right-4 top-5 z-raised grid h-11 w-11 place-items-center rounded-pill text-calico-50"
         >
           <X className="h-5 w-5" aria-hidden="true" />
         </button>
 
-        <div data-lenis-prevent className="mx-auto h-full max-w-[680px] overflow-y-auto px-5 pb-16 pt-20 sm:pt-28">
+        <div data-lenis-prevent className="relative mx-auto h-full max-w-[680px] overflow-y-auto px-5 pb-16 pt-20 sm:pt-28">
           {/* ── The field ── one line, no box, no icon inside it ──────────── */}
-          <label htmlFor="site-search" className="eyebrow mb-4 block text-ember-300">
+          <label htmlFor="site-search" className="eyebrow mb-4 flex items-center gap-2.5 text-ember-300">
+            <span aria-hidden="true" className="block h-px w-5 bg-ember-500" />
             Search
           </label>
           <div className="relative">
@@ -235,7 +247,7 @@ export default function SearchOverlay({ open, onClose, categories, triggerRef }:
               aria-autocomplete="list"
               className="focus-ring-inset w-full appearance-none rounded-sm border-0 bg-transparent pb-3 font-display text-[32px] font-semibold leading-tight text-calico-50 placeholder:text-calico-50/30 [&::-webkit-search-cancel-button]:hidden"
             />
-            <span aria-hidden="true" className="block h-px w-full bg-ember-500" />
+            <span aria-hidden="true" className="block h-px w-full" style={{ backgroundImage: 'var(--grad-rule)' }} />
           </div>
 
           {/* ── Nothing typed yet: recents, then popular categories ───────── */}
@@ -252,7 +264,7 @@ export default function SearchOverlay({ open, onClose, categories, triggerRef }:
                           onClick={() => setQuery(r)}
                           className="hover-icon-dark flex min-h-11 w-full items-center gap-3 rounded-sm px-2 text-left text-body text-calico-50"
                         >
-                          <Clock aria-hidden="true" className="h-4 w-4 shrink-0 text-ink-400" />
+                          <Clock aria-hidden="true" className="h-4 w-4 shrink-0 text-ember-300" />
                           {r}
                         </button>
                       </li>
@@ -270,7 +282,7 @@ export default function SearchOverlay({ open, onClose, categories, triggerRef }:
                         key={cat.id}
                         href={`/shop/${cat.slug}`}
                         onClick={onClose}
-                        className="rounded-pill border border-calico-50/15 px-4 py-2.5 text-body-sm text-calico-300 no-underline transition-colors duration-swift hover:border-ember-500 hover:text-calico-50"
+                        className="glass-dark-panel hover-btn hover-btn-dark rounded-pill px-4 py-2.5 text-body-sm text-calico-300 no-underline"
                       >
                         {cat.name}
                       </Link>
@@ -300,7 +312,7 @@ export default function SearchOverlay({ open, onClose, categories, triggerRef }:
                       } ${open ? 'translate-y-0 opacity-100' : 'translate-y-2 opacity-0'}`}
                       style={{ transitionDelay: `${Math.min(i, STAGGER_CAP - 1) * STAGGER_STEP * 1000}ms` }}
                     >
-                      <span className="relative h-14 w-14 shrink-0 overflow-hidden rounded-sm bg-calico-50/10">
+                      <span className="relative h-14 w-14 shrink-0 overflow-hidden rounded-md bg-calico-50/10">
                         {hit.image && (
                           <Image src={hit.image} alt="" fill sizes="56px" className="object-cover"
             placeholder="blur"

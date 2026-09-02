@@ -64,6 +64,92 @@ export type Database = {
           },
         ]
       }
+      fabric_collections: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          slug: string
+          sort: number
+          supplier: string
+          supplier_handle: string | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          slug: string
+          sort?: number
+          supplier?: string
+          supplier_handle?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          slug?: string
+          sort?: number
+          supplier?: string
+          supplier_handle?: string | null
+        }
+        Relationships: []
+      }
+      fabrics: {
+        Row: {
+          code: string
+          collection_id: string
+          created_at: string
+          hex: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean
+          is_swatchable: boolean
+          name: string
+          sort: number
+          supplier_title: string | null
+        }
+        Insert: {
+          code: string
+          collection_id: string
+          created_at?: string
+          hex?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          is_swatchable?: boolean
+          name: string
+          sort?: number
+          supplier_title?: string | null
+        }
+        Update: {
+          code?: string
+          collection_id?: string
+          created_at?: string
+          hex?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          is_swatchable?: boolean
+          name?: string
+          sort?: number
+          supplier_title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fabrics_collection_id_fkey"
+            columns: ["collection_id"]
+            isOneToOne: false
+            referencedRelation: "fabric_collections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       newsletter_subscribers: {
         Row: {
           confirm_token: string
@@ -111,6 +197,10 @@ export type Database = {
       }
       order_items: {
         Row: {
+          fabric_code: string | null
+          fabric_collection: string | null
+          fabric_id: string | null
+          fabric_name: string | null
           id: string
           order_id: string
           price_at_time_of_purchase: number
@@ -118,6 +208,10 @@ export type Database = {
           variant_id: string
         }
         Insert: {
+          fabric_code?: string | null
+          fabric_collection?: string | null
+          fabric_id?: string | null
+          fabric_name?: string | null
           id?: string
           order_id: string
           price_at_time_of_purchase: number
@@ -125,6 +219,10 @@ export type Database = {
           variant_id: string
         }
         Update: {
+          fabric_code?: string | null
+          fabric_collection?: string | null
+          fabric_id?: string | null
+          fabric_name?: string | null
           id?: string
           order_id?: string
           price_at_time_of_purchase?: number
@@ -132,6 +230,13 @@ export type Database = {
           variant_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "order_items_fabric_id_fkey"
+            columns: ["fabric_id"]
+            isOneToOne: false
+            referencedRelation: "fabrics"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "order_items_order_id_fkey"
             columns: ["order_id"]
@@ -172,6 +277,7 @@ export type Database = {
           purchase_event_id: string
           purchase_event_sent_at: string | null
           ga_client_id: string | null
+          has_made_to_order: boolean
           shipping_address: string
           special_instructions: string | null
           status: string | null
@@ -202,6 +308,7 @@ export type Database = {
           purchase_event_id?: string
           purchase_event_sent_at?: string | null
           ga_client_id?: string | null
+          has_made_to_order?: boolean
           shipping_address: string
           special_instructions?: string | null
           status?: string | null
@@ -232,6 +339,7 @@ export type Database = {
           purchase_event_id?: string
           purchase_event_sent_at?: string | null
           ga_client_id?: string | null
+          has_made_to_order?: boolean
           shipping_address?: string
           special_instructions?: string | null
           status?: string | null
@@ -446,6 +554,90 @@ export type Database = {
           },
         ]
       }
+      swatch_request_items: {
+        Row: {
+          fabric_code: string
+          fabric_collection: string
+          fabric_id: string | null
+          fabric_name: string
+          id: string
+          request_id: string
+        }
+        Insert: {
+          fabric_code: string
+          fabric_collection: string
+          fabric_id?: string | null
+          fabric_name: string
+          id?: string
+          request_id: string
+        }
+        Update: {
+          fabric_code?: string
+          fabric_collection?: string
+          fabric_id?: string | null
+          fabric_name?: string
+          id?: string
+          request_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "swatch_request_items_fabric_id_fkey"
+            columns: ["fabric_id"]
+            isOneToOne: false
+            referencedRelation: "fabrics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "swatch_request_items_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "swatch_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      swatch_requests: {
+        Row: {
+          created_at: string
+          customer_email: string
+          customer_ip: string | null
+          customer_name: string
+          customer_phone: string | null
+          customer_user_agent: string | null
+          id: string
+          postcode: string
+          posted_at: string | null
+          shipping_address: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          customer_email: string
+          customer_ip?: string | null
+          customer_name: string
+          customer_phone?: string | null
+          customer_user_agent?: string | null
+          id?: string
+          postcode: string
+          posted_at?: string | null
+          shipping_address: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          customer_email?: string
+          customer_ip?: string | null
+          customer_name?: string
+          customer_phone?: string | null
+          customer_user_agent?: string | null
+          id?: string
+          postcode?: string
+          posted_at?: string | null
+          shipping_address?: string
+          status?: string
+        }
+        Relationships: []
+      }
       variant_groups: {
         Row: {
           created_at: string | null
@@ -547,6 +739,19 @@ export type Database = {
       refresh_product_review_stats: {
         Args: { p_product_id: string }
         Returns: undefined
+      }
+      request_swatches: {
+        Args: {
+          p_customer_email: string
+          p_customer_name: string
+          p_customer_phone: string
+          p_fabric_ids: string[]
+          p_ip?: string
+          p_postcode: string
+          p_shipping_address: string
+          p_user_agent?: string
+        }
+        Returns: Json
       }
       track_order: {
         Args: { p_postcode: string; p_reference: string }

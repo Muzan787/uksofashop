@@ -7,6 +7,7 @@ import { productSchema, breadcrumbSchema, jsonLd } from '@/utils/schema';
 import { createClient } from '@/utils/supabase/server';
 import { deliveryWindow } from '@/utils/delivery';
 import ProductPageClient from '../../../../components/Product/ProductPageClient';
+import { getFabricLibrary } from '@/utils/fabrics';
 
 type Params = Promise<{ slug: string; category: string }>;
 // NEW: Define searchParams type to read the URL
@@ -274,6 +275,10 @@ export default async function ProductPage(props: { params: Params, searchParams:
   const crumbCategorySlug = primaryCat?.slug ?? decodeURIComponent(category)
   // Human-readable name in the trail, not the URL slug.
   const categoryName = primaryCat?.name ?? crumbCategorySlug
+  // The fabric range, fetched only where it can be chosen. A stocked recliner
+  // pays nothing for a feature it does not have.
+  const fabrics = product.custom_made ? await getFabricLibrary() : [];
+
   const breadcrumbLd = breadcrumbSchema([
     { name: 'Home', path: '/' },
     { name: 'Shop', path: '/shop/all' },
@@ -299,6 +304,7 @@ export default async function ProductPage(props: { params: Params, searchParams:
       subgroupTitle={subgroupTitle}
       currentSubgroup={product.subgroup_label}
       initialVariantId={initialVariantId}
+      fabrics={fabrics}
     />
     </>
   );

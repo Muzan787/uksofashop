@@ -177,16 +177,30 @@ export default function MegaMenu({
         aria-label="Shop menu"
         onPointerEnter={onPointerEnter}
         onPointerLeave={onPointerLeave}
-        className={`w-full bg-ink-900 transition-transform duration-base ease-out-expo ${
+        data-ground="dark"
+        className={`grad-ink grain relative isolate w-full overflow-hidden bg-ink-900 transition-transform duration-base ease-out-expo ${
           open ? 'translate-y-0' : '-translate-y-full'
         }`}
       >
-        <span aria-hidden="true" className="block h-0.5 bg-ember-500" />
+        {/* The same lighting as the hero, the footer and the mobile menu. */}
+        <div aria-hidden="true" className="aurora">
+          <span className="aurora__warm" />
+          <span className="aurora__deep" />
+        </div>
 
-        <div className="mx-auto grid max-w-shell grid-cols-[1.1fr_0.8fr_1fr] gap-12 px-4 py-12">
+        <span
+          aria-hidden="true"
+          className="relative block h-0.5"
+          style={{ backgroundImage: 'var(--grad-rule)' }}
+        />
+
+        <div className="relative mx-auto grid max-w-shell grid-cols-[1.1fr_0.8fr_1fr] gap-12 px-4 py-12">
           {/* ── Categories ────────────────────────────────────────────── */}
           <div>
-            <p className="eyebrow mb-6 text-ember-300">Categories</p>
+            <p className="eyebrow mb-6 flex items-center gap-2.5 text-ember-300">
+              <span aria-hidden="true" className="block h-px w-5 bg-ember-500" />
+              Categories
+            </p>
             <ul className="m-0 list-none p-0">
               {categories.map((cat, i) => (
                 <li key={cat.id}>
@@ -218,7 +232,10 @@ export default function MegaMenu({
 
           {/* ── Collections ───────────────────────────────────────────── */}
           <div>
-            <p className="eyebrow mb-6 text-ember-300">Complete Sets</p>
+            <p className="eyebrow mb-6 flex items-center gap-2.5 text-ember-300">
+              <span aria-hidden="true" className="block h-px w-5 bg-ember-500" />
+              Complete Sets
+            </p>
             {collections.length > 0 ? (
               <ul className="m-0 flex list-none flex-col gap-1 p-0">
                 {collections.map((col) => (
@@ -233,12 +250,12 @@ export default function MegaMenu({
                 ))}
               </ul>
             ) : (
-              <p className="text-body-sm text-ink-400">Loading…</p>
+              <p className="text-body-sm text-calico-300">Loading…</p>
             )}
 
             <Link
               href="/shop/all"
-              className="hover-btn mt-8 inline-flex items-center gap-2 rounded-sm bg-ember-500 px-5 py-3 font-data text-eyebrow font-semibold uppercase tracking-widest text-ink-900 no-underline"
+              className="hover-btn btn-ember sheen shadow-ember mt-8 inline-flex items-center gap-2 rounded-pill bg-ember-500 px-6 py-3 font-data text-eyebrow font-semibold uppercase tracking-widest text-ink-900 no-underline"
             >
               Shop everything
               <ArrowUpRight aria-hidden="true" className="h-3.5 w-3.5" />
@@ -247,7 +264,10 @@ export default function MegaMenu({
 
           {/* ── The image panel ───────────────────────────────────────── */}
           <div>
-            <div className="relative aspect-[4/5] w-full overflow-hidden rounded-md bg-ink-900">
+            {/* Square, because the category photographs are 1024x1024. In a 4:5 frame
+                object-cover was trimming 12.5% off each side of every one of them —
+                the same crop the product gallery and the cards were carrying. */}
+            <div className="relative aspect-square w-full overflow-hidden rounded-md bg-ink-900">
               {/* Every image is mounted and stacked; only opacity changes, so
                   the swap is a genuine cross-fade with nothing to load. */}
               {categories.map((cat, i) =>

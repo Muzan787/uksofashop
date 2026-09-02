@@ -98,7 +98,7 @@ export default function CategoryBento({ categories }: { categories: CategoryTile
               <Link
                 href={`/shop/${cat.slug}`}
                 data-cursor="view"
-                className="bento group relative block aspect-[4/5] w-full overflow-hidden rounded-md bg-calico-200 no-underline shadow-e1 lg:aspect-auto lg:h-full"
+                className="bento group relative block aspect-square w-full overflow-hidden rounded-md bg-calico-200 no-underline shadow-e1 lg:aspect-auto lg:h-full"
               >
                 {cat.image_url ? (
                   <Image

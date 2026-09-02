@@ -9,6 +9,7 @@ import {
   Loader2,
   MapPin, Check, Search,
   ChevronDown, Landmark,
+  Phone, AlertTriangle,
 } from 'lucide-react'
 import { useCart, type DisplayCartItem } from '@/context/CartContext'
 import { placeOrder } from '@/app/actions/checkout'
@@ -55,24 +56,51 @@ interface FormState {
 
 interface FieldError { [key: string]: string }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-const ACCENT = 'var(--color-ember-500)'      // fills: buttons, rules, icons, badges
-const ACCENT_TEXT = 'var(--color-ember-700)' // letterforms on a light ground
+/**
+ * ─────────────────────────────────────────────────────────────────────────────
+ *  WHY THIS FILE NO LONGER STYLES ITSELF INLINE
+ * ─────────────────────────────────────────────────────────────────────────────
+ *
+ * Every rule here used to be an inline `style` object — a hundred and four of
+ * them, on the one page where a mistake costs an order rather than a
+ * compliment. They were not merely verbose: inline styles were breaking things
+ * in two ways a class cannot break.
+ *
+ * THEY BEAT THE BREAKPOINTS. An inline declaration outranks every class
+ * selector, so a responsive class beside it can never win. The grid holding
+ * the form and the order summary carried `gridTemplateColumns: 'auto'` inline
+ * next to `lg:grid-cols-[1fr_340px]` — so the two-column layout never applied
+ * at any width, and the summary dropped underneath the form on desktop. There
+ * is a comment on the payment cards below warning about exactly this trap; the
+ * grid two hundred lines further down had already fallen into it.
+ *
+ * THEY MADE COLOURS BY STRING CONCATENATION. `${ACCENT}08` was meant to read as
+ * Ember at 3% — but ACCENT was `var(--color-ember-500)`, and gluing hex digits
+ * onto a var() produces `var(--color-ember-500)08`, which is not a colour, so
+ * the browser discards the declaration entirely. Three surfaces were affected
+ * and all three had been invisible since the day they were written: the tint on
+ * a ticked delivery extra, the highlight on the selected address, and both the
+ * background and the border of the panel stating the total due on delivery —
+ * which is the number the customer came to the page to find. Written as
+ * `bg-ember-500/[0.07]` the same intent cannot fail to parse.
+ *
+ * One inline style survives, at the header rule: a background-image built from
+ * --grad-rule, which has no utility of its own.
+ */
 
-function inputStyle(focused: boolean, error: boolean) {
-  return {
-    width: '100%',
-    padding: '12px 16px 12px 32px',
-    fontSize: 'var(--text-body-sm)',
-    border: `1.5px solid ${error ? 'var(--color-rust-700)' : focused ? ACCENT : 'var(--color-calico-300)'}`,
-    borderRadius: 'var(--radius-sm)',
-    outline: 'none',
-    background: 'var(--color-calico-50)',
-    color: 'var(--color-ink-900)',
-    transition: 'border-color var(--dur-swift) var(--ease-out-expo), scale var(--dur-press) var(--ease-out-expo)',
-    boxSizing: 'border-box' as const,
-    fontFamily: 'inherit',
-  }
+// ─── The one bespoke input on the page ────────────────────────────────────────
+// Postcode keeps its own control rather than using <Field>, because it is the
+// only field on the site with a leading icon and a button sharing its row. The
+// shell matches Field's: same radius, same hairline, and Ember 700 on focus
+// (Ember 500 is 2.9:1 on a light ground, under the 3:1 a focus ring must meet).
+const FIELD_SHELL =
+  'w-full rounded-sm border-[1.5px] bg-calico-50 py-3 pl-8 pr-4 text-body-sm text-ink-900 ' +
+  'outline-none transition-[border-color] duration-swift ease-out-expo'
+
+function fieldClass(error: boolean): string {
+  return `${FIELD_SHELL} ${
+    error ? 'border-rust-700' : 'border-calico-300 focus:border-ember-700'
+  }`
 }
 
 // ─── Optional delivery extra ──────────────────────────────────────────────────
@@ -88,32 +116,29 @@ function ExtraOption({
   children?: React.ReactNode
 }) {
   return (
-    <div style={{
-      border: `1.5px solid ${checked ? ACCENT : 'var(--color-calico-300)'}`,
-      borderRadius: 'var(--radius-sm)',
-      background: checked ? `${ACCENT}08` : 'var(--color-calico-50)',
-      padding: '12px 16px',
-      transition: 'border-color var(--dur-swift) var(--ease-out-expo), background var(--dur-swift) var(--ease-out-expo), scale var(--dur-press) var(--ease-out-expo)',
-    }}>
-      <label style={{ display: 'flex', gap: 12, alignItems: 'flex-start', cursor: 'pointer' }}>
+    <div
+      className={`rounded-sm border-[1.5px] px-4 py-3 transition-[border-color,background-color] duration-swift ease-out-expo ${
+        checked ? 'border-ember-500 bg-ember-500/[0.06]' : 'border-calico-300 bg-calico-50'
+      }`}
+    >
+      <label className="flex cursor-pointer items-start gap-3">
         <input
           type="checkbox"
           checked={checked}
           onChange={e => onToggle(e.target.checked)}
-          className="h-11 w-11 shrink-0 cursor-pointer"
-          style={{ accentColor: ACCENT }}
+          className="h-11 w-11 shrink-0 cursor-pointer accent-ember-500"
         />
-        <span style={{ flex: 1, minWidth: 0 }}>
-          <span style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'baseline' }}>
-            <span style={{ fontSize: 'var(--text-body-sm)', fontWeight: 700, color: 'var(--color-ink-900)' }}>{title}</span>
-            <span style={{ fontSize: 'var(--text-body-sm)', fontWeight: 800, color: ACCENT_TEXT, flexShrink: 0 }}>
-              {priceIsFrom && <span style={{ fontFamily: 'var(--font-data)', fontVariantNumeric: 'tabular-nums',  fontSize: 'var(--text-caption)', fontWeight: 600, color: 'var(--color-ink-500)' }}>from </span>}
+        <span className="min-w-0 flex-1">
+          <span className="flex items-baseline justify-between gap-3">
+            <span className="text-body-sm font-bold text-ink-900">{title}</span>
+            <span className="shrink-0 text-body-sm font-extrabold text-ember-700">
+              {priceIsFrom && (
+                <span className="font-data text-caption font-semibold text-ink-500">from </span>
+              )}
               £{price.toFixed(2)}
             </span>
           </span>
-          <span style={{ display: 'block', fontSize: 'var(--text-caption)', color: 'var(--color-ink-500)', lineHeight: 1.55, marginTop: 4 }}>
-            {note}
-          </span>
+          <span className="mt-1 block text-caption leading-relaxed text-ink-500">{note}</span>
         </span>
       </label>
       {checked && children}
@@ -130,41 +155,48 @@ function OrderSummary({ compact = false, extras = NO_EXTRAS }: { compact?: boole
   const grandTotal = totalAmount + delivery
 
   return (
-    <div data-ground="dark" style={{
-      background: 'var(--color-ink-900)', borderRadius: 'var(--radius-md)',
-      padding: compact ? '14px 16px' : '20px',
-      border: '1px solid rgba(255,255,255,0.06)',
-    }}>
+    <div
+      data-ground="dark"
+      className={`rounded-md border border-calico-50/[0.06] bg-ink-900 ${compact ? 'px-4 py-3.5' : 'p-5'}`}
+    >
       {!compact && (
-        <div style={{ fontFamily: 'var(--font-data)', fontSize: 'var(--text-eyebrow)', color: 'var(--color-ember-300)', textTransform: 'uppercase', letterSpacing: '0.2em', fontWeight: 700, marginBottom: 16 }}>
+        <div className="mb-4 font-data text-eyebrow font-bold uppercase tracking-[0.2em] text-ember-300">
           Order Summary
         </div>
       )}
 
       {/* Items */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16 }}>
+      <div className="mb-4 flex flex-col gap-3">
         {cartItems.map((item, i) => (
-          <div key={`${item.variant_id}-${i}`} style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-            <div style={{ position: 'relative', width: 46, height: 46, borderRadius: 'var(--radius-sm)', overflow: 'hidden', flexShrink: 0, background: 'var(--color-ink-900)' }}>
-              <Image src={item.image_url || '/placeholder.svg'} alt={item.title} fill style={{ objectFit: 'cover' }} sizes="46px" />
-              <div style={{
-                position: 'absolute', top: -4, right: -4,
-                width: 16, height: 16, borderRadius: 'var(--radius-pill)',
-                background: ACCENT, color: 'var(--color-ink-900)',
-                fontSize: 'var(--text-caption)', fontWeight: 700,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>{item.quantity}</div>
+          <div key={`${item.variant_id}-${i}`} className="flex items-center gap-3">
+            <div className="relative h-[46px] w-[46px] shrink-0 overflow-hidden rounded-sm bg-ink-900">
+              <Image
+                src={item.image_url || '/placeholder.svg'}
+                alt={item.title}
+                fill
+                sizes="46px"
+                className="object-cover"
+              />
+              <div className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-pill bg-ember-500 text-caption font-bold text-ink-900">
+                {item.quantity}
+              </div>
             </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 'var(--text-caption)', fontWeight: 600, color: 'var(--color-calico-300)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.title}</div>
-              <div style={{ fontSize: 'var(--text-caption)', color: 'var(--color-calico-300)', marginTop: 2 }}>{item.color}</div>
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-caption font-semibold text-calico-300">{item.title}</div>
+              <div className="mt-0.5 truncate text-caption text-calico-300">
+                {item.color}
+                {item.fabric_code && (
+                  <span className="font-data text-ember-300"> · {item.fabric_code}</span>
+                )}
+              </div>
             </div>
-            <div style={{ fontFamily: 'var(--font-data)', fontVariantNumeric: 'tabular-nums',  fontSize: 'var(--text-caption)', fontWeight: 700, color: 'var(--color-calico-50)', flexShrink: 0 }}>
+            <div className="font-data tnum shrink-0 text-caption font-bold text-calico-50">
               £{(item.price * item.quantity).toFixed(0)}
             </div>
           </div>
         ))}
       </div>
+
       {/* ── What you owe right now ─────────────────────────────────────
           Which is nothing, and it is the single most reassuring fact about
           buying a sofa here. It was one 12px line of Ink 500 inside the
@@ -191,46 +223,46 @@ function OrderSummary({ compact = false, extras = NO_EXTRAS }: { compact?: boole
       </div>
 
       {/* Totals */}
-      <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--text-caption)', color: 'var(--color-calico-300)' }}>
+      <div className="flex flex-col gap-2 border-t border-calico-50/[0.07] pt-3">
+        <div className="flex justify-between text-caption text-calico-300">
           <span>Subtotal</span>
           <span className="font-data tnum">£{totalAmount.toFixed(2)}</span>
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--text-caption)', color: 'var(--color-calico-300)' }}>
-          <span>Delivery <span style={{ color: 'var(--color-calico-300)' }}>· UK Mainland</span></span>
-          <span style={{ color: 'var(--color-sage-300)', fontWeight: 700 }}>FREE</span>
+        <div className="flex justify-between text-caption text-calico-300">
+          <span>Delivery · UK Mainland</span>
+          <span className="font-bold text-sage-300">FREE</span>
         </div>
 
         {/* Each chosen extra as its own line, so the total is never a mystery. */}
         {extraLines.map(line => (
-          <div key={line.key} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 'var(--text-caption)', color: 'var(--color-calico-300)' }}>
-            <span style={{ minWidth: 0 }}>
+          <div key={line.key} className="flex justify-between gap-3 text-caption text-calico-300">
+            <span className="min-w-0">
               {line.label}
-              {line.detail && <span style={{ color: 'var(--color-calico-300)' }}> · {line.detail}</span>}
+              {line.detail && <span> · {line.detail}</span>}
             </span>
-            <span style={{ fontFamily: 'var(--font-data)', fontVariantNumeric: 'tabular-nums',  color: 'var(--color-calico-50)', flexShrink: 0 }}>£{line.amount.toFixed(2)}</span>
+            <span className="font-data tnum shrink-0 text-calico-50">£{line.amount.toFixed(2)}</span>
           </div>
         ))}
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--text-body)', fontWeight: 800, color: 'var(--color-calico-50)', paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.07)', marginTop: 4 }}>
+        <div className="mt-1 flex justify-between border-t border-calico-50/[0.07] pt-2 text-body font-extrabold text-calico-50">
           <span>Total due on delivery</span>
-          <span style={{ fontFamily: 'var(--font-data)', fontVariantNumeric: 'tabular-nums',  color: 'var(--color-ember-300)' }}>£{grandTotal.toFixed(2)}</span>
+          <span className="font-data tnum text-ember-300">£{grandTotal.toFixed(2)}</span>
         </div>
       </div>
 
       {/* Trust strip */}
       {!compact && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 16, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+        <div className="mt-4 flex flex-col gap-2 border-t border-calico-50/[0.06] pt-4">
           {([
             [ShieldCheck, PROMISES.guarantee.short],
             [Truck, PROMISES.delivery.long],
           ] as const).map(([Icon, text]) => (
-            <div key={text} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div key={text} className="flex items-center gap-2">
               {/* `as const` above keeps Icon a callable component type. Without it the
                   tuple widens to a union TS cannot call, which is why this line
                   used to carry a suppression comment. */}
-              <Icon style={{ width: 12, height: 12, color: 'var(--color-ember-300)', flexShrink: 0 }} />
-              <span style={{ fontSize: 'var(--text-caption)', color: 'var(--color-calico-300)' }}>{text}</span>
+              <Icon aria-hidden="true" className="h-3 w-3 shrink-0 text-ember-300" />
+              <span className="text-caption text-calico-300">{text}</span>
             </div>
           ))}
         </div>
@@ -249,17 +281,21 @@ function DetailsStep({
   setExtras: (next: DeliveryOptions) => void
 }) {
   const { cartItems, totalAmount, clearCart } = useCart()
+  // A line with a fabric is a line that has to be built. Nothing else in the
+  // basket knows whether a product was flagged made-to-order, and it does not
+  // need to - the fabric is the thing that makes it one.
+  const madeToOrder = cartItems.some(i => i.fabric_id)
   const extrasTotal = deliveryTotal(extras)
   const grandTotal = totalAmount + extrasTotal
   const [form, setForm] = useState<FormState>({
     customerName: '', customerEmail: '', customerPhone: '',
     postcode: '', shippingAddress: '', specialInstructions: '', // NEW POSTCODE FIELD
   })
-  
+
   const [errors, setErrors] = useState<FieldError>({})
   const [pending, setPending] = useState(false)
   const [serverError, setServerError] = useState('')
-  
+
   // Postcode Lookup State
   const [addresses, setAddresses] = useState<string[]>([])
   const [searchingPostcode, setSearchingPostcode] = useState(false)
@@ -315,7 +351,7 @@ function DetailsStep({
     e.preventDefault()
     if (!validate()) return
     setPending(true); setServerError('')
-    
+
     const fd = new FormData()
     Object.entries(form).forEach(([k, v]) => {
       // We append the postcode to the shipping address so your backend schema doesn't need to change
@@ -325,10 +361,14 @@ function DetailsStep({
          fd.append(k, v)
       }
     })
-    
+
     // Ids and quantities only - the database looks up every price itself, so a
     // tampered request can't change what an order costs.
-    const items = cartItems.map(i => ({ variant_id: i.variant_id, quantity: i.quantity }))
+    const items = cartItems.map(i => ({
+      variant_id: i.variant_id,
+      quantity: i.quantity,
+      fabric_id: i.fabric_id ?? null,
+    }))
 
     const res = await placeOrder(fd, items, grandTotal, extras)
 
@@ -347,63 +387,59 @@ function DetailsStep({
   return (
     <form onSubmit={handleSubmit} noValidate>
       <button
-        type="button" onClick={onBack}
-        style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: 'pointer', fontSize: 'var(--text-caption)', color: 'var(--color-ink-500)', marginBottom: 16, padding: 0 }}
+        type="button"
+        onClick={onBack}
+        className="mb-4 inline-flex cursor-pointer items-center gap-1 border-0 bg-transparent p-0 text-caption text-ink-500"
       >
-        <ArrowLeft style={{ width: 12, height: 12 }} /> Back to Cart
+        <ArrowLeft aria-hidden="true" className="h-3 w-3" /> Back to Cart
       </button>
 
-      <div style={{ fontFamily: 'var(--font-data)', fontSize: 'var(--text-eyebrow)', color: ACCENT_TEXT, textTransform: 'uppercase', letterSpacing: '0.2em', fontWeight: 700, marginBottom: 4 }}>
+      <div className="mb-1 font-data text-eyebrow font-bold uppercase tracking-[0.2em] text-ember-700">
         Delivery Information
       </div>
-      <p style={{ fontSize: 'var(--text-caption)', color: 'var(--color-ink-500)', marginBottom: 16 }}>
+      <p className="mb-4 text-caption text-ink-500">
         Delivered free to UK Mainland, ground floor. We&apos;ll call before arrival.
       </p>
 
       {serverError && (
-        <div style={{ padding: '12px 16px', background: 'var(--color-rust-50)', border: '1px solid var(--color-rust-200)', borderRadius: 'var(--radius-sm)', fontSize: 'var(--text-caption)', color: 'var(--color-rust-700)', marginBottom: 16 }}>
+        <div className="mb-4 rounded-sm border border-rust-200 bg-rust-50 px-4 py-3 text-caption text-rust-700">
           {serverError}
         </div>
       )}
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 16 }}>
-        
+      <div className="mb-4 flex flex-col gap-4">
+
         {/* Basic Info Fields */}
         <Field label="Full Name" name="customerName" value={form.customerName} onChange={set('customerName')} error={errors.customerName} />
         <Field label="Email Address" type="email" name="customerEmail" hint="Your order confirmation will be sent here" value={form.customerEmail} onChange={set('customerEmail')} error={errors.customerEmail} />
         <Field label="Mobile Number" type="tel" name="customerPhone" hint="A UK mobile — our driver calls before delivery, and we message you on WhatsApp" value={form.customerPhone} onChange={set('customerPhone')} error={errors.customerPhone} />
-        
+
         {/* NEW: Postcode Lookup Section */}
         <div>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 8, fontFamily: 'var(--font-data)', fontSize: 'var(--text-eyebrow)', fontWeight: 700, color: 'var(--color-ink-500)', textTransform: 'uppercase', letterSpacing: '0.15em' }}>
-             Postcode <span style={{ color: ACCENT_TEXT }}>*</span>
+          <label className="mb-2 flex items-center gap-1 font-data text-eyebrow font-bold uppercase tracking-[0.15em] text-ink-500">
+             Postcode <span className="text-ember-700">*</span>
           </label>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <div style={{ position: 'relative', flex: 1 }}>
-               <MapPin style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', width: 14, height: 14, color: 'var(--color-ink-500)', zIndex: 1 }} />
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+               <MapPin aria-hidden="true" className="absolute left-3 top-1/2 z-[1] h-3.5 w-3.5 -translate-y-1/2 text-ink-500" />
                <input
                   type="text"
                   value={form.postcode}
                   onChange={(e) => set('postcode')(e.target.value.toUpperCase())}
-                  style={{ ...inputStyle(false, !!errors.postcode), textTransform: 'uppercase' }}
+                  className={`${fieldClass(!!errors.postcode)} uppercase`}
                />
             </div>
             <button
                type="button"
                onClick={handleFindAddress}
                disabled={searchingPostcode || form.postcode.length < 5}
-               style={{ 
-                 padding: '0 16px', background: 'var(--color-ink-900)', color: 'var(--color-calico-50)', borderRadius: 'var(--radius-sm)', 
-                 fontSize: 'var(--text-caption)', fontWeight: 700, border: 'none', cursor: 'pointer', 
-                 display: 'flex', alignItems: 'center', gap: 8, transition: 'background var(--dur-swift), scale var(--dur-press) var(--ease-out-expo)',
-                 opacity: searchingPostcode || form.postcode.length < 5 ? 0.6 : 1
-               }}
+               className="flex cursor-pointer items-center gap-2 rounded-sm border-0 bg-ink-900 px-4 text-caption font-bold text-calico-50 transition-[background-color,opacity] duration-swift ease-out-expo disabled:cursor-not-allowed disabled:opacity-60"
             >
-               {searchingPostcode ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+               {searchingPostcode ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
                Find
             </button>
           </div>
-          {errors.postcode && <p style={{ fontSize: 'var(--text-caption)', color: 'var(--color-rust-700)', marginTop: 4 }}>{errors.postcode}</p>}
+          {errors.postcode && <p className="mt-1 text-caption text-rust-700">{errors.postcode}</p>}
           {/* Confirmation, not decoration: "free" is the fact a customer is
               actually checking for, and it was never stated against their own
               address. Grows in rather than appearing, so it reads as an answer
@@ -423,59 +459,29 @@ function DetailsStep({
 
         {/* Custom Address Dropdown */}
         {addresses.length > 0 && (
-          <div style={{ position: 'relative', animation: 'fadeIn var(--dur-base) var(--ease-out-expo)' }}>
+          <div className="relative animate-[fadeIn_var(--dur-base)_var(--ease-out-expo)]">
             {/* The Trigger Button */}
             <button
               type="button"
               onClick={() => setDropdownOpen(!dropdownOpen)}
-              style={{
-                width: '100%',
-                padding: '12px 16px',
-                borderRadius: 'var(--radius-sm)',
-                border: `1.5px solid ${ACCENT}`,
-                outline: 'none',
-                fontSize: 'var(--text-body-sm)',
-                background: 'var(--color-calico-50)',
-                cursor: 'pointer',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                color: form.shippingAddress ? 'var(--color-ink-900)' : 'var(--color-ink-500)',
-                textAlign: 'left'
-              }}
+              className={`flex w-full cursor-pointer items-center justify-between rounded-sm border-[1.5px] border-ember-500 bg-calico-50 px-4 py-3 text-left text-body-sm outline-none ${
+                form.shippingAddress ? 'text-ink-900' : 'text-ink-500'
+              }`}
             >
-              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: 12 }}>
+              <span className="truncate pr-3">
                 {form.shippingAddress || "Select your address..."}
               </span>
-              <ChevronDown 
-                style={{ 
-                  width: 16, height: 16, color: ACCENT_TEXT, flexShrink: 0, 
-                  transform: dropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)', 
-                  transition: 'transform var(--dur-swift) var(--ease-out-expo), scale var(--dur-press) var(--ease-out-expo)' 
-                }} 
+              <ChevronDown
+                aria-hidden="true"
+                className={`h-4 w-4 shrink-0 text-ember-700 transition-transform duration-swift ease-out-expo ${
+                  dropdownOpen ? 'rotate-180' : 'rotate-0'
+                }`}
               />
             </button>
 
-            {/* The Floating Menu */}
+            {/* The Floating Menu. max-h-60 keeps it off the whole screen. */}
             {dropdownOpen && (
-              <div
-                style={{
-                  position: 'absolute',
-                  top: '100%',
-                  left: 0,
-                  right: 0,
-                  marginTop: 8,
-                  background: 'var(--color-calico-50)',
-                  border: '1px solid var(--color-calico-300)',
-                  borderRadius: 'var(--radius-sm)',
-                  boxShadow: 'var(--shadow-e1)',
-                  maxHeight: 240, // Limits height so it never takes the whole screen
-                  overflowY: 'auto', // Adds an elegant scrollbar
-                  zIndex: 50,
-                  display: 'flex',
-                  flexDirection: 'column'
-                }}
-              >
+              <div className="absolute inset-x-0 top-full z-50 mt-2 flex max-h-60 flex-col overflow-y-auto rounded-sm border border-calico-300 bg-calico-50 shadow-e1">
                 {addresses.map((addr, i) => (
                   <button
                     key={i}
@@ -484,19 +490,13 @@ function DetailsStep({
                       set('shippingAddress')(addr);
                       setDropdownOpen(false); // Close after selection
                     }}
-                    style={{
-                      padding: '12px 16px',
-                      background: form.shippingAddress === addr ? `${ACCENT}15` : 'transparent',
-                      border: 'none',
-                      borderBottom: i < addresses.length - 1 ? '1px solid var(--color-calico-100)' : 'none',
-                      textAlign: 'left',
-                      fontSize: 'var(--text-caption)',
-                      color: form.shippingAddress === addr ? 'var(--color-ink-900)' : 'var(--color-ink-500)',
-                      fontWeight: form.shippingAddress === addr ? 700 : 500,
-                      cursor: 'pointer',
-                      transition: 'background var(--dur-press) var(--ease-out-expo), scale var(--dur-press) var(--ease-out-expo)',
-                      lineHeight: 1.4 // Allows long addresses to wrap nicely
-                    }}
+                    // last:border-b-0 rather than comparing i to the array
+                    // length, and leading-snug so a long address wraps.
+                    className={`cursor-pointer border-0 border-b border-calico-100 px-4 py-3 text-left text-caption leading-snug transition-colors duration-press ease-out-expo last:border-b-0 ${
+                      form.shippingAddress === addr
+                        ? 'bg-ember-500/10 font-bold text-ink-900'
+                        : 'bg-transparent font-medium text-ink-500'
+                    }`}
                   >
                     {addr}
                   </button>
@@ -508,21 +508,21 @@ function DetailsStep({
 
         {/* Manual Address Field (Always visible for manual edits) */}
         <Field label="Full Address" name="shippingAddress" type="textarea" value={form.shippingAddress} onChange={set('shippingAddress')} error={errors.shippingAddress} />
-        
+
         <Field label="Special Instructions" name="specialInstructions" required={false} type="textarea" value={form.specialInstructions} onChange={set('specialInstructions')} />
       </div>
 
       {/* ── Optional delivery extras ── */}
-      <div style={{ marginBottom: 16 }}>
-        <div style={{ fontFamily: 'var(--font-data)', fontSize: 'var(--text-eyebrow)', color: ACCENT_TEXT, textTransform: 'uppercase', letterSpacing: '0.2em', fontWeight: 700, marginBottom: 4 }}>
+      <div className="mb-4">
+        <div className="mb-1 font-data text-eyebrow font-bold uppercase tracking-[0.2em] text-ember-700">
           Delivery Options
         </div>
-        <p style={{ fontSize: 'var(--text-caption)', color: 'var(--color-ink-500)', marginBottom: 12, lineHeight: 1.5 }}>
+        <p className="mb-3 text-caption leading-relaxed text-ink-500">
           Delivery to a UK Mainland ground floor is free. Add anything else you need —
           your total updates as you go, and you still pay on delivery.
         </p>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div className="flex flex-col gap-2">
 
           <ExtraOption
             checked={extras.floor > 0}
@@ -532,31 +532,31 @@ function DetailsStep({
             price={extras.floor > 0 ? deliveryBreakdown(extras).lines.find(l => l.key === 'upstairs')?.amount ?? 0 : UPSTAIRS_FIRST_FLOOR}
             priceIsFrom={extras.floor === 0}
           >
-            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12, paddingTop: 12 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 'var(--text-caption)', color: 'var(--color-ink-500)', fontWeight: 600 }}>Floor</span>
-                <div style={{ display: 'flex', alignItems: 'center', border: '1px solid var(--color-calico-300)', borderRadius: 'var(--radius-sm)', overflow: 'hidden', background: 'var(--color-calico-50)' }}>
+            <div className="flex flex-wrap items-center gap-3 pt-3">
+              <div className="flex items-center gap-2">
+                <span className="text-caption font-semibold text-ink-500">Floor</span>
+                <div className="flex items-center overflow-hidden rounded-sm border border-calico-300 bg-calico-50">
                   <button type="button" aria-label="Fewer floors"
                     onClick={() => setExtras({ ...extras, floor: Math.max(1, extras.floor - 1) })}
                     className="flex h-11 w-11 items-center justify-center rounded-sm text-ink-700 hover:bg-calico-200">
-                    <Minus style={{ width: 12, height: 12 }} />
+                    <Minus aria-hidden="true" className="h-3 w-3" />
                   </button>
-                  <span style={{ minWidth: 30, textAlign: 'center', fontSize: 'var(--text-body-sm)', fontWeight: 700, color: 'var(--color-ink-900)' }}>{extras.floor}</span>
+                  <span className="min-w-[30px] text-center text-body-sm font-bold text-ink-900">{extras.floor}</span>
                   <button type="button" aria-label="More floors"
                     onClick={() => setExtras({ ...extras, floor: Math.min(20, extras.floor + 1) })}
                     className="flex h-11 w-11 items-center justify-center rounded-sm text-ink-700 hover:bg-calico-200">
-                    <Plus style={{ width: 12, height: 12 }} />
+                    <Plus aria-hidden="true" className="h-3 w-3" />
                   </button>
                 </div>
-                <span style={{ fontSize: 'var(--text-caption)', color: 'var(--color-ink-500)' }}>{floorName(extras.floor)}</span>
+                <span className="text-caption text-ink-500">{floorName(extras.floor)}</span>
               </div>
 
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 'var(--text-caption)', color: 'var(--color-ink-500)' }}>
+              <label className="flex cursor-pointer items-center gap-2 text-caption text-ink-500">
                 <input
                   type="checkbox"
                   checked={extras.hasLift}
                   onChange={e => setExtras({ ...extras, hasLift: e.target.checked })}
-                  style={{ width: 16, height: 16, accentColor: ACCENT, cursor: 'pointer' }}
+                  className="h-4 w-4 cursor-pointer accent-ember-500"
                 />
                 There&apos;s a lift
               </label>
@@ -580,83 +580,121 @@ function DetailsStep({
           />
         </div>
 
-        <p style={{ fontSize: 'var(--text-caption)', color: 'var(--color-ink-500)', marginTop: 12, lineHeight: 1.6 }}>
+        <p className="mt-3 text-caption leading-relaxed text-ink-500">
           {DELIVERY_AREA_NOTE}
         </p>
       </div>
 
       {/* ── How you pay ── */}
-      <div style={{ marginBottom: 16 }}>
-        <div style={{ fontFamily: 'var(--font-data)', fontSize: 'var(--text-eyebrow)', color: ACCENT_TEXT, textTransform: 'uppercase', letterSpacing: '0.2em', fontWeight: 700, marginBottom: 4 }}>
+      <div className="mb-4">
+        <div className="mb-1 font-data text-eyebrow font-bold uppercase tracking-[0.2em] text-ember-700">
           How You Pay
         </div>
-        <p style={{ fontSize: 'var(--text-caption)', color: 'var(--color-ink-500)', marginBottom: 12, lineHeight: 1.5 }}>
+        <p className="mb-3 text-caption leading-relaxed text-ink-500">
           Nothing is taken now. You pay once your sofa has arrived and you&apos;re happy with it —
           choose either method on the day, there&apos;s nothing to decide here.
         </p>
 
-        {/* Tailwind only - an inline gridTemplateColumns would beat the
-            sm: breakpoint and pin this to one column at every width. */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <div style={{ border: '1px solid var(--color-calico-300)', borderRadius: 'var(--radius-sm)', padding: '12px 16px', background: 'var(--color-calico-50)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-              <Wallet style={{ width: 15, height: 15, color: ACCENT_TEXT, flexShrink: 0 }} />
-              <span style={{ fontSize: 'var(--text-body-sm)', fontWeight: 700, color: 'var(--color-ink-900)' }}>Cash</span>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <div className="rounded-sm border border-calico-300 bg-calico-50 px-4 py-3">
+            <div className="mb-1 flex items-center gap-2">
+              <Wallet aria-hidden="true" className="h-4 w-4 shrink-0 text-ember-700" />
+              <span className="text-body-sm font-bold text-ink-900">Cash</span>
             </div>
-            <p style={{ fontSize: 'var(--text-caption)', color: 'var(--color-ink-500)', lineHeight: 1.55, margin: 0 }}>
+            <p className="m-0 text-caption leading-relaxed text-ink-500">
               Hand the full amount to our driver when your sofa is delivered.
             </p>
           </div>
 
-          <div style={{ border: '1px solid var(--color-calico-300)', borderRadius: 'var(--radius-sm)', padding: '12px 16px', background: 'var(--color-calico-50)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-              <Landmark style={{ width: 15, height: 15, color: ACCENT_TEXT, flexShrink: 0 }} />
-              <span style={{ fontSize: 'var(--text-body-sm)', fontWeight: 700, color: 'var(--color-ink-900)' }}>Bank transfer</span>
+          <div className="rounded-sm border border-calico-300 bg-calico-50 px-4 py-3">
+            <div className="mb-1 flex items-center gap-2">
+              <Landmark aria-hidden="true" className="h-4 w-4 shrink-0 text-ember-700" />
+              <span className="text-body-sm font-bold text-ink-900">Bank transfer</span>
             </div>
-            <p style={{ fontSize: 'var(--text-caption)', color: 'var(--color-ink-500)', lineHeight: 1.55, margin: 0 }}>
-              Transfer <strong style={{ color: 'var(--color-ink-500)' }}>at the door</strong>, not in advance. Our
+            <p className="m-0 text-caption leading-relaxed text-ink-500">
+              Transfer <strong>at the door</strong>, not in advance. Our
               driver gives you the account details and waits for the payment to show.
             </p>
           </div>
         </div>
 
-        <div style={{
-          display: 'flex', gap: 12, alignItems: 'flex-start',
-          padding: '12px 16px', borderRadius: 'var(--radius-sm)', marginTop: 12,
-          background: `${ACCENT}10`, border: `1px solid ${ACCENT}22`,
-        }}>
-          <ShieldCheck style={{ width: 17, height: 17, color: ACCENT_TEXT, flexShrink: 0, marginTop: 1 }} />
-          <div style={{ fontSize: 'var(--text-caption)', color: 'var(--color-ink-500)', lineHeight: 1.55 }}>
-            Your total due on delivery is <strong style={{ fontFamily: 'var(--font-data)', fontVariantNumeric: 'tabular-nums',  color: 'var(--color-ink-900)' }}>£{grandTotal.toFixed(2)}</strong>
+        {/* The panel stating what is owed. Its background and its border were
+            both written as `${ACCENT}10` / `${ACCENT}22` — hex digits
+            concatenated onto a var(), which parses as nothing, so this box had
+            neither of them. */}
+        <div className="mt-3 flex items-start gap-3 rounded-sm border border-ember-500/20 bg-ember-500/[0.07] px-4 py-3">
+          <ShieldCheck aria-hidden="true" className="mt-px h-4 w-4 shrink-0 text-ember-700" />
+          <div className="text-caption leading-relaxed text-ink-500">
+            Your total due on delivery is <strong className="font-data tnum text-ink-900">£{grandTotal.toFixed(2)}</strong>
             {extrasTotal > 0 && (
-              <span style={{ color: 'var(--color-ink-500)' }}> (£{totalAmount.toFixed(2)} for your order plus £{extrasTotal.toFixed(2)} of delivery extras)</span>
+              <span> (£{totalAmount.toFixed(2)} for your order plus £{extrasTotal.toFixed(2)} of delivery extras)</span>
             )}.
-            <span style={{ display: 'block', marginTop: 4, color: 'var(--color-ink-500)', fontSize: 'var(--text-caption)' }}>
+            <span className="mt-1 block">
               We don&apos;t accept card payments of any kind.
             </span>
           </div>
         </div>
       </div>
 
+      {/* ── Made to order ────────────────────────────────────────────────
+          Only when a basket line carries a fabric, which is the same thing as
+          saying the sofa has to be built. Two facts belong here rather than
+          only on the product page: that a person will ring to confirm the
+          specification, and that a made-to-measure item carries no 14-day
+          right to change your mind. The second one is a term of the sale, and
+          a term of the sale belongs at the point of sale. */}
+      {madeToOrder && (
+        <div className="mb-4 rounded-sm border border-indigo-300 bg-indigo-50 px-4 py-3">
+          <p className="m-0 flex items-center gap-2 text-body-sm font-semibold text-indigo-700">
+            <Phone aria-hidden="true" className="h-4 w-4 shrink-0" />
+            We&apos;ll call you to confirm this one
+          </p>
+          <p className="m-0 mt-2 text-caption leading-relaxed text-ink-500">
+            Your sofa is built to order in the fabric you chose, so one of our team will ring
+            you to go through the details before anything is made. Nothing is charged in the
+            meantime — you still pay on delivery.
+          </p>
+          <p className="m-0 mt-3 flex gap-2 border-t border-indigo-300 pt-3 text-caption leading-relaxed text-ink-500">
+            <AlertTriangle aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-ember-700" />
+            <span>
+              <strong className="text-ink-900">Because it&apos;s made to your specification</strong>,
+              the 14-day right to change your mind doesn&apos;t apply — that&apos;s the standard
+              exemption under the Consumer Contracts Regulations. Faulty or damaged items are
+              covered exactly as normal.
+            </span>
+          </p>
+        </div>
+      )}
+
+      {/* THE MOST IMPORTANT BUTTON ON THE SITE, and it was breaking the one
+          rule the palette calls load-bearing.
+
+          It read `background: ACCENT` with `color: var(--color-calico-50)` —
+          near-white letterforms on Ember 500, which measures 2.9:1 and fails
+          AA at any size. tokens.css states it outright: "an ember-500 button
+          always carries ink-900 text (6.6:1), never white (2.9:1)", and the
+          quantity badge in the summary already does exactly that. Only the
+          submit button had it backwards.
+
+          The glow was not rendering either — `0 6px 24px ${ACCENT}44`, the same
+          concatenation bug as above. It carries the real --shadow-ember token
+          now. */}
       <button
-        type="submit" disabled={pending}
-        style={{
-          width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
-          padding: '16px 0', borderRadius: 'var(--radius-sm)', border: 'none',
-          background: pending ? 'var(--color-ink-500)' : ACCENT, color: 'var(--color-calico-50)',
-          fontFamily: 'var(--font-data)', fontSize: 'var(--text-eyebrow)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase',
-          cursor: pending ? 'wait' : 'pointer',
-          boxShadow: pending ? 'none' : `0 6px 24px ${ACCENT}44`,
-          transition: 'all var(--dur-swift) var(--ease-out-expo)',
-        }}
+        type="submit"
+        disabled={pending}
+        className={`flex h-14 w-full items-center justify-center gap-3 rounded-pill border-0 font-data text-eyebrow font-bold uppercase tracking-[0.1em] transition-[background-color,box-shadow] duration-swift ease-out-expo ${
+          pending
+            ? 'cursor-wait bg-ink-500 text-calico-50'
+            : 'hover-btn btn-ember sheen shadow-ember cursor-pointer bg-ember-500 text-ink-900'
+        }`}
       >
         {pending
-          ? <><Loader2 style={{ width: 15, height: 15, animation: 'spin 0.8s linear infinite' }} /> Placing Order…</>
-          : <><ShoppingBag style={{ width: 15, height: 15 }} /> Place Order</>
+          ? <><Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" /> Placing Order…</>
+          : <><ShoppingBag aria-hidden="true" className="h-4 w-4" /> Place Order</>
         }
       </button>
 
-      <p style={{ fontSize: 'var(--text-caption)', color: 'var(--color-ink-500)', textAlign: 'center', marginTop: 12, lineHeight: 1.6 }}>
+      <p className="mt-3 text-center text-caption leading-relaxed text-ink-500">
         By placing this order you agree to pay on delivery. We&apos;ll send a confirmation email with a tracking link.
       </p>
     </form>
@@ -707,99 +745,107 @@ export default function CheckoutClient() {
   }
 
   return (
-    <>
-      <style>{`
-        @keyframes spin { to { transform: rotate(360deg); } }
-        @keyframes pulseRing { 0% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(212,135,26,0.3); } 70% { transform: scale(1); box-shadow: 0 0 0 15px rgba(212,135,26,0); } 100% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(212,135,26,0); } }
-      `}</style>
+    // This page used to open with a <style> block declaring @keyframes spin and
+    // @keyframes pulseRing. globals.css already defines spin, so that was a
+    // duplicate shipped on every checkout, and nothing anywhere on the site has
+    // ever referenced pulseRing. Both are gone.
+    <div className="grad-calico grain-light relative min-h-screen bg-calico-50 pb-16">
 
-      <div style={{ minHeight: '100vh', background: 'var(--color-calico-50)', paddingBottom: 64 }}>
-
-        {/* Header strip */}
-        <div data-ground="dark" style={{ background: 'var(--color-ink-900)', borderBottom: `2px solid ${ACCENT}` }}>
-          <div style={{ maxWidth: 960, margin: '0 auto', padding: '16px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Link href="/" style={{ textDecoration: 'none' }}>
-              <span className="font-body font-semibold" style={{ fontSize: 'var(--text-lead)', fontWeight: 700, color: 'var(--color-calico-50)' }}>
-                UK Sofa <span style={{ color: ACCENT_TEXT }}>Shop</span>
-              </span>
-            </Link>
-            {step !== 'success' && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'var(--text-caption)', color: 'var(--color-ink-500)' }}>
-                <ShieldCheck style={{ width: 13, height: 13, color: ACCENT_TEXT }} />
-                Secure Checkout
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div style={{ maxWidth: 960, margin: '0 auto', padding: '24px 16px' }}>
-
-          {/* The whole flow had no level-1 heading — three steps, a stepper
-              and a form, and nothing naming the page. It is visually hidden
-              because the stepper already says where you are on screen, and a
-              second visible title above it would be repeating itself. */}
-          <h1 className="sr-only">
-            {step === 'cart' ? 'Your cart'
-              : step === 'details' ? 'Delivery details'
-              : 'Order confirmed'}
-          </h1>
-
-          {/* Steps indicator */}
-          {step !== 'success' && <Steps current={step} />}
-
-          <div style={{ display: 'grid', gridTemplateColumns: step === 'success' ? '1fr' : 'auto', gap: 16 }}
-            className={step !== 'success' ? 'lg:grid-cols-[1fr_340px]' : ''}>
-
-            {/* Main panel */}
-            <div 
-              className="p-4 sm:p-6"
-              style={{
-                background: 'var(--color-calico-50)', borderRadius: 'var(--radius-md)',
-                border: '1px solid var(--color-calico-300)',
-                boxShadow: 'var(--shadow-e1)',
-                opacity: visible ? 1 : 0,
-                transform: visible
-                  ? 'translateX(0)'
-                  : direction === 'forward' ? 'translateX(40px)' : 'translateX(-40px)',
-                // 380ms, and the outgoing step is already fading as the
-                // incoming one starts — see goNext/goBack, where the swap
-                // happens a beat into the fade rather than after it.
-                transition: 'opacity var(--dur-base) var(--ease-out-expo), transform var(--dur-base) var(--ease-out-expo)',
-                maxWidth: step === 'success' ? 520 : 'none',
-                margin: step === 'success' ? '0 auto' : 0,
-              }}
-            >
-              {step === 'cart'    && <CartStep onNext={goNext} />}
-              {step === 'details' && <DetailsStep onBack={goBack} onSuccess={goSuccess} extras={extras} setExtras={setExtras} />}
-              {step === 'success' && <SuccessStep orderId={orderId} postcode={orderPostcode} amount={orderAmount} />}
+      {/* Header strip */}
+      {/* The ink gradient, and a fading ember rule along the bottom rather
+          than a flat 2px bar — the same edge the announcement bar, the mega
+          menu and both collection headers carry. */}
+      <div data-ground="dark" className="grad-ink relative bg-ink-900">
+        <span
+          aria-hidden="true"
+          className="absolute inset-x-0 bottom-0 h-0.5"
+          style={{ backgroundImage: 'var(--grad-rule)' }}
+        />
+        <div className="mx-auto flex max-w-[60rem] items-center justify-between p-4">
+          <Link href="/" className="no-underline">
+            {/* Ember 300, not Ember 700. Ember 700 is the amber a LIGHT ground
+                takes; on Ink 900 it is dark on dark. Same correction on the
+                shield to the right. */}
+            <span className="font-body text-lead font-bold text-calico-50">
+              UK Sofa <span className="text-ember-300">Shop</span>
+            </span>
+          </Link>
+          {step !== 'success' && (
+            // Ink 500 on Ink 900 measures about 2.5:1 — this line was very
+            // nearly invisible. Calico 300 is the ramp's colour for secondary
+            // type on a dark ground.
+            <div className="flex items-center gap-2 text-caption text-calico-300">
+              <ShieldCheck aria-hidden="true" className="h-3.5 w-3.5 text-ember-300" />
+              Secure Checkout
             </div>
-
-            {/* Sidebar — hidden on success */}
-            {step !== 'success' && cartItems.length > 0 && (
-              <div className="hidden lg:block">
-                <div style={{ position: 'sticky', top: 80 }}>
-                  <OrderSummary extras={extras} />
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* ── The total, pinned ─────────────────────────────────────────
-              This was a <details> between the form and the foot of the page,
-              so on a phone the delivery form was pushed down by a block most
-              people never opened — and the number they wanted was below it
-              either way. It is a bar now: the total always on screen, the
-              breakdown rising over the page when asked for. */}
-          {step !== 'success' && cartItems.length > 0 && (
-            <MobileTotalBar
-              total={totalAmount + deliveryTotal(extras)}
-              itemCount={cartItems.reduce((n, i) => n + i.quantity, 0)}
-            >
-              <OrderSummary extras={extras} />
-            </MobileTotalBar>
           )}
         </div>
       </div>
-    </>
+
+      <div className="mx-auto max-w-[60rem] px-4 py-6">
+
+        {/* The whole flow had no level-1 heading — three steps, a stepper
+            and a form, and nothing naming the page. It is visually hidden
+            because the stepper already says where you are on screen, and a
+            second visible title above it would be repeating itself. */}
+        <h1 className="sr-only">
+          {step === 'cart' ? 'Your cart'
+            : step === 'details' ? 'Delivery details'
+            : 'Order confirmed'}
+        </h1>
+
+        {/* Steps indicator */}
+        {step !== 'success' && <Steps current={step} />}
+
+        {/* All classes. This grid carried `gridTemplateColumns: 'auto'` inline
+            beside `lg:grid-cols-[1fr_340px]`, and an inline declaration beats
+            every class — so the two-column layout never applied and the order
+            summary sat below the form at every width instead of beside it. */}
+        <div className={`grid gap-4 ${step === 'success' ? 'grid-cols-1' : 'lg:grid-cols-[1fr_340px]'}`}>
+
+          {/* Main panel */}
+          <div
+            // 380ms, and the outgoing step is already fading as the incoming
+            // one starts — see goNext/goBack, where the swap happens a beat
+            // into the fade rather than after it.
+            className={`rounded-md border border-calico-300 bg-calico-50 p-4 shadow-e1 transition-[opacity,transform] duration-base ease-out-expo sm:p-6 ${
+              step === 'success' ? 'mx-auto max-w-[520px]' : ''
+            } ${
+              visible
+                ? 'translate-x-0 opacity-100'
+                : direction === 'forward' ? 'translate-x-10 opacity-0' : '-translate-x-10 opacity-0'
+            }`}
+          >
+            {step === 'cart'    && <CartStep onNext={goNext} />}
+            {step === 'details' && <DetailsStep onBack={goBack} onSuccess={goSuccess} extras={extras} setExtras={setExtras} />}
+            {step === 'success' && <SuccessStep orderId={orderId} postcode={orderPostcode} amount={orderAmount} />}
+          </div>
+
+          {/* Sidebar — hidden on success */}
+          {step !== 'success' && cartItems.length > 0 && (
+            <div className="hidden lg:block">
+              <div className="sticky top-20">
+                <OrderSummary extras={extras} />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ── The total, pinned ─────────────────────────────────────────
+            This was a <details> between the form and the foot of the page,
+            so on a phone the delivery form was pushed down by a block most
+            people never opened — and the number they wanted was below it
+            either way. It is a bar now: the total always on screen, the
+            breakdown rising over the page when asked for. */}
+        {step !== 'success' && cartItems.length > 0 && (
+          <MobileTotalBar
+            total={totalAmount + deliveryTotal(extras)}
+            itemCount={cartItems.reduce((n, i) => n + i.quantity, 0)}
+          >
+            <OrderSummary extras={extras} />
+          </MobileTotalBar>
+        )}
+      </div>
+    </div>
   )
 }

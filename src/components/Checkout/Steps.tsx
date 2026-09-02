@@ -50,7 +50,7 @@ export default function Steps({ current }: { current: Step }) {
           className="h-1.5 w-full overflow-hidden rounded-pill bg-calico-200"
         >
           <span
-            className="block h-full rounded-pill bg-ember-500 transition-[width] duration-base ease-out-expo"
+            className="btn-ember block h-full rounded-pill bg-ember-500 transition-[width] duration-base ease-out-expo"
             // The first step is not zero progress — you have arrived, and a bar
             // reading empty at the top of a checkout is discouraging.
             style={{ width: `${Math.max(progress, 8)}%` }}
@@ -71,7 +71,7 @@ export default function Steps({ current }: { current: Step }) {
                   aria-hidden="true"
                   className={`flex h-8 w-8 items-center justify-center rounded-pill border-2 transition-colors duration-base ease-out-expo ${
                     done || active
-                      ? 'border-ember-500 bg-ember-500 text-ink-900'
+                      ? 'btn-ember border-ember-500 bg-ember-500 text-ink-900 shadow-ember'
                       : 'border-calico-300 bg-calico-100 text-ink-500'
                   }`}
                 >
@@ -94,7 +94,7 @@ export default function Steps({ current }: { current: Step }) {
                 // rather than a line that changes colour all at once.
                 <span aria-hidden="true" className="mt-4 block h-0.5 w-16 overflow-hidden rounded-pill bg-calico-300">
                   <span
-                    className="block h-full rounded-pill bg-ember-500 transition-[width] duration-settle ease-out-expo"
+                    className="btn-ember block h-full rounded-pill bg-ember-500 transition-[width] duration-settle ease-out-expo"
                     style={{ width: done ? '100%' : '0%' }}
                   />
                 </span>

@@ -16,13 +16,37 @@ export interface DisplayCartItem extends CartItem {
   title: string
   color: string
   image_url: string
+
+  /**
+   * Made-to-order lines only. The id is what the order needs; the label, code
+   * and swatch are carried so the basket, the totals panel and the mobile
+   * drawer can show the choice without any of them having to fetch the fabric
+   * library to find out what it was called.
+   */
+  fabric_id?: string | null
+  fabric_label?: string | null
+  fabric_code?: string | null
+  fabric_swatch?: string | null
+}
+
+/**
+ * What makes two basket rows the same row.
+ *
+ * The same frame in two different fabrics is two different sofas, and keying
+ * the basket on variant_id alone silently merged them into one line of
+ * quantity two - carrying whichever fabric happened to be added first. Stocked
+ * products have no fabric, so their key is exactly what it always was.
+ */
+export function lineKey(item: Pick<DisplayCartItem, 'variant_id' | 'fabric_id'>): string {
+  return item.fabric_id ? `${item.variant_id}:${item.fabric_id}` : item.variant_id
 }
 
 interface CartContextType {
   cartItems: DisplayCartItem[]
   addToCart: (item: DisplayCartItem) => void
-  removeFromCart: (variantId: string) => void
-  updateQuantity: (variantId: string, qty: number) => void
+  /** Takes a lineKey(), not a variant id - see the note on lineKey. */
+  removeFromCart: (key: string) => void
+  updateQuantity: (key: string, qty: number) => void
   clearCart: () => void
   totalAmount: number
   itemCount: number
@@ -100,11 +124,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
    * ProductPageClient instead, where it runs exactly once per click.
    */
   const addToCart = (newItem: DisplayCartItem) => {
+    const key = lineKey(newItem)
     setCartItems(prev => {
-      const existing = prev.find(i => i.variant_id === newItem.variant_id)
+      const existing = prev.find(i => lineKey(i) === key)
       if (existing) {
         return prev.map(i =>
-          i.variant_id === newItem.variant_id
+          lineKey(i) === key
             ? { ...i, quantity: i.quantity + newItem.quantity }
             : i
         )
@@ -113,13 +138,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
     })
   }
 
-  const removeFromCart = (variantId: string) =>
-    setCartItems(prev => prev.filter(i => i.variant_id !== variantId))
+  const removeFromCart = (key: string) =>
+    setCartItems(prev => prev.filter(i => lineKey(i) !== key))
 
-  const updateQuantity = (variantId: string, qty: number) => {
-    if (qty < 1) { removeFromCart(variantId); return }
+  const updateQuantity = (key: string, qty: number) => {
+    if (qty < 1) { removeFromCart(key); return }
     setCartItems(prev =>
-      prev.map(i => i.variant_id === variantId ? { ...i, quantity: qty } : i)
+      prev.map(i => lineKey(i) === key ? { ...i, quantity: qty } : i)
     )
   }
 

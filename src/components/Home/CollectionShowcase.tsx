@@ -53,7 +53,7 @@ export default function CollectionShowcase({ collections }: { collections: HomeC
 
       <div className="relative">
         <div className="mx-auto max-w-shell pl-4 sm:px-6">
-          <div className="no-scrollbar flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 pr-4 sm:grid sm:grid-cols-2 sm:overflow-visible sm:pr-0 lg:gap-6">
+          <div className="no-scrollbar flex snap-x snap-mandatory gap-4 overflow-x-auto overflow-y-hidden pb-2 pr-4 sm:grid sm:grid-cols-2 sm:overflow-visible sm:pr-0 lg:gap-6">
             {collections.map((col, i) => (
               <Reveal
                 key={col.id}

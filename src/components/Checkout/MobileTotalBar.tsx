@@ -49,7 +49,7 @@ export default function MobileTotalBar({ total, itemCount, children }: Props) {
         // Tells the floating WhatsApp button to stand down. See
         // bottomBarShowing() in src/components/Layout/WhatsAppFab.tsx.
         data-bottom-bar=""
-        className="fixed inset-x-0 z-sticky-bar border-t border-calico-300 bg-calico-50"
+        className="fixed inset-x-0 z-sticky-bar border-t border-calico-300 bg-calico-50 shadow-e2"
         style={{ bottom: clearance }}
       >
         {/* The drawer. A grid row growing from zero, so it can rise to the

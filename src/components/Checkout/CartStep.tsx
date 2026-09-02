@@ -9,7 +9,7 @@ import { ArrowLeft, ArrowRight, Minus, Plus, ShoppingBag, Trash2, Truck } from '
 import EmptyState from '@/components/UI/EmptyState';
 import toast from 'react-hot-toast';
 import { PROMISES } from '@/constants/promises';
-import { useCart, type DisplayCartItem } from '@/context/CartContext';
+import { useCart, lineKey, type DisplayCartItem } from '@/context/CartContext';
 import { blurDataURL } from '@/utils/cloudinary';
 import { useReducedMotionSafe } from '@/components/Motion/useReducedMotionSafe';
 
@@ -36,14 +36,14 @@ export default function CartStep({ onNext }: { onNext: () => void }) {
    * closes, and for five seconds the item is one tap from returning.
    */
   function remove(item: DisplayCartItem) {
-    setCollapsing(item.variant_id);
+    setCollapsing(lineKey(item));
 
     timers.current.push(setTimeout(() => {
-      removeFromCart(item.variant_id);
+      removeFromCart(lineKey(item));
       setCollapsing(null);
 
       const id = toast.custom(() => (
-        <div className="flex items-center gap-4 rounded-sm bg-ink-900 py-3 pl-4 pr-3 shadow-e3">
+        <div data-ground="dark" className="grad-ink flex items-center gap-4 rounded-md bg-ink-900 py-3 pl-4 pr-3 shadow-e3">
           <span className="text-body-sm text-calico-50">
             Removed <span className="font-semibold">{item.title}</span>
           </span>
@@ -70,19 +70,19 @@ export default function CartStep({ onNext }: { onNext: () => void }) {
       <ul className="m-0 flex list-none flex-col gap-3 p-0">
         {cartItems.map(item => (
           <li
-            key={item.variant_id}
+            key={lineKey(item)}
             // The collapse is a grid row going to zero, which is the only way
             // CSS can animate to "as tall as the content" and back. A measured
             // height animation that never gets a frame leaves the row stuck.
             className={`grid transition-[grid-template-rows,opacity,margin] duration-base ease-out-expo ${
-              collapsing === item.variant_id ? 'grid-rows-[0fr] opacity-0' : 'grid-rows-[1fr] opacity-100'
+              collapsing === lineKey(item) ? 'grid-rows-[0fr] opacity-0' : 'grid-rows-[1fr] opacity-100'
             }`}
           >
             <div className="overflow-hidden">
               <Row
                 item={item}
                 onRemove={() => remove(item)}
-                onQuantity={q => updateQuantity(item.variant_id, q)}
+                onQuantity={q => updateQuantity(lineKey(item), q)}
               />
             </div>
           </li>
@@ -92,7 +92,7 @@ export default function CartStep({ onNext }: { onNext: () => void }) {
       <button
         type="button"
         onClick={onNext}
-        className="hover-btn mt-6 flex h-14 w-full items-center justify-center gap-3 rounded-sm bg-ember-500 font-data text-eyebrow font-bold uppercase tracking-[0.1em] text-ink-900 shadow-ember"
+        className="hover-btn btn-ember sheen shadow-ember mt-6 flex h-14 w-full items-center justify-center gap-3 rounded-pill bg-ember-500 font-data text-eyebrow font-bold uppercase tracking-[0.1em] text-ink-900 shadow-ember"
       >
         Continue to delivery
         <ArrowRight aria-hidden="true" className="h-4 w-4" />
@@ -120,7 +120,7 @@ function Row({ item, onRemove, onQuantity }: {
   onQuantity: (q: number) => void;
 }) {
   return (
-    <article className="flex h-[88px] items-stretch overflow-hidden rounded-sm border border-calico-300 bg-calico-50 shadow-e1">
+    <article className="flex h-[88px] items-stretch overflow-hidden rounded-md border border-calico-300 bg-calico-50 shadow-e1">
       <div className="relative h-full w-[88px] shrink-0 bg-calico-200">
         <Image
           src={item.image_url || '/placeholder.svg'}
@@ -197,7 +197,7 @@ function Stepper({ quantity, title, onChange }: {
     'transition-colors duration-swift ease-out-expo hover:bg-calico-200 disabled:text-ink-400';
 
   return (
-    <div className="flex h-11 items-center rounded-sm bg-calico-100">
+    <div className="flex h-11 items-center rounded-pill bg-calico-100">
       <button
         type="button"
         onClick={() => step(quantity - 1)}

@@ -148,7 +148,7 @@ export default function SuccessStep({ orderId, postcode, amount }: Props) {
       <Reveal index={5} className="mt-6 flex flex-col gap-3">
         <Link
           href={trackHref}
-          className="hover-btn flex h-14 items-center justify-center gap-3 rounded-sm bg-ember-500 font-data text-eyebrow font-bold uppercase tracking-[0.1em] text-ink-900 no-underline shadow-ember"
+          className="hover-btn btn-ember sheen shadow-ember flex h-14 items-center justify-center gap-3 rounded-pill bg-ember-500 font-data text-eyebrow font-bold uppercase tracking-[0.1em] text-ink-900 no-underline shadow-ember"
         >
           <Truck aria-hidden="true" className="h-4 w-4" />
           Track this order
@@ -159,14 +159,14 @@ export default function SuccessStep({ orderId, postcode, amount }: Props) {
             href={whatsapp}
             target="_blank"
             rel="noopener noreferrer"
-            className="hover-btn flex h-12 flex-1 items-center justify-center gap-2 rounded-sm bg-whatsapp text-body-sm font-semibold text-calico-50 no-underline"
+            className="hover-btn btn-whatsapp shadow-whatsapp flex h-12 flex-1 items-center justify-center gap-2 rounded-pill bg-whatsapp text-body-sm font-semibold text-ink-900 no-underline"
           >
             <WhatsAppIcon className="h-5 w-5" />
             Message us about {reference}
           </a>
           <a
             href={PHONE_HREF}
-            className="hover-btn hover-btn-dark flex h-12 flex-1 items-center justify-center gap-2 rounded-sm bg-ink-900 text-body-sm font-semibold text-calico-50 no-underline"
+            className="hover-btn hover-btn-dark grad-ink flex h-12 flex-1 items-center justify-center gap-2 rounded-pill bg-ink-900 text-body-sm font-semibold text-calico-50 no-underline"
           >
             <Phone aria-hidden="true" className="h-4 w-4" />
             {PHONE_DISPLAY}

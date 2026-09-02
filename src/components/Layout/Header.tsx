@@ -38,7 +38,10 @@ function Wordmark({ light, className = '' }: { light: boolean; className?: strin
       aria-label="UK Sofa Shop — home"
       className={`flex min-h-11 items-center gap-2 no-underline ${className}`}
     >
-      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-sm bg-ember-500">
+      {/* The gradient, not a flat fill — but the same rounded-sm square it has
+          always been. The mark itself is a brand decision and not one to make
+          in a styling pass; only the surface it is drawn on changes. */}
+      <span className="btn-ember grid h-8 w-8 shrink-0 place-items-center rounded-sm bg-ember-500">
         <Sofa className="h-5 w-5 text-ink-900" aria-hidden="true" />
       </span>
       <span
@@ -168,10 +171,21 @@ export default function Header() {
 
       {/* ── Announcement ──────────────────────────────────────────────────── */}
       {annoVisible && (
-        <div className="relative flex min-h-9 items-center justify-center bg-ink-900 px-12 py-2">
+        <div
+          data-ground="dark"
+          className="grad-ink relative flex min-h-9 items-center justify-center bg-ink-900 px-12 py-2"
+        >
           <p aria-live="polite" className="eyebrow m-0 text-center text-calico-300">
             {ANNOUNCEMENT}
           </p>
+
+          {/* The fading ember hairline along the bottom edge, so the bar hands
+              over to whatever is beneath it rather than simply stopping. */}
+          <span
+            aria-hidden="true"
+            className="absolute inset-x-0 bottom-0 h-px"
+            style={{ backgroundImage: 'var(--grad-rule)', opacity: 0.5 }}
+          />
           <button
             type="button"
             onClick={() => setAnnoVisible(false)}
@@ -192,12 +206,16 @@ export default function Header() {
           isHome ? '-mb-14' : '',
         ].join(' ')}
       >
-        {/* The ember rule sweeps in from the left as the bar solidifies. */}
+        {/* The ember rule sweeps in from the left as the bar solidifies. The
+            gradient version, so it fades out toward the right margin the way
+            every other rule on the site does rather than running flat into the
+            corner. */}
         <span
           aria-hidden="true"
-          className={`block h-0.5 origin-left bg-ember-500 transition-transform duration-settle ease-out-expo ${
+          className={`block h-0.5 origin-left transition-transform duration-settle ease-out-expo ${
             scrolled ? 'scale-x-100' : 'scale-x-0'
           }`}
+          style={{ backgroundImage: 'var(--grad-rule)' }}
         />
 
         <div className="mx-auto max-w-shell px-3">

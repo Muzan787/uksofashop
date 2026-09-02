@@ -112,7 +112,7 @@ export default function ProductRail({
           <div
             ref={rail}
             data-lenis-prevent
-            className="no-scrollbar flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 pr-4 sm:pr-6 lg:gap-6"
+            className="no-scrollbar flex snap-x snap-mandatory gap-4 overflow-x-auto overflow-y-hidden pb-2 pr-4 sm:pr-6 lg:gap-6"
           >
             {items.map((item, i) => (
               <Reveal

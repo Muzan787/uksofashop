@@ -35,7 +35,7 @@ import Similar from './Similar';
 import StickyBar from './StickyBar';
 import WhatsAppIcon from './WhatsAppIcon';
 import Modal from '@/components/UI/Modal';
-import type { GalleryImage, Product, Review, SimilarProduct, SizeVariant, Swatch, Variant } from './types';
+import type { Fabric, FabricCollection, GalleryImage, Product, Review, SimilarProduct, SizeVariant, Swatch, Variant } from './types';
 
 interface Props {
   product: Product;
@@ -53,6 +53,8 @@ interface Props {
   subgroupTitle?: string;
   currentSubgroup?: string | null;
   initialVariantId?: string;
+  /** The whole made-to-order fabric range. Empty on stocked products. */
+  fabrics?: FabricCollection[];
 }
 
 /**
@@ -74,6 +76,7 @@ export default function ProductPageClient({
   categorySlug, categoryName, deliveryEstimate,
   initialWishlistState, isLoggedIn,
   sizeVariants, subgroupTitle, currentSubgroup, initialVariantId,
+  fabrics = [],
 }: Props) {
   const { addToCart } = useCart();
 
@@ -205,17 +208,41 @@ export default function ProductPageClient({
     trackViewContent({ variantId: selVariant.id, title: product.title, price, quantity: 1 });
   }, [selVariant, price, product.title]);
 
+  // ── Fabric, on made-to-order frames ──────────────────────────────────────
+  //
+  // Held here rather than inside the picker because two things need it: the
+  // basket line, and "Add to basket" itself, which opens the dialog rather than
+  // complaining when nothing has been chosen yet.
+  const madeToOrder = Boolean(product.custom_made) && fabrics.length > 0;
+  const [fabric, setFabric] = useState<Fabric | null>(null);
+  const [fabricOpen, setFabricOpen] = useState(false);
+
   // ── Cart ─────────────────────────────────────────────────────────────────
   const [added, setAdded] = useState(false);
   const handleAdd = useCallback(() => {
     if (!selVariant) return;
+
+    // You cannot build a sofa without knowing what to build it in. Rather than
+    // refusing, this puts the choice in front of them - one tap, instead of an
+    // error they then have to go and resolve for themselves.
+    if (madeToOrder && !fabric) {
+      setFabricOpen(true);
+      return;
+    }
+
     addToCart({
       variant_id: selVariant.id,
       quantity: 1,
       price,
       title: product.title,
-      color: `${selVariant.color ?? ''} ${selVariant.material ?? ''}`.trim(),
+      color: fabric
+        ? `${fabric.collectionName} ${fabric.name}`
+        : `${selVariant.color ?? ''} ${selVariant.material ?? ''}`.trim(),
       image_url: images[0]?.src || '/placeholder.svg',
+      fabric_id: fabric?.id ?? null,
+      fabric_label: fabric ? `${fabric.collectionName} ${fabric.name}` : null,
+      fabric_code: fabric?.code ?? null,
+      fabric_swatch: fabric?.image ?? null,
     });
     // Fired here rather than inside the cart reducer: the reducer runs inside a
     // setState updater, which React may invoke more than once.
@@ -223,7 +250,7 @@ export default function ProductPageClient({
     setAdded(true);
     toast.success(`${product.title} added to cart`, { icon: '🛋️', position: 'top-center' });
     setTimeout(() => setAdded(false), 2000);
-  }, [selVariant, price, product.title, images, addToCart]);
+  }, [selVariant, price, product.title, images, addToCart, madeToOrder, fabric]);
 
   // ── Wishlist ─────────────────────────────────────────────────────────────
   const [inWishlist, setInWishlist] = useState(initialWishlistState);
@@ -334,6 +361,11 @@ export default function ProductPageClient({
               selectedColor={selColor}
               onSelectColor={setSelColor}
               material={selMat === 'Standard' ? '' : selMat}
+              fabrics={fabrics}
+              selectedFabric={fabric}
+              onSelectFabric={madeToOrder ? setFabric : undefined}
+              fabricDialogOpen={fabricOpen}
+              onFabricDialogChange={madeToOrder ? setFabricOpen : undefined}
             />
           </div>
 

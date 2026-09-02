@@ -2,15 +2,25 @@
 import { Metadata } from 'next';
 import { createClient } from '@/utils/supabase/server'
 import { summariseCollections } from '@/utils/collections';
-import Link from 'next/link';
-import { ChevronRight, PackageSearch } from 'lucide-react';
 import CollectionCard from '@/components/Product/CollectionCard';
+import CollectionHero from '@/components/Collection/CollectionHero';
+import CollectionEmpty from '@/components/Collection/CollectionEmpty';
+import { Reveal } from '@/components/Motion';
+import { staggerDelay } from '@/components/Motion/tokens';
 
 export const metadata: Metadata = {
   title: 'All Collections',
   description: 'Browse our complete range of sofa collections and sets, with free UK Mainland delivery.',
   alternates: { canonical: '/collection' },
 };
+
+/** "6 collections · from £529", and the honest shorter versions of it. */
+function summarise(count: number, from: number | null): string {
+  if (count === 0) return 'No collections yet';
+  const sets = `${count} ${count === 1 ? 'collection' : 'collections'}`;
+  if (from === null) return sets;
+  return `${sets} · from £${Math.round(from).toLocaleString('en-GB')}`;
+}
 
 export default async function CollectionsIndexPage() {
   const supabase = await createClient();
@@ -35,67 +45,48 @@ export default async function CollectionsIndexPage() {
 
   const collectionsData = summariseCollections(groupsData);
 
-  return (
-    <div className="min-h-screen bg-calico-50">
-      
-      {/* ── HEADER SECTION ── */}
-      <div className="relative bg-ink-900 overflow-hidden">
-        <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-stone-600 via-stone-900 to-black" />
-        
-        <div className="relative max-w-shell mx-auto px-4 pt-8 pb-8 sm:py-16">
-          <nav className="flex items-center gap-2 mb-4 flex-wrap">
-            {[['/', 'Home'], ['/shop/all', 'Shop']].map(([href, label]) => (
-              <span key={href} className="flex items-center gap-2">
-                <Link href={href} className="text-caption text-calico-300 no-underline hover:text-calico-50 transition-colors">
-                  {label}
-                </Link>
-                <span className="text-calico-300/50 text-caption">›</span>
-              </span>
-            ))}
-            <span className="text-caption text-ember-300 font-semibold">Collections</span>
-          </nav>
-          
-          <div className="eyebrow text-ember-300 tracking-[0.22em] font-bold mb-2">
-            Curated Sets
-          </div>
-          <h1 className="font-display text-h1 font-bold text-white leading-tight">
-            All Collections
-          </h1>
-          <p className="text-white/50 text-caption sm:text-body-sm mt-3 max-w-md leading-relaxed">
-            Discover our curated sets. Designed to completely transform your living space.
-          </p>
-        </div>
-        <div className="h-[2px] bg-ember-500" />
-      </div>
+  // Counted from what is actually on the page rather than asserted, so the
+  // header cannot drift from the grid underneath it.
+  const cheapest = collectionsData.length
+    ? Math.min(...collectionsData.map(c => c.minPrice).filter(n => Number.isFinite(n) && n > 0))
+    : null;
 
-      {/* ── COLLECTIONS GRID ── */}
-      <div className="max-w-shell mx-auto px-4 py-8 pb-24">
-        {collectionsData && collectionsData.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
+  return (
+    <div className="grad-calico grain-light relative min-h-screen bg-calico-50">
+      <CollectionHero
+        eyebrow="Curated sets"
+        title="Buy the whole room at once."
+        standfirst="Sofa, loveseat and armchair in the same fabric and the same frame — priced as a set and delivered in one visit."
+        summary={summarise(collectionsData.length, Number.isFinite(cheapest as number) ? cheapest : null)}
+        trail={[
+          { href: '/', label: 'Home' },
+          { href: '/shop/all', label: 'Shop' },
+          { label: 'Collections' },
+        ]}
+      />
+
+      <div className="relative mx-auto max-w-shell px-4 pb-16 pt-8 sm:px-6 lg:pb-24 lg:pt-10">
+        {collectionsData.length > 0 ? (
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6">
             {collectionsData.map((collection, i) => (
-              <div 
-                key={collection.id}
-                style={{ opacity: 0, animation: `fadeUp var(--dur-base) var(--ease-out-expo) ${i * 50}ms forwards` }}
-              >
+              // The shared reveal, not an inline `opacity: 0` plus a locally
+              // redeclared keyframe. That pattern renders the whole grid
+              // invisible and waits for an animation to bring it back, which is
+              // the one thing the motion vocabulary says a primitive may never
+              // do — and the keyframe it declared was already in globals.css.
+              <Reveal key={collection.id} delay={staggerDelay(i)} distance={20} amount={0.12}>
                 <CollectionCard {...collection} />
-              </div>
+              </Reveal>
             ))}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center py-16 px-4 text-center bg-white rounded-sm border border-calico-300">
-            <PackageSearch className="w-9 h-9 text-stone-300 mb-4" />
-            <h2 className="text-body font-bold text-ink-900 mb-2">No collections available</h2>
-            <p className="text-caption text-stone-500 max-w-[300px] mb-4 leading-relaxed">
-              We are currently designing new sets. Please check back soon.
-            </p>
-            <Link href="/shop/all" className="inline-flex items-center gap-2 bg-ember-500 text-ink-900 px-4 py-3 rounded-sm eyebrow font-bold no-underline tracking-widest hover:bg-ember-700 hover:text-calico-50 transition-colors">
-              Shop Individual Sofas <ChevronRight className="w-3 h-3" />
-            </Link>
-          </div>
+          <CollectionEmpty
+            title="No collections available"
+            body="We are currently putting new sets together. In the meantime, every sofa is available on its own."
+            ctaLabel="Shop individual sofas"
+          />
         )}
       </div>
-
-      <style>{`@keyframes fadeUp { from { opacity:0; transform:translateY(16px) } to { opacity:1; transform:translateY(0) } }`}</style>
     </div>
   );
 }
