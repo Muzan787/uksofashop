@@ -97,5 +97,7 @@ export interface FabricCollection {
   id: string
   slug: string
   name: string
+  /** One line on how the cloth behaves. The long version is /fabrics. */
+  description: string | null
   fabrics: Fabric[]
 }

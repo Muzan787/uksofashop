@@ -43,6 +43,7 @@ const supportLinks = [
   { href: '/track-order',      label: 'Track Your Order' },
   { href: '/size-guide',       label: 'Size Guide' },
   { href: '/care-guide',       label: 'Care Guide' },
+  { href: '/fabrics',          label: 'Fabric Guide' },
 ];
 
 const companyLinks = [

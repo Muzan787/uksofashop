@@ -8,7 +8,6 @@ interface ProductVariant {
   color: string | null;
   material: string | null;
   price_adjustment: number;
-  stock_quantity: number;
   image_url: string | null;
 }
 
@@ -51,8 +50,7 @@ export async function GET(): Promise<Response> {
         sku, 
         color, 
         material, 
-        price_adjustment, 
-        stock_quantity, 
+        price_adjustment,
         image_url
       )
     `)
@@ -66,6 +64,42 @@ export async function GET(): Promise<Response> {
   const products = data as unknown as Product[];
   const baseUrl = 'https://www.uksofashop.co.uk';
   let itemsXml = '';
+
+  /**
+   * Availability is always in_stock, and that is deliberate.
+   *
+   * We do not track stock. The sofas are made to order, so anything listed can
+   * be built. This used to read `stock_quantity > 0`, which meant 28 of the 77
+   * variants were being declared out_of_stock to Google purely because a column
+   * nobody maintains was sitting at zero — and an out_of_stock item is
+   * suppressed from Shopping rather than shown as unavailable. Over a third of
+   * the catalogue was invisible for no reason.
+   *
+   * What decides whether something is sellable is `is_active`, the same flag
+   * the storefront uses, and it is applied by the query above: an inactive
+   * product never reaches this loop at all. So every item that gets written
+   * here is, by definition, available.
+   */
+
+  /**
+   * The rest of the photographs, as Google wants them.
+   *
+   * One <g:additional_image_link> per URL, capped at the ten Google accepts,
+   * and never repeating whatever already went out as the main <g:image_link> —
+   * a duplicate is rejected as an invalid additional image rather than being
+   * quietly ignored.
+   *
+   * Today this emits almost nothing, because one active product has a gallery
+   * and the rest have a single variant photograph each. It is here so that it
+   * starts working the day the photography lands, rather than being the thing
+   * somebody has to remember afterwards.
+   */
+  const additionalImages = (gallery: string[] | null, main: string) =>
+    (gallery ?? [])
+      .filter(url => url && url !== main)
+      .slice(0, 10)
+      .map(url => `<g:additional_image_link>${url}</g:additional_image_link>`)
+      .join('');
 
   products.forEach((product) => {
     // Safely extract the category slug, fallback to 'uncategorized' if missing
@@ -91,8 +125,9 @@ export async function GET(): Promise<Response> {
             <!-- Exact variant link structure -->
             <g:link>${baseUrl}/shop/${categorySlug}/${product.slug}?variant=${variant.id}</g:link>
             <g:image_link>${imageUrl}</g:image_link>
+            ${additionalImages(product.gallery_images, imageUrl)}
             <g:condition>new</g:condition>
-            <g:availability>${variant.stock_quantity > 0 ? 'in_stock' : 'out_of_stock'}</g:availability>
+            <g:availability>in_stock</g:availability>
             <g:price>${finalPrice.toFixed(2)} GBP</g:price>
             <g:brand>UK Sofa Shop</g:brand>
             ${variant.sku ? `<g:mpn><![CDATA[${variant.sku}]]></g:mpn>` : ''}
@@ -113,6 +148,7 @@ export async function GET(): Promise<Response> {
           <!-- Base product link structure -->
           <g:link>${baseUrl}/shop/${categorySlug}/${product.slug}</g:link>
           <g:image_link>${fallbackImageUrl}</g:image_link>
+          ${additionalImages(product.gallery_images, fallbackImageUrl)}
           <g:condition>new</g:condition>
           <g:availability>in_stock</g:availability>
           <g:price>${Number(product.base_price).toFixed(2)} GBP</g:price>

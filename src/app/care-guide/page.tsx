@@ -77,6 +77,11 @@ export default function CareGuidePage() {
           <strong>Get it professionally cleaned</strong> once a year, or after anything major. An
           upholstery cleaner has extraction equipment that lifts what a cloth pushes further in.
         </p>
+        <p className="fine">
+          Pile fabrics — the velvets and Marble — also need brushing rather than just vacuuming, to
+          lift the flattening where people sit. Which fabric behaves how is set out in the{' '}
+          <Link href="/fabrics">fabric guide</Link>.
+        </p>
 
         <h2 id="leather">Leather sofas</h2>
         <p>

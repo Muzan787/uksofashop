@@ -51,10 +51,18 @@ export default async function HomePage() {
   })) ?? [];
 
   // 2. Fetch Featured Products
+  //
+  //    is_featured first, then newest — the same order the shop's "Featured"
+  //    sort uses, so ticking a product in the admin moves it in both places.
+  //    This rail previously sorted on created_at alone, which meant the front
+  //    page showed whatever had been added last and the flag on the products
+  //    table did nothing here. With fewer than six ticked the remainder still
+  //    fills from the newest, so the rail is never short.
   const { data: featuredProducts } = await supabase
     .from('products')
     .select('id, title, slug, base_price, gallery_images, average_rating, review_count, product_variants(id, image_url, color, color_hex, price_adjustment, priority), product_categories(categories(slug, name))')
     .eq('is_active', true)
+    .order('is_featured', { ascending: false, nullsFirst: false })
     .order('created_at', { ascending: false })
     .order('priority', { referencedTable: 'product_variants', ascending: true })
     .limit(6);

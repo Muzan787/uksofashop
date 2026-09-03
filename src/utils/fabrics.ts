@@ -28,6 +28,7 @@ interface CollectionRow {
   id: string
   slug: string
   name: string
+  description: string | null
   fabrics: FabricRow[] | null
 }
 
@@ -36,7 +37,7 @@ export async function getFabricLibrary(): Promise<FabricCollection[]> {
 
   const { data, error } = await supabase
     .from('fabric_collections')
-    .select('id, slug, name, fabrics(id, code, name, hex, image_url, is_swatchable, sort)')
+    .select('id, slug, name, description, fabrics(id, code, name, hex, image_url, is_swatchable, sort)')
     .eq('is_active', true)
     .eq('fabrics.is_active', true)
     .order('sort', { ascending: true })
@@ -49,6 +50,7 @@ export async function getFabricLibrary(): Promise<FabricCollection[]> {
       id: c.id,
       slug: c.slug,
       name: c.name,
+      description: c.description,
       fabrics: (c.fabrics ?? []).map(f => ({
         id: f.id,
         code: f.code,

@@ -28,6 +28,7 @@ const STATIC_PATHS = [
   '/faq',
   '/size-guide',
   '/care-guide',
+  '/fabrics',
   '/journal',
   '/careers',
   '/terms',

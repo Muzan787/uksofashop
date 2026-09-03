@@ -31,6 +31,8 @@ const productSchema = z.object({
   // Only 'uk' ever renders a claim; anything else is silent.
   origin: z.enum(['uk', 'imported', 'unspecified']).default('unspecified'),
   customMade: z.boolean().default(false),
+  // Pins a product to the homepage rail and the top of the shop's Featured sort.
+  isFeatured: z.boolean().default(false),
 })
 
 
@@ -78,6 +80,7 @@ export async function addProduct(formData: FormData, variants: VariantInput[]) {
     gallery_images: formData.get('gallery_images') as string || '[]',
     origin: (formData.get('origin') as string) || 'unspecified',
     customMade: formData.get('customMade') === 'true',
+    isFeatured: formData.get('isFeatured') === 'true',
   }
 
   const validatedData = productSchema.safeParse(rawData)
@@ -86,7 +89,7 @@ export async function addProduct(formData: FormData, variants: VariantInput[]) {
     return { error: validatedData.error.issues[0].message }
   }
 
-  const { title, slug, categoryIds, basePrice, description, specifications, variantGroupId, sizeLabel, subgroupLabel, gallery_images, origin, customMade } = validatedData.data
+  const { title, slug, categoryIds, basePrice, description, specifications, variantGroupId, sizeLabel, subgroupLabel, gallery_images, origin, customMade, isFeatured } = validatedData.data
 
   let parsedSpecs = {};
   try { parsedSpecs = JSON.parse(specifications || '{}'); } catch { }
@@ -107,7 +110,8 @@ export async function addProduct(formData: FormData, variants: VariantInput[]) {
       subgroup_label: subgroupLabel || null,
       gallery_images: parsedGallery,
       origin,
-      custom_made: customMade
+      custom_made: customMade,
+      is_featured: isFeatured
     })
     .select('id')
     .single()
@@ -195,6 +199,7 @@ export async function updateProduct(formData: FormData, variants: VariantInput[]
   const originRaw = formData.get('origin') as string
   const origin = ['uk', 'imported', 'unspecified'].includes(originRaw) ? originRaw : 'unspecified'
   const customMade = formData.get('customMade') === 'true'
+  const isFeatured = formData.get('isFeatured') === 'true'
 
   let parsedSpecs = {};
   try { parsedSpecs = JSON.parse(specifications); } catch { }
@@ -215,7 +220,8 @@ export async function updateProduct(formData: FormData, variants: VariantInput[]
       subgroup_label: subgroupLabel,
       gallery_images: parsedGallery,
       origin,
-      custom_made: customMade
+      custom_made: customMade,
+      is_featured: isFeatured
     })
     .eq('id', productId)
 

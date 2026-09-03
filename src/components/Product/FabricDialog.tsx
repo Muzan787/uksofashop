@@ -11,10 +11,8 @@ import SwatchRequestForm from './SwatchRequestForm';
 import { DUR, EASE } from '@/components/Motion';
 import { useReducedMotionSafe } from '@/components/Motion/useReducedMotionSafe';
 import { blurDataURL } from '@/utils/cloudinary';
+import { MAX_SAMPLES } from '@/constants/swatches';
 import type { Fabric, FabricCollection } from './types';
-
-/** Three samples, free, anywhere on the UK mainland. */
-export const MAX_SAMPLES = 3;
 
 interface Props {
   collections: FabricCollection[];
@@ -244,7 +242,16 @@ export default function FabricDialog({ collections, selectedId, onChoose, onClos
             onSelect={setActiveSlug}
           />
 
-          <p className="m-0 mt-4 text-caption leading-relaxed text-ink-500">
+          {/* The one line about what the cloth actually does. It is the same
+              sentence the fabric guide opens each collection with, kept in the
+              database so the two cannot drift apart. */}
+          {active?.description && (
+            <p className="m-0 mt-4 text-body-sm leading-relaxed text-ink-700">
+              {active.description}
+            </p>
+          )}
+
+          <p className="m-0 mt-2 text-caption leading-relaxed text-ink-500">
             {active?.fabrics.length} colours in {active?.name}. Tap any one to see the weave up
             close — they all cost the same.
           </p>

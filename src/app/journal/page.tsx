@@ -58,6 +58,11 @@ export default function JournalPage() {
         </p>
         <ul>
           <li>
+            <Link href="/fabrics">Choosing your fabric</Link> — what chenille, plush velvet,
+            crushed velvet, naple, marble and PVC leather each actually do in a room, and all 69
+            colours to look at.
+          </li>
+          <li>
             <Link href="/size-guide">Will it fit?</Link> — measuring doorways, hallways and the
             turn at the bottom of the stairs, with a calculator that answers it directly.
           </li>

@@ -232,6 +232,21 @@ export default function AddProductForm({ categories }: { categories: Category[] 
               </span>
             </label>
           </div>
+          {/* Decides what the homepage rail shows, and what sorts to the top
+              of the shop under "Featured". */}
+          <div>
+            <label className="flex items-start gap-3 p-3.5 bg-stone-50 border border-stone-200 rounded-sm cursor-pointer hover:border-orange-300 transition">
+              <input type="checkbox" name="isFeatured" value="true" className="mt-0.5 w-5 h-5 accent-orange-500 shrink-0 cursor-pointer" />
+              <span>
+                <span className="block text-sm font-bold text-stone-900">Feature on the homepage</span>
+                <span className="block text-[11px] text-stone-500 mt-1 leading-relaxed">
+                  The homepage rail shows six products. Ticked ones go first, newest fills the
+                  rest — so tick six to control it completely, or fewer to pin a couple and let
+                  the newest arrivals take the remaining slots.
+                </span>
+              </span>
+            </label>
+          </div>
 
 
         </div>

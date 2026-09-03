@@ -74,6 +74,7 @@ export default async function HTMLSitemapPage() {
         { name: 'Delivery & Exchanges', href: '/delivery-returns' },
         { name: 'Sofa Size Guide', href: '/size-guide' },
         { name: 'Fabric & Leather Care Guide', href: '/care-guide' },
+        { name: 'Choosing Your Fabric', href: '/fabrics' },
         { name: 'Frequently Asked Questions', href: '/faq' },
       ],
     },
