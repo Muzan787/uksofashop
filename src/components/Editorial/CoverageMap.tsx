@@ -43,12 +43,11 @@ const BANDS: Band[] = [
   {
     id: 'far',
     label: 'Wales & Scotland',
-    // The whole mainland is 2-4 working days, confirmed by the owner. This band
-    // said 5-7, which was the source of the same claim in the prose above the
-    // map, in the category copy and in two Journal articles. Tighten to 3-4 if
-    // Wales and Scotland realistically never arrive on day two - that would make
-    // the map more informative, but it is not a claim to make without knowing.
-    window: '2–4 working days',
+    // This band said 5-7, and was the source of that claim in the prose above
+    // the map, in the FAQ, in the category copy and in two Journal articles.
+    // The whole mainland is 2-4 working days; within that, Wales and Scotland
+    // are 3-4 rather than 2-4. Both figures confirmed by the owner.
+    window: '3–4 working days',
     places: 'All of Wales, and Scotland up to the central belt and beyond',
     fill: 'fill-ember-500/20',
     swatch: 'bg-ember-500/20',
