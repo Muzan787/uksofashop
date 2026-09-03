@@ -8,6 +8,7 @@ import { createClient } from '@/utils/supabase/server';
 import { deliveryWindow } from '@/utils/delivery';
 import ProductPageClient from '../../../../components/Product/ProductPageClient';
 import { getFabricLibrary } from '@/utils/fabrics';
+import { parseDimensions } from '@/components/Product/dimensions';
 
 type Params = Promise<{ slug: string; category: string }>;
 // NEW: Define searchParams type to read the URL
@@ -252,6 +253,31 @@ export default async function ProductPage(props: { params: Params, searchParams:
     ...((product.gallery_images as string[] | null) ?? []),
   ].filter((v, i, a): v is string => typeof v === 'string' && a.indexOf(v) === i)
 
+  // The measurements, read from the same place the diagram reads them and
+  // parsed with the same function, so the markup cannot claim a width the
+  // dialog does not draw.
+  //
+  // Both spellings of the key are tried because both are in the data: the
+  // column is free-form jsonb and the admin panel has never enforced a case.
+  // ProductPageClient does exactly this, and CategoryFilters does it for the
+  // neighbouring `style` key.
+  const specs = ((): Record<string, unknown> => {
+    const raw = product.specifications
+    if (!raw) return {}
+    if (typeof raw === 'string') { try { return JSON.parse(raw) } catch { return {} } }
+    return raw as Record<string, unknown>
+  })()
+  const dimensionsRaw =
+    typeof specs.dimensions === 'string' ? specs.dimensions
+    : typeof specs.Dimensions === 'string' ? specs.Dimensions
+    : ''
+  const dims = parseDimensions(dimensionsRaw)
+
+  // Deduplicated, because a colour appears once per variant that offers it
+  // and repeating "Grey" eleven times describes nothing.
+  const distinct = (values: (string | null)[]) =>
+    [...new Set(values.filter((v): v is string => Boolean(v && v.trim())).map(v => v.trim()))]
+
   const productLd = productSchema({
     productId: product.id,
     title: product.title,
@@ -262,6 +288,11 @@ export default async function ProductPage(props: { params: Params, searchParams:
     skus: (product.product_variants ?? []).map((v: any) => v.sku).filter(Boolean),
     origin: product.origin,
     customMade: product.custom_made,
+    width: dims.width,
+    depth: dims.depth,
+    height: dims.height,
+    materials: distinct(safeVariants.map(v => v.material)),
+    colors: distinct(safeVariants.map(v => v.color)),
     // Only genuine approved reviews reach this - see the filter above.
     reviews: approvedReviews.map(r => ({
       rating: r.rating,

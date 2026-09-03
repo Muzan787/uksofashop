@@ -20,6 +20,8 @@ import { ProductGridSkeleton, FilterSidebarSkeleton } from './Skeletons'
 import CategoryHero, { type CategoryChip } from '@/components/Category/CategoryHero'
 import SortSelect from '@/components/Category/SortSelect'
 import ActiveFilterChips, { type Chip } from '@/components/Category/ActiveFilterChips'
+import CategoryCopy from '@/components/Category/CategoryCopy'
+import { CATEGORY_COPY } from '@/constants/categorySeo'
 
 type Params       = Promise<{ category: string }>
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>
@@ -62,8 +64,20 @@ export async function generateMetadata(
   // Page 1 stays parameter-free so /shop/x and /shop/x?page=1 do not compete.
   const path = page > 1 ? `${basePath}?page=${page}` : basePath
 
-  const title = page > 1 ? `${name} - Page ${page}` : name
-  const description = `Shop our premium ${name.toLowerCase()} collection. Free delivery across UK Mainland. Cash on Delivery available.`
+  // The DB category name still titles the page itself. What goes in <title>
+  // and the description is written for the search result instead - see
+  // src/constants/categorySeo.ts for why the two are not the same string.
+  //
+  // A category with no entry falls back to its DB name, so adding a category in
+  // the admin panel gives a working page immediately rather than a broken one.
+  // It just does not get the tuned title until somebody writes it.
+  const copy = CATEGORY_COPY[decodedCategory]
+  const baseTitle = copy?.title ?? name
+
+  const title = page > 1 ? `${baseTitle} - Page ${page}` : baseTitle
+  const description =
+    copy?.description ??
+    `Shop our ${name.toLowerCase()} at UK Sofa Shop. Free delivery across UK Mainland in 2-4 working days, and cash on delivery.`
 
   return {
     title,
@@ -198,6 +212,18 @@ export default async function CategoryPage(props: { params: Params; searchParams
     })
   }
 
+  // The prose under the grid, on the canonical view of the category only.
+  //
+  // Page 2 and every filtered view are noindex already, so repeating the same
+  // four paragraphs across them would buy nothing - and it would put identical
+  // copy on a dozen URLs, which is the exact signal the noindex is there to
+  // avoid sending. It is also simply not what those pages are for: somebody who
+  // has ticked "chenille" and gone to page 2 has finished reading the intro.
+  const introCopy = CATEGORY_COPY[decodedCategory]
+  const showIntro = Boolean(introCopy) && currentPage === 1 && !hasActiveFilters({
+    style, material, color, minPrice, maxPrice,
+  }) && sort === 'featured'
+
   // Matches the visual breadcrumb rendered below, which had no markup behind it.
   const breadcrumbLd = breadcrumbSchema(
     decodedCategory === 'all'
@@ -287,6 +313,8 @@ export default async function CategoryPage(props: { params: Params; searchParams
             </Suspense>
           </div>
         </div>
+
+        {showIntro && introCopy && <CategoryCopy copy={introCopy} />}
       </div>
     </div>
   )

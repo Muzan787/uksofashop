@@ -3,14 +3,22 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Phone } from 'lucide-react'
 import EditorialHero from '@/components/Editorial/EditorialHero'
+import EditorialSchema from '@/components/Editorial/EditorialSchema'
 import EditorialLayout, { Note, PullQuote } from '@/components/Editorial/EditorialLayout'
 import { PHONE_DISPLAY, PHONE_HREF } from '@/constants/contact'
+
+/**
+ * Said once, used twice: as the meta description, and as the description on
+ * the page's own schema node. Two hand-written sentences describing the same
+ * page is the sort of drift nobody notices and nothing benefits from.
+ */
+const DESCRIPTION =
+  'How to keep a fabric or leather sofa looking right: weekly upkeep, what to do about a spill in the first thirty seconds, and the products that will ruin it.'
 
 export const metadata: Metadata = {
   alternates: { canonical: '/care-guide' },
   title: 'Sofa Care & Cleaning Guide',
-  description:
-    'How to keep a fabric or leather sofa looking right: weekly upkeep, what to do about a spill in the first thirty seconds, and the products that will ruin it.',
+  description: DESCRIPTION,
 }
 
 const TOC = [
@@ -25,6 +33,14 @@ const TOC = [
 export default function CareGuidePage() {
   return (
     <div className="min-h-screen bg-calico-50">
+      <EditorialSchema
+        type="Article"
+        headline="Sofa Care & Cleaning Guide"
+        current="Looking after it"
+        path="/care-guide"
+        updated="2026-09-03"
+        description={DESCRIPTION}
+      />
       <EditorialHero
         eyebrow="Maintenance & protection"
         title="Looking after it"

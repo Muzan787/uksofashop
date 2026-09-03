@@ -3,16 +3,24 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Package } from 'lucide-react'
 import EditorialHero from '@/components/Editorial/EditorialHero'
+import EditorialSchema from '@/components/Editorial/EditorialSchema'
 import EditorialLayout, { Note, PullQuote } from '@/components/Editorial/EditorialLayout'
 import { getFabricLibrary } from '@/utils/fabrics'
 import { MAX_SAMPLES } from '@/constants/swatches'
 import { SamplesProvider, CollectionSwatches, SampleBar } from './FabricSamples'
 
+/**
+ * Said once, used twice: as the meta description, and as the description on
+ * the page's own schema node. Two hand-written sentences describing the same
+ * page is the sort of drift nobody notices and nothing benefits from.
+ */
+const DESCRIPTION =
+  'All 69 fabrics we build made-to-order sofas in, and how to choose between them: what chenille, plush velvet, crushed velvet, naple, marble and PVC leather each do in a real room. Three free samples posted.'
+
 export const metadata: Metadata = {
   alternates: { canonical: '/fabrics' },
   title: 'Sofa Fabric Guide — Chenille, Velvet, Naple, Marble & PVC Leather',
-  description:
-    'All 69 fabrics we build made-to-order sofas in, and how to choose between them: what chenille, plush velvet, crushed velvet, naple, marble and PVC leather each do in a real room. Three free samples posted.',
+  description: DESCRIPTION,
 }
 
 /**
@@ -59,6 +67,14 @@ export default async function FabricsPage() {
 
   return (
     <div className="min-h-screen bg-calico-50">
+      <EditorialSchema
+        type="Article"
+        headline="Sofa Fabric Guide"
+        current="Choosing your fabric"
+        path="/fabrics"
+        updated="2026-09-03"
+        description={DESCRIPTION}
+      />
       <EditorialHero
         eyebrow="Made to order"
         title="Choosing your fabric"

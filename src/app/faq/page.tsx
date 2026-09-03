@@ -5,6 +5,7 @@ import { Phone } from 'lucide-react'
 import EditorialHero from '@/components/Editorial/EditorialHero'
 import FaqList from './FaqList'
 import { allFaqs } from './faqData'
+import { breadcrumbSchema, jsonLd, SITE_URL } from '@/utils/schema'
 import { PHONE_DISPLAY, PHONE_HREF } from '@/constants/contact'
 
 export const metadata: Metadata = {
@@ -21,6 +22,14 @@ export const metadata: Metadata = {
 const faqSchema = {
   '@context': 'https://schema.org',
   '@type': 'FAQPage',
+  name: 'Frequently Asked Questions',
+  url: `${SITE_URL}/faq`,
+  // Bump when an answer changes, not when the file is reformatted.
+  dateModified: '2026-08-28',
+  // The same two nodes every other content page points at, so this page is
+  // attributed to the one Organization rather than to a second unnamed one.
+  publisher: { '@id': `${SITE_URL}/#organization` },
+  isPartOf: { '@id': `${SITE_URL}/#website` },
   mainEntity: allFaqs.map(({ q, a }) => ({
     '@type': 'Question',
     name: q,
@@ -28,12 +37,24 @@ const faqSchema = {
   })),
 }
 
+// The trail EditorialHero has been drawing on screen all along, which had no
+// markup behind it. "Questions, answered" rather than the metadata title,
+// because the crumb has to be the words the visitor can see.
+const breadcrumbLd = breadcrumbSchema([
+  { name: 'Home', path: '/' },
+  { name: 'Questions, answered', path: '/faq' },
+])
+
 export default function FAQPage() {
   return (
     <div className="min-h-screen bg-calico-50">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema).replace(/</g, '\\u003c') }}
+        dangerouslySetInnerHTML={{ __html: jsonLd(faqSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLd(breadcrumbLd) }}
       />
 
       <EditorialHero

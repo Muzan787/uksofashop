@@ -3,16 +3,24 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Clock, RotateCcw, Truck, Wallet } from 'lucide-react'
 import EditorialHero from '@/components/Editorial/EditorialHero'
+import EditorialSchema from '@/components/Editorial/EditorialSchema'
 import EditorialLayout, { Note, PullQuote } from '@/components/Editorial/EditorialLayout'
 import CoverageMap from '@/components/Editorial/CoverageMap'
 import { ASSEMBLY_FEE, SOFA_REMOVAL_FEE, UPSTAIRS_FIRST_FLOOR } from '@/constants/delivery'
 
 const SUPPORT_EMAIL = 'uksofashop.co.uk@gmail.com'
 
+/**
+ * Said once, used twice: as the meta description, and as the description on
+ * the page's own schema node. Two hand-written sentences describing the same
+ * page is the sort of drift nobody notices and nothing benefits from.
+ */
+const DESCRIPTION =
+  'Free delivery across UK Mainland in 2–4 working days, paid on delivery. What to do if your sofa arrives damaged, and your 14-day right to change your mind.'
+
 export const metadata: Metadata = {
   title: 'Delivery & Returns',
-  description:
-    'Free delivery across UK Mainland in 2–4 working days, paid on delivery. What to do if your sofa arrives damaged, and your 14-day right to change your mind.',
+  description: DESCRIPTION,
   alternates: { canonical: '/delivery-returns' },
 }
 
@@ -64,6 +72,14 @@ const FACTS = [
 export default function DeliveryReturnsPage() {
   return (
     <div className="min-h-screen bg-calico-50">
+      <EditorialSchema
+        type="WebPage"
+        headline="Delivery & Returns"
+        current="Delivery & returns"
+        path="/delivery-returns"
+        updated="2026-08-28"
+        description={DESCRIPTION}
+      />
       <EditorialHero
         eyebrow="Policies"
         title="Delivery & returns"

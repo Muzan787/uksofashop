@@ -3,15 +3,23 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import EditorialHero from '@/components/Editorial/EditorialHero'
+import EditorialSchema from '@/components/Editorial/EditorialSchema'
 import EditorialLayout, { Note, PullQuote } from '@/components/Editorial/EditorialLayout'
 import DoorwayCalculator, { type CalculatorProduct } from './DoorwayCalculator'
 import FitCheckForm from './FitCheckForm'
 
+/**
+ * Said once, used twice: as the meta description, and as the description on
+ * the page's own schema node. Two hand-written sentences describing the same
+ * page is the sort of drift nobody notices and nothing benefits from.
+ */
+const DESCRIPTION =
+  'Work out whether a sofa will fit through your door before you order. A doorway calculator, how to measure, and a free fit check from our delivery team.'
+
 export const metadata: Metadata = {
   alternates: { canonical: '/size-guide' },
   title: 'Sofa Size & Measurement Guide',
-  description:
-    'Work out whether a sofa will fit through your door before you order. A doorway calculator, how to measure, and a free fit check from our delivery team.',
+  description: DESCRIPTION,
 }
 
 const TOC = [
@@ -54,6 +62,14 @@ export default async function SizeGuidePage() {
 
   return (
     <div className="min-h-screen bg-calico-50">
+      <EditorialSchema
+        type="Article"
+        headline="Sofa Size & Measurement Guide"
+        current="Will it fit?"
+        path="/size-guide"
+        updated="2026-08-28"
+        description={DESCRIPTION}
+      />
       <EditorialHero
         eyebrow="Before you order"
         title="Will it fit?"

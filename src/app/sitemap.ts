@@ -13,6 +13,12 @@ import { SITE_URL } from '@/constants/site'
 // Excluded for that reason: /search, /track-order, /checkout, /account,
 // /wishlist, /login, /signup, /confirm-order/*, and everything under /admin.
 //
+// /journal and /careers belong to that list too, and used to be in this array
+// anyway - both send noindex, so Search Console reported both as "Submitted URL
+// marked noindex". Adding a path here is only correct once the page indexes:
+// publishing the first Journal article, or opening a real vacancy, is what
+// removes its noindex and earns it a line below.
+//
 // No changeFrequency or priority: Google has ignored both for years, and
 // wrong values are worse than none because they invite the reader to trust
 // them. lastModified is the only hint that still carries weight.
@@ -29,8 +35,6 @@ const STATIC_PATHS = [
   '/size-guide',
   '/care-guide',
   '/fabrics',
-  '/journal',
-  '/careers',
   '/terms',
   '/privacy',
   '/cookies',

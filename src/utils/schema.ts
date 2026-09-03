@@ -166,6 +166,21 @@ export interface ProductSchemaInput {
   skus: string[]
   origin?: string | null
   customMade?: boolean | null
+  /**
+   * Centimetres, already parsed. The catalogue stores dimensions as free
+   * text in specifications.dimensions ("L:198cm H:97cm D:99cm"), so the
+   * parsing lives in components/Product/dimensions.ts where the diagram
+   * already needed it, and this takes the numbers it produced. Any of the
+   * three may be absent: a measurement the record does not give is left out
+   * rather than guessed at.
+   */
+  width?: number
+  depth?: number
+  height?: number
+  /** Distinct fabric names across the variants, e.g. ["Chenille", "Plush Velvet"]. */
+  materials?: string[]
+  /** Distinct colour names across the variants. */
+  colors?: string[]
   reviews: { rating: number; comment?: string | null; customer_name?: string | null; created_at?: string | null }[]
 }
 
@@ -174,8 +189,18 @@ export function productSchema(p: ProductSchemaInput) {
   const low = Math.min(...prices)
   const high = Math.max(...prices)
 
+  // Google reports an Offer without this as a non-critical issue on every
+  // product in the report. Nothing here is a timed promotion - the price is
+  // what it is until we change it - so a rolling year is the honest answer to
+  // "when does this stop being true". It is computed per request rather than
+  // at build time, and the product page is dynamic, so it never goes stale.
+  const priceValidUntil = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .slice(0, 10)
+
   const offerBase = {
     priceCurrency: 'GBP',
+    priceValidUntil,
     // The page 404s for an inactive product and everything is made to order,
     // so anything reachable here is available. Stock counts aren't tracked.
     availability: 'https://schema.org/InStock',
@@ -223,6 +248,35 @@ export function productSchema(p: ProductSchemaInput) {
   if (p.productId) schema.productID = p.productId
   if (p.origin === 'uk') schema.countryOfOrigin = 'GB'
 
+  // Physical size, as three properties rather than a sentence in the
+  // description. This is the whole reason the parser exists: "will it fit"
+  // is the question this catalogue gets asked most, and a doorway is a number
+  // being compared against another number. A crawler cannot do that
+  // comparison against "L:198cm H:97cm D:99cm" in prose.
+  //
+  // CMT is the UN/CEFACT code for centimetre, which is what unitCode wants.
+  // A corner sofa also records a second arm length; schema.org has no property
+  // for it, so it stays on the diagram and out of here rather than being
+  // squeezed into one of these three where it would be wrong.
+  const cm = (value: number) => ({
+    '@type': 'QuantitativeValue',
+    value,
+    unitCode: 'CMT',
+  })
+  if (p.width) schema.width = cm(p.width)
+  if (p.depth) schema.depth = cm(p.depth)
+  if (p.height) schema.height = cm(p.height)
+
+  // One value where there is one, the array where there are several. Google
+  // accepts both, and collapsing a single-fabric product to a bare string
+  // reads better in the report than a one-item list.
+  const one = (values?: string[]) =>
+    !values || values.length === 0 ? undefined : values.length === 1 ? values[0] : values
+  const material = one(p.materials)
+  const color = one(p.colors)
+  if (material) schema.material = material
+  if (color) schema.color = color
+
   // Only where genuine approved reviews exist. Emitting a zero rating - or any
   // rating at all without real reviews behind it - is a manual-action risk.
   if (p.reviews.length > 0) {
@@ -242,6 +296,71 @@ export function productSchema(p: ProductSchemaInput) {
       ...(r.created_at ? { datePublished: r.created_at.slice(0, 10) } : {}),
     }))
   }
+
+  return schema
+}
+
+// ─── Editorial and information pages ────────────────────────────────────────
+
+/**
+  * The guide pages carried no page-level markup at all.
+  *
+  * /fabrics is 4,598 words, /delivery-returns 3,582, /care-guide 2,812 and
+  * /size-guide 2,470 - and every one of them shipped with nothing but the
+  * site-wide FurnitureStore node from the root layout. No type, no author, no
+  * date, and no BreadcrumbList behind a breadcrumb that has been rendered on
+  * screen the whole time. The category pages had exactly this problem and it
+  * was fixed there; these never got the same treatment.
+  *
+  * It matters most for the answer engines. A long page with no declared type
+  * is a wall of text a crawler has to infer everything about; the same page
+  * declared as an Article, authored by a named Organization and dated, is a
+  * source something can quote with attribution.
+  */
+export interface EditorialSchemaInput {
+  /**
+   * Article for a guide, and the more specific type where schema.org has one:
+   * AboutPage, ContactPage, CollectionPage. Anything else, WebPage.
+   */
+  type?: 'Article' | 'WebPage' | 'AboutPage' | 'ContactPage' | 'CollectionPage'
+  headline: string
+  description?: string
+  path: string
+  /**
+   * ISO date, YYYY-MM-DD. The date the CONTENT last changed, not the date the
+   * file was last touched - a typo fix or a refactor is not a revision, and a
+   * date that moves every deploy tells a reader nothing except that it is
+   * automated. Bump it when you change what the page says.
+   */
+  updated: string
+}
+
+export function editorialSchema(e: EditorialSchemaInput) {
+  const type = e.type ?? 'Article'
+
+  const schema: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@type': type,
+    name: e.headline,
+    url: abs(e.path),
+    dateModified: e.updated,
+    // Both point at the single Organization node the homepage declares, rather
+    // than restating the name here. Two spellings of the same publisher read
+    // as two publishers.
+    publisher: { '@id': `${SITE_URL}/#organization` },
+    isPartOf: { '@id': `${SITE_URL}/#website` },
+  }
+
+  // headline is the Article-specific property and Google reads it in place of
+  // name; author only means something on a creative work. A ContactPage has no
+  // author, and giving it one would be claiming somebody wrote the shop's
+  // phone number.
+  if (type === 'Article') {
+    schema.headline = e.headline
+    schema.author = { '@id': `${SITE_URL}/#organization` }
+  }
+
+  if (e.description) schema.description = e.description
 
   return schema
 }

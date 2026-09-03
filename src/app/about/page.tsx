@@ -4,13 +4,21 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { Banknote, MapPin, Shield, Truck } from 'lucide-react'
 import EditorialHero from '@/components/Editorial/EditorialHero'
+import EditorialSchema from '@/components/Editorial/EditorialSchema'
 import EditorialLayout, { PullQuote } from '@/components/Editorial/EditorialLayout'
 import { blurDataURL } from '@/utils/cloudinary'
 
+/**
+ * Said once, used twice: as the meta description, and as the description on
+ * the page's own schema node. Two hand-written sentences describing the same
+ * page is the sort of drift nobody notices and nothing benefits from.
+ */
+const DESCRIPTION =
+  'A Blackburn furniture shop selling sofas with free UK Mainland delivery and cash on delivery. Who we are and how we work.'
+
 export const metadata: Metadata = {
   title: 'About Us',
-  description:
-    'A Blackburn furniture shop selling sofas with free UK Mainland delivery and cash on delivery. Who we are and how we work.',
+  description: DESCRIPTION,
   alternates: { canonical: '/about' },
 }
 
@@ -43,6 +51,14 @@ const PROMISES = [
 export default function AboutPage() {
   return (
     <div className="min-h-screen bg-calico-50">
+      <EditorialSchema
+        type="AboutPage"
+        headline="About UK Sofa Shop"
+        current="A sofa shop in Blackburn"
+        path="/about"
+        updated="2026-08-28"
+        description={DESCRIPTION}
+      />
       <EditorialHero
         eyebrow="Who we are"
         title="A sofa shop in Blackburn"

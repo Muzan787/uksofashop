@@ -4,12 +4,15 @@ import { createClient } from '@/utils/supabase/server'
 import Link from 'next/link'
 import { Star, BadgeCheck } from 'lucide-react'
 import ReviewFormModal from './ReviewFormModal'
+import EditorialSchema from '@/components/Editorial/EditorialSchema'
 
+
+const DESCRIPTION =
+  'Genuine reviews from UK Sofa Shop customers. Every review here comes from someone who actually bought from us.'
 
 export const metadata: Metadata = {
   title: 'Customer Reviews',
-  description:
-    'Genuine reviews from UK Sofa Shop customers. Every review here comes from someone who actually bought from us.',
+  description: DESCRIPTION,
   alternates: { canonical: '/reviews' },
 }
 
@@ -31,6 +34,19 @@ export default async function ReviewsPage() {
 
   return (
     <div className="min-h-screen bg-calico-50 pt-24 pb-16 px-4 sm:px-6 lg:px-8">
+      {/* CollectionPage rather than Article: this is a list of other
+          people's writing, not ours. The individual ratings are already
+          marked up per product where they belong, so no aggregateRating is
+          claimed here - one on a page that mixes products would be an
+          average of unrelated things. */}
+      <EditorialSchema
+        type="CollectionPage"
+        headline="Customer Reviews"
+        path="/reviews"
+        updated="2026-08-28"
+        description={DESCRIPTION}
+      />
+
       <div className="max-w-shell mx-auto">
         
         {/* Header Section */}

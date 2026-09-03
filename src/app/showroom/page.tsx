@@ -4,15 +4,23 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { CalendarCheck, Mail, MapPin, MessageCircle, Palette, Phone, Ruler, Sofa } from 'lucide-react'
 import EditorialHero from '@/components/Editorial/EditorialHero'
+import EditorialSchema from '@/components/Editorial/EditorialSchema'
 import EditorialLayout, { Note, PullQuote } from '@/components/Editorial/EditorialLayout'
 import { blurDataURL } from '@/utils/cloudinary'
 import { PHONE_DISPLAY, PHONE_HREF } from '@/constants/contact'
 
+/**
+ * Said once, used twice: as the meta description, and as the description on
+ * the page's own schema node. Two hand-written sentences describing the same
+ * page is the sort of drift nobody notices and nothing benefits from.
+ */
+const DESCRIPTION =
+  'See our sofas in person at our Blackburn showroom, Unit 02 Waverledge Street, BB6 7LS. Visits are by appointment — call, WhatsApp or email to book a time.'
+
 export const metadata: Metadata = {
   alternates: { canonical: '/showroom' },
   title: 'Visit Our Showroom',
-  description:
-    'See our sofas in person at our Blackburn showroom, Unit 02 Waverledge Street, BB6 7LS. Visits are by appointment — call, WhatsApp or email to book a time.',
+  description: DESCRIPTION,
 }
 
 const SUPPORT_EMAIL = 'uksofashop.co.uk@gmail.com'
@@ -68,6 +76,14 @@ const WHAT_TO_EXPECT = [
 export default function ShowroomPage() {
   return (
     <div className="min-h-screen bg-calico-50">
+      <EditorialSchema
+        type="WebPage"
+        headline="Visit Our Blackburn Showroom"
+        current="Come and sit on one"
+        path="/showroom"
+        updated="2026-08-28"
+        description={DESCRIPTION}
+      />
       {/* The FurnitureStore schema for this address is emitted site-wide from
           the root layout — a second copy here would be a duplicate entity. */}
 
