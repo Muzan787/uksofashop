@@ -137,6 +137,28 @@ export const ARTICLES: Article[] = [
       { id: 'worth', label: 'A last word on price' },
     ],
   },
+  {
+    slug: 'measuring-for-a-corner-sofa',
+    title: 'Measuring for a Corner Sofa: The Two Walls, the Depth and the Hand',
+    heading: 'Measuring for a corner',
+    eyebrow: 'Before you order',
+    description:
+      'A corner sofa is two lengths, not one, and its depth eats into both walls. How to measure the two runs, choose between 2c1 and 1c2, and tape out the footprint before you order.',
+    lede:
+      'The shape most often measured wrong, and not because anyone was careless — a corner is two sofas at a right angle, so most instincts about measuring one give the wrong answer twice.',
+    published: '2026-09-04',
+    updated: '2026-09-04',
+    toc: [
+      { id: 'different', label: 'Why it is different' },
+      { id: 'hand', label: '2c2, 2c1 and 1c2' },
+      { id: 'walls', label: 'Measuring the two runs' },
+      { id: 'depth', label: 'The forgotten number' },
+      { id: 'clearance', label: 'What must be left over' },
+      { id: 'ushape', label: 'If it is a U-shape' },
+      { id: 'tape', label: 'Tape it out' },
+      { id: 'door', label: 'Then check it gets in' },
+    ],
+  },
 ]
 
 /** Newest first, which is the order the index renders them in. */

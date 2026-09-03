@@ -69,9 +69,11 @@ export default function SofaJargonExplained() {
       </ul>
       <p>
         Because a 2c1 is asymmetric, which way round it sits in the room is a real decision — the
-        trade calls this the <strong>hand</strong> or <strong>facing</strong>, described as you
-        look at the sofa from the front. If you need the short arm on a particular side, ask us
-        before you order rather than after; it is not something to assume from the photograph.
+        trade calls this the <strong>hand</strong>. You choose it by picking the right code:{' '}
+        <strong>2c1</strong> and <strong>1c2</strong> are the same sofa in mirror image, listed as
+        two separate products, so the long arm goes on the side the code says. It cannot be
+        changed after it is built, which makes it worth{' '}
+        <Link href="/journal/measuring-for-a-corner-sofa">deciding from the room first</Link>.
       </p>
       <PullQuote>
         The number on a corner sofa is the seat count. The code is the shape. A 5 seater and a 2c2
