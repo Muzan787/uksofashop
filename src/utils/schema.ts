@@ -333,6 +333,12 @@ export interface EditorialSchemaInput {
    * automated. Bump it when you change what the page says.
    */
   updated: string
+  /**
+   * ISO date the piece first went up. Only meaningful on an Article - a
+   * policy page or a contact page was never "published" in the sense Google
+   * means, and dating one implies an archive that does not exist.
+   */
+  published?: string
 }
 
 export function editorialSchema(e: EditorialSchemaInput) {
@@ -358,6 +364,10 @@ export function editorialSchema(e: EditorialSchemaInput) {
   if (type === 'Article') {
     schema.headline = e.headline
     schema.author = { '@id': `${SITE_URL}/#organization` }
+    // Falls back to dateModified so an Article is never dated only by its
+    // last edit. A piece with a modified date and no published date reads as
+    // older than it is, because that is the only date there is to read.
+    schema.datePublished = e.published ?? e.updated
   }
 
   if (e.description) schema.description = e.description

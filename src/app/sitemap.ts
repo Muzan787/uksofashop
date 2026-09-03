@@ -4,6 +4,7 @@ import { MetadataRoute } from 'next'
 import { createClient } from '@/utils/supabase/server'
 import { canonicalProductPath } from '@/utils/productUrl'
 import { SITE_URL } from '@/constants/site'
+import { ARTICLES } from './journal/articles'
 
 // Every static route that should be indexed. Pages carrying
 // `robots: { index: false }` are deliberately absent - listing a noindexed URL
@@ -13,11 +14,15 @@ import { SITE_URL } from '@/constants/site'
 // Excluded for that reason: /search, /track-order, /checkout, /account,
 // /wishlist, /login, /signup, /confirm-order/*, and everything under /admin.
 //
-// /journal and /careers belong to that list too, and used to be in this array
-// anyway - both send noindex, so Search Console reported both as "Submitted URL
-// marked noindex". Adding a path here is only correct once the page indexes:
-// publishing the first Journal article, or opening a real vacancy, is what
-// removes its noindex and earns it a line below.
+// /journal and /careers both used to sit in this array while both sent
+// noindex, which Search Console reported as "Submitted URL marked noindex".
+// /journal has since earned its place back the only way that counts - three
+// articles were written and the noindex came off. Its article URLs are
+// appended below from the same registry the pages themselves render from, so
+// a fourth article is listed here the moment it exists.
+//
+// /careers is still out, and still noindex. Opening a real vacancy is what
+// puts it back.
 //
 // No changeFrequency or priority: Google has ignored both for years, and
 // wrong values are worse than none because they invite the reader to trust
@@ -35,6 +40,7 @@ const STATIC_PATHS = [
   '/size-guide',
   '/care-guide',
   '/fabrics',
+  '/journal',
   '/terms',
   '/privacy',
   '/cookies',
@@ -48,6 +54,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     url: `${SITE_URL}${path === '/' ? '' : path}`,
     lastModified: now,
   }))
+
+  // ── Journal ───────────────────────────────────────────────────────────────
+  // Hand-written pages rather than database rows, so `updated` on each entry
+  // is the lastModified - there is no created_at to read.
+  ARTICLES.forEach((article) => {
+    routes.push({
+      url: `${SITE_URL}/journal/${article.slug}`,
+      lastModified: new Date(article.updated),
+    })
+  })
 
   // ── Categories ────────────────────────────────────────────────────────────
   const { data: categories } = await supabase
