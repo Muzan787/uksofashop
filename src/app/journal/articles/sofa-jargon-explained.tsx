@@ -93,6 +93,12 @@ export default function SofaJargonExplained() {
         purpose. Neither is better. One is lower maintenance and one is more forgiving to slouch
         into.
       </p>
+      <p>
+        What sits underneath either of them — the frame, the springs and the foam — is a
+        separate subject, and the one that decides how long the sofa lasts rather than how it
+        looks. That has{' '}
+        <Link href="/journal/whats-inside-a-sofa">an article of its own</Link>.
+      </p>
 
       <h2 id="recliners">Manual, electric, and &ldquo;power&rdquo;</h2>
       <p>

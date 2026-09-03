@@ -9,15 +9,22 @@
 // thing: a PullQuote in the middle of an argument is part of the writing. An
 // articles table would mean either a rich text editor nobody asked for, or
 // markdown that cannot use any of the components these pages are built from.
-// Three articles a year does not justify a CMS.
+// A handful of articles a year does not justify a CMS.
 //
 // WHAT WAS HERE BEFORE. This page used to list "How to Style a Corner Sofa",
 // "Leather vs. Fabric" and "What's Inside a Well-Made Sofa" with bylines, read
 // times, and dates in October 2026. None of them existed and all three linked
-// to a 404. Those three titles are NOT the three below, which was deliberate:
-// two of them would have repeated /fabrics and /size-guide almost line for
-// line, and the site does not need a second answer to a question it already
-// answers well.
+// to a 404.
+//
+// Two of those titles are still not here and are not coming: /fabrics and the
+// care guide already answer them better than an article would, and a second,
+// weaker answer competes with the page that has the good one.
+//
+// The third, on what is inside a sofa, HAS since been written - from scratch,
+// and with a scope note at the top of it that is worth reading before editing
+// it. Almost nothing about how our own sofas are built is recorded anywhere in
+// this repository, so that piece is written about sofas in general and asserts
+// only the construction facts the site already publishes and stands behind.
 //
 // NO READ TIMES, NO BYLINES. The old cards carried both and both were invented.
 // A read time is only honest if something counts the words, and a byline is
@@ -106,6 +113,28 @@ export const ARTICLES: Article[] = [
       { id: 'later', label: 'Damage found later' },
       { id: 'mind', label: 'Changing your mind' },
       { id: 'why', label: 'Why we sell this way' },
+    ],
+  },
+  {
+    slug: 'whats-inside-a-sofa',
+    title: "What's Inside a Sofa: Frames, Springs, Foam and What Actually Lasts",
+    heading: "What's inside it",
+    eyebrow: 'Buying guide',
+    description:
+      'Frames, suspension and foam decide whether a sofa lasts. What hardwood, plywood, serpentine springs and foam density actually mean, and how to judge a sofa in a showroom in two minutes.',
+    lede:
+      'You can judge about a fifth of a sofa by looking at it. The frame, the springs and the foam are the parts that decide how long it lasts, and all three are hidden by the time you meet it.',
+    published: '2026-09-04',
+    updated: '2026-09-04',
+    toc: [
+      { id: 'frame', label: 'The frame' },
+      { id: 'suspension', label: 'What holds you up' },
+      { id: 'foam', label: 'Seat foam and density' },
+      { id: 'backs', label: 'Backs, and what sags' },
+      { id: 'fabric', label: 'The cover' },
+      { id: 'tells', label: 'Judging one in two minutes' },
+      { id: 'ask', label: 'What to ask' },
+      { id: 'worth', label: 'A last word on price' },
     ],
   },
 ]
