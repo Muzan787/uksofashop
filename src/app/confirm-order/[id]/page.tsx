@@ -4,6 +4,7 @@ import { createClient } from '@/utils/supabase/server'
 import { notFound } from 'next/navigation'
 import { CheckCircle, MessageCircle, Package, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
+import AdsPurchaseConversion from '@/components/Checkout/AdsPurchaseConversion'
 
 
 export const metadata: Metadata = {
@@ -34,8 +35,32 @@ export default async function ConfirmOrderPage({ params }: { params: Promise<{ i
 
   return (
     <div className="min-h-screen bg-calico-50 flex items-center justify-center p-4">
+      {/* Reports the Google Ads conversion. Renders nothing.
+
+          The BACKSTOP firing site. Checkout success reports the same order at
+          the moment it is placed, in the session that clicked the ad; this one
+          only runs if the customer opens the confirmation email, which may be
+          on a device with no _gcl cookie to attribute against. It is here for
+          the order whose checkout event never ran at all.
+
+          Both sites emit `shortCode` as the transaction id - the same value
+          the server-side GA4 purchase and the Meta CAPI event use - so an
+          order that fires from both is counted once. Changing the identifier
+          here without changing it in CheckoutClient would double-count every
+          order that reaches both.
+
+          The value is the database's own total_amount, read above, rather than
+          anything carried from the browser's cart - this link is opened from an
+          email, often on a different device and days later, so there is no cart
+          to trust even in principle.
+
+          GA4 is deliberately not reported here. It already receives a purchase
+          server-side when the order reaches 'confirmed'; a second one from the
+          browser would double the revenue. See utils/orderConversions.ts. */}
+      <AdsPurchaseConversion reference={shortCode} total={Number(order.total_amount)} />
+
       <div className="max-w-xl w-full bg-white rounded-md shadow-e3 border border-calico-300 overflow-hidden">
-        
+
         {/* Header Header */}
         <div className="bg-ink-900 p-8 text-center relative overflow-hidden">
           <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white to-transparent" />

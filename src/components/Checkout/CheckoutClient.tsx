@@ -27,6 +27,7 @@ import Steps from './Steps'
 import Field from '@/components/UI/Field'
 import MobileTotalBar from './MobileTotalBar'
 import SuccessStep from './SuccessStep'
+import AdsPurchaseConversion from './AdsPurchaseConversion'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 import type { Step } from './Steps'
@@ -374,13 +375,16 @@ function DetailsStep({
 
     if (res?.error) { setServerError(res.error); setPending(false) }
     else if (res?.success) {
-      // The database's figure, not ours, so reported conversion value always
-      // matches what we actually collect - and total_amount is delivery
-      // inclusive, so paid extras are credited to the campaign too. Items are
-      // read before clearCart(), which empties the array this maps over.
-      trackOrderPlaced(res.orderId || '', res.total ?? grandTotal, toTrackedItems(cartItems));
+      // res.total is the database's figure and is always present on success
+      // (see PlaceOrderResult), so there is no `?? grandTotal` here any more.
+      // That fallback silently substituted cart state - the one number a
+      // conversion value must never come from - for a value the server had
+      // already computed. total_amount is delivery inclusive, so paid extras
+      // are credited to the campaign too. Items are read before clearCart(),
+      // which empties the array this maps over.
+      trackOrderPlaced(res.orderId, res.total, toTrackedItems(cartItems));
       clearCart();
-      onSuccess(res.orderId || '', form.postcode.toUpperCase(), res.total ?? grandTotal)
+      onSuccess(res.orderId, form.postcode.toUpperCase(), res.total)
     }
   }
 
@@ -703,9 +707,13 @@ function DetailsStep({
 
 export default function CheckoutClient() {
   const [step, setStep] = useState<Step>('cart')
+  /** The short reference, as placeOrder returned it. The canonical order id. */
   const [orderId, setOrderId] = useState('')
   const [orderPostcode, setOrderPostcode] = useState('')
-  /** What the database says this order costs. Held because the cart empties. */
+  /**
+   * What the database says this order costs. Held because the cart empties -
+   * and because this, not the emptied cart, is the Google Ads conversion value.
+   */
   const [orderAmount, setOrderAmount] = useState(0)
   const [direction, setDirection] = useState<'forward' | 'back'>('forward')
   const [visible, setVisible] = useState(true)
@@ -818,7 +826,29 @@ export default function CheckoutClient() {
           >
             {step === 'cart'    && <CartStep onNext={goNext} />}
             {step === 'details' && <DetailsStep onBack={goBack} onSuccess={goSuccess} extras={extras} setExtras={setExtras} />}
-            {step === 'success' && <SuccessStep orderId={orderId} postcode={orderPostcode} amount={orderAmount} />}
+            {step === 'success' && (
+              <>
+                {/* The PRIMARY Google Ads firing site. Renders nothing.
+
+                    This runs in the session that clicked the ad, so the _gcl
+                    cookie is present and the conversion can be attributed.
+                    /confirm-order/[id] reports the same order again as a
+                    backstop, from an email link that may be opened on a
+                    different device entirely - where there is no _gcl cookie
+                    and attribution is lost.
+
+                    Both sites pass the short reference as the transaction id,
+                    so the pair is deduplicated by Google into one conversion.
+                    Change it in one place only and every order that reaches
+                    both is counted twice.
+
+                    orderAmount is the database's total_amount, handed back by
+                    placeOrder. The cart has been emptied by this point and was
+                    never the source of this number in any case. */}
+                <AdsPurchaseConversion reference={orderId} total={orderAmount} />
+                <SuccessStep orderId={orderId} postcode={orderPostcode} amount={orderAmount} />
+              </>
+            )}
           </div>
 
           {/* Sidebar — hidden on success */}

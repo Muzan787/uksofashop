@@ -6,12 +6,14 @@ import { CartProvider } from "@/context/CartContext";
 import MainLayoutWrapper from "@/components/Layout/MainLayoutWrapper";
 import { Toaster } from "react-hot-toast";
 import CookieConsent from '@/components/UI/CookieConsent';
+import AnalyticsRedaction from '@/components/UI/AnalyticsRedaction';
 import TrackingScripts from '@/components/UI/TrackingScripts';
 import { META_DESCRIPTION } from '@/constants/promises';
 import { localBusinessSchema, jsonLd } from '@/utils/schema';
 import { METADATA_BASE } from '@/constants/site';
 import { ogImage } from '@/utils/socialImage';
 import { CONSENT_DEFAULT_SNIPPET } from '@/utils/consentMode';
+import { ANALYTICS_REDACTION_SNIPPET } from '@/utils/redactUrl';
 import { PALETTE } from '@/constants/palette';
 
 
@@ -159,6 +161,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             Google assumed in the meantime. Plain inline <script> rather than
             next/script so the position is guaranteed rather than scheduled. */}
         <script dangerouslySetInnerHTML={{ __html: CONSENT_DEFAULT_SNIPPET }} />
+        {/* Keeps order uuids, review tokens and postcodes out of what the tags
+            report as the page. MUST be here, before gtag.js: gtag('set') only
+            governs events queued after it, so a redaction that lands after the
+            first config has already sent the real URL. See utils/redactUrl.ts. */}
+        <script dangerouslySetInnerHTML={{ __html: ANALYTICS_REDACTION_SNIPPET }} />
         <script dangerouslySetInnerHTML={{ __html: ENTRANCE_GATE }} />
         <script
           type="application/ld+json"
@@ -208,6 +215,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </MainLayoutWrapper>
 
 
+          <AnalyticsRedaction />
           <TrackingScripts />
 
           <CookieConsent />

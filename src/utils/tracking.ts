@@ -172,3 +172,65 @@ export function trackOrderPlaced(orderId: string, total: number, items: TrackedI
     items: gaItems(items),
   })
 }
+
+// ─── Google Ads ──────────────────────────────────────────────────────────────
+
+/**
+ * The conversion action to report against, as "AW-<account>/<label>".
+ *
+ * Read from the environment rather than hardcoded because the label is the one
+ * value here that changes without the code changing: creating a new conversion
+ * action in the Ads UI issues a new label, and a stale one reports into an
+ * action nobody is bidding on. Absent, this whole function is a no-op - the
+ * same way every other optional integration in this project behaves.
+ *
+ * NEXT_PUBLIC_ is required: the value is inlined at build time and read in the
+ * browser. It is not a secret; the label is visible in any page that fires it.
+ */
+const ADS_SEND_TO = process.env.NEXT_PUBLIC_ADS_PURCHASE_SEND_TO
+
+/**
+ * Report one order to Google Ads.
+ *
+ * Deliberately NOT paired with a GA4 'purchase' here. GA4 already receives one
+ * for every order, server-side, when it reaches 'confirmed' - see
+ * utils/orderConversions.ts. Sending a second from the browser would double
+ * the revenue in the Monetisation reports and re-introduce the cash-on-delivery
+ * overstatement that the server-side design exists to remove.
+ *
+ * Google Ads has no such server-side path on this site, which is why this one
+ * is a browser event.
+ *
+ * `reference` is the order's SHORT code - the first 8 characters of its uuid,
+ * uppercased - and it is the canonical transaction id for this order
+ * everywhere. The server-side GA4 purchase and the Meta CAPI event in
+ * utils/orderConversions.ts already report against the same value, so one
+ * order carries one identifier across all three platforms and the three
+ * reports can be reconciled against each other.
+ *
+ * It is deliberately not the full uuid: that is the access token for
+ * /confirm-order/[id], where holding it is enough to confirm the order and
+ * read the customer's name, total and address. A transaction_id is transmitted
+ * to Google and retained in its logs, which is no place for a bearer token.
+ *
+ * Google Ads treats transaction_id as the deduplication key. This event is
+ * sent from two places - the checkout success step and /confirm-order/[id] -
+ * and they agree on this value, so an order reported by both is counted once.
+ * That is also the only guard that works across devices, where the local
+ * storage check in components/Checkout/AdsPurchaseConversion.tsx cannot see
+ * that the order has already been reported.
+ *
+ * Currency is GBP unconditionally. Google converts into the Ads account's
+ * currency itself, so declaring the account's currency here instead would
+ * silently mis-state the value of every order.
+ */
+export function trackAdsPurchase(reference: string, total: number): void {
+  if (!ADS_SEND_TO) return
+
+  ga('conversion', {
+    send_to: ADS_SEND_TO,
+    value: Number(total.toFixed(2)),
+    currency: CURRENCY,
+    transaction_id: reference,
+  })
+}

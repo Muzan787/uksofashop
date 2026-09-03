@@ -47,12 +47,30 @@ interface PlacedOrder {
   total_amount: number
 }
 
+/**
+ * What the browser gets back.
+ *
+ * Declared rather than inferred so the success branch is a contract: `total`
+ * is always present, and is always the figure `place_order` computed in the
+ * database. The checkout screen reports it to Google Ads as the conversion
+ * value, so a caller must never be able to fall back to a cart-derived number
+ * when it is missing - an optional `total` is what makes that fallback look
+ * reasonable at the call site.
+ *
+ * `orderId` is the short reference, not the row's uuid. The uuid is the access
+ * token for /confirm-order/[id] and does not belong in the browser's hands, or
+ * in a transaction_id sent to Google.
+ */
+export type PlaceOrderResult =
+  | { success?: undefined; error: string }
+  | { success: true; error?: undefined; orderId: string; total: number }
+
 export async function placeOrder(
   formData: FormData,
   cartItems: CartItem[],
   expectedTotal: number,
   extras: DeliveryOptions = NO_EXTRAS,
-) {
+): Promise<PlaceOrderResult> {
   // place_order is anon-callable and sends two emails per successful call,
   // through the same mailbox that has a daily cap. Ten orders per hour from
   // one address is well beyond any real customer and far below the cap.

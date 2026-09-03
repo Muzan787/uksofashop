@@ -19,9 +19,11 @@
 // personal data on a legitimate-interest basis we do not have. It therefore
 // stays fully gated and mounts only once consent is granted.
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useSyncExternalStore } from 'react';
+import { usePathname } from 'next/navigation';
 import Script from 'next/script';
 import { applyGoogleConsent, GA_ID, META_PIXEL_ID } from '@/utils/consentMode';
+import { isSensitiveUrl } from '@/utils/redactUrl';
 import {
   CONSENT_KEY,
   CONSENT_CHANGED_EVENT,
@@ -29,8 +31,46 @@ import {
   type ConsentValue,
 } from '@/utils/consent';
 
+/** useSyncExternalStore needs a stable subscribe; usePathname does the work. */
+const subscribeToNothing = () => () => {};
+
 export default function TrackingScripts() {
   const [consent, setConsent] = useState<ConsentValue | null>(null);
+  // Called for its re-render on navigation, which is what makes the
+  // useSyncExternalStore snapshot below re-read the address bar.
+  usePathname();
+
+  /**
+   * Whether the current URL carries an order uuid, a link token or a postcode.
+   *
+   * The Meta Pixel puts the document URL and the referrer into every request
+   * it makes, and offers nothing like gtag's `set` to override them - so on
+   * these URLs it cannot be made safe, only kept from running. Google is
+   * handled by redaction instead (utils/redactUrl.ts), so those pages are
+   * still measured; nothing on them ever fired a Meta event to begin with, so
+   * suppressing the Pixel here costs no data.
+   *
+   * Read from window rather than from usePathname alone because the sensitive
+   * part of /track-order is in the query string, which usePathname does not
+   * return - and useSearchParams would opt the whole root layout out of static
+   * rendering to get it.
+   *
+   * useSyncExternalStore rather than an effect writing state: the address bar
+   * is external mutable state, and this is the API for reading that during
+   * render without it being an impure read. It matters more than usual here,
+   * because the React Compiler is enabled and would be free to memoise a bare
+   * `window.location` read and never look again. usePathname is what
+   * re-renders us, so the subscribe function has nothing to do.
+   *
+   * The server snapshot is `false`, and safely so: the Pixel is additionally
+   * gated on `consent`, which is null until an effect has run, so this value
+   * cannot affect the server render or the hydration pass.
+   */
+  const sensitive = useSyncExternalStore(
+    subscribeToNothing,
+    () => isSensitiveUrl(window.location.pathname + window.location.search),
+    () => false,
+  );
 
   useEffect(() => {
     // grantConsent() dispatches both event names, and both are listened to so
@@ -84,9 +124,12 @@ export default function TrackingScripts() {
         }}
       />
 
-      {/* 3. Meta Pixel - only once consent is granted. See the note at the top
-             of this file for why this one is not merely defaulted-denied. */}
-      {consent === 'granted' && (
+      {/* 3. Meta Pixel - only once consent is granted, and never on a URL that
+             carries an order uuid, a link token or a postcode. See the note at
+             the top of this file for why this one is not merely
+             defaulted-denied, and `sensitive` above for why it is withheld
+             entirely rather than redacted the way Google's is. */}
+      {consent === 'granted' && !sensitive && (
         <Script
           id="meta-pixel"
           strategy="afterInteractive"
