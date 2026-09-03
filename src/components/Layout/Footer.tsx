@@ -14,7 +14,7 @@ import {
   SOCIAL_PROFILES, PHONE_DISPLAY, PHONE_HREF, SUPPORT_EMAIL, ADDRESS, OPENING_HOURS,
 } from '@/constants/contact';
 import TikTokIcon from '@/components/UI/TikTokIcon';
-import { useCategories } from '@/hooks/useCategories';
+import type { NavCategory } from '@/utils/navigation';
 
 /**
  * ─────────────────────────────────────────────────────────────────────────────
@@ -280,10 +280,11 @@ function BackToTop() {
   );
 }
 
-export default function Footer() {
+export default function Footer({ categories }: { categories: NavCategory[] }) {
   // Was `categories={[]}`, hardcoded in the layout wrapper — so the Shop
-  // column has never once listed a category since it was written.
-  const categories = useCategories();
+  // column has never once listed a category since it was written. It then
+  // became a client fetch, and is now handed down from the root layout, which
+  // is what finally puts these links in the server HTML.
   const year = new Date().getFullYear();
 
   const shopLinks = [

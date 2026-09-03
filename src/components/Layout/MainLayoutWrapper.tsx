@@ -12,8 +12,16 @@ import PageFade from "@/components/Motion/PageFade"
 import Cursor from "@/components/Motion/Cursor"
 import BrandEntrance from "@/components/Motion/BrandEntrance"
 import WhatsAppFab from "./WhatsAppFab"
+import type { NavCategory } from '@/utils/navigation'
 
-export default function MainLayoutWrapper({ children }: { children: React.ReactNode }) {
+export default function MainLayoutWrapper({
+  children,
+  categories,
+}: {
+  children: React.ReactNode
+  /** Fetched once in the root layout. Was a client query in both consumers. */
+  categories: NavCategory[]
+}) {
   const pathname = usePathname()
   const isAdmin = pathname?.startsWith('/admin')
 
@@ -46,7 +54,7 @@ export default function MainLayoutWrapper({ children }: { children: React.ReactN
       <ScrollProgress />
       <ViewTransitions />
       <Cursor />
-      <Header />
+      <Header categories={categories} />
       {/* The bottom-navigation clearance is NOT here any more — it moved to the
           last row of the Footer, which is the element that actually sits under
           that bar. On <main> it protected nothing (the footer follows it) and,
@@ -56,7 +64,7 @@ export default function MainLayoutWrapper({ children }: { children: React.ReactN
       <main id="main-content" className="flex-grow">
         <PageFade>{children}</PageFade>
       </main>
-      <Footer />
+      <Footer categories={categories} />
       {/* Storefront only, and mounted here rather than on the homepage so it
           exists on the product page too — which is where somebody actually has
           a question about fabric, size or delivery. It hides itself on the

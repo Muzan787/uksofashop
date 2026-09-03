@@ -4,6 +4,7 @@ import { Geist, Geist_Mono, Fraunces } from "next/font/google";
 import "./globals.css";
 import { CartProvider } from "@/context/CartContext";
 import MainLayoutWrapper from "@/components/Layout/MainLayoutWrapper";
+import { getNavCategories } from '@/utils/navigation';
 import { Toaster } from "react-hot-toast";
 import CookieConsent from '@/components/UI/CookieConsent';
 import AnalyticsRedaction from '@/components/UI/AnalyticsRedaction';
@@ -142,7 +143,13 @@ export const viewport: Viewport = {
   // cost was being paid for a problem that was already solved.
 }
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // Fetched here so the header and the footer render WITH their category links
+  // rather than filling them in after a client round trip. It also keeps
+  // @supabase/supabase-js out of the storefront bundle entirely - see
+  // src/utils/navigation.ts for what that was costing.
+  const navCategories = await getNavCategories();
+
   return (
     // The three next/font variables go on <html>, not <body>.
     //
@@ -210,7 +217,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           />
           
           {/* Use the wrapper here instead of hardcoding Header/Footer */}
-          <MainLayoutWrapper>
+          <MainLayoutWrapper categories={navCategories}>
             {children}
           </MainLayoutWrapper>
 

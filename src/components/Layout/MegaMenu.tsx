@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowUpRight } from 'lucide-react';
-import { createClient } from '@/utils/supabase/client';
+import { getMegaMenuData } from '@/app/actions/navigation';
 import { STAGGER_STEP, STAGGER_CAP } from '@/components/Motion/tokens';
 import { blurDataURL } from '@/utils/cloudinary'
 
@@ -62,32 +62,18 @@ export default function MegaMenu({
     if (!open || loaded.current) return;
     loaded.current = true;
 
-    const supabase = createClient();
-
-    supabase
-      .from('variant_groups').select('id,name,slug').order('name').limit(6)
-      .then(({ data }) => { if (data) setCollections(data); });
-
-    supabase
-      .from('products')
-      .select('base_price, product_categories!inner(category_id)')
-      .eq('is_active', true)
-      .then(({ data }) => {
-        if (!data) return;
-        const next: PriceRange = {};
-        for (const row of data) {
-          const price = Number(row.base_price);
-          if (!Number.isFinite(price)) continue;
-          for (const pc of row.product_categories ?? []) {
-            const id = pc.category_id;
-            if (!id) continue;
-            next[id] = next[id]
-              ? { min: Math.min(next[id].min, price), max: Math.max(next[id].max, price) }
-              : { min: price, max: price };
-          }
-        }
-        setPrices(next);
-      });
+    // One server action rather than two browser queries. The aggregation that
+    // used to happen here now happens on the server, which is also why this is
+    // a single round trip instead of two.
+    getMegaMenuData()
+      .then(({ collections, prices }) => {
+        setCollections(collections);
+        setPrices(prices);
+      })
+      // A failed fetch leaves the drawer without collections and price ranges,
+      // which is degraded but still a working category menu. It must not take
+      // the header down, and the next open retries.
+      .catch(() => { loaded.current = false; });
   }, [open]);
 
   // Escape closes and hands focus back to whatever opened it.

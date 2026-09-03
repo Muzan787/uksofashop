@@ -6,7 +6,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { X, Clock, ArrowUpRight } from 'lucide-react';
-import { createClient } from '@/utils/supabase/client';
+import { searchProducts } from '@/app/actions/navigation';
 import { STAGGER_STEP, STAGGER_CAP } from '@/components/Motion/tokens';
 import { blurDataURL } from '@/utils/cloudinary'
 
@@ -106,26 +106,14 @@ export default function SearchOverlay({ open, onClose, categories, triggerRef }:
     let cancelled = false;
 
     const timer = setTimeout(async () => {
-      const { data } = await createClient()
-        .from('products')
-        .select('id, title, slug, base_price, product_variants(image_url), product_categories!inner(categories(slug))')
-        .eq('is_active', true)
-        .or(`title.ilike.%${term}%,description.ilike.%${term}%`)
-        .limit(6);
+      // The row shaping and the term sanitising both moved into the action -
+      // the old version interpolated the raw term straight into a PostgREST
+      // `or=` filter, where a comma or a bracket silently corrupted the query.
+      const hits = await searchProducts(term).catch(() => []);
 
       if (cancelled) return;
 
-      setResult({
-        term,
-        hits: (data ?? []).map((p) => ({
-          id: p.id,
-          title: p.title,
-          slug: p.slug,
-          base_price: Number(p.base_price),
-          image: p.product_variants?.[0]?.image_url ?? null,
-          categorySlug: p.product_categories?.[0]?.categories?.slug ?? 'all',
-        })),
-      });
+      setResult({ term, hits });
       setHighlight(-1);
     }, DEBOUNCE_MS);
 

@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { ShoppingBag, X, Search, ChevronDown, User, Heart, Sofa } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { ANNOUNCEMENTS } from '@/constants/promises';
-import { useCategories } from '@/hooks/useCategories';
+import type { NavCategory } from '@/utils/navigation';
 import MegaMenu from './MegaMenu';
 import MobileMenu from './MobileMenu';
 import SearchOverlay from './SearchOverlay';
@@ -55,9 +55,8 @@ function Wordmark({ light, className = '' }: { light: boolean; className?: strin
   );
 }
 
-export default function Header() {
+export default function Header({ categories }: { categories: NavCategory[] }) {
   const { itemCount } = useCart();
-  const categories = useCategories();
   const pathname = usePathname();
 
   const [scrolled, setScrolled] = useState(false);
