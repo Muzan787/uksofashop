@@ -9,18 +9,18 @@
 // MATERIAL ACCURACY, which is the whole reason this file has a scope note.
 // Checked against the live catalogue, September 2026:
 //
-//   Nova range (4 products)   "Elephant Grey tech leather, a breathable,
-//                             scratch-resistant material that wipes clean"
-//   Roma range (5 products)   "a blend of durable leather and soft fabric"
+//   Nova range (4 products)   tech leather. A coated synthetic - breathable,
+//                             scratch-resistant, wipes clean. NOT a hide, so it
+//                             never patinas and must never be described as if
+//                             it does, and it must not be conditioned.
+//   Roma range (5 products)   real leather, blended with fabric panels. It is a
+//                             hide, it does patina, and it wants conditioning
+//                             every six to twelve months.
 //
-// Nothing in the range is described as full hide. So this article must NOT
-// attribute hide behaviour to it - no patina, no "leather is a skin", no
-// darkening and softening where you sit. An earlier version of the leather
-// category copy did exactly that and has been corrected.
-//
-// The Roma's leather component is not stated as genuine or synthetic anywhere,
-// so this says what each range says and sends anyone who specifically needs
-// hide to ask. Do not resolve that ambiguity by guessing.
+// Both confirmed by the owner, 4 Sept 2026. The catalogue copy does not make
+// the Roma's status explicit - it says only "a blend of durable leather and
+// soft fabric" - so do not re-derive this from the product descriptions and
+// conclude the opposite, which is what happened the first time this was written.
 //
 // Other facts from elsewhere:
 //   69 colours / 6 fabrics, 3 free samples   /fabrics, actions/swatches.ts
@@ -55,18 +55,24 @@ export default function FabricOrLeather() {
         the same price. The <Link href="/fabrics">fabric guide</Link> covers what each one does.
       </p>
       <p>
-        <strong>Our leather sofas</strong> are two ranges and they are not the same thing. The Nova
-        range is upholstered in <strong>tech leather</strong>: a coated, breathable,
-        scratch-resistant material that wipes clean. The Roma range is a{' '}
-        <strong>blend of leather and soft fabric</strong>. Neither is a full-hide sofa, and neither
-        behaves like one — which matters mostly for how they age, covered further down.
+        <strong>Our leather sofas</strong> are two ranges and they are genuinely different
+        materials, which almost nobody tells you. The <strong>Roma</strong> range is{' '}
+        <strong>real leather</strong>, blended with fabric panels — a hide, with everything that
+        follows from that. The <strong>Nova</strong> range is <strong>tech leather</strong>: a
+        coated synthetic that is breathable, scratch-resistant and wipes clean.
       </p>
-      <Note title="If you specifically want hide">
+      <p>
+        They look similar in a photograph and they behave differently in a house, so it is worth
+        knowing which one you are looking at. It changes how the sofa ages, and it changes how you
+        are meant to look after it.
+      </p>
+      <Note title="Which is which">
         <p>
-          Tech leather is not a lesser version of hide so much as a different material with a
-          different set of trade-offs, several of which are advantages. But if genuine hide is what
-          you are set on, <Link href="/contact">ask us before ordering</Link> rather than working it
-          out from a photograph.
+          If you want genuine hide, that is the <strong>Roma</strong>. If you want the lowest
+          maintenance and the best resistance to claws and sticky hands, that is the{' '}
+          <strong>Nova</strong>. Tech leather is not a lesser hide so much as a different material
+          with a different set of trade-offs, and several of them are advantages —{' '}
+          <Link href="/shop/leather-sofa">both ranges are here</Link>.
         </p>
       </Note>
 
@@ -101,11 +107,12 @@ export default function FabricOrLeather() {
         smell that lives in the filling, not on the cover, which is the part you cannot wash.
       </p>
       <p>
-        <strong>Cats: it is a genuine toss-up.</strong> Claws catch and pull loops in a woven fabric
-        — a chenille or a velvet can be ruined by one determined cat in a fortnight. Full hide
-        punctures and scars. Tech leather sits between the two: our Nova range is described as
-        scratch-resistant, and a smooth coated surface offers a cat much less to hook into than a
-        pile does. It is not claw-proof, because nothing is. Give the cat something it prefers.
+        <strong>Cats: the Nova, if anything.</strong> Claws catch and pull loops in a woven fabric
+        — a chenille or a velvet can be ruined by one determined cat in a fortnight. Real hide, so
+        the Roma, punctures and scars and does not recover. Tech leather sits between the two: the
+        Nova is scratch-resistant, and a smooth coated surface offers a cat far less to hook into
+        than a pile does. It is not claw-proof, because nothing is. Give the cat something it
+        prefers regardless.
       </p>
       <PullQuote>
         Hair and mud come off leather. On fabric they go in. That is the whole argument, and for
@@ -149,12 +156,20 @@ export default function FabricOrLeather() {
         can be pushed back a long way by rotating the cushions and keeping it out of direct sun.
       </p>
       <p>
-        <strong>Tech leather and leather blends</strong> hold their colour and their finish. What
-        they do not do is develop the patina people pay for in an expensive hide sofa — they will
-        not darken and soften where you sit, and they will not look better in year five than in
-        year one. They look consistent for a long time and then, eventually, show wear at the seams
-        and the front edge of the seat rather than mellowing. If &ldquo;it will age beautifully&rdquo;
-        is why you were leaning towards leather, that is the sentence to read twice.
+        <strong>Real leather — the Roma</strong> — ages the way people hope leather will. It takes
+        marks where you actually sit and gets darker and softer there, so it does not wear evenly;
+        it develops character in the places you use. Whether that is the point or the problem is
+        personal, and it is the one thing tech leather cannot give you. It asks for conditioning
+        every six to twelve months in return, which is what stops the seat creases turning into
+        cracks.
+      </p>
+      <p>
+        <strong>Tech leather — the Nova</strong> — holds its colour and its finish instead. It will
+        not darken, will not soften where you sit, and will not look better at year five than at
+        year one; it looks consistent for a long time and then eventually shows wear at the seams
+        and the front edge of the seat. In exchange it needs nothing but a damp cloth, ever. If
+        &ldquo;it will age beautifully&rdquo; is why you were leaning towards leather, the Roma is
+        the one you mean.
       </p>
 
       <h2 id="size">The difference that has nothing to do with the surface</h2>
@@ -205,6 +220,11 @@ export default function FabricOrLeather() {
         </li>
         <li>
           <strong>Not fully decided yet</strong> — leather, because it keeps your 14 days.
+        </li>
+        <li>
+          <strong>Between the two leathers</strong> — Roma if you want a hide that ages into
+          something and you will condition it twice a year; Nova if you want to wipe it and forget
+          it. The <Link href="/care-guide">care guide</Link> has the routine for each.
         </li>
       </ul>
       <p>

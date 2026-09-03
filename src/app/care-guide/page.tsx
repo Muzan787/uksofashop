@@ -102,13 +102,34 @@ export default function CareGuidePage() {
         <h2 id="leather">Leather sofas</h2>
         <p>
           <strong>Dust it weekly</strong> with a soft microfibre cloth, lightly dampened with plain
-          water. Nothing else on the cloth.
+          water. Nothing else on the cloth. That part is the same whichever of the two you have.
         </p>
+        <p>
+          After that they differ, and it matters — the two ranges are not the same material.
+        </p>
+
+        <h3>Real leather &mdash; the Roma range</h3>
         <p>
           <strong>Condition it every six to twelve months</strong> with a proper leather
           conditioner. Leather is a skin and it dries out; conditioning is what stops the creases
           across the seat turning into cracks. This is the difference between leather that looks
           better at year five and leather that looks worse.
+        </p>
+        <p className="fine">
+          The Roma is a blend of leather and fabric, so condition the leather panels and treat the
+          fabric ones as fabric — vacuum them with the soft brush like anything else woven.
+        </p>
+
+        <h3>Tech leather &mdash; the Nova range</h3>
+        <p>
+          <strong>Do not condition it.</strong> Tech leather is a coated material rather than a
+          hide, so there is nothing in it to dry out and nothing for a conditioner to feed. At best
+          it sits on the surface; at worst the oils and solvents in some conditioners soften the
+          coating they are supposed to protect.
+        </p>
+        <p>
+          A damp cloth is genuinely the whole routine. It is scratch-resistant, it wipes clean, and
+          it holds its colour without help — which is most of the reason to choose it.
         </p>
 
         <PullQuote>
