@@ -16,6 +16,7 @@ import MadeToOrderExplained from './made-to-order-explained'
 import CashOnDeliveryExplained from './cash-on-delivery-explained'
 import WhatsInsideASofa from './whats-inside-a-sofa'
 import MeasuringForACornerSofa from './measuring-for-a-corner-sofa'
+import DeliveryDayPreparation from './delivery-day-preparation'
 
 export const ARTICLE_BODIES: Record<string, ComponentType> = {
   'sofa-jargon-explained': SofaJargonExplained,
@@ -23,4 +24,5 @@ export const ARTICLE_BODIES: Record<string, ComponentType> = {
   'cash-on-delivery-explained': CashOnDeliveryExplained,
   'whats-inside-a-sofa': WhatsInsideASofa,
   'measuring-for-a-corner-sofa': MeasuringForACornerSofa,
+  'delivery-day-preparation': DeliveryDayPreparation,
 }

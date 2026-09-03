@@ -159,6 +159,29 @@ export const ARTICLES: Article[] = [
       { id: 'door', label: 'Then check it gets in' },
     ],
   },
+  {
+    slug: 'delivery-day-preparation',
+    title: 'Sofa Delivery Day: How to Prepare, and What It Costs to Get Wrong',
+    heading: 'Getting ready for the van',
+    eyebrow: 'Before it arrives',
+    description:
+      'Book the extras at checkout because they cannot be added at the door, protect a confirmed slot because missing one is £50, clear the route, and move the old sofa out first. A delivery day checklist.',
+    lede:
+      'Most deliveries that go badly were decided days earlier, by something nobody thought to do. None of it is dramatic and all of it is avoidable.',
+    published: '2026-09-04',
+    updated: '2026-09-04',
+    toc: [
+      { id: 'checkout', label: 'Book the extras early' },
+      { id: 'slot', label: 'Confirm and protect the day' },
+      { id: 'route', label: 'Clear the route' },
+      { id: 'spot', label: 'Know where it goes' },
+      { id: 'old', label: 'The old sofa' },
+      { id: 'access', label: 'Parking and access' },
+      { id: 'house', label: 'Floors, pets, children' },
+      { id: 'day', label: 'On the day' },
+      { id: 'after', label: 'After the van leaves' },
+    ],
+  },
 ]
 
 /** Newest first, which is the order the index renders them in. */

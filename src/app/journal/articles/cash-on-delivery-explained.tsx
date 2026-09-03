@@ -20,9 +20,14 @@ export default function CashOnDeliveryExplained() {
         but our time.
       </p>
       <p>
-        Delivery to a UK Mainland address is free with no minimum order, and it usually takes two
-        to four working days. The sofa is brought to the ground floor, or to a ground-floor room of
-        your choice — not left on the drive.
+        Delivery to a UK Mainland address is free with no minimum order, and the sofa is brought to
+        the ground floor, or to a ground-floor room of your choice — not left on the drive.
+      </p>
+      <p>
+        Most orders arrive within two to four working days. Wales, Scotland and a handful of
+        specific postcodes take five to seven, and we cannot always tell which band a postcode
+        falls into at the moment you order — so if yours is one of the longer ones we tell you as
+        soon as the order reaches us rather than leaving you to find out on the day.
       </p>
 
       <h2 id="methods">Cash or bank transfer</h2>
@@ -86,6 +91,12 @@ export default function CashOnDeliveryExplained() {
           more, and the team confirms with you before delivery rather than on the doorstep.
         </li>
       </ul>
+      <p>
+        All three are booked when you order and cannot be added at the door, because the visit is
+        planned around what was booked — that, and the rest of the preparation worth doing before
+        the van arrives, is in{' '}
+        <Link href="/journal/delivery-day-preparation">getting ready for the van</Link>.
+      </p>
       <p>
         Full detail, including the areas outside the standard mainland service, is on{' '}
         <Link href="/delivery-returns">delivery and returns</Link>.
