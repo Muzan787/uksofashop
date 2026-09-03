@@ -46,6 +46,17 @@ const nextConfig: NextConfig = {
    * therefore cheaper. This rule is kept as a backstop so the behaviour is
    * guaranteed by the repository rather than by dashboard state, and so it
    * survives a move to different hosting.
+   *
+   * KNOWN ISSUE, fixable only in the Vercel dashboard: the edge redirect wins,
+   * and it is currently configured as a 307 rather than a 308 -
+   *
+   *   curl -sI https://uksofashop.co.uk/  ->  307 Temporary Redirect
+   *
+   * so the `permanent: true` below never gets the chance to apply. A 307 tells
+   * Google the move is provisional, which is why it keeps the apex host as a
+   * candidate rather than consolidating every signal onto www. Set the apex
+   * domain to a Permanent redirect in Project -> Settings -> Domains; this rule
+   * then goes back to being the backstop it was written as.
    */
   // Removes the `X-Powered-By: Next.js` response header, which advertises the
   // framework and version to anyone scanning.
@@ -66,6 +77,7 @@ const nextConfig: NextConfig = {
    *   googletagmanager / google-analytics / analytics.google  - GA4
    *   googleadservices.com                                    - Ads conversion
    *   *.g.doubleclick.net / ad.doubleclick.net                - Ads + signals
+   *   pagead2.googlesyndication.com                           - Ads ccm/collect
    *   www.google.com / www.google.co.uk                       - 1p conversion
    *                                                             + remarketing
    *   connect.facebook.net / facebook.com                     - Meta Pixel
@@ -85,6 +97,23 @@ const nextConfig: NextConfig = {
       "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.googleadservices.com https://*.g.doubleclick.net https://connect.facebook.net https://*.vercel-insights.com https://va.vercel-scripts.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' data: https://fonts.gstatic.com",
+      // pagead2.googlesyndication.com/ccm/collect is the one that was still
+      // being blocked after the two commits that set out to fix Google Ads.
+      //
+      // It is a THIRD host, separate from both googleadservices.com (the
+      // conversion itself) and *.g.doubleclick.net, and it is easy to miss
+      // because the tag asks for it twice in two different ways and each way is
+      // governed by a different directive:
+      //
+      //   ?...&fmt=8  the Fetch API attempt   -> connect-src
+      //   ?...&fmt=3  the <img> beacon it falls back to when fetch is refused
+      //                                       -> img-src
+      //
+      // Allowing it in only one of the two is the same as allowing it in
+      // neither: the fetch is refused, the fallback beacon is refused, and the
+      // hit is lost. So it is listed HERE and in connect-src below, and both
+      // entries have to stay.
+      //
       // The ga-audiences pixel fires against the visitor's OWN Google country
       // domain - www.google.co.uk here, www.google.com.pk for someone in
       // Pakistan - and CSP cannot wildcard a TLD, so this can only ever list
@@ -92,7 +121,7 @@ const nextConfig: NextConfig = {
       // a visitor on another Google domain loses remarketing audience
       // membership, which is a targeting cost and NOT a measurement one. No
       // conversion depends on this line.
-      "img-src 'self' data: blob: https://res.cloudinary.com https://images.pexels.com https://www.googletagmanager.com https://www.google-analytics.com https://www.googleadservices.com https://*.g.doubleclick.net https://www.google.com https://www.google.co.uk https://www.facebook.com",
+      "img-src 'self' data: blob: https://res.cloudinary.com https://images.pexels.com https://www.googletagmanager.com https://www.google-analytics.com https://www.googleadservices.com https://*.g.doubleclick.net https://pagead2.googlesyndication.com https://www.google.com https://www.google.co.uk https://www.facebook.com",
       // IMAGE HOSTS MUST APPEAR HERE AS WELL AS IN img-src.
       //
       // An <img src> is governed by img-src - but this site registers a
@@ -136,7 +165,7 @@ const nextConfig: NextConfig = {
       // *.google-analytics.com covers the regional endpoints GA4 rotates
       // through (region1.google-analytics.com and friends), which the two exact
       // hosts here do not.
-      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://*.analytics.google.com https://www.googletagmanager.com https://www.google.com https://www.google.co.uk https://ad.doubleclick.net https://www.googleadservices.com https://*.g.doubleclick.net https://connect.facebook.net https://graph.facebook.com https://vitals.vercel-insights.com https://api.homedata.co.uk https://api.cloudinary.com https://res.cloudinary.com https://images.pexels.com",
+      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://*.analytics.google.com https://www.googletagmanager.com https://www.google.com https://www.google.co.uk https://ad.doubleclick.net https://www.googleadservices.com https://*.g.doubleclick.net https://pagead2.googlesyndication.com https://connect.facebook.net https://graph.facebook.com https://vitals.vercel-insights.com https://api.homedata.co.uk https://api.cloudinary.com https://res.cloudinary.com https://images.pexels.com",
       // openstreetmap.org is the showroom locator map. An <iframe> is the
       // only way to embed a real, pannable map without shipping a mapping
       // library and a tile key - and OSM needs no key and sets no cookies,
