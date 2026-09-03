@@ -66,6 +66,20 @@ export function breadcrumbSchema(crumbs: Crumb[]) {
 
 // ─── Organisation and site search ────────────────────────────────────────────
 
+/**
+ * The trader, as opposed to localBusinessSchema() which describes the shop at
+ * the Blackburn address.
+ *
+ * logo and sameAs were both missing, and they are the two properties this node
+ * exists to carry. The FurnitureStore node had them all along, but that is not
+ * the node Google reads for a knowledge panel or a logo rich result, and it is
+ * not the one an answer engine resolves "UK Sofa Shop" against - both of those
+ * follow @id to #organization, which is also what every Article, WebPage and
+ * Offer on the site points its publisher, author and seller at.
+ *
+ * So the site had one well-described entity that nothing referenced, and one
+ * heavily referenced entity with no logo and no verified profiles attached.
+ */
 export function organizationSchema() {
   return {
     '@context': 'https://schema.org',
@@ -73,6 +87,9 @@ export function organizationSchema() {
     '@id': `${SITE_URL}/#organization`,
     name: ORGANISATION_NAME,
     url: SITE_URL,
+    // Google wants at least 112x112 for the logo rich result; this is 512.
+    logo: `${SITE_URL}/icon-512x512.png`,
+    image: `${SITE_URL}/og-image.jpg`,
     telephone: PHONE_E164,
     address: postalAddress(),
     contactPoint: {
@@ -83,6 +100,11 @@ export function organizationSchema() {
       areaServed: 'GB',
       availableLanguage: 'English',
     },
+    // Only real, verified profiles. SOCIAL_SAME_AS already filters out the
+    // TikTok placeholder, so this is empty rather than wrong when there is
+    // nothing to point at - attaching an unverified handle to the business
+    // entity is worse than attaching none.
+    ...(SOCIAL_SAME_AS.length ? { sameAs: SOCIAL_SAME_AS } : {}),
   }
 }
 

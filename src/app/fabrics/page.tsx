@@ -19,7 +19,10 @@ const DESCRIPTION =
 
 export const metadata: Metadata = {
   alternates: { canonical: '/fabrics' },
-  title: 'Sofa Fabric Guide — Chenille, Velvet, Naple, Marble & PVC Leather',
+  // 42 characters, so the brand suffix still fits inside ~57. The old title
+  // listed all six fabrics, ran to 80 with the suffix, and was cut off mid-word
+  // in results - the six names are in the description and the H2s instead.
+  title: 'Sofa Fabric Guide: 69 Colours, 6 Fabrics',
   description: DESCRIPTION,
 }
 

@@ -19,7 +19,7 @@ const DESCRIPTION =
 
 export const metadata: Metadata = {
   alternates: { canonical: '/showroom' },
-  title: 'Visit Our Showroom',
+  title: 'Sofa Showroom in Blackburn',
   description: DESCRIPTION,
 }
 
