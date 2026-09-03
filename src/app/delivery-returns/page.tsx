@@ -101,14 +101,14 @@ export default function DeliveryReturnsPage() {
         <h2 id="delivery">Getting it to you</h2>
         <p>
           Delivery is free to every UK Mainland address, with no minimum order value. Our drivers
-          bring your sofa to the ground floor, or to a ground-floor room of your choice. Most
-          orders arrive within two to four working days of purchase.
+          bring your sofa to the ground floor, or to a ground-floor room of your choice. Orders
+          arrive within two to four working days of purchase, anywhere on the mainland — England,
+          Scotland and Wales alike.
         </p>
         <p>
-          Wales, Scotland and a handful of specific postcodes take longer — five to seven working
-          days. We cannot always confirm which band a postcode falls into at the moment you order,
-          so if yours is going to take longer we will tell you as soon as the order reaches us,
-          rather than leaving you to find out on the day.
+          Northern Ireland, the Isle of Man and the Scottish Islands sit outside that service. They
+          are not refused; we simply do not quote for them automatically, so please get in touch
+          before ordering and we will arrange delivery for you.
         </p>
 
         <CoverageMap />

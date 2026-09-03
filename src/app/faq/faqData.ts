@@ -17,7 +17,7 @@ export const faqGroups: FaqGroup[] = [
     items: [
       {
         q: 'How long does delivery take?',
-        a: 'Most orders reach UK Mainland addresses within 2–4 working days of purchase. Wales, Scotland and certain postcodes can take 5–7 working days — we can’t confirm which at the point of ordering, so if there’s any delay on yours we’ll let you know straight away, as soon as we’ve received the order. Around 90% of orders arrive within the stated period, unless you’ve asked us to hold it back.',
+        a: 'Orders reach UK Mainland addresses within 2–4 working days of purchase — England, Scotland and Wales alike. Around 90% arrive inside that window, unless you have asked us to hold it back; if anything is going to run late on yours we will tell you as soon as the order reaches us rather than leaving you to find out on the day. Northern Ireland, the Isle of Man and the Scottish Islands sit outside the standard service, so please get in touch before ordering and we will arrange it.',
       },
       {
         q: 'Where do you deliver?',

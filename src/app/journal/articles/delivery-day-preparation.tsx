@@ -20,8 +20,7 @@
 //   upstairs £20 / +£10, assembly £20,
 //   removal £30 indicative                      constants/delivery.ts
 //   ground floor or a ground-floor room         /delivery-returns
-//   2-4 working days, 5-7 for Wales, Scotland
-//   and some postcodes                          /delivery-returns
+//   2-4 working days across UK Mainland         /delivery-returns
 //   arrives in pieces, feet unscrew ~10cm       /size-guide
 //   30cm from a radiator                        /care-guide
 //
@@ -72,9 +71,8 @@ export default function DeliveryDayPreparation() {
 
       <h2 id="slot">Confirm the day, and protect it</h2>
       <p>
-        Most orders arrive within two to four working days; Wales, Scotland and a handful of
-        specific postcodes take five to seven, and we tell you which band you are in once the order
-        reaches us.
+        Delivery runs to two to four working days anywhere on UK Mainland, so the day comes round
+        quickly — which is the reason to have the rest of this list done before it does.
       </p>
       <p>
         Once a slot has actually been <strong>confirmed</strong> with you, treat it as fixed. A

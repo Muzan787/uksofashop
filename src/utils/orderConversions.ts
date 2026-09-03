@@ -12,7 +12,7 @@
 // Confirmation happens within minutes of the order, so moving the event there
 // removes most of that noise without the two costs that firing on DELIVERY
 // would carry: conversions landing outside Meta's 7-day click window (delivery
-// runs 2-4 days, 5-7 to Wales and Scotland), and an ad set never accumulating
+// runs 2-4 working days across UK Mainland), and an ad set never accumulating
 // the ~50 conversions per week it needs to leave the learning phase.
 //
 // Confirmation is an admin action, long after the customer closed the tab, so
