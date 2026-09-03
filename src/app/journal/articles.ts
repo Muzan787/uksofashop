@@ -182,6 +182,28 @@ export const ARTICLES: Article[] = [
       { id: 'after', label: 'After the van leaves' },
     ],
   },
+  {
+    slug: 'fabric-or-leather',
+    title: 'Fabric or Leather: Which One Suits Your House',
+    heading: 'Fabric or leather',
+    eyebrow: 'Buying guide',
+    description:
+      'Decided by household rather than by material: children, dogs, cats, allergies, cold rooms. Plus what tech leather actually is, and the two practical differences that have nothing to do with the surface.',
+    lede:
+      'The first real decision of a sofa purchase, usually made on a photograph — the one input that tells you nothing. Both look good in a picture; they behave completely differently in a house.',
+    published: '2026-09-04',
+    updated: '2026-09-04',
+    toc: [
+      { id: 'what', label: 'What we actually sell' },
+      { id: 'children', label: 'With young children' },
+      { id: 'pets', label: 'With a dog or a cat' },
+      { id: 'allergies', label: 'With allergies' },
+      { id: 'comfort', label: 'How they feel' },
+      { id: 'look', label: 'How they age' },
+      { id: 'size', label: 'Sizing and returns' },
+      { id: 'verdict', label: 'The short version' },
+    ],
+  },
 ]
 
 /** Newest first, which is the order the index renders them in. */

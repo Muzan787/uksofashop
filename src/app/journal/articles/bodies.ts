@@ -17,6 +17,7 @@ import CashOnDeliveryExplained from './cash-on-delivery-explained'
 import WhatsInsideASofa from './whats-inside-a-sofa'
 import MeasuringForACornerSofa from './measuring-for-a-corner-sofa'
 import DeliveryDayPreparation from './delivery-day-preparation'
+import FabricOrLeather from './fabric-or-leather'
 
 export const ARTICLE_BODIES: Record<string, ComponentType> = {
   'sofa-jargon-explained': SofaJargonExplained,
@@ -25,4 +26,5 @@ export const ARTICLE_BODIES: Record<string, ComponentType> = {
   'whats-inside-a-sofa': WhatsInsideASofa,
   'measuring-for-a-corner-sofa': MeasuringForACornerSofa,
   'delivery-day-preparation': DeliveryDayPreparation,
+  'fabric-or-leather': FabricOrLeather,
 }
