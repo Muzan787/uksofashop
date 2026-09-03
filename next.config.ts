@@ -64,8 +64,9 @@ const nextConfig: NextConfig = {
    *
    * Hosts allowed here and why:
    *   googletagmanager / google-analytics / analytics.google  - GA4
-   *   googleads.g.doubleclick.net / ad.doubleclick.net        - Google Ads
-   *   www.google.com / www.google.co.uk                       - Ads conversion
+   *   googleadservices.com                                    - Ads conversion
+   *   *.g.doubleclick.net / ad.doubleclick.net                - Ads + signals
+   *   www.google.com / www.google.co.uk                       - 1p conversion
    *                                                             + remarketing
    *   connect.facebook.net / facebook.com                     - Meta Pixel
    *   res.cloudinary.com                                      - product images
@@ -77,11 +78,11 @@ const nextConfig: NextConfig = {
   async headers() {
     const csp = [
       "default-src 'self'",
-      // googleads.g.doubleclick.net serves the Google Ads conversion tag, which
-      // the Google tag pulls in because Ads is a destination on the container.
-      // Without it the tag loads, reports AW-18399071645 as a destination, and
-      // then silently cannot measure anything.
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://googleads.g.doubleclick.net https://connect.facebook.net https://*.vercel-insights.com https://va.vercel-scripts.com",
+      // googleadservices.com and *.g.doubleclick.net serve the Google Ads
+      // conversion tag, which the Google tag pulls in because Ads is a
+      // destination on the container. Without them the tag loads, reports
+      // AW-18399071645 as a destination, and then silently cannot measure.
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.googleadservices.com https://*.g.doubleclick.net https://connect.facebook.net https://*.vercel-insights.com https://va.vercel-scripts.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' data: https://fonts.gstatic.com",
       // The ga-audiences pixel fires against the visitor's OWN Google country
@@ -91,7 +92,7 @@ const nextConfig: NextConfig = {
       // a visitor on another Google domain loses remarketing audience
       // membership, which is a targeting cost and NOT a measurement one. No
       // conversion depends on this line.
-      "img-src 'self' data: blob: https://res.cloudinary.com https://images.pexels.com https://www.googletagmanager.com https://www.google-analytics.com https://googleads.g.doubleclick.net https://www.google.com https://www.google.co.uk https://www.facebook.com",
+      "img-src 'self' data: blob: https://res.cloudinary.com https://images.pexels.com https://www.googletagmanager.com https://www.google-analytics.com https://www.googleadservices.com https://*.g.doubleclick.net https://www.google.com https://www.google.co.uk https://www.facebook.com",
       // IMAGE HOSTS MUST APPEAR HERE AS WELL AS IN img-src.
       //
       // An <img src> is governed by img-src - but this site registers a
@@ -109,18 +110,33 @@ const nextConfig: NextConfig = {
       // api.homedata.co.uk is the postcode -> address lookup in checkout, and
       // api.cloudinary.com receives review photo uploads.
       //
-      // GOOGLE ADS. /ccm/collect on www.google.com is where a conversion is
-      // actually sent, and ad.doubleclick.net/ccm/s/collect is its cross-domain
-      // counterpart; /rmkt/collect is remarketing. All three were blocked, so
-      // the purchase conversion could not have been recorded no matter what the
-      // page fired. These are separate hosts from the GA4 ones already listed -
-      // Ads was added as a destination on the Google tag after this policy was
-      // written, and a destination brings its own endpoints with it.
+      // GOOGLE ADS. The conversion itself goes to
+      // googleadservices.com/pagead/conversion/<account>/ - that is the request
+      // that must not be blocked, and it is NOT one of the hosts Tag Assistant
+      // names in its console, because Tag Assistant reports what the tag tried
+      // on page load rather than what a conversion event tries. It was found by
+      // firing a real conversion and listening for securitypolicyviolation.
+      //
+      // Supporting endpoints: *.g.doubleclick.net covers both the conversion
+      // tag on googleads.g and Google signals on stats.g; ad.doubleclick.net
+      // and www.google.com/ccm/collect carry cross-domain measurement;
+      // /rmkt/collect is remarketing.
+      //
+      // NOTE ON COUNTRY DOMAINS. www.google.com/pagead/1p-conversion REDIRECTS
+      // to the visitor's own Google domain, and CSP re-checks the redirect
+      // target - so that request is blocked for anyone outside the .com/.co.uk
+      // listed here. It degrades enhanced/first-party conversion signal for
+      // those visitors; the primary googleadservices.com conversion above is
+      // not affected and still records.
+      //
+      // These are all separate hosts from the GA4 ones already listed. Ads was
+      // added as a destination on the Google tag after this policy was written,
+      // and a destination brings its own endpoints with it.
       //
       // *.google-analytics.com covers the regional endpoints GA4 rotates
       // through (region1.google-analytics.com and friends), which the two exact
       // hosts here do not.
-      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://*.analytics.google.com https://www.googletagmanager.com https://www.google.com https://www.google.co.uk https://ad.doubleclick.net https://googleads.g.doubleclick.net https://connect.facebook.net https://graph.facebook.com https://vitals.vercel-insights.com https://api.homedata.co.uk https://api.cloudinary.com https://res.cloudinary.com https://images.pexels.com",
+      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://*.analytics.google.com https://www.googletagmanager.com https://www.google.com https://www.google.co.uk https://ad.doubleclick.net https://www.googleadservices.com https://*.g.doubleclick.net https://connect.facebook.net https://graph.facebook.com https://vitals.vercel-insights.com https://api.homedata.co.uk https://api.cloudinary.com https://res.cloudinary.com https://images.pexels.com",
       // openstreetmap.org is the showroom locator map. An <iframe> is the
       // only way to embed a real, pannable map without shipping a mapping
       // library and a tile key - and OSM needs no key and sets no cookies,
@@ -128,7 +144,12 @@ const nextConfig: NextConfig = {
       "frame-src 'self' https://www.facebook.com https://www.openstreetmap.org",
       "object-src 'none'",
       "base-uri 'self'",
-      "form-action 'self'",
+      // www.facebook.com because the Meta Pixel falls back to submitting a
+      // hidden form to /tr/ when it cannot use an image or fetch. That was
+      // being blocked - a pre-existing fault, unrelated to Google Ads, found
+      // while checking for conversion violations. Nothing else may post
+      // off-site: this is not 'self' plus a wildcard.
+      "form-action 'self' https://www.facebook.com",
       "frame-ancestors 'none'",
       // PRODUCTION ONLY.
       //
