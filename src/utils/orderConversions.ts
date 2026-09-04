@@ -64,7 +64,7 @@ export async function reportOrderConversion(
     // which collapses every field below to an error type.
     const { data: order } = await supabase
       .from('orders')
-      .select('id, customer_name, customer_email, customer_phone, shipping_address, total_amount, purchase_event_id, ga_client_id, meta_fbp, meta_fbc, customer_user_agent, customer_ip, purchase_event_sent_at, delivered_event_sent_at')
+      .select('id, customer_name, customer_email, customer_phone, shipping_address, total_amount, purchase_event_id, ga_client_id, meta_fbp, meta_fbc, customer_user_agent, customer_ip, purchase_event_sent_at, delivered_event_sent_at, source')
       .eq('id', orderId)
       .single()
 
@@ -103,6 +103,23 @@ export async function reportOrderConversion(
     const shortCode = orderId.substring(0, 8).toUpperCase()
     const name = (order.customer_name ?? '').trim()
 
+    /**
+     * An order agreed in a WhatsApp conversation, not on a page.
+     *
+     * It has no _fbp, no _fbc, no browser and no URL, because there was no
+     * browser involved - the columns holding those are null on every manual
+     * order. Reporting it as a website event would therefore be a claim we
+     * cannot support, and worse than merely unmatched: Meta would read the
+     * absence of every browser identifier on a website event as a badly
+     * implemented pixel rather than as a sale that happened somewhere else.
+     *
+     * So it goes as ‘chat’, with the identifiers it genuinely has - the
+     * hashed name, phone, email and postcode taken during the conversation.
+     * The phone number is the strong one here, because on WhatsApp it is
+     * how the customer reached us in the first place.
+     */
+    const fromChat = order.source === 'whatsapp'
+
     await Promise.all([
       sendCapiEvent({
         // Purchase is the standard event the optimiser bids against.
@@ -112,22 +129,25 @@ export async function reportOrderConversion(
           kind === 'purchase'
             ? (order.purchase_event_id as string)
             : `${order.purchase_event_id as string}-delivered`,
-        eventSourceUrl: `${SITE_URL}/checkout`,
+        // No page to name for a chat order; Meta treats the field as
+        // optional and a fabricated URL would only be noise in the reports.
+        eventSourceUrl: fromChat ? undefined : `${SITE_URL}/checkout`,
+        actionSource: fromChat ? 'chat' : 'website',
         user: {
           email: order.customer_email,
           phone: order.customer_phone,
           firstName: name.split(/\s+/)[0] || null,
           lastName: name.split(/\s+/).slice(1).join(' ') || null,
           postcode: order.shipping_address?.split(',').pop()?.trim() ?? null,
-          fbp: order.meta_fbp,
-          fbc: order.meta_fbc,
+          fbp: fromChat ? null : order.meta_fbp,
+          fbc: fromChat ? null : order.meta_fbc,
           // Captured with the request that PLACED the order, not this one.
           // Meta lists client_user_agent as required for website events, and
           // both improve match quality - but at confirmation time the only
           // headers going are the admin's, which would attribute the sale to
           // the shop owner's device.
-          userAgent: order.customer_user_agent,
-          clientIp: order.customer_ip,
+          userAgent: fromChat ? null : order.customer_user_agent,
+          clientIp: fromChat ? null : order.customer_ip,
         },
         contents,
         value,

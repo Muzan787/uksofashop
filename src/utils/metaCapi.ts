@@ -78,6 +78,25 @@ export interface CapiContent {
   item_price: number
 }
 
+/**
+ * Where the conversion actually happened.
+ *
+ * 'website' is a page on this site: the event carries _fbp, _fbc, the
+ * browser and the URL it happened on, and Meta can tie it to a click.
+ *
+ * 'chat' is an order agreed in a WhatsApp conversation. There is no browser
+ * and no page, so it carries none of those - and it must not pretend to.
+ * Sending an order taken by hand as a website event would attach whatever
+ * identifiers the admin’s own request happened to carry, which credits the
+ * sale to the shop owner's device. Matching is on the hashed phone number,
+ * which for a WhatsApp sale is the one identifier that is always present.
+ *
+ * Meta accepts several others (email, app, phone_call, physical_store,
+ * system_generated, business_messaging, other). Only the two this site can
+ * honestly claim are listed.
+ */
+export type CapiActionSource = 'website' | 'chat'
+
 export interface CapiEvent {
   eventName: 'Purchase' | 'InitiateCheckout' | 'AddToCart' | 'ViewContent' | 'OrderDelivered'
   /** MUST equal the event_id the browser sent for the same action. */
@@ -88,6 +107,8 @@ export interface CapiEvent {
   value?: number
   currency?: string
   orderId?: string
+  /** Defaults to 'website', which is where all but the manual orders happen. */
+  actionSource?: CapiActionSource
 }
 
 function userData(u: CapiUser): Record<string, unknown> {
@@ -129,7 +150,7 @@ export async function sendCapiEvent(event: CapiEvent): Promise<void> {
         event_time: Math.floor(Date.now() / 1000),
         event_id: event.eventId,
         event_source_url: event.eventSourceUrl,
-        action_source: 'website',
+        action_source: event.actionSource ?? 'website',
         user_data: userData(event.user),
         custom_data: {
           currency: event.currency ?? 'GBP',

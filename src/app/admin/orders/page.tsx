@@ -4,6 +4,7 @@ import { createClient } from '@/utils/supabase/server'
 import { Package, Inbox, Printer, MapPin, User, Phone, Truck } from 'lucide-react'
 import { updateOrderStatus } from '@/app/actions/orders'
 import DirectPrintButton from './DirectPrintButton'
+import NewWhatsAppOrder from './NewWhatsAppOrder'
 import Link from 'next/link'
 
 import { whatsAppLink } from '@/utils/phone'
@@ -84,6 +85,55 @@ export default async function AdminOrdersPage(props: { searchParams: SearchParam
 
   if (error) return <div className="p-8 text-red-500">Error: {error.message}</div>
 
+  // The two lists the WhatsApp order form picks from. Fetched here rather
+  // than in the component because this page is already a server component
+  // with a client - and because pulling a Supabase client into the browser
+  // for a form that is closed by default is exactly the cost commit 7eef61e
+  // took out of the storefront.
+  const [{ data: variantRows }, { data: fabricRows }] = await Promise.all([
+    supabase
+      .from('product_variants')
+      .select('id, color, material, price_adjustment, products!inner ( title, base_price, is_active )')
+      .eq('products.is_active', true),
+    supabase
+      .from('fabrics')
+      .select('id, code, name, is_active, fabric_collections ( name )')
+      .eq('is_active', true)
+      .order('sort'),
+  ])
+
+  type VariantRow = {
+    id: string
+    color: string | null
+    material: string | null
+    price_adjustment: number | null
+    products: { title: string; base_price: number } | null
+  }
+  type FabricRow = {
+    id: string
+    code: string
+    name: string
+    fabric_collections: { name: string } | null
+  }
+
+  const pickerVariants = ((variantRows ?? []) as unknown as VariantRow[])
+    .filter(v => v.products)
+    .map(v => ({
+      id: v.id,
+      // Colour and material, because a title on its own does not tell you
+      // which of the six Veronas the customer means.
+      label: [v.products!.title, [v.color, v.material].filter(Boolean).join(' ')]
+        .filter(Boolean)
+        .join(' · '),
+      price: Number(v.products!.base_price) + Number(v.price_adjustment ?? 0),
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label))
+
+  const pickerFabrics = ((fabricRows ?? []) as unknown as FabricRow[]).map(f => ({
+    id: f.id,
+    label: `${f.fabric_collections?.name ?? 'Fabric'} ${f.name} (${f.code})`,
+  }))
+
   const total = count ?? 0
   const lastPage = Math.max(1, Math.ceil(total / PER_PAGE))
   const href = (s: string, p = 1) => `/admin/orders?status=${s}${p > 1 ? `&page=${p}` : ''}`
@@ -96,6 +146,8 @@ export default async function AdminOrdersPage(props: { searchParams: SearchParam
           {total} {total === 1 ? 'order' : 'orders'}
         </span>
       </div>
+
+      <NewWhatsAppOrder variants={pickerVariants} fabrics={pickerFabrics} />
 
       {/* Status filter */}
       <div className="flex gap-2 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden">

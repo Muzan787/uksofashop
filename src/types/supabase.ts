@@ -279,6 +279,7 @@ export type Database = {
           ga_client_id: string | null
           has_made_to_order: boolean
           shipping_address: string
+          source: string
           special_instructions: string | null
           status: string | null
           total_amount: number
@@ -310,6 +311,7 @@ export type Database = {
           ga_client_id?: string | null
           has_made_to_order?: boolean
           shipping_address: string
+          source?: string
           special_instructions?: string | null
           status?: string | null
           total_amount: number
@@ -341,6 +343,7 @@ export type Database = {
           ga_client_id?: string | null
           has_made_to_order?: boolean
           shipping_address?: string
+          source?: string
           special_instructions?: string | null
           status?: string | null
           total_amount?: number
@@ -718,6 +721,21 @@ export type Database = {
       }
       newsletter_unsubscribe: {
         Args: { p_token: string }
+        Returns: Json
+      }
+      place_manual_order: {
+        Args: {
+          // text, and the column is nullable: an order taken on WhatsApp
+          // often has a phone number and no email.
+          p_customer_email: string | null
+          p_customer_name: string
+          p_customer_phone: string
+          p_delivery_charge?: number
+          p_items: Json
+          p_shipping_address: string
+          p_source?: string
+          p_special_instructions: string
+        }
         Returns: Json
       }
       place_order: {
