@@ -165,7 +165,24 @@ const nextConfig: NextConfig = {
       // *.google-analytics.com covers the regional endpoints GA4 rotates
       // through (region1.google-analytics.com and friends), which the two exact
       // hosts here do not.
-      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://*.analytics.google.com https://www.googletagmanager.com https://www.google.com https://www.google.co.uk https://ad.doubleclick.net https://www.googleadservices.com https://*.g.doubleclick.net https://pagead2.googlesyndication.com https://connect.facebook.net https://graph.facebook.com https://vitals.vercel-insights.com https://api.homedata.co.uk https://api.cloudinary.com https://res.cloudinary.com https://images.pexels.com",
+      //
+      // www.facebook.com IS THE META PIXEL'S OWN ENDPOINT, and it is here for
+      // exactly the reason pagead2.googlesyndication.com is, above.
+      //
+      // fbevents.js batches its events and POSTs them to www.facebook.com/tr/
+      // with the Fetch API, which connect-src governs - not img-src. The <img>
+      // beacon is only the fallback for browsers that have no fetch; a fetch
+      // that is REFUSED is not retried as an image. So with www.facebook.com
+      // present in img-src, frame-src and form-action but absent here, every
+      // browser-side Meta event was accepted by the pixel and then silently
+      // discarded: PageView, ViewContent, AddToCart, InitiateCheckout,
+      // OrderPlaced. Nothing showed in the console either, because a fetch
+      // refused by CSP rejects its promise and fbevents does not report it.
+      //
+      // connect.facebook.net serves the library and graph.facebook.com is the
+      // Conversions API; neither of them ever receives a pixel event. Only
+      // this host does.
+      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://*.analytics.google.com https://www.googletagmanager.com https://www.google.com https://www.google.co.uk https://ad.doubleclick.net https://www.googleadservices.com https://*.g.doubleclick.net https://pagead2.googlesyndication.com https://connect.facebook.net https://graph.facebook.com https://www.facebook.com https://vitals.vercel-insights.com https://api.homedata.co.uk https://api.cloudinary.com https://res.cloudinary.com https://images.pexels.com",
       // openstreetmap.org is the showroom locator map. An <iframe> is the
       // only way to embed a real, pannable map without shipping a mapping
       // library and a tile key - and OSM needs no key and sets no cookies,

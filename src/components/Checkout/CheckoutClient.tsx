@@ -13,7 +13,12 @@ import {
 } from 'lucide-react'
 import { useCart, type DisplayCartItem } from '@/context/CartContext'
 import { placeOrder } from '@/app/actions/checkout'
-import { trackOrderPlaced, trackInitiateCheckout, type TrackedItem } from '@/utils/tracking'
+import {
+  trackOrderPlaced,
+  trackInitiateCheckout,
+  setMetaIdentity,
+  type TrackedItem,
+} from '@/utils/tracking'
 import { PROMISES } from '@/constants/promises'
 import { isValidUkMobile, UK_MOBILE_ERROR } from '@/utils/phone'
 import {
@@ -352,6 +357,24 @@ function DetailsStep({
     e.preventDefault()
     if (!validate()) return
     setPending(true); setServerError('')
+
+    // Advanced matching, from here to the end of the tab.
+    //
+    // This is the only point on the site where a visitor tells us who they
+    // are without signing in, and it is worth a great deal to Meta: a hashed
+    // email matches a person across their devices, where _fbp is one browser
+    // and Safari deletes it after seven days either way. Set BEFORE
+    // placeOrder, so the OrderPlaced that follows carries it.
+    //
+    // Nothing readable leaves the page - fbevents hashes these itself, and
+    // utils/metaCapi.ts hashes the server copy. See setMetaIdentity for why
+    // it is held in memory and never written to storage.
+    setMetaIdentity({
+      email: form.customerEmail,
+      phone: form.customerPhone,
+      name: form.customerName,
+      postcode: form.postcode,
+    })
 
     const fd = new FormData()
     Object.entries(form).forEach(([k, v]) => {

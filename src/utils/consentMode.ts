@@ -17,6 +17,23 @@ export const GA_ID = 'G-GTBKG6RSNF'
 export const META_PIXEL_ID = '1613016580155004'
 
 /**
+ * Dispatched by the Pixel snippet itself, immediately after fbq('init').
+ *
+ * The snippet is only rendered once consent is granted, which means it is
+ * injected a re-render AFTER the page has already mounted - measurably late:
+ * fbevents.js starts loading around three seconds in, well past the load
+ * event. Anything the page tried to report in the meantime found no fbq and
+ * was dropped. utils/tracking.ts holds those events and listens for this to
+ * know when they can be sent. See the queue there for why it is bounded.
+ *
+ * Emitted from inside the snippet rather than from a next/script onLoad
+ * because the snippet is where fbq actually becomes callable; onLoad has
+ * different semantics for inline scripts and would be a guess about timing
+ * rather than a statement of it.
+ */
+export const META_PIXEL_READY_EVENT = 'meta_pixel_ready'
+
+/**
  * Denied by default, for everything that stores or uses an identifier.
  *
  * In this state gtag writes no cookies and stores nothing, but still sends

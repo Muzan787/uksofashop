@@ -58,6 +58,18 @@ export interface CapiUser {
   /** _fbp / _fbc cookies, when the browser had them to send. */
   fbp?: string | null
   fbc?: string | null
+  /**
+   * A stable id for this person on our side - the Supabase user id.
+   *
+   * Meta treats it as a match key in its own right, and it is the only one
+   * that survives a customer changing their email or ordering from a second
+   * address. It also joins the events of one account together across the
+   * devices they sign in on, which fbp cannot do because fbp is per browser.
+   *
+   * Hashed like the rest. Meta accepts it either way, but there is no reason
+   * to hand over a raw internal identifier when a digest matches just as well.
+   */
+  externalId?: string | null
 }
 
 export interface CapiContent {
@@ -89,6 +101,7 @@ function userData(u: CapiUser): Record<string, unknown> {
     // Postcodes match better with whitespace removed.
     zp: hash(u.postcode?.replace(/\s+/g, '')),
     country: hash('gb'),
+    external_id: hash(u.externalId),
     // Not hashed - Meta expects these raw.
     client_ip_address: u.clientIp || undefined,
     client_user_agent: u.userAgent || undefined,

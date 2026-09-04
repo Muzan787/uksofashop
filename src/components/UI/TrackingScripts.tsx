@@ -22,7 +22,12 @@
 import { useState, useEffect, useSyncExternalStore } from 'react';
 import { usePathname } from 'next/navigation';
 import Script from 'next/script';
-import { applyGoogleConsent, GA_ID, META_PIXEL_ID } from '@/utils/consentMode';
+import {
+  applyGoogleConsent,
+  GA_ID,
+  META_PIXEL_ID,
+  META_PIXEL_READY_EVENT,
+} from '@/utils/consentMode';
 import { isSensitiveUrl } from '@/utils/redactUrl';
 import {
   CONSENT_KEY,
@@ -146,6 +151,10 @@ export default function TrackingScripts() {
 
               fbq('init', '${META_PIXEL_ID}');
               fbq('track', 'PageView');
+
+              // fbq is callable from here, so anything utils/tracking.ts had
+              // to hold while this script did not exist can now be sent.
+              window.dispatchEvent(new Event('${META_PIXEL_READY_EVENT}'));
             `,
           }}
         />
