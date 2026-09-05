@@ -60,7 +60,11 @@ export default async function HomePage() {
   //    fills from the newest, so the rail is never short.
   const { data: featuredProducts } = await supabase
     .from('products')
-    .select('id, title, slug, base_price, gallery_images, average_rating, review_count, product_variants(id, image_url, color, color_hex, price_adjustment, priority), product_categories(categories(slug, name))')
+    // categories!products_category_id_fkey is the designated primary category
+    // and the first thing canonicalProductPath looks at, so the card's link
+    // has to have it or it silently falls back to the priority order and can
+    // name a different URL than the product page's own canonical tag.
+    .select('id, title, slug, base_price, gallery_images, average_rating, review_count, product_variants(id, image_url, color, color_hex, price_adjustment, priority), categories!products_category_id_fkey(slug, name), product_categories(categories(slug, name))')
     .eq('is_active', true)
     .order('is_featured', { ascending: false, nullsFirst: false })
     .order('created_at', { ascending: false })

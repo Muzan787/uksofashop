@@ -10,6 +10,7 @@
 // library stays on the server. See src/utils/navigation.ts for the full note.
 
 import { createClient } from '@/utils/supabase/server'
+import { canonicalProductPath } from '@/utils/productUrl'
 
 // ─── Mega menu ───────────────────────────────────────────────────────────────
 
@@ -68,7 +69,14 @@ export interface SearchHit {
   slug: string
   base_price: number
   image: string | null
-  categorySlug: string
+  /**
+   * The finished product URL, canonical. It used to be a bare categorySlug the
+   * overlay pasted into a template, taken from product_categories[0] with
+   * 'all' behind it — the first is whichever row the join happened to return,
+   * the second is a segment no product belongs to. Either way the header
+   * search could hand somebody a URL that only answered with a redirect.
+   */
+  href: string
 }
 
 const MIN_CHARS = 2
@@ -99,7 +107,7 @@ export async function searchProducts(rawTerm: string): Promise<SearchHit[]> {
   const { data } = await supabase
     .from('products')
     .select(
-      'id, title, slug, base_price, product_variants(image_url), product_categories!inner(categories(slug))',
+      'id, title, slug, base_price, product_variants(image_url), categories!products_category_id_fkey(slug), product_categories!inner(categories(slug))',
     )
     .eq('is_active', true)
     .or(`title.ilike.%${term}%,description.ilike.%${term}%`)
@@ -107,14 +115,17 @@ export async function searchProducts(rawTerm: string): Promise<SearchHit[]> {
 
   return (data ?? []).map((p) => {
     const variants = p.product_variants as { image_url: string | null }[] | null
-    const cats = p.product_categories as { categories: { slug: string } | null }[] | null
     return {
       id: p.id as string,
       title: p.title as string,
       slug: p.slug as string,
       base_price: Number(p.base_price),
       image: variants?.[0]?.image_url ?? null,
-      categorySlug: cats?.[0]?.categories?.slug ?? 'all',
+      href: canonicalProductPath({
+        slug: p.slug as string,
+        categories: p.categories,
+        product_categories: p.product_categories,
+      }),
     }
   })
 }

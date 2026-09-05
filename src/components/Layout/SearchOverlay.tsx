@@ -18,7 +18,7 @@ interface Hit {
   slug: string;
   base_price: number;
   image: string | null;
-  categorySlug: string;
+  href: string;
 }
 
 interface Props {
@@ -127,7 +127,7 @@ export default function SearchOverlay({ open, onClose, categories, triggerRef }:
     (hit: Hit) => {
       rememberSearch(query);
       onClose();
-      router.push(`/shop/${hit.categorySlug}/${hit.slug}`);
+      router.push(hit.href);
     },
     [query, onClose, router],
   );

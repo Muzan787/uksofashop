@@ -7,6 +7,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/supabase'
+import { canonicalProductPath } from '@/utils/productUrl'
 
 type Client = SupabaseClient<Database>
 
@@ -199,7 +200,10 @@ export async function fetchProductCards(
     supabase
       .from('products')
       .select(
-        'id, title, slug, base_price, gallery_images, average_rating, review_count, product_variants!inner(id, image_url, material, color, color_hex, price_adjustment, priority), product_categories!inner(category_id)',
+        // The two category relations are here for the href, not for the card:
+        // see the note where it is built below. Both are joins on a query that
+        // already runs, so they cost no extra round trip.
+        'id, title, slug, base_price, gallery_images, average_rating, review_count, product_variants!inner(id, image_url, material, color, color_hex, price_adjustment, priority), product_categories!inner(category_id, categories(slug)), categories!products_category_id_fkey(slug)',
         { count: 'exact' },
       )
       .eq('is_active', true),
@@ -225,11 +229,35 @@ export async function fetchProductCards(
 
     const image = variant?.image_url ?? null
 
+    // The link keeps the visitor inside the category they are browsing, which
+    // is what the breadcrumb on the product page then shows — but ONLY where
+    // that is a category the product genuinely belongs to.
+    //
+    // Everywhere else it has to be the canonical path instead, because the
+    // product page redirects anything else. On /shop/all — the listing the
+    // header's Shop link goes to, and the busiest one on the site — "all" is a
+    // virtual segment that no product belongs to, so every single card was
+    // linking to a URL that answered with a 308. That is not one slow
+    // navigation, it is two: the server renders /shop/all/<slug> far enough to
+    // work out where it should have gone, throws that work away, and renders
+    // the canonical URL from scratch. Roughly double the wait, on every
+    // product opened from the main shop page.
+    //
+    // A category filter narrows the embedded rows to the filtered category
+    // (product_categories!inner plus the .eq in applyProductFilters), so on a
+    // real category page this still finds a match and the link is unchanged.
+    const belongsToSegment = (product.product_categories ?? []).some(pc => {
+      const cats = Array.isArray(pc?.categories) ? pc.categories : pc?.categories ? [pc.categories] : []
+      return cats.some(c => c?.slug === categorySegment)
+    })
+
     return {
       id: product.id,
       title: product.title,
       slug: product.slug,
-      href: `/shop/${categorySegment}/${product.slug}`,
+      href: belongsToSegment
+        ? `/shop/${encodeURIComponent(categorySegment)}/${encodeURIComponent(product.slug)}`
+        : canonicalProductPath(product),
       price: product.base_price + (variant?.price_adjustment || 0),
       image,
       secondaryImage:

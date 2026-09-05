@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { canonicalProductPath } from '@/utils/productUrl';
 
 export const revalidate = 3600;
 
@@ -20,6 +21,9 @@ interface Product {
   size_label: string | null;
   gallery_images: string[] | null;
   categories: { slug: string; name: string } | null; // slug for the link, name for g:product_type
+  // The join table, only so canonicalProductPath has something to fall back to
+  // when category_id has not been set. See the note on the link below.
+  product_categories: { categories: { slug: string } | null }[] | null;
   product_variants: ProductVariant[] | null;
 }
 
@@ -44,7 +48,8 @@ export async function GET(): Promise<Response> {
       base_price, 
       size_label, 
       gallery_images,
-      categories!products_category_id_fkey ( slug, name ), 
+      categories!products_category_id_fkey ( slug, name ),
+      product_categories ( categories ( slug ) ),
       product_variants (
         id, 
         sku, 
@@ -138,8 +143,29 @@ export async function GET(): Promise<Response> {
       .join('');
 
   products.forEach((product) => {
-    // Safely extract the category slug, fallback to 'uncategorized' if missing
-    const categorySlug = product.categories?.slug || 'uncategorized';
+    /**
+     * The landing page Google sends a shopper to. It must not redirect.
+     *
+     * This was `product.categories?.slug || 'uncategorized'`, and
+     * 'uncategorized' is not a category — /shop/uncategorized/<slug> answers
+     * with a 308 to wherever the product actually lives. That is worse here
+     * than anywhere else on the site for one specific reason: the variant
+     * links below carry `?variant=<id>`, and permanentRedirect() sends a bare
+     * path, so the query string is DROPPED on the way through.
+     *
+     *   /shop/uncategorized/verona-...?variant=abc  ->  308
+     *   /shop/3-2-seater/verona-...                     (no ?variant)
+     *
+     * So a shopper who clicked an ad for a specific colour would land on the
+     * default one, at the default price, and Merchant Centre would see a
+     * landing page whose price and colour do not match the item it was given.
+     *
+     * Every active product has category_id set today, so this is latent rather
+     * than live — it is one unset column away from mispricing a paid click.
+     * canonicalProductPath falls back through the join table and can only ever
+     * name a real category.
+     */
+    const productPath = canonicalProductPath(product);
 
     if (product.product_variants && product.product_variants.length > 0) {
       product.product_variants.forEach((variant) => {
@@ -159,7 +185,7 @@ export async function GET(): Promise<Response> {
             <g:title><![CDATA[${variantTitle}]]></g:title>
             <g:description><![CDATA[${product.description || product.title}]]></g:description>
             <!-- Exact variant link structure -->
-            <g:link>${baseUrl}/shop/${categorySlug}/${product.slug}?variant=${variant.id}</g:link>
+            <g:link>${baseUrl}${productPath}?variant=${variant.id}</g:link>
             <g:image_link>${imageUrl}</g:image_link>
             ${additionalImages(product.gallery_images, imageUrl)}
             <g:condition>new</g:condition>
@@ -185,7 +211,7 @@ export async function GET(): Promise<Response> {
           <g:title><![CDATA[${product.title}]]></g:title>
           <g:description><![CDATA[${product.description || product.title}]]></g:description>
           <!-- Base product link structure -->
-          <g:link>${baseUrl}/shop/${categorySlug}/${product.slug}</g:link>
+          <g:link>${baseUrl}${productPath}</g:link>
           <g:image_link>${fallbackImageUrl}</g:image_link>
           ${additionalImages(product.gallery_images, fallbackImageUrl)}
           <g:condition>new</g:condition>

@@ -4,6 +4,7 @@ import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import AccountTabs, { type AccountOrder, type AccountReview, type AccountWishlistItem } from './AccountTabs'
 import { logout } from '@/app/actions/auth'
+import { canonicalProductPath } from '@/utils/productUrl'
 import { LogOut } from 'lucide-react'
 
 export const metadata: Metadata = {
@@ -61,6 +62,7 @@ export default async function AccountPage() {
         slug,
         base_price,
         categories!products_category_id_fkey ( slug ),
+        product_categories ( categories ( slug ) ),
         product_variants ( id, color, image_url, price_adjustment, priority )
       )
     `)
@@ -112,7 +114,6 @@ export default async function AccountPage() {
 
   const formattedWishlist: AccountWishlistItem[] = (wishlist ?? []).map((w) => {
     const product = one(w.product)
-    const category = one(product?.categories)
     const variant = [...(product?.product_variants ?? [])]
       .sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0))[0] ?? null
     return {
@@ -120,7 +121,13 @@ export default async function AccountPage() {
       productId: w.product_id,
       title: product?.title ?? 'Unavailable product',
       slug: product?.slug ?? '',
-      categorySlug: category?.slug ?? 'sofas',
+      // The canonical URL, resolved exactly as /wishlist does it — the two
+      // lists are the same saved sofas and must not link to different pages.
+      href: canonicalProductPath({
+        slug: product?.slug ?? '',
+        categories: product?.categories,
+        product_categories: product?.product_categories,
+      }),
       price: Number(product?.base_price ?? 0) + Number(variant?.price_adjustment ?? 0),
       image: variant?.image_url ?? null,
       variantId: variant?.id ?? null,

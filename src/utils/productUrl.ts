@@ -86,22 +86,66 @@ export function productPath(categorySlug: string | null | undefined, productSlug
   return `/shop/${encodeURIComponent(cat)}/${encodeURIComponent(productSlug)}`
 }
 
+/** The two shapes a category can arrive in from a Supabase select. */
+export interface ProductCategoryRelations {
+  categories?: CategoryRef | CategoryRef[] | null
+  product_categories?: { categories?: CategoryRef | CategoryRef[] | null }[] | null
+}
+
+/** Every category a query returned for a product, in one flat list. */
+function categoryRefs<T extends CategoryRef>(product: {
+  categories?: T | T[] | null
+  product_categories?: { categories?: T | T[] | null }[] | null
+}): T[] {
+  const one = (c: T | T[] | null | undefined): T[] =>
+    Array.isArray(c) ? c : c ? [c] : []
+
+  return [
+    ...one(product.categories),
+    ...(product.product_categories ?? []).flatMap(pc => one(pc?.categories)),
+  ]
+}
+
+/**
+ * The one category slug a product's URL is built from.
+ *
+ * Split out of canonicalProductPath because callers need it on its own: a card
+ * that both links to a product and labels it has to name the SAME category it
+ * links to, or the badge and the breadcrumb the link lands on disagree.
+ */
+export function canonicalCategorySlug(product: ProductCategoryRelations): string {
+  // 1. products.category_id, the designated primary category.
+  const direct = Array.isArray(product.categories) ? product.categories[0] : product.categories
+  if (direct?.slug) return direct.slug
+
+  // 2. Fall back to the join table and apply the priority order.
+  return pickCanonicalCategorySlug(
+    (product.product_categories ?? []).flatMap(pc =>
+      Array.isArray(pc?.categories) ? pc.categories : pc?.categories ? [pc.categories] : [],
+    ),
+  )
+}
+
 /**
  * Canonical path from whatever a query returned: the explicit category_id
  * relation if it's set, otherwise the join table.
  */
-export function canonicalProductPath(product: {
-  slug: string
-  categories?: CategoryRef | CategoryRef[] | null
-  product_categories?: { categories?: CategoryRef | CategoryRef[] | null }[] | null
-}): string {
-  // 1. products.category_id, the designated primary category.
-  const direct = Array.isArray(product.categories) ? product.categories[0] : product.categories
-  if (direct?.slug) return productPath(direct.slug, product.slug)
+export function canonicalProductPath(product: ProductCategoryRelations & { slug: string }): string {
+  return productPath(canonicalCategorySlug(product), product.slug)
+}
 
-  // 2. Fall back to the join table and apply the priority order.
-  const joined = (product.product_categories ?? []).flatMap(pc =>
-    Array.isArray(pc?.categories) ? pc.categories : pc?.categories ? [pc.categories] : [],
-  )
-  return productPath(pickCanonicalCategorySlug(joined), product.slug)
+/**
+ * The category a product's canonical URL names, as the row the query returned
+ * — so a caller can read `name` off it and label the card with the category it
+ * is about to send the visitor to.
+ *
+ * Null when that row was not selected, which is not an error: the slug alone
+ * is enough to build the URL, and the caller decides what to show without one.
+ */
+export function canonicalCategory<T extends CategoryRef>(product: {
+  categories?: T | T[] | null
+  product_categories?: { categories?: T | T[] | null }[] | null
+}): T | null {
+  const slug = canonicalCategorySlug(product)
+  return categoryRefs(product).find(c => c?.slug === slug) ?? null
 }

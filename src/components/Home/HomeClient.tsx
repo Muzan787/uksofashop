@@ -10,6 +10,7 @@ import CraftStory from './CraftStory';
 import QuoteStrip from './QuoteStrip';
 import ReviewTicker, { type HomeReview } from './ReviewTicker';
 import ClosingCta from './ClosingCta';
+import { canonicalCategory, canonicalProductPath } from '@/utils/productUrl';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Product {
@@ -18,6 +19,8 @@ interface Product {
   review_count?: number | null;
   gallery_images?: string[] | null;
   product_variants?: { id: string; image_url?: string; color?: string | null; color_hex?: string | null }[];
+  /** products.category_id — the designated primary category, when it is set. */
+  categories?: { slug: string; name: string } | null;
   product_categories?: { categories?: { slug: string; name: string } }[];
 }
 
@@ -79,13 +82,28 @@ const CLOSING_FALLBACK =
 /** Maps a homepage product onto the shared card. */
 function toCard(product: Product) {
   const variants = product.product_variants ?? [];
-  const cat = product.product_categories?.[0]?.categories ?? null;
+
+  // The canonical category, not whichever row the join returned first.
+  //
+  // Taking [0] gave a URL that WORKED — the product really is in that category,
+  // so the product page served it 200 rather than redirecting — and that is
+  // exactly what made it easy to miss. It was a second live URL for a sofa the
+  // shop listing already links to under its canonical one, so the same product
+  // sat at two addresses, both indexable, each disagreeing with the canonical
+  // tag on the page it served. That is the duplicate-URL problem the whole of
+  // src/utils/productUrl.ts exists to prevent, and the homepage was quietly
+  // reintroducing it.
+  //
+  // The badge is read off the same category as the link, so the label on the
+  // card and the breadcrumb it lands on now say the same word.
+  const cat = canonicalCategory(product);
+
   return {
     id: product.id,
     title: product.title,
     slug: product.slug,
     price: product.base_price,
-    href: `/shop/${cat?.slug ?? 'all'}/${product.slug}`,
+    href: canonicalProductPath(product),
     image: variants[0]?.image_url ?? null,
     secondaryImage: variants[1]?.image_url ?? product.gallery_images?.[0] ?? null,
     badge: cat?.name ?? null,
@@ -100,9 +118,9 @@ function toCard(product: Product) {
 // ─── Main export ──────────────────────────────────────────────────────────────
 export default function HomeClient({ categories, products, collections, sofaCount, reviews }: Props) {
   const lead = products[0] ?? null;
-  const leadHref = lead
-    ? `/shop/${lead.product_categories?.[0]?.categories?.slug ?? 'all'}/${lead.slug}`
-    : null;
+  // Same product as the first card in the rail below, so the same URL — see
+  // the note in toCard.
+  const leadHref = lead ? canonicalProductPath(lead) : null;
 
   return (
     <>

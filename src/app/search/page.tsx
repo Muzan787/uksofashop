@@ -4,6 +4,7 @@ import { createClient } from '@/utils/supabase/server'
 import { Search, PackageSearch } from 'lucide-react'
 import EmptyState from '@/components/UI/EmptyState'
 import ProductCard from '@/components/Product/ProductCard'
+import { canonicalProductPath } from '@/utils/productUrl'
 
 
 export const metadata: Metadata = {
@@ -25,7 +26,11 @@ export default async function SearchPage(props: { searchParams: SearchParams }) 
   if (query) {
     const { data } = await supabase
       .from('products')
-      .select('id, title, slug, base_price, average_rating, review_count, product_variants(image_url, price_adjustment), product_categories!inner(categories(slug, name))')
+      // categories!products_category_id_fkey is the designated primary
+      // category, which canonicalProductPath reads before it falls back to the
+      // join table. Without it the link can name a different URL than the
+      // product page's own canonical tag.
+      .select('id, title, slug, base_price, average_rating, review_count, product_variants(image_url, price_adjustment), categories!products_category_id_fkey(slug), product_categories!inner(categories(slug, name))')
       .eq('is_active', true)
       .or(`title.ilike.%${query}%,description.ilike.%${query}%`)
       .order('created_at', { ascending: false })
@@ -94,7 +99,6 @@ export default async function SearchPage(props: { searchParams: SearchParams }) 
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4 xl:grid-cols-5">
               {products.map((product, i) => {
                 const variant = product.product_variants?.[0] ?? null
-                const catSlug = product.product_categories?.[0]?.categories?.slug ?? 'all'
                 return (
                   <ProductCard
                     key={product.id}
@@ -102,7 +106,10 @@ export default async function SearchPage(props: { searchParams: SearchParams }) 
                     title={product.title}
                     slug={product.slug}
                     price={Number(product.base_price) + Number(variant?.price_adjustment ?? 0)}
-                    href={`/shop/${catSlug}/${product.slug}`}
+                    // The canonical URL, not product_categories[0] with 'all'
+                    // behind it — the first is whichever row the join returned
+                    // and the second is a segment no product belongs to.
+                    href={canonicalProductPath(product)}
                     image={variant?.image_url ?? null}
                     reviewCount={product.review_count}
                     averageRating={product.average_rating}

@@ -3,6 +3,7 @@ import { Metadata } from 'next';
 import Link from 'next/link';
 import { Map, ChevronRight } from 'lucide-react';
 import { createClient } from '@/utils/supabase/server';
+import { canonicalProductPath } from '@/utils/productUrl';
 
 const ACCENT = 'var(--color-ember-500)';      // fills: buttons, rules, icons, badges
 const ACCENT_TEXT = 'var(--color-ember-700)'; // letterforms on a light ground
@@ -21,28 +22,31 @@ export default async function HTMLSitemapPage() {
     .select('name, slug')
     .order('name', { ascending: true });
 
-  // 2. Fetch Active Products (Using your exact relation logic)
+  // 2. Fetch Active Products
   const { data: products } = await supabase
     .from('products')
     .select(`
       title,
-      slug, 
-      categories!products_category_id_fkey ( slug )
+      slug,
+      categories!products_category_id_fkey ( slug ),
+      product_categories ( categories ( slug ) )
     `)
     .eq('is_active', true)
     .order('title', { ascending: true });
 
-  // Map products into links, safely extracting the category slug just like your XML sitemap
-  const productLinks = (products || []).map((product: any) => {
-    let categorySlug = 'all';
-    if (product.categories && !Array.isArray(product.categories) && product.categories.slug) {
-      categorySlug = product.categories.slug;
-    }
-    return {
-      name: product.title,
-      href: `/shop/${categorySlug}/${product.slug}`,
-    };
-  });
+  // The same canonical URL the XML sitemap emits.
+  //
+  // The comment this replaces said "just like your XML sitemap", and it had
+  // stopped being true: sitemap.ts moved to canonicalProductPath and this was
+  // left behind, reading the primary category by hand and falling back to
+  // 'all' — a segment no product belongs to, so the human sitemap would have
+  // pointed at a 308 for any product whose category_id was not set. Two
+  // sitemaps for the same site disagreeing about where a product lives is
+  // exactly what one shared helper is for.
+  const productLinks = (products || []).map(product => ({
+    name: product.title,
+    href: canonicalProductPath(product),
+  }));
 
   const sections = [
     {

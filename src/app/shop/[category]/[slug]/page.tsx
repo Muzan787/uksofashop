@@ -73,14 +73,36 @@ export default async function ProductPage(props: { params: Params, searchParams:
   const initialVariantId = searchParams?.variant as string | undefined;
 
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
 
-  const { data: product, error } = await supabase
-    .from('products')
-    .select('*, product_variants(*), reviews(*), categories!products_category_id_fkey(slug, name), product_categories(categories(slug))')
-    .eq('slug', slug)
-    .order('priority', { referencedTable: 'product_variants', ascending: true })
-    .maybeSingle();
+  // ── First round trip ──
+  //
+  // These three know nothing about each other, and they used to be awaited one
+  // after another anyway: the session, then the product, then — thirty lines
+  // further down, past two more awaits — the category row the "similar
+  // products" query needs. Three sequential trips to Supabase before the page
+  // had anything to render, each one paying the full round-trip latency again.
+  //
+  // Issued together they cost one. Nothing here is wasted on the redirect path
+  // either: the category lookup that a redirecting request does not need was
+  // already in flight beside the product query rather than after it.
+  const [
+    { data: { user } },
+    { data: product, error },
+    { data: categoryData },
+  ] = await Promise.all([
+    supabase.auth.getUser(),
+    supabase
+      .from('products')
+      .select('*, product_variants(*), reviews(*), categories!products_category_id_fkey(slug, name), product_categories(categories(slug))')
+      .eq('slug', slug)
+      .order('priority', { referencedTable: 'product_variants', ascending: true })
+      .maybeSingle(),
+    supabase
+      .from('categories')
+      .select('id')
+      .eq('slug', category)
+      .maybeSingle(),
+  ]);
 
   if (error || !product) notFound();
 
@@ -111,36 +133,74 @@ export default async function ProductPage(props: { params: Params, searchParams:
     permanentRedirect(canonicalPath);
   }
 
-  let initialWishlistState = false;
-  if (user) {
-    const { data: wishlistItem } = await supabase
-      .from('wishlist')
-      .select('id')
-      .eq('user_id', user.id)
-      .eq('product_id', product.id)
-      .maybeSingle(); 
+  // ── Second round trip ──
+  //
+  // Everything below needs the product row, and nothing below needs anything
+  // else below. The wishlist flag, the size/style siblings, the "similar
+  // products" rail and the fabric library were four more awaits in a line —
+  // so a made-to-order sofa in a size group, viewed by a signed-in customer,
+  // spent five round trips here on work that fits in one.
+  //
+  // The conditions are unchanged: a signed-out visitor still asks nothing of
+  // the wishlist table, a product with no variant_group_id still asks nothing
+  // of variant_groups, and a stocked recliner still does not load 69 fabrics.
+  const [
+    wishlistItem,
+    group,
+    related,
+    fabrics,
+  ] = await Promise.all([
+    user
+      ? supabase
+          .from('wishlist')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('product_id', product.id)
+          .maybeSingle()
+          .then(r => r.data)
+      : null,
 
-    if (wishlistItem) {
-      initialWishlistState = true;
-    }
-  }
+    product.variant_group_id
+      ? Promise.all([
+          supabase
+            .from('products')
+            .select('id, slug, size_label, subgroup_label, base_price')
+            .eq('variant_group_id', product.variant_group_id)
+            .eq('is_active', true)
+            .order('base_price', { ascending: true }),
+          supabase
+            .from('variant_groups')
+            .select('subgroup_title')
+            .eq('id', product.variant_group_id)
+            .maybeSingle(),
+        ])
+      : null,
+
+    categoryData
+      ? supabase
+          .from('product_categories')
+          .select(`
+            products (
+              id, title, slug, base_price, is_active,
+              product_variants ( image_url, priority )
+            )
+          `)
+          .eq('category_id', categoryData.id)
+          .order('priority', { referencedTable: 'products.product_variants', ascending: true })
+          .then(r => r.data)
+      : null,
+
+    // The fabric range, fetched only where it can be chosen. A stocked
+    // recliner pays nothing for a feature it does not have.
+    product.custom_made ? getFabricLibrary() : [],
+  ]);
+
+  const initialWishlistState = Boolean(wishlistItem);
 
   let sizeVariants: any[] = [];
   let subgroupTitle = 'Style';
-  if (product.variant_group_id) {
-    const [{ data: groupProducts }, { data: groupInfo }] = await Promise.all([
-      supabase
-        .from('products')
-        .select('id, slug, size_label, subgroup_label, base_price')
-        .eq('variant_group_id', product.variant_group_id)
-        .eq('is_active', true)
-        .order('base_price', { ascending: true }),
-      supabase
-        .from('variant_groups')
-        .select('subgroup_title')
-        .eq('id', product.variant_group_id)
-        .single(),
-    ]);
+  if (group) {
+    const [{ data: groupProducts }, { data: groupInfo }] = group;
 
     if (groupInfo?.subgroup_title) subgroupTitle = groupInfo.subgroup_title;
 
@@ -154,51 +214,32 @@ export default async function ProductPage(props: { params: Params, searchParams:
     }
   }
 
-  const { data: categoryData } = await supabase
-    .from('categories')
-    .select('id')
-    .eq('slug', category)
-    .single();
-
   let safeSimilarProducts: any[] = [];
-  if (categoryData) {
-    const { data: related } = await supabase
-      .from('product_categories')
-      .select(`
-        products (
-          id, title, slug, base_price, is_active,
-          product_variants ( image_url, priority )
-        )
-      `)
-      .eq('category_id', categoryData.id)
-      .order('priority', { referencedTable: 'products.product_variants', ascending: true });
+  if (related) {
+    const currentFirstWord = product.title.trim().split(' ')[0].toLowerCase();
 
-    if (related) {
-      const currentFirstWord = product.title.trim().split(' ')[0].toLowerCase();
-      
-      const relatedProducts = related
-        .map((r: any) => r.products)
-        .flat()
-        .filter((p: any) => p && p.id !== product.id && p.is_active !== false);
+    const relatedProducts = related
+      .map((r: any) => r.products)
+      .flat()
+      .filter((p: any) => p && p.id !== product.id && p.is_active !== false);
 
-      relatedProducts.sort((a: any, b: any) => {
-        const aFirstWord = a.title.trim().split(' ')[0].toLowerCase();
-        const bFirstWord = b.title.trim().split(' ')[0].toLowerCase();
-        
-        const matchA = aFirstWord === currentFirstWord ? 1 : 0;
-        const matchB = bFirstWord === currentFirstWord ? 1 : 0;
-        
-        return matchB - matchA; 
-      });
+    relatedProducts.sort((a: any, b: any) => {
+      const aFirstWord = a.title.trim().split(' ')[0].toLowerCase();
+      const bFirstWord = b.title.trim().split(' ')[0].toLowerCase();
 
-      safeSimilarProducts = relatedProducts.slice(0, 4).map((p: any) => ({
-        id: p.id,
-        title: p.title,
-        slug: p.slug,
-        base_price: p.base_price,
-        image_url: p.product_variants?.[0]?.image_url || '/placeholder.svg'
-      }));
-    }
+      const matchA = aFirstWord === currentFirstWord ? 1 : 0;
+      const matchB = bFirstWord === currentFirstWord ? 1 : 0;
+
+      return matchB - matchA;
+    });
+
+    safeSimilarProducts = relatedProducts.slice(0, 4).map((p: any) => ({
+      id: p.id,
+      title: p.title,
+      slug: p.slug,
+      base_price: p.base_price,
+      image_url: p.product_variants?.[0]?.image_url || '/placeholder.svg'
+    }));
   }
 
   const safeProduct = {
@@ -306,9 +347,6 @@ export default async function ProductPage(props: { params: Params, searchParams:
   const crumbCategorySlug = primaryCat?.slug ?? decodeURIComponent(category)
   // Human-readable name in the trail, not the URL slug.
   const categoryName = primaryCat?.name ?? crumbCategorySlug
-  // The fabric range, fetched only where it can be chosen. A stocked recliner
-  // pays nothing for a feature it does not have.
-  const fabrics = product.custom_made ? await getFabricLibrary() : [];
 
   const breadcrumbLd = breadcrumbSchema([
     { name: 'Home', path: '/' },

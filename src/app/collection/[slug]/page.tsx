@@ -6,6 +6,7 @@ import { notFound } from 'next/navigation'
 import ProductCard from '@/components/Product/ProductCard'
 import CollectionHero from '@/components/Collection/CollectionHero'
 import CollectionEmpty from '@/components/Collection/CollectionEmpty'
+import { canonicalProductPath } from '@/utils/productUrl'
 
 type Params = Promise<{ slug: string }>
 
@@ -85,6 +86,7 @@ export default async function CollectionPage(props: { params: Params }) {
     .select(`
       id, title, slug, base_price, average_rating, review_count, size_label, subgroup_label,
       product_variants (id, image_url, color, color_hex, price_adjustment, priority),
+      categories!products_category_id_fkey ( slug ),
       product_categories ( categories ( slug ) )
     `)
     .eq('variant_group_id', group.id)
@@ -126,9 +128,6 @@ export default async function CollectionPage(props: { params: Params }) {
               const img = targetVariant?.image_url ?? null
               const displayPrice = product.base_price + (targetVariant?.price_adjustment || 0)
               
-              // Safely extract the category slug to build the correct product URL
-              const catSlug = product.product_categories?.[0]?.categories?.slug || 'all'
-
               const swatches = (product.product_variants ?? [])
                 .filter((v) => v.color_hex)
                 .map((v) => ({
@@ -142,7 +141,12 @@ export default async function CollectionPage(props: { params: Params }) {
                   title={product.title}
                   slug={product.slug}
                   price={displayPrice}
-                  href={`/shop/${catSlug}/${product.slug}`}
+                  // The canonical URL. This was product_categories[0] with a
+                  // fallback of 'all' — the first is whichever row the join
+                  // returned and need not be the canonical category, and the
+                  // second is a virtual segment no product belongs to, so a
+                  // piece with no categories at all opened through a 308.
+                  href={canonicalProductPath(product)}
                   image={img}
                   badges={[product.size_label, product.subgroup_label].filter(Boolean) as string[]}
                   reviewCount={product.review_count}

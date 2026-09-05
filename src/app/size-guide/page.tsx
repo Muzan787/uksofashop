@@ -7,6 +7,7 @@ import EditorialSchema from '@/components/Editorial/EditorialSchema'
 import EditorialLayout, { Note, PullQuote } from '@/components/Editorial/EditorialLayout'
 import DoorwayCalculator, { type CalculatorProduct } from './DoorwayCalculator'
 import FitCheckForm from './FitCheckForm'
+import { canonicalProductPath } from '@/utils/productUrl'
 
 /**
  * Said once, used twice: as the meta description, and as the description on
@@ -41,20 +42,21 @@ export default async function SizeGuidePage() {
       slug,
       size_label,
       specifications,
-      categories!products_category_id_fkey ( slug )
+      categories!products_category_id_fkey ( slug ),
+      product_categories ( categories ( slug ) )
     `)
     .eq('is_active', true)
     .order('title')
 
-  const one = <T,>(v: T | T[] | null | undefined): T | null =>
-    Array.isArray(v) ? (v[0] ?? null) : (v ?? null)
-
   const products: CalculatorProduct[] = (data ?? []).map(p => {
-    const category = one(p.categories)
     const specs = (p.specifications ?? {}) as Record<string, unknown>
     return {
       title: p.title,
-      href: `/shop/${category?.slug ?? 'all'}/${p.slug}`,
+      // The join table is selected alongside the primary category so this can
+      // fall back the way canonicalProductPath expects. On the primary column
+      // alone, a product with no category_id set fell through to 'all' — a
+      // segment no product belongs to, so the link answered with a 308.
+      href: canonicalProductPath(p),
       sizeLabel: p.size_label ?? null,
       dimensions: typeof specs.dimensions === 'string' ? specs.dimensions : '',
     }

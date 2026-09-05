@@ -17,7 +17,17 @@ export interface WishlistCardItem {
   productId: string
   title: string
   slug: string
-  categorySlug: string
+  /**
+   * The finished product URL, canonical, built by whoever ran the query.
+   *
+   * This used to be a bare `categorySlug` that the grid pasted into a template
+   * — and both of the two places that build these items defaulted it to
+   * 'sofas', which is not a category. /shop/sofas is a 404 and
+   * /shop/sofas/<slug> is a 308, so every saved sofa whose category_id had not
+   * been set opened through a redirect. Assembling the URL is the query's job:
+   * it is the only side that has the category rows to do it correctly.
+   */
+  href: string
   price: number
   image: string | null
   /** The default variant, so the card can add to the cart on its own.
@@ -111,7 +121,7 @@ export default function WishlistGrid({ items: initial }: { items: WishlistCardIt
               title={item.title}
               slug={item.slug}
               price={item.price}
-              href={`/shop/${item.categorySlug}/${item.slug}`}
+              href={item.href}
               image={item.image}
               delayMs={Math.min(i, 5) * 70}
             />
@@ -129,7 +139,7 @@ export default function WishlistGrid({ items: initial }: { items: WishlistCardIt
               </button>
             ) : (
               <Link
-                href={`/shop/${item.categorySlug}/${item.slug}`}
+                href={item.href}
                 className="hover-btn relative z-raised mt-3 flex h-11 w-full items-center justify-center rounded-sm border border-calico-300 font-data text-eyebrow font-bold uppercase tracking-[0.1em] text-ink-700 no-underline"
               >
                 Choose options

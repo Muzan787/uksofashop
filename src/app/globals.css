@@ -262,18 +262,47 @@
     scale: 0.97;
   }
 
-  /* Anything that opts out — a full-bleed hero link, a skip link, a row that
-     should not visibly shrink. */
-  [data-press='off']:active {
-    scale: 1;
-  }
-
   /* A transform is ignored on an inline box, so a link inside a paragraph
      would answer a tap with nothing. Those carry .hover-link, and they dim
      instead — the one feedback that works on an inline element. */
   .hover-link:active {
     opacity: 0.65;
     transition: opacity var(--dur-press) var(--ease-out-expo);
+  }
+}
+
+/* The opt-out — a full-bleed hero link, a skip link, a row that should not
+ * visibly shrink.
+ *
+ * TWO THINGS ABOUT IT ARE DELIBERATE, and it was written without either.
+ *
+ * It sits in `utilities`, not in `base` alongside the rule it overrides,
+ * because specificity alone cannot win. `[data-press='off']:active` scores
+ * (0,2,0) and nearly every selector above outscores it — `a[href]:active` is
+ * (0,2,1), `input[type='submit']:not(:disabled):active` is (0,3,1). So the
+ * opt-out silently did nothing on links and buttons, which are most of what
+ * it exists for. A later layer wins whatever the specificity, which is the
+ * relationship an override actually wants, and it keeps the base rule
+ * overridable by any component that needs a different press.
+ *
+ * And the value is `none`, NOT `1`. Those look identical and are not the same
+ * thing: a `scale` of any numeric value, 1 included, is still a transform, and
+ * a transform makes the element a containing block for its absolutely
+ * positioned descendants. Only `none` keeps the element out of that.
+ *
+ * That second point is not pedantry. A stretched link — an <a> whose ::after
+ * is `absolute; inset: 0`, and therefore sized against the CARD rather than
+ * against the anchor — had its overlay collapse to the anchor's own two lines
+ * of text the moment the press began, because the press gave the anchor a
+ * scale and so a new containing block. Mousedown landed on the overlay,
+ * mouseup landed on the photograph it had just stopped covering, and a click
+ * whose down and up are on different elements is dispatched to their common
+ * ancestor — the <article>, which is not a link. Clicking a product photo did
+ * nothing at all; clicking the title, still inside the collapsed overlay,
+ * worked. `scale: 1` would not have fixed it. */
+@layer utilities {
+  [data-press='off']:active {
+    scale: none;
   }
 }
 

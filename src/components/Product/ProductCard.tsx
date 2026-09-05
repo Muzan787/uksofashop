@@ -149,9 +149,17 @@ export default function ProductCard({
       <div className="mt-3">
         <h3 className="m-0 font-body text-body font-semibold leading-snug text-ink-900">
           {/* The stretched link. Covers the card without swallowing the
-              swatch buttons, which sit above it. */}
+              swatch buttons, which sit above it.
+              data-press="off" is load-bearing, not cosmetic. The universal
+              press effect gives every a[href] a `scale` while it is held down,
+              and a scale is a transform, and a transform would re-anchor this
+              ::after to the anchor's own two lines instead of to the card —
+              mid-click, between mousedown and mouseup. That is what stopped
+              the photograph from being clickable. The card already answers the
+              press as a whole via .hover-card:active, so nothing is lost. */}
           <Link
             href={href}
+            data-press="off"
             className="line-clamp-2 no-underline transition-colors duration-swift after:absolute after:inset-0 after:content-['']"
           >
             {title}

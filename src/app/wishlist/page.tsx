@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 import { Heart } from 'lucide-react'
 import EmptyState from '@/components/UI/EmptyState'
 import WishlistGrid, { type WishlistCardItem } from '@/components/Account/WishlistGrid'
+import { canonicalProductPath } from '@/utils/productUrl'
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
@@ -31,6 +32,7 @@ export default async function WishlistPage() {
         slug,
         base_price,
         categories!products_category_id_fkey ( slug ),
+        product_categories ( categories ( slug ) ),
         product_variants ( id, color, image_url, price_adjustment, priority )
       )
     `)
@@ -46,7 +48,6 @@ export default async function WishlistPage() {
 
   const items: WishlistCardItem[] = (data ?? []).map(row => {
     const product = one(row.products)
-    const category = one(product?.categories)
     // The same variant the product page opens on, so the price on the card is
     // the price in the cart.
     const variants = [...(product?.product_variants ?? [])]
@@ -57,7 +58,16 @@ export default async function WishlistPage() {
       productId: row.product_id,
       title: product?.title ?? 'Unavailable product',
       slug: product?.slug ?? '',
-      categorySlug: category?.slug ?? 'sofas',
+      // Both category relations are selected above, so this resolves the same
+      // way the product page's own canonical does. It used to be the primary
+      // category alone, falling back to the string 'sofas' — which is not a
+      // category, so a saved sofa with no category_id set opened through a
+      // 308 to wherever it should have gone in the first place.
+      href: canonicalProductPath({
+        slug: product?.slug ?? '',
+        categories: product?.categories,
+        product_categories: product?.product_categories,
+      }),
       price: Number(product?.base_price ?? 0) + Number(variant?.price_adjustment ?? 0),
       image: variant?.image_url ?? null,
       variantId: variant?.id ?? null,

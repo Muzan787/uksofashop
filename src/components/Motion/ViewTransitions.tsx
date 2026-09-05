@@ -6,8 +6,28 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useReducedMotionSafe } from './useReducedMotionSafe'
 
 
-/** Longest we will hold a transition snapshot waiting for the new route. */
-const SETTLE_TIMEOUT = 1200
+/**
+ * Longest we will hold a transition snapshot waiting for the new route.
+ *
+ * This is not a safety valve that rarely trips. A snapshot is a still image of
+ * the page: while it is held, nothing on screen moves, no hover answers, no
+ * scroll happens. The product page is a dynamic server render, so on a cold
+ * navigation this timeout IS the wait — and at 1200ms it was long enough to
+ * read as the site having hung rather than as a link having been followed.
+ * Then it expired, the live page came back, and the new route arrived some
+ * time after that with no animation at all. The worst of both.
+ *
+ * A frozen frame stops feeling like a response at somewhere around a third of
+ * a second, so the budget is set below that. A navigation that resolves inside
+ * it — anything already in the router cache, back and forward, a lighter route
+ * — still morphs, which is every case the transition was written for. One that
+ * does not simply behaves like an ordinary link: the page stays alive and the
+ * new one replaces it when it is ready.
+ *
+ * The real fix for a slow route is the route. This only makes sure a slow one
+ * cannot take the whole window down with it.
+ */
+const SETTLE_TIMEOUT = 300
 
 /**
  * Drives view transitions for client-side navigation.
