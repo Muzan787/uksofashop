@@ -14,6 +14,13 @@ import { ARTICLES } from './journal/articles'
 // Excluded for that reason: /search, /track-order, /checkout, /account,
 // /wishlist, /login, /signup, /confirm-order/*, and everything under /admin.
 //
+// /fabrics and /swatches are both listed, and both carry the same 69 swatch
+// photographs. They are here as two entries rather than one because they
+// answer two different questions - /fabrics is the guide ("what is chenille"),
+// /swatches is the order form ("send me some") - and each targets the query
+// that matches its own. That only stays true while the copy on each does; the
+// note at the top of src/app/swatches/page.tsx is where the reasoning lives.
+//
 // /journal and /careers both used to sit in this array while both sent
 // noindex, which Search Console reported as "Submitted URL marked noindex".
 // /journal has since earned its place back the only way that counts - three
@@ -40,6 +47,7 @@ const STATIC_PATHS = [
   '/size-guide',
   '/care-guide',
   '/fabrics',
+  '/swatches',
   '/journal',
   '/terms',
   '/privacy',

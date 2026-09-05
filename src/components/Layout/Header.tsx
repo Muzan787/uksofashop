@@ -14,10 +14,17 @@ import SearchOverlay from './SearchOverlay';
 /** One message. This bar used to cycle four of them every four seconds. */
 const ANNOUNCEMENT = ANNOUNCEMENTS[0];
 
+/**
+ * "Samples" rather than "Free Samples", for the same reason the row already
+ * says "Track" and not "Track Order": this bar has one line at 1024px and
+ * seven entries to fit on it, and the word doing the work is the noun. The
+ * drawer, which has a column to itself, spells both of them out.
+ */
 const navLinks = [
   { href: '/',            label: 'Home' },
   { href: '/shop/all',    label: 'Shop', hasMenu: true },
   { href: '/collection',  label: 'Collections' },
+  { href: '/swatches',    label: 'Samples' },
   { href: '/reviews',     label: 'Reviews' },
   { href: '/track-order', label: 'Track' },
   { href: '/contact',     label: 'Contact' },

@@ -1,5 +1,5 @@
 'use client'
-// src/app/fabrics/FabricSamples.tsx
+// src/components/Product/FabricSamples.tsx
 
 import { createContext, useContext, useState } from 'react'
 import Image from 'next/image'
@@ -11,18 +11,24 @@ import { MAX_SAMPLES } from '@/constants/swatches'
 import type { Fabric, FabricCollection } from '@/components/Product/types'
 
 /**
- * The fabric guide's one piece of interactivity: picking three to be posted.
+ * Picking fabrics to be posted.
  *
  * The product page has a dialog that does two jobs — choose what the sofa is
  * built in, and choose what goes through the letterbox — and has to work hard
- * to keep them apart. This page only has the second job. Nobody arrives at a
- * guide to configure a sofa; they arrive to work out what chenille is. So a
- * tap on a swatch means one thing here, and the page can say so in a sentence
- * and then be quiet about it.
+ * to keep them apart. Everything in this file only has the second job. A tap
+ * on a swatch means one thing, and a page can say so in a sentence and then be
+ * quiet about it.
  *
  * State lives in a context rather than in each grid because the limit is three
  * across the whole page, not three per collection — somebody comparing a
  * velvet against a chenille is picking across two sections a screen apart.
+ *
+ * This lived at src/app/fabrics/FabricSamples.tsx while the guide was its only
+ * caller. There are two now: /fabrics threads the grids through its prose one
+ * collection at a time, and /swatches puts the whole library behind a filter.
+ * They lay the swatches out differently and share everything else — the
+ * basket, the limit, the bar and the form — so the tile is exported on its own
+ * and each page arranges its own grid around it.
  */
 
 interface SampleState {
@@ -36,7 +42,7 @@ interface SampleState {
 
 const Ctx = createContext<SampleState | null>(null)
 
-function useSamples() {
+export function useSamples() {
   const ctx = useContext(Ctx)
   if (!ctx) throw new Error('Fabric swatches must be rendered inside <SamplesProvider>')
   return ctx
@@ -71,89 +77,96 @@ export function SamplesProvider({ collections, children }: {
 }
 
 /**
- * One collection's colours, in the flow of the article.
+ * One fabric, as a square you can put in the basket.
  *
- * The tiles are square and as large as the column allows rather than the small
- * grid the dialog uses, because this page is for looking at the weave — the
- * whole reason somebody is reading it is that a 96px dot told them nothing.
+ * Square and as large as its column allows rather than the small dot the
+ * product dialog uses, because both pages that render it exist so somebody can
+ * look at the weave — the whole reason they are there is that a 96px dot told
+ * them nothing.
  *
- * It renders on the server like any other client component, so all sixty-nine
- * fabrics and their names are in the HTML. That matters: this is the only page
- * on the site where the range is crawlable at all.
+ * It renders on the server like any other client component, so every fabric
+ * and its name is in the HTML rather than arriving after hydration.
  */
+export function SwatchTile({ fabric }: { fabric: Fabric }) {
+  const { toggle, full, holding } = useSamples()
+
+  const chosen = holding(fabric.id)
+  // A full basket disables everything except taking one back out, so the limit
+  // is discovered by a button that will not press rather than by a fourth
+  // swatch silently failing to appear.
+  const locked = full && !chosen
+
+  return (
+    <button
+      type="button"
+      onClick={() => toggle(fabric)}
+      disabled={locked || !fabric.swatchable}
+      aria-pressed={chosen}
+      aria-label={`${fabric.collectionName} ${fabric.name}, ${fabric.code}${
+        chosen ? ' — in your samples' : ''
+      }`}
+      className="group w-full cursor-pointer border-0 bg-transparent p-0 text-left disabled:cursor-not-allowed"
+    >
+      <span
+        className={`relative block aspect-square w-full overflow-hidden rounded-sm bg-calico-200 transition-shadow duration-swift ease-out-expo ${
+          chosen
+            ? 'shadow-[0_0_0_2px_var(--color-calico-50),0_0_0_4px_var(--color-ink-900)]'
+            : 'shadow-[inset_0_0_0_1px_rgba(25,28,27,0.18)] group-enabled:group-hover:shadow-[0_0_0_2px_var(--color-calico-50),0_0_0_3px_var(--color-calico-300)]'
+        } ${locked ? 'opacity-45' : ''}`}
+        style={fabric.hex ? { background: fabric.hex } : undefined}
+      >
+        {fabric.image && (
+          <Image
+            src={fabric.image}
+            alt={`${fabric.collectionName} ${fabric.name} upholstery fabric, close up`}
+            fill
+            sizes="(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 220px"
+            placeholder="blur"
+            blurDataURL={blurDataURL(fabric.image)}
+            className="object-cover"
+          />
+        )}
+
+        <span
+          aria-hidden="true"
+          className={`absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-pill transition-opacity duration-swift ease-out-expo ${
+            chosen
+              ? 'bg-sage-700 opacity-100'
+              : 'bg-ink-900/70 opacity-0 group-enabled:group-hover:opacity-100'
+          }`}
+        >
+          {chosen ? (
+            <Check className="h-4 w-4 text-calico-50" strokeWidth={3} />
+          ) : (
+            <Plus className="h-4 w-4 text-calico-50" strokeWidth={2.5} />
+          )}
+        </span>
+      </span>
+
+      <span className="mt-2 block truncate text-body-sm font-semibold text-ink-900">
+        {fabric.name}
+      </span>
+      <span className="block truncate font-data text-caption uppercase tracking-widest text-ink-500">
+        {fabric.code}
+      </span>
+    </button>
+  )
+}
+
+/** One collection's colours, in the flow of the fabric guide's prose. */
 export function CollectionSwatches({ slug }: { slug: string }) {
-  const { collections, toggle, full, holding } = useSamples()
+  const { collections } = useSamples()
   const collection = collections.find(c => c.slug === slug)
 
   if (!collection) return null
 
   return (
     <ul className="not-prose m-0 mt-6 grid list-none grid-cols-2 gap-3 p-0 sm:grid-cols-3 lg:grid-cols-4">
-      {collection.fabrics.map(fabric => {
-        const chosen = holding(fabric.id)
-        // A full basket disables everything except taking one back out, so the
-        // limit is discovered by a button that will not press rather than by a
-        // fourth swatch silently failing to appear.
-        const locked = full && !chosen
-
-        return (
-          <li key={fabric.id}>
-            <button
-              type="button"
-              onClick={() => toggle(fabric)}
-              disabled={locked || !fabric.swatchable}
-              aria-pressed={chosen}
-              aria-label={`${collection.name} ${fabric.name}, ${fabric.code}${
-                chosen ? ' — in your samples' : ''
-              }`}
-              className="group w-full cursor-pointer border-0 bg-transparent p-0 text-left disabled:cursor-not-allowed"
-            >
-              <span
-                className={`relative block aspect-square w-full overflow-hidden rounded-sm bg-calico-200 transition-shadow duration-swift ease-out-expo ${
-                  chosen
-                    ? 'shadow-[0_0_0_2px_var(--color-calico-50),0_0_0_4px_var(--color-ink-900)]'
-                    : 'shadow-[inset_0_0_0_1px_rgba(25,28,27,0.18)] group-enabled:group-hover:shadow-[0_0_0_2px_var(--color-calico-50),0_0_0_3px_var(--color-calico-300)]'
-                } ${locked ? 'opacity-45' : ''}`}
-                style={fabric.hex ? { background: fabric.hex } : undefined}
-              >
-                {fabric.image && (
-                  <Image
-                    src={fabric.image}
-                    alt={`${collection.name} ${fabric.name} upholstery fabric, close up`}
-                    fill
-                    sizes="(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 220px"
-                    placeholder="blur"
-                    blurDataURL={blurDataURL(fabric.image)}
-                    className="object-cover"
-                  />
-                )}
-
-                <span
-                  aria-hidden="true"
-                  className={`absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-pill transition-opacity duration-swift ease-out-expo ${
-                    chosen
-                      ? 'bg-sage-700 opacity-100'
-                      : 'bg-ink-900/70 opacity-0 group-enabled:group-hover:opacity-100'
-                  }`}
-                >
-                  {chosen ? (
-                    <Check className="h-4 w-4 text-calico-50" strokeWidth={3} />
-                  ) : (
-                    <Plus className="h-4 w-4 text-calico-50" strokeWidth={2.5} />
-                  )}
-                </span>
-              </span>
-
-              <span className="mt-2 block truncate text-body-sm font-semibold text-ink-900">
-                {fabric.name}
-              </span>
-              <span className="block truncate font-data text-caption uppercase tracking-widest text-ink-500">
-                {fabric.code}
-              </span>
-            </button>
-          </li>
-        )
-      })}
+      {collection.fabrics.map(fabric => (
+        <li key={fabric.id}>
+          <SwatchTile fabric={fabric} />
+        </li>
+      ))}
     </ul>
   )
 }

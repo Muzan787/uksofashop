@@ -39,6 +39,7 @@ export function GET() {
 
 - [Sofa size and measurement guide](${url('/size-guide')}): whether a sofa fits through a door, hallway or stair turn. Includes a doorway calculator.
 - [Sofa fabric guide](${url('/fabrics')}): all 69 made-to-order colours across chenille, plush velvet, crushed velvet, naple, marble and PVC leather, and how each behaves. Three free samples posted.
+- [Free fabric samples](${url('/swatches')}): the same 69 colours as a filterable picker rather than a guide, for ordering three samples posted free to the UK mainland. No account, no payment.
 - [Sofa care and cleaning guide](${url('/care-guide')}): weekly upkeep, what to do in the first thirty seconds of a spill, and separate routines for real leather and tech leather.
 ${ARTICLES_BY_DATE.map(a => `- [${a.title}](${url(`/journal/${a.slug}`)}): ${a.description}`).join('\n')}
 

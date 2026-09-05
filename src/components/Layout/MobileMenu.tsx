@@ -5,7 +5,7 @@ import { useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  House, Sofa, LayoutGrid, Star, PackageSearch, Mail,
+  House, Sofa, LayoutGrid, Palette, Star, PackageSearch, Mail,
   Phone, ShoppingBag, X, ArrowRight, type LucideIcon,
 } from 'lucide-react';
 import { PHONE_HREF, PHONE_DISPLAY } from '@/constants/contact';
@@ -25,12 +25,16 @@ interface Props {
 /** Lucide, replacing the ⌂ 🛋 ⊞ ★ ◎ ✉ glyphs, which rendered differently on
  *  every platform and were read aloud as punctuation. */
 const LINKS: { href: string; label: string; icon: LucideIcon }[] = [
-  { href: '/',            label: 'Home',        icon: House },
-  { href: '/shop/all',    label: 'All Sofas',   icon: Sofa },
-  { href: '/collection',  label: 'Collections', icon: LayoutGrid },
-  { href: '/reviews',     label: 'Reviews',     icon: Star },
-  { href: '/track-order', label: 'Track Order', icon: PackageSearch },
-  { href: '/contact',     label: 'Contact Us',  icon: Mail },
+  { href: '/',            label: 'Home',         icon: House },
+  { href: '/shop/all',    label: 'All Sofas',    icon: Sofa },
+  { href: '/collection',  label: 'Collections',  icon: LayoutGrid },
+  // Palette, not Package: PackageSearch is two rows below on Track Order, and
+  // two parcel outlines a thumb apart is a distinction nobody makes at a
+  // glance. This row is about choosing a colour anyway.
+  { href: '/swatches',    label: 'Free Samples', icon: Palette },
+  { href: '/reviews',     label: 'Reviews',      icon: Star },
+  { href: '/track-order', label: 'Track Order',  icon: PackageSearch },
+  { href: '/contact',     label: 'Contact Us',   icon: Mail },
 ];
 
 const FOCUSABLE = 'a[href], button:not([disabled]), input, [tabindex]:not([tabindex="-1"])';

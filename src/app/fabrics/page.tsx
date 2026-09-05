@@ -7,7 +7,7 @@ import EditorialSchema from '@/components/Editorial/EditorialSchema'
 import EditorialLayout, { Note, PullQuote } from '@/components/Editorial/EditorialLayout'
 import { getFabricLibrary } from '@/utils/fabrics'
 import { MAX_SAMPLES } from '@/constants/swatches'
-import { SamplesProvider, CollectionSwatches, SampleBar } from './FabricSamples'
+import { SamplesProvider, CollectionSwatches, SampleBar } from '@/components/Product/FabricSamples'
 
 /**
  * Said once, used twice: as the meta description, and as the description on
@@ -251,6 +251,11 @@ export default async function FabricsPage() {
             people quite often pick three shades of the same grey when what they actually wanted
             was to see a grey next to a mink next to a charcoal, and two minutes on the phone
             saves a week.
+          </p>
+          <p>
+            If you already know roughly what you are after and would rather not read the rest of
+            this, the <Link href="/swatches">free samples page</Link> is the same {total} swatches
+            with a filter over them and none of the explaining.
           </p>
 
           <Note title="Ordering without samples">
