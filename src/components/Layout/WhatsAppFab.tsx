@@ -1,7 +1,7 @@
 'use client';
 // src/components/Layout/WhatsAppFab.tsx
 
-import { useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import { usePathname } from 'next/navigation';
 import { whatsAppHref } from '@/constants/contact';
 
@@ -44,11 +44,13 @@ function coveringBarHeight(): number {
  */
 export default function WhatsAppFab() {
   const pathname = usePathname();
-  const reference = useMemo(() => makeReference(), [pathname]);
+  const [reference, setReference] = useState('');
   const [productName, setProductName] = useState<string | null>(null);
   const [extra, setExtra] = useState(0);
 
   useEffect(() => {
+    setReference(makeReference());
+
     const parts = pathname.split('/').filter(Boolean);
     const isProductPage = parts[0] === 'shop' && parts.length >= 3;
     const heading = isProductPage ? document.querySelector('h1')?.textContent?.trim() : '';
@@ -68,9 +70,10 @@ export default function WhatsAppFab() {
     };
   }, [pathname]);
 
-  const message = productName
-    ? `Hi, I'm enquiring about the ${productName}.\n\nRef: ${reference}`
-    : `Hi, I'd like some help with a sofa enquiry.\n\nRef: ${reference}`;
+  const readable = productName
+    ? `Hi, I'm enquiring about the ${productName}.`
+    : `Hi, I'd like some help with a sofa enquiry.`;
+  const message = reference ? `${readable}\n\nRef: ${reference}` : readable;
 
   return (
     <>
