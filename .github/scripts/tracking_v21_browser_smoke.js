@@ -233,11 +233,20 @@ function assertGoogleTouch(raw) {
       await context.close();
     }
 
+    // Persist the consent evidence before unrelated UI smoke runs.
+    console.log('TRACKING_V21_CONSENT_DIAGNOSTIC=' + JSON.stringify({
+      host: result.host,
+      consentMatrix: result.consentMatrix,
+      google: result.google,
+      meta: result.meta,
+    }));
+
     // Product acquisition WhatsApp persists reference before navigation.
     {
       const { context, page } = await fresh(browser);
       await page.goto(base + productPath, { waitUntil: 'domcontentloaded', timeout: 45000 });
-      await page.waitForTimeout(600);
+      await essentialOnly(page);
+      await page.waitForTimeout(450);
       await page.evaluate(() => {
         document.addEventListener('click', e => {
           const a = e.target instanceof Element ? e.target.closest('a[href^="https://wa.me/"]') : null;
@@ -259,7 +268,8 @@ function assertGoogleTouch(raw) {
     {
       const { context, page } = await fresh(browser);
       await page.goto(base + '/track-order', { waitUntil: 'domcontentloaded', timeout: 45000 });
-      await page.waitForTimeout(500);
+      await essentialOnly(page);
+      await page.waitForTimeout(450);
       await page.evaluate(() => {
         document.addEventListener('click', e => {
           const a = e.target instanceof Element ? e.target.closest('a[href^="https://wa.me/"]') : null;
@@ -282,7 +292,7 @@ function assertGoogleTouch(raw) {
       await context.close();
     }
 
-    console.log('TRACKING_V21_CONSENT_DIAGNOSTIC=' + JSON.stringify(result));
+    console.log('TRACKING_V21_BROWSER_RESULT=' + JSON.stringify(result));
     console.log('Tracking V2.1 browser smoke PASS');
   } finally {
     await browser.close();
