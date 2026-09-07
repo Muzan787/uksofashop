@@ -2,7 +2,8 @@ name: Phase 2B trust delivery validation
 
 on:
   push:
-    branches: [qa/cro-phase2b-validation]
+    branches:
+      - qa/cro-phase2b-validation
 
 permissions:
   contents: write
@@ -20,335 +21,57 @@ jobs:
       NODE_PATH: /tmp/pw/node_modules
 
     steps:
+      - name: Checkout QA harness
+        uses: actions/checkout@v4
+        with:
+          ref: qa/cro-phase2b-validation
+          path: qa
+          fetch-depth: 1
+
       - name: Checkout clean Phase 2B branch
         uses: actions/checkout@v4
         with:
           ref: fix/cro-phase2b-trust-delivery
+          path: work
           fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
+          cache-dependency-path: work/package-lock.json
 
-      - name: Verify clean production base
+      - name: Verify production base and apply patch
+        working-directory: work
         shell: bash
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$BASE_SHA"
           test -z "$(git status --porcelain)"
           grep -q 'data-lenis-prevent-horizontal' src/components/Home/ProductRail.tsx
-          ! grep -q 'data-lenis-prevent[^-]' src/components/Home/ProductRail.tsx
+          python ../qa/.github/scripts/p2b_apply.py
 
-      - name: Apply Phase 2B copy consistency patch
+      - name: Verify exact Phase 2B scope
+        working-directory: work
         shell: bash
         run: |
           set -euo pipefail
-          python <<'PY'
-          from pathlib import Path
-
-          def replace(path, old, new, count=None):
-              p = Path(path)
-              text = p.read_text()
-              found = text.count(old)
-              if found == 0:
-                  raise SystemExit(f"missing replacement in {path}: {old[:120]!r}")
-              if count is not None and found != count:
-                  raise SystemExit(f"unexpected count in {path}: expected {count}, found {found}: {old[:120]!r}")
-              p.write_text(text.replace(old, new))
-
-          # Central promises: qualify delivery timing, preserve the true product-level
-          # made-to-order promise, and introduce a safe global custom-options promise.
-          replace('src/constants/promises.ts',
-          """  delivery: {
-            label: 'Free Delivery',
-            sub: 'UK Mainland, ground floor',
-            short: 'Free UK Mainland delivery',
-            long: 'Free delivery to UK Mainland addresses, brought to the ground floor or a ground-floor room of your choice.',
-          },""",
-          """  delivery: {
-            label: 'Free Delivery',
-            sub: 'UK Mainland, ground floor',
-            short: 'Free UK Mainland delivery',
-            long: 'Free delivery to UK Mainland addresses, brought to the ground floor or a ground-floor room of your choice.',
-            timingShort: 'Most UK Mainland: 2–4 working days',
-            timingException: 'Some Wales and Scotland postcodes take 5–7 working days.',
-            timingLong: 'Most UK Mainland orders arrive in 2–4 working days. Some Wales and Scotland postcodes take 5–7 working days.',
-          },""", 1)
-          replace('src/constants/promises.ts',
-          """  custom: {
-            label: 'Made to Order',
-            sub: 'Your fabric and size',
-            short: 'Fabric sofas made to order',
-            long: 'Our fabric sofas are made to order in the colour, material and size you choose.',
-          },""",
-          """  custom: {
-            label: 'Made to Order',
-            sub: 'Your fabric and size',
-            short: 'Fabric sofas made to order',
-            long: 'Our fabric sofas are made to order in the colour, material and size you choose.',
-          },
-          customGlobal: {
-            label: 'Custom Options',
-            sub: 'Fabric & size options available',
-            short: 'Custom fabric & size options available',
-            long: 'Custom fabric and size options are available on selected sofas.',
-          },""", 1)
-          replace('src/constants/promises.ts',
-          """export const ANNOUNCEMENTS = [
-            'Free Delivery to UK Mainland',
-            'Fabric Sofas Made to Your Own Size and Colour',
-            'Cash on Delivery Available Nationwide',
-            'Delivered in 2-4 Working Days',
-          ] as const""",
-          """export const ANNOUNCEMENTS = [
-            'Free Delivery to UK Mainland',
-            'Fabric Sofas Made to Your Own Size and Colour',
-            'Pay Cash or by Bank Transfer on Delivery',
-            'Most UK Mainland Orders: 2-4 Working Days',
-          ] as const""", 1)
-          replace('src/constants/promises.ts', '  PROMISES.custom,\n', '  PROMISES.customGlobal,\n', 1)
-
-          # Footer: placeholder profiles stay in central config but never render publicly.
-          replace('src/components/Layout/Footer.tsx',
-          """const socials = SOCIAL_PROFILES.map(({ platform, url }) => ({
-            Icon: SOCIAL_ICONS[platform],
-            href: url,
-            label: SOCIAL_LABELS[platform],
-          }));""",
-          """const socials = SOCIAL_PROFILES.filter((profile) => !profile.placeholder).map(({ platform, url }) => ({
-            Icon: SOCIAL_ICONS[platform],
-            href: url,
-            label: SOCIAL_LABELS[platform],
-          }));""", 1)
-
-          # Homepage: the live count is catalogue availability, not warehouse stock.
-          replace('src/components/Home/Hero.tsx', '{sofaCount} in stock', '{sofaCount} sofas available', 1)
-          replace('src/components/Home/Hero.tsx',
-                  'Made to your size. Delivered free. Paid for on the doorstep.',
-                  'Fabric sofas made to your size. Delivered free. Pay on arrival.', 1)
-
-          replace('src/components/Home/StatsBand.tsx',
-                  "import { HOME_ART, hasArt } from '@/constants/homeArt';",
-                  "import { HOME_ART, hasArt } from '@/constants/homeArt';\nimport { PROMISES } from '@/constants/promises';", 1)
-          replace('src/components/Home/StatsBand.tsx',
-                  'and the two\n * fixed terms of the offer — nothing paid up front, two to four working days.',
-                  'and the two\n * fixed terms of the offer — nothing paid up front, plus the qualified delivery window.', 1)
-          replace('src/components/Home/StatsBand.tsx',
-          """            <span className="font-data text-data font-semibold tabular-nums text-ember-300">
-              2–4 working days
-            </span>
-            <span aria-hidden="true" className="h-3 w-px bg-calico-50/25" />
-            <span className="text-body-sm text-calico-300">
-              Free delivery to UK mainland, brought to the ground floor
-            </span>""",
-          """            <span className="font-data text-data font-semibold tabular-nums text-ember-300">
-              {PROMISES.delivery.timingShort}
-            </span>
-            <span aria-hidden="true" className="h-3 w-px bg-calico-50/25" />
-            <span className="text-body-sm text-calico-300">
-              {PROMISES.delivery.timingException}
-            </span>""", 1)
-
-          replace('src/components/Home/CraftStory.tsx',
-                  "import { blurDataURL } from '@/utils/cloudinary';",
-                  "import { blurDataURL } from '@/utils/cloudinary';\nimport { PROMISES } from '@/constants/promises';", 1)
-          replace('src/components/Home/CraftStory.tsx',
-                  ' * 2–4 working days. No founding date, no heritage, no workshop we do not have.',
-                  ' * qualified delivery timing. No founding date, no heritage, no workshop we do not have.', 1)
-          replace('src/components/Home/CraftStory.tsx',
-          """    body:
-      'Cash on delivery means what it says. Our team carries it in, you look at it, and only then does any money change hands — by cash or bank transfer, on the doorstep. Delivery across UK mainland is free and usually takes two to four working days.',""",
-          """    body:
-      `Cash on delivery means what it says. Our team carries it in, you look at it, and only then does any money change hands — by cash or bank transfer, on the doorstep. Delivery across UK Mainland is free. ${PROMISES.delivery.timingLong}`,""", 1)
-
-          # PDP: keep the date estimate, but make clear it is the normal mainland window,
-          # and do not pretend the existing postcode helper can identify the slower band.
-          replace('src/components/Product/DeliveryEstimate.tsx',
-                  ' * The dates are real. `deliveryWindow()` turns "2–4 working days" into two\n * calendar dates on the server, so the page answers the question rather than\n * restating the policy and leaving the customer to count weekends. The <time>\n * elements carry the machine-readable dates for anything parsing the page.',
-                  ' * `deliveryWindow()` turns the normal 2–4-working-day mainland window into\n * two calendar dates on the server. The visible label qualifies that window,\n * because some Wales and Scotland postcodes take 5–7 working days and no\n * regional postcode mapping exists here.', 1)
-          replace('src/components/Product/DeliveryEstimate.tsx',
-          """          <p className="mt-1.5 text-body font-semibold leading-snug text-ink-900">
-            Arrives{' '}
-            <time dateTime={estimate.fromISO} className="font-data font-semibold tabular-nums">
-              {estimate.label.split(' – ')[0]}
-            </time>
-            {' – '}
-            <time dateTime={estimate.toISO} className="font-data font-semibold tabular-nums">
-              {estimate.label.split(' – ')[1]}
-            </time>
-          </p>
-          <p className="mt-1 text-body-sm text-ink-500">{PROMISES.delivery.long}</p>""",
-          """          <p className="mt-1.5 text-body font-semibold leading-snug text-ink-900">
-            Most UK Mainland: arrives{' '}
-            <time dateTime={estimate.fromISO} className="font-data font-semibold tabular-nums">
-              {estimate.label.split(' – ')[0]}
-            </time>
-            {' – '}
-            <time dateTime={estimate.toISO} className="font-data font-semibold tabular-nums">
-              {estimate.label.split(' – ')[1]}
-            </time>
-          </p>
-          <p className="mt-1 text-body-sm text-ink-500">{PROMISES.delivery.timingException}</p>
-          <p className="mt-1 text-body-sm text-ink-500">{PROMISES.delivery.long}</p>""", 1)
-
-          replace('src/components/Product/DeliveryEstimator.tsx',
-                  "import { deliveryWindow, type DeliveryWindow } from '@/utils/delivery';\n", '', 1)
-          replace('src/components/Product/DeliveryEstimator.tsx',
-                  "  | { kind: 'free'; postcode: string; window: DeliveryWindow }\n",
-                  "  | { kind: 'free'; postcode: string }\n", 1)
-          replace('src/components/Product/DeliveryEstimator.tsx',
-                  ' * The page already states 2–4 working days and free UK Mainland delivery. That\n * is a policy, not an answer: a customer paying cash on the doorstep is\n * deciding whether they will be in the house on a particular day, and whether\n * the number they have been quoted is the number they will hand over. This\n * turns both into facts about their address.',
-                  ' * The postcode can safely answer whether the free UK Mainland service applies.\n * It cannot safely assign a delivery band inside the mainland, so this component\n * deliberately keeps the timing qualified instead of fabricating regional\n * precision from the postcode string.', 1)
-          replace('src/components/Product/DeliveryEstimator.tsx',
-          """    // The date is computed first and is never contingent on the network.
-    const window = deliveryWindow();
-
-""", '', 1)
-          replace('src/components/Product/DeliveryEstimator.tsx',
-                  "    setResult({ kind: 'free', postcode, window });",
-                  "    setResult({ kind: 'free', postcode });", 1)
-          replace('src/components/Product/DeliveryEstimator.tsx',
-          """            <p className="m-0 mt-2 font-data text-body font-semibold tabular-nums text-ink-900">
-              Delivered{' '}
-              <time dateTime={result.window.fromISO}>{result.window.label.split(' – ')[0]}</time>
-              {' – '}
-              <time dateTime={result.window.toISO}>{result.window.label.split(' – ')[1]}</time>
-            </p>
-            <p className="m-0 mt-2 text-caption leading-relaxed text-ink-500">
-              {PROMISES.delivery.sub}. {PROMISES.payment.long}
-            </p>""",
-          """            <p className="m-0 mt-2 text-body font-semibold text-ink-900">
-              {PROMISES.delivery.timingLong}
-            </p>
-            <p className="m-0 mt-2 text-caption leading-relaxed text-ink-500">
-              {PROMISES.delivery.sub}. {PROMISES.payment.long}
-            </p>""", 1)
-
-          # Delivery policy is the explicit regional source of truth.
-          replace('src/app/delivery-returns/page.tsx',
-                  "import { ASSEMBLY_FEE, SOFA_REMOVAL_FEE, UPSTAIRS_FIRST_FLOOR } from '@/constants/delivery'",
-                  "import { ASSEMBLY_FEE, SOFA_REMOVAL_FEE, UPSTAIRS_FIRST_FLOOR } from '@/constants/delivery'\nimport { PROMISES } from '@/constants/promises'", 1)
-          replace('src/app/delivery-returns/page.tsx',
-          """const DESCRIPTION =
-  'Free delivery across UK Mainland in 2–4 working days, paid on delivery. What to do if your sofa arrives damaged, and your 14-day right to change your mind.'""",
-          """const DESCRIPTION =
-  `${PROMISES.delivery.short}. ${PROMISES.delivery.timingLong} Pay on delivery. What to do if your sofa arrives damaged, and your 14-day right to change your mind.`""", 1)
-          replace('src/app/delivery-returns/page.tsx',
-                  "  { icon: Clock, label: '2–4 working days' },",
-                  "  { icon: Clock, label: PROMISES.delivery.timingShort },", 1)
-          replace('src/app/delivery-returns/page.tsx',
-          """          bring your sofa to the ground floor, or to a ground-floor room of your choice. Orders
-          arrive within two to four working days of purchase, anywhere on the mainland — England,
-          Scotland and Wales alike.""",
-          """          bring your sofa to the ground floor, or to a ground-floor room of your choice. Most UK
-          Mainland orders arrive in two to four working days. Some Wales and Scotland postcodes
-          take five to seven working days.""", 1)
-          replace('src/app/delivery-returns/page.tsx', 'updated="2026-08-28"', 'updated="2026-09-07"', 1)
-
-          replace('src/components/Editorial/CoverageMap.tsx',
-          """    // This band said 5-7, and was the source of that claim in the prose above
-    // the map, in the FAQ, in the category copy and in two Journal articles.
-    // The whole mainland is 2-4 working days; within that, Wales and Scotland
-    // are 3-4 rather than 2-4. Both figures confirmed by the owner.
-    window: '3–4 working days',""",
-          """    // Slower mainland band. Keep this explicit rather than deriving it from
-    // a postcode prefix: the site has no maintained region-to-postcode map.
-    window: '5–7 working days',""", 1)
-
-          # FAQ uses the same central timing sentence as the storefront.
-          replace('src/app/faq/faqData.ts',
-                  "import { ASSEMBLY_FEE, SOFA_REMOVAL_FEE, UPSTAIRS_FIRST_FLOOR } from '@/constants/delivery'",
-                  "import { ASSEMBLY_FEE, SOFA_REMOVAL_FEE, UPSTAIRS_FIRST_FLOOR } from '@/constants/delivery'\nimport { PROMISES } from '@/constants/promises'", 1)
-          replace('src/app/faq/faqData.ts',
-                  "a: 'Orders reach UK Mainland addresses within 2–4 working days of purchase — England, Scotland and Wales alike. Around 90% arrive inside that window, unless you have asked us to hold it back; if anything is going to run late on yours we will tell you as soon as the order reaches us rather than leaving you to find out on the day. Northern Ireland, the Isle of Man and the Scottish Islands sit outside the standard service, so please get in touch before ordering and we will arrange it.',",
-                  "a: `${PROMISES.delivery.timingLong} Around 90% arrive inside the window for their delivery band, unless you have asked us to hold it back. Northern Ireland, the Isle of Man and the Scottish Islands sit outside the standard service, so please get in touch before ordering and we will arrange it.`,", 1)
-
-          # Category metadata and editorial copy: preserve the fabric-vs-stock distinction,
-          # but remove the universal 2–4-day claim.
-          replace('src/constants/categorySeo.ts',
-                  "// src/constants/categorySeo.ts\n",
-                  "// src/constants/categorySeo.ts\nimport { PROMISES } from '@/constants/promises'\n\nconst DELIVERY_TIMING = PROMISES.delivery.timingLong\n", 1)
-          replacements = [
-            ("'Fabric sofas made to order in your choice of 69 colours across chenille, velvet and more. Free UK Mainland delivery in 2-4 working days, paid on arrival.'",
-             "`Fabric sofas made to order in your choice of 69 colours across chenille, velvet and more. Free UK Mainland delivery, paid on arrival. ${DELIVERY_TIMING}`"),
-            ("'Leather sofas and 3+2 leather sofa sets that wipe clean in seconds. Free UK Mainland delivery in 2-4 working days, and you pay when it arrives.'",
-             "`Leather sofas and 3+2 leather sofa sets that wipe clean in seconds. Free UK Mainland delivery, and you pay when it arrives. ${DELIVERY_TIMING}`"),
-            ("'Electric recliner sofas and power reclining sofa sets, reclining at the touch of a button. Free UK Mainland delivery in 2-4 working days, cash on delivery.'",
-             "`Electric recliner sofas and power reclining sofa sets, reclining at the touch of a button. Free UK Mainland delivery, cash on delivery. ${DELIVERY_TIMING}`"),
-            ("'A three seater and a two seater together - the usual answer for a family living room. Free UK Mainland delivery in 2-4 working days, cash on delivery.'",
-             "`A three seater and a two seater together - the usual answer for a family living room. Free UK Mainland delivery, cash on delivery. ${DELIVERY_TIMING}`"),
-            ("'Every corner sofa is delivered free to a UK Mainland address in 2 to 4 working days, brought to the ground floor or a ground-floor room of your choice, and paid for in cash or by bank transfer on the doorstep. Nothing upfront. It carries a 1-year guarantee on the frame and springs.'",
-             "`Every corner sofa is delivered free to a UK Mainland address, brought to the ground floor or a ground-floor room of your choice, and paid for in cash or by bank transfer on the doorstep. ${DELIVERY_TIMING} Nothing upfront. It carries a 1-year guarantee on the frame and springs.`"),
-            ("'Delivery is free to UK Mainland in 2 to 4 working days and you pay cash or by bank transfer when it arrives. Fabric needs a little care to stay looking new; the [care guide](/care-guide) covers the first thirty seconds of a spill, which is the part that decides the outcome.'",
-             "`Delivery is free to UK Mainland and you pay cash or by bank transfer when it arrives. ${DELIVERY_TIMING} Fabric needs a little care to stay looking new; the [care guide](/care-guide) covers the first thirty seconds of a spill, which is the part that decides the outcome.`"),
-            ("'Leather sofas here are stocked in set sizes rather than made to order, so they ship sooner and, being a standard size, they come with the full 14-day right to change your mind. Delivery is free across UK Mainland in 2 to 4 working days, cash or bank transfer on the doorstep, with a 1-year guarantee on the frame and springs. Check the doorway first with the [size guide](/size-guide): a leather three-seater does not give under pressure the way a fabric one does.'",
-             "`Leather sofas here are stocked in set sizes rather than made to order, so they come with the full 14-day right to change your mind. Delivery is free across UK Mainland, cash or bank transfer on the doorstep. ${DELIVERY_TIMING} A 1-year guarantee covers the frame and springs. Check the doorway first with the [size guide](/size-guide): a leather three-seater does not give under pressure the way a fabric one does.`"),
-            ("'Free delivery to UK Mainland in 2 to 4 working days, brought to a ground-floor room of your choice, paid in cash or by bank transfer on arrival. A 1-year guarantee covers the frame and springs. Upstairs delivery, assembly and taking your old sofa away are available as paid extras chosen at checkout - see [delivery and returns](/delivery-returns).'",
-             "`Free delivery to UK Mainland, brought to a ground-floor room of your choice, paid in cash or by bank transfer on arrival. ${DELIVERY_TIMING} A 1-year guarantee covers the frame and springs. Upstairs delivery, assembly and taking your old sofa away are available as paid extras chosen at checkout - see [delivery and returns](/delivery-returns).`"),
-            ("'Delivered free to UK Mainland in 2 to 4 working days and paid for in cash or by bank transfer when it arrives. The 1-year guarantee covers structural faults in the frame and springs. Measure the doorway first with the [size guide](/size-guide): powered frames carry their mechanism inside the seat and do not pack down as small as you might expect.'",
-             "`Delivered free to UK Mainland and paid for in cash or by bank transfer when it arrives. ${DELIVERY_TIMING} The 1-year guarantee covers structural faults in the frame and springs. Measure the doorway first with the [size guide](/size-guide): powered frames carry their mechanism inside the seat and do not pack down as small as you might expect.`"),
-            ("'Fabric sets are made to order in your own size and any of the 69 colours in the [fabric library](/fabrics); leather sets are stocked in set sizes. Either way delivery is free to UK Mainland in 2 to 4 working days, both pieces are brought to a ground-floor room of your choice, and you pay cash or by bank transfer on the doorstep. A 1-year guarantee covers frame and springs on both pieces.'",
-             "`Fabric sets are made to order in your own size and any of the 69 colours in the [fabric library](/fabrics); leather sets are stocked in set sizes. Either way delivery is free to UK Mainland, both pieces are brought to a ground-floor room of your choice, and you pay cash or by bank transfer on the doorstep. ${DELIVERY_TIMING} A 1-year guarantee covers frame and springs on both pieces.`"),
-            ("'However you get there: free delivery to any UK Mainland address in 2 to 4 working days, brought to the ground floor or a ground-floor room of your choice, and paid for in cash or by bank transfer when it arrives rather than upfront. A 1-year guarantee covers the frame and springs. You can also see everything in person at the Blackburn [showroom](/showroom), by appointment.'",
-             "`However you get there: free delivery to any UK Mainland address, brought to the ground floor or a ground-floor room of your choice, and paid for in cash or by bank transfer when it arrives rather than upfront. ${DELIVERY_TIMING} A 1-year guarantee covers the frame and springs. You can also see everything in person at the Blackburn [showroom](/showroom), by appointment.`"),
-          ]
-          for old, new in replacements:
-              replace('src/constants/categorySeo.ts', old, new, 1)
-
-          replace('src/app/shop/[category]/page.tsx',
-                  "import { CATEGORY_COPY } from '@/constants/categorySeo'",
-                  "import { CATEGORY_COPY } from '@/constants/categorySeo'\nimport { PROMISES } from '@/constants/promises'", 1)
-          replace('src/app/shop/[category]/page.tsx',
-                  "`Shop our ${name.toLowerCase()} at UK Sofa Shop. Free delivery across UK Mainland in 2-4 working days, and cash on delivery.`",
-                  "`Shop our ${name.toLowerCase()} at UK Sofa Shop. Free delivery across UK Mainland and cash on delivery. ${PROMISES.delivery.timingLong}`", 1)
-
-          # Public answer-engine copy must not repeat the old universal promise.
-          replace('src/app/llms.txt/route.ts',
-                  '> and recliners across UK Mainland. Free delivery in 2-4 working days, paid for\n> in cash or by bank transfer on the doorstep rather than upfront.',
-                  '> and recliners across UK Mainland. Delivery is free; most UK Mainland orders arrive\n> in 2-4 working days, while some Wales and Scotland postcodes take 5-7. Payment\n> is cash or bank transfer on the doorstep rather than upfront.', 1)
-          replace('src/app/llms.txt/route.ts',
-                  '- Delivery is free to every UK Mainland address with no minimum order, in 2-4 working days. Northern Ireland, the Isle of Man and the Scottish Islands are arranged individually rather than quoted online.',
-                  '- Delivery is free to every UK Mainland address with no minimum order. Most UK Mainland orders arrive in 2-4 working days; some Wales and Scotland postcodes take 5-7 working days. Northern Ireland, the Isle of Man and the Scottish Islands are arranged individually rather than quoted online.', 1)
-
-          # Long-form delivery articles get the same qualified policy wording.
-          replace('src/app/journal/articles/delivery-day-preparation.tsx',
-                  '//   2-4 working days across UK Mainland         /delivery-returns',
-                  '//   most 2-4; some Wales/Scotland 5-7          /delivery-returns', 1)
-          replace('src/app/journal/articles/delivery-day-preparation.tsx',
-          """        Delivery runs to two to four working days anywhere on UK Mainland, so the day comes round
-        quickly — which is the reason to have the rest of this list done before it does.""",
-          """        Most UK Mainland orders arrive in two to four working days; some Wales and Scotland
-        postcodes take five to seven. Either way the day can come round quickly, which is the reason
-        to have the rest of this list done before it does.""", 1)
-
-          replace('src/app/journal/articles/cash-on-delivery-explained.tsx',
-          """        Delivery runs to two to four working days across the whole of UK Mainland. Northern
-        Ireland, the Isle of Man and the Scottish Islands are not refused — we just do not quote
-        for them automatically, so get in touch before ordering and we will arrange it.""",
-          """        Most UK Mainland orders arrive in two to four working days. Some Wales and Scotland
-        postcodes take five to seven working days. Northern Ireland, the Isle of Man and the Scottish
-        Islands are not refused — we just do not quote for them automatically, so get in touch before
-        ordering and we will arrange it.""", 1)
-          PY
-
-      - name: Verify Phase 2B scope and source consistency
-        shell: bash
-        run: |
-          set -euo pipefail
-          git diff --check "$BASE_SHA"...HEAD || true
-          git diff --name-only "$BASE_SHA" -- > /tmp/changed.txt
-          cat /tmp/changed.txt
-          test -s /tmp/changed.txt
-          ! grep -E '^(supabase/|src/utils/attribution/|src/app/api/attribution/|src/components/Home/ProductRail\.tsx$|src/components/Layout/WhatsAppFab\.tsx$|src/components/Checkout/)' /tmp/changed.txt
-          grep -q 'data-lenis-prevent-horizontal' src/components/Home/ProductRail.tsx
-          ! grep -q 'Cash on Delivery Available Nationwide' src/constants/promises.ts
-          ! grep -q '{sofaCount} in stock' src/components/Home/Hero.tsx
+          git diff --name-only "$BASE_SHA" > /tmp/p2b-changed.txt
+          cat /tmp/p2b-changed.txt
+          test -s /tmp/p2b-changed.txt
+          if grep -E '^(supabase/|src/utils/attribution/|src/app/api/attribution/|src/components/Home/ProductRail\.tsx$|src/components/Layout/WhatsAppFab\.tsx$|src/components/Checkout/)' /tmp/p2b-changed.txt; then
+            echo 'Prohibited Phase 2B path changed' >&2
+            exit 1
+          fi
           grep -q "window: '5–7 working days'" src/components/Editorial/CoverageMap.tsx
-          grep -q "PROMISES.customGlobal" src/constants/promises.ts
-          grep -q "filter((profile) => !profile.placeholder)" src/components/Layout/Footer.tsx
+          grep -q 'PROMISES.customGlobal' src/constants/promises.ts
+          grep -q 'filter((profile) => !profile.placeholder)' src/components/Layout/Footer.tsx
+          grep -q '{sofaCount} sofas available' src/components/Home/Hero.tsx
+          ! grep -q 'Cash on Delivery Available Nationwide' src/constants/promises.ts
+          git diff --check "$BASE_SHA"
 
-      - name: Install and static release gates
+      - name: Static release gates
+        working-directory: work
         shell: bash
         run: |
           set -euo pipefail
@@ -361,13 +84,16 @@ jobs:
           git diff --check "$BASE_SHA"
 
       - name: Prepare preview browser
+        working-directory: work
         run: |
           mkdir -p /tmp/pw
           npm install --prefix /tmp/pw playwright-core@1.55.0
           command -v google-chrome
           google-chrome --version
 
-      - name: Start exact Phase 2B preview
+      - name: Start Phase 2B preview
+        working-directory: work
+        shell: bash
         run: |
           nohup npm run start >/tmp/ukss-p2b-next.log 2>&1 &
           for i in $(seq 1 60); do
@@ -378,142 +104,20 @@ jobs:
           exit 1
 
       - name: Preview customer journey QA
+        working-directory: work
+        run: node ../qa/.github/scripts/p2b_smoke.js
+
+      - name: Commit clean feature branch
+        working-directory: work
         shell: bash
         run: |
           set -euo pipefail
-          node <<'NODE'
-          const { chromium } = require('playwright-core');
-          const base = process.env.QA_URL;
-          const widths = [320,390,430,1440];
-          const results = [];
-
-          async function quiet(page) {
-            await page.route('**/api/attribution/**', r => r.fulfill({status:204, body:''}));
-            await page.route('**/api/meta/**', r => r.fulfill({status:204, body:''}));
-            await page.route(/googletagmanager\.com|google-analytics\.com|connect\.facebook\.net|facebook\.com\/tr/, r => r.fulfill({status:204, body:''}));
-          }
-          async function dismiss(page) {
-            const b=page.getByRole('button',{name:'Essential only'});
-            if (await b.count()) { try { await b.first().click({timeout:1500}); await page.waitForTimeout(450); } catch {} }
-          }
-          async function goto(page,path) {
-            const r=await page.goto(base+path,{waitUntil:'domcontentloaded',timeout:45000});
-            if (!r || !r.ok()) throw new Error(`${path}: HTTP ${r&&r.status()}`);
-            await page.waitForTimeout(700); await dismiss(page); return r;
-          }
-          async function firstProduct(page, category) {
-            await goto(page, `/shop/${category}`);
-            const links = page.locator(`a[href^="/shop/${category}/"]`);
-            const n=Math.min(await links.count(),12);
-            for(let i=0;i<n;i++){
-              const href=await links.nth(i).getAttribute('href');
-              if (href) return href;
-            }
-            throw new Error(`${category}: no product link`);
-          }
-          async function findPdp(page, category, wantCustom) {
-            await goto(page, `/shop/${category}`);
-            const hrefs = await page.locator(`a[href^="/shop/${category}/"]`).evaluateAll(as => [...new Set(as.map(a => a.getAttribute('href')).filter(Boolean))]);
-            for (const href of hrefs.slice(0,12)) {
-              await goto(page, href);
-              const custom = await page.getByText('Made to Order',{exact:true}).count() > 0;
-              if (custom === wantCustom) return href;
-            }
-            throw new Error(`${category}: could not find wantCustom=${wantCustom}`);
-          }
-
-          (async()=>{
-            const browser=await chromium.launch({headless:true,executablePath:'/usr/bin/google-chrome',args:['--no-sandbox']});
-            try {
-              for(const width of widths){
-                const context=await browser.newContext({viewport:{width,height:width===1440?1000:844}});
-                const page=await context.newPage(); await quiet(page);
-                const errors=[]; page.on('pageerror',e=>errors.push(e.message));
-
-                await goto(page,'/');
-                const home=(await page.locator('body').innerText()).replace(/\s+/g,' ');
-                if(!/sofas available/i.test(home)) throw new Error(`${width}: catalogue availability wording missing`);
-                if(/\bin stock\b/i.test(home)) throw new Error(`${width}: homepage still says in stock`);
-                if(!/Fabric sofas made to your size\. Delivered free\. Pay on arrival\./i.test(home)) throw new Error(`${width}: hero customisation wording missing`);
-                if(!/Pay Cash or by Bank Transfer on Delivery/i.test(home)) throw new Error(`${width}: payment announcement missing`);
-                if(/Cash on Delivery Available Nationwide/i.test(home)) throw new Error(`${width}: nationwide wording remains`);
-                const footer=page.locator('footer'); await footer.scrollIntoViewIfNeeded();
-                const footerText=(await footer.innerText()).replace(/\s+/g,' ');
-                if(!/Custom Options/i.test(footerText) || !/Fabric & size options available/i.test(footerText)) throw new Error(`${width}: safe global custom promise missing`);
-                if(await footer.locator('a[href="https://www.tiktok.com"]').count()) throw new Error(`${width}: placeholder TikTok visible`);
-                const overflow=await page.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth);
-                if(overflow>1) throw new Error(`${width}: homepage horizontal overflow ${overflow}`);
-
-                await goto(page,'/delivery-returns');
-                const delivery=(await page.locator('body').innerText()).replace(/\s+/g,' ');
-                for(const s of ['2–3 working days','3–4 working days','5–7 working days','Ask us first']) if(!delivery.includes(s)) throw new Error(`${width}: delivery band missing ${s}`);
-                if(/England, Scotland and Wales alike/i.test(delivery)) throw new Error(`${width}: old universal delivery wording remains`);
-
-                for(const cat of ['fabric-sofa','leather-sofa','electric-sofa']) {
-                  await goto(page,`/shop/${cat}`);
-                  const txt=(await page.locator('body').innerText()).replace(/\s+/g,' ');
-                  if(!/5–7 working days/.test(txt)) throw new Error(`${width}: ${cat} missing slower-band qualification`);
-                  const ov=await page.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth);
-                  if(ov>1) throw new Error(`${width}: ${cat} horizontal overflow ${ov}`);
-                }
-
-                // Run full PDP distinction once; viewport repetition is layout-only after that.
-                if(width===390){
-                  const customHref=await findPdp(page,'fabric-sofa',true);
-                  const customText=(await page.locator('body').innerText()).replace(/\s+/g,' ');
-                  if(!/Made to Order/.test(customText) || !/Some Wales and Scotland postcodes take 5–7 working days/.test(customText)) throw new Error('custom PDP trust wording missing');
-                  const input=page.locator('#estimator-postcode');
-                  if(await input.count()){
-                    await input.fill('BB6 7LS'); await page.getByRole('button',{name:'Check',exact:true}).click(); await page.waitForTimeout(500);
-                    const txt=(await page.locator('body').innerText()).replace(/\s+/g,' ');
-                    if(!/Most UK Mainland orders arrive in 2–4 working days/.test(txt)) throw new Error('postcode estimator still uses false exact timing');
-                  }
-                  const fixedHref=await findPdp(page,'leather-sofa',false);
-                  if(await page.getByText('Made to Order',{exact:true}).count()) throw new Error(`fixed PDP ${fixedHref} falsely claims Made to Order`);
-                  results.push({customHref,fixedHref});
-                }
-
-                if(errors.length) throw new Error(`${width}: runtime errors ${JSON.stringify(errors)}`);
-                results.push({width,home:true,delivery:true,categories:true,overflow});
-                await context.close();
-              }
-            } finally { await browser.close(); }
-            console.log(JSON.stringify(results,null,2));
-          })().catch(e=>{console.error(e);process.exit(1)});
-          NODE
-
-      - name: Commit clean Phase 2B branch
-        shell: bash
-        run: |
-          set -euo pipefail
+          git config user.name Muzan787
+          git config user.email 109960574+Muzan787@users.noreply.github.com
+          git add -u
           git status --short
-          git config user.name "Muzan787"
-          git config user.email "109960574+Muzan787@users.noreply.github.com"
-          git add \
-            src/constants/promises.ts \
-            src/components/Layout/Footer.tsx \
-            src/components/Home/Hero.tsx \
-            src/components/Home/StatsBand.tsx \
-            src/components/Home/CraftStory.tsx \
-            src/components/Product/DeliveryEstimate.tsx \
-            src/components/Product/DeliveryEstimator.tsx \
-            src/app/delivery-returns/page.tsx \
-            src/components/Editorial/CoverageMap.tsx \
-            src/app/faq/faqData.ts \
-            src/constants/categorySeo.ts \
-            'src/app/shop/[category]/page.tsx' \
-            src/app/llms.txt/route.ts \
-            src/app/journal/articles/delivery-day-preparation.tsx \
-            src/app/journal/articles/cash-on-delivery-explained.tsx
-          test -z "$(git status --porcelain | grep '^??' || true)"
-          git commit -m "Fix Phase 2B delivery and trust consistency"
+          git commit -m 'Fix Phase 2B delivery and trust consistency'
+          test "$(git rev-parse HEAD^1)" = "$BASE_SHA"
           git push origin HEAD:refs/heads/$FEATURE_BRANCH
-          echo "FEATURE_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
-
-      - name: Final clean diff evidence
-        shell: bash
-        run: |
-          set -euo pipefail
           git diff --name-status "$BASE_SHA"...HEAD
           git diff --stat "$BASE_SHA"...HEAD
-          test "$(git rev-parse HEAD^1)" = "$BASE_SHA"
