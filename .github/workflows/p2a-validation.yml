@@ -48,7 +48,7 @@ jobs:
       - name: Native touch gesture matrix
         shell: bash
         run: |
-          node <<'NODE'
+          xvfb-run -a node <<'NODE'
           const { chromium } = require('playwright');
           const fs = require('fs');
           const widths = [320,390,430,768];
@@ -128,20 +128,28 @@ jobs:
           function horizontal(r){ if(r.railDelta<35||Math.abs(r.pageDelta)>70) throw new Error(`${r.name} horizontal FAIL ${JSON.stringify(r)}`); }
 
           (async()=>{
-            const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
+            const browser=await chromium.launch({headless:false,args:['--no-sandbox','--touch-events=enabled']});
             console.log(`Chromium=${browser.version()}`);
             try{
               for(const width of widths){
-                const context=await browser.newContext({viewport:{width,height:width===768?1024:844},isMobile:width<768,hasTouch:true});
+                const context=await browser.newContext({viewport:{width,height:width===768?1024:844}});
                 const page=await context.newPage(); await protect(page); await page.goto(process.env.QA_URL,{waitUntil:'domcontentloaded'});
                 const {section,rail}=await getParts(page); const cases=[]; let r;
 
-                await page.evaluate(()=>window.scrollTo(0,0)); await page.waitForTimeout(300);
+                await page.evaluate(() => {
+                  window.scrollTo(0,0);
+                  window.__qaTouch = {start:0,move:0,end:0};
+                  document.addEventListener('touchstart',()=>window.__qaTouch.start++,{passive:true});
+                  document.addEventListener('touchmove',()=>window.__qaTouch.move++,{passive:true});
+                  document.addEventListener('touchend',()=>window.__qaTouch.end++,{passive:true});
+                });
+                await page.waitForTimeout(300);
                 const controlBefore=await page.evaluate(()=>scrollY);
-                await nativeGesture(page,{x:Math.min(40,width-10),y:Math.min(650,(width===768?1024:844)-40)},0,-180);
+                await nativeGesture(page,{x:Math.round(width/2),y:400},0,-180);
                 const controlAfter=await page.evaluate(()=>scrollY);
-                console.log(JSON.stringify({width,controlBefore,controlAfter,controlDelta:controlAfter-controlBefore}));
-                if(controlAfter-controlBefore<40) throw new Error(`${width} native compositor control gesture failed ${controlBefore}->${controlAfter}`);
+                const touchCounts=await page.evaluate(()=>window.__qaTouch);
+                console.log(JSON.stringify({width,controlBefore,controlAfter,controlDelta:controlAfter-controlBefore,touchCounts}));
+                if(controlAfter-controlBefore<40) throw new Error(`${width} native compositor control gesture failed ${controlBefore}->${controlAfter} touches=${JSON.stringify(touchCounts)}`);
 
                 r=await run(page,rail,'vertical-image','image',0,-190); vertical(r); cases.push(r);
                 r=await run(page,rail,'vertical-title','title',0,-170); vertical(r); cases.push(r);
