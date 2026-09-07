@@ -7,13 +7,14 @@ on:
 jobs:
   gesture:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
     env:
       BASE_SHA: 8de4c3ff2ef774e5d1311311c5391331587775a7
       NEXT_PUBLIC_SUPABASE_URL: https://nznpeqjnoobhyxwnmsez.supabase.co
       NEXT_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_tMk28Ay_hIljhv8NQcV01Q_cI9ApS9c
       QA_URL: http://127.0.0.1:3000
-      NODE_PATH: /tmp/pw/node_modules
+      NODE_PATH: /tmp/pw96/node_modules
+      PLAYWRIGHT_BROWSERS_PATH: /tmp/pw96-browsers
     steps:
       - uses: actions/checkout@v4
         with:
@@ -30,12 +31,11 @@ jobs:
           npm run build
           git diff --check "$BASE_SHA"...HEAD
           test "$(git diff --name-only "$BASE_SHA"...HEAD | grep -v '^\.github/workflows/p2a-validation.yml$')" = "src/components/Home/ProductRail.tsx"
-      - name: Prepare system Chrome
+      - name: Install Chromium 96 harness
         run: |
-          mkdir -p /tmp/pw
-          npm install --prefix /tmp/pw playwright-core@1.55.0
-          command -v google-chrome || command -v google-chrome-stable
-          (google-chrome --version || google-chrome-stable --version)
+          mkdir -p /tmp/pw96 /tmp/pw96-browsers
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm install --prefix /tmp/pw96 playwright@1.15.2
+          /tmp/pw96/node_modules/.bin/playwright install chromium
       - name: Start app
         run: |
           nohup npm run start >/tmp/ukss-next.log 2>&1 &
@@ -48,11 +48,9 @@ jobs:
       - name: Native touch gesture matrix
         shell: bash
         run: |
-          xvfb-run -a node <<'NODE'
-          const { chromium } = require('playwright-core');
+          node <<'NODE'
+          const { chromium } = require('playwright');
           const fs = require('fs');
-          const chromePath = ['/usr/bin/google-chrome','/usr/bin/google-chrome-stable'].find(fs.existsSync);
-          if (!chromePath) throw new Error('System Google Chrome not found');
           const widths = [320,390,430,768];
           const results = [];
 
@@ -99,8 +97,6 @@ jobs:
           }
           async function nativeGesture(page, p, xDistance, yDistance) {
             const cdp = await page.context().newCDPSession(page);
-            await cdp.send('Emulation.setTouchEmulationEnabled', { enabled:true, maxTouchPoints:5 });
-            await cdp.send('Input.setIgnoreInputEvents', { ignore:false });
             await cdp.send('Input.synthesizeScrollGesture', {
               x: Math.round(p.x), y: Math.round(p.y),
               xDistance, yDistance,
@@ -125,7 +121,8 @@ jobs:
           function horizontal(r){ if(r.railDelta<35||Math.abs(r.pageDelta)>70) throw new Error(`${r.name} horizontal FAIL ${JSON.stringify(r)}`); }
 
           (async()=>{
-            const browser=await chromium.launch({headless:false,executablePath:chromePath,args:['--disable-gpu','--no-sandbox']});
+            const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
+            console.log(`Chromium=${browser.version()}`);
             try{
               for(const width of widths){
                 const context=await browser.newContext({viewport:{width,height:width===768?1024:844},isMobile:width<768,hasTouch:true});
