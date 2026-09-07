@@ -14,6 +14,7 @@ jobs:
     env:
       BASE_SHA: bf2eeab6e1f3c1984ecfaf0e2fd1aac5715aeb47
       FEATURE_BRANCH: fix/tracking-v2-real-order-linkage
+      FEATURE_PREVIOUS_SHA: dc020f679d3c03ccb16bd28068835a4f79fcd5c1
       PHASE2B_SHA: 99e8fd026c3f9ff2eb03a117ba57d6cd58edd595
       NEXT_PUBLIC_SUPABASE_URL: https://nznpeqjnoobhyxwnmsez.supabase.co
       NEXT_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_tMk28Ay_hIljhv8NQcV01Q_cI9ApS9c
@@ -28,10 +29,10 @@ jobs:
           path: qa
           fetch-depth: 1
 
-      - name: Checkout clean Tracking V2.1 branch
+      - name: Checkout clean production base
         uses: actions/checkout@v4
         with:
-          ref: fix/tracking-v2-real-order-linkage
+          ref: bf2eeab6e1f3c1984ecfaf0e2fd1aac5715aeb47
           path: work
           fetch-depth: 0
 
@@ -48,11 +49,13 @@ jobs:
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$BASE_SHA"
           test -z "$(git status --porcelain)"
+          test "$(git ls-remote origin refs/heads/$FEATURE_BRANCH | cut -f1)" = "$FEATURE_PREVIOUS_SHA"
           test "$(git ls-remote origin refs/heads/fix/cro-phase2b-trust-delivery | cut -f1)" = "$PHASE2B_SHA"
           grep -q 'data-lenis-prevent-horizontal' src/components/Home/ProductRail.tsx
           python ../qa/.github/scripts/tracking_v21_apply.py
           python ../qa/.github/scripts/tracking_v21_fix_syntax.py
           python ../qa/.github/scripts/tracking_v21_refine.py
+          python ../qa/.github/scripts/tracking_v21_confirm_page.py
 
       - name: Verify exact Tracking V2.1 scope
         working-directory: work
@@ -64,6 +67,7 @@ jobs:
           src/app/actions/checkout.ts
           src/app/actions/orders.ts
           src/app/api/cron/conversions/route.ts
+          src/app/confirm-order/[id]/page.tsx
           src/utils/attribution/checkoutLinkage.ts
           src/utils/attribution/useWhatsAppCTA.ts
           src/utils/attribution/whatsapp.ts
@@ -126,6 +130,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          test "$(git ls-remote origin refs/heads/$FEATURE_BRANCH | cut -f1)" = "$FEATURE_PREVIOUS_SHA"
           test "$(git ls-remote origin refs/heads/fix/cro-phase2b-trust-delivery | cut -f1)" = "$PHASE2B_SHA"
           test ! -e .tracking_v21_linkage_test.ts
           git config user.name Muzan787
@@ -134,6 +139,6 @@ jobs:
           git status --short
           git commit -m 'Fix Tracking V2.1 real-order attribution linkage'
           test "$(git rev-parse HEAD^1)" = "$BASE_SHA"
-          git push origin HEAD:refs/heads/$FEATURE_BRANCH
+          git push --force-with-lease=refs/heads/$FEATURE_BRANCH:$FEATURE_PREVIOUS_SHA origin HEAD:refs/heads/$FEATURE_BRANCH
           git diff --name-status "$BASE_SHA"...HEAD
           git diff --stat "$BASE_SHA"...HEAD
