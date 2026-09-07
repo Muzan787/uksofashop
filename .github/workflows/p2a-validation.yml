@@ -112,11 +112,17 @@ jobs:
                 const metrics = await rail.evaluate(el => ({scrollWidth:el.scrollWidth, clientWidth:el.clientWidth, scrollLeft:el.scrollLeft}));
                 if (metrics.scrollWidth <= metrics.clientWidth) throw new Error(`${width}: ProductRail is not horizontally overflowed ${JSON.stringify(metrics)}`);
 
-                await rail.evaluate(el => { el.scrollLeft = Math.min(180, el.scrollWidth - el.clientWidth); });
-                await page.waitForTimeout(150);
+                const secondOffset = await rail.evaluate(el => {
+                  const second = el.children[1];
+                  return second ? second.offsetLeft - el.offsetLeft : 0;
+                });
+                if (secondOffset <= 0) throw new Error(`${width}: second ProductRail snap offset missing`);
+                await rail.evaluate((el, left) => el.scrollTo({left, behavior:'auto'}), secondOffset);
+                await page.waitForTimeout(250);
                 const scrolledX = await rail.evaluate(el => el.scrollLeft);
-                if (scrolledX <= 0) throw new Error(`${width}: ProductRail did not scroll horizontally`);
-                await rail.evaluate(el => { el.scrollLeft = 0; });
+                if (scrolledX <= 20) throw new Error(`${width}: ProductRail did not scroll to second snap ${secondOffset}->${scrolledX}`);
+                await rail.evaluate(el => el.scrollTo({left:0, behavior:'auto'}));
+                await page.waitForTimeout(100);
 
                 const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
                 if (overflow > 1) throw new Error(`${width}: horizontal page overflow ${overflow}`);
@@ -147,7 +153,9 @@ jobs:
                 }
 
                 if (runtimeErrors.length) throw new Error(`${width}: runtime console errors ${JSON.stringify(runtimeErrors)}`);
-                results.push({width,newIn:true,subtitle:true,railMetrics:metrics,programmaticScrollLeft:scrolledX,pageOverflow:overflow,firstProductHref:href,runtimeErrors:[]});
+                const row = {width,newIn:true,subtitle:true,railMetrics:metrics,secondOffset,programmaticScrollLeft:scrolledX,pageOverflow:overflow,firstProductHref:href,runtimeErrors:[]};
+                console.log(JSON.stringify(row));
+                results.push(row);
                 await page.screenshot({path:`release-smoke-${width}.png`, fullPage:false});
                 await context.close();
               }
