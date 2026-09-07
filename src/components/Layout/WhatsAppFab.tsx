@@ -148,15 +148,30 @@ export default function WhatsAppFab() {
   useEffect(() => {
     const evaluate = () => setExtra(coveringBarHeight());
 
+    // A bottom bar can mount after this persistent layout component has already
+    // measured the page (notably when client navigation enters checkout). Keep
+    // the existing scroll/resize checks, but also remeasure when the DOM gains
+    // or changes a sticky bar so the FAB cannot remain at its base offset.
     evaluate();
+    const frame = requestAnimationFrame(evaluate);
+    const observer = new MutationObserver(evaluate);
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['inert', 'class', 'style'],
+    });
+
     window.addEventListener('scroll', evaluate, { passive: true });
     // A resize can cross the breakpoint where a bar stops being display:none.
     window.addEventListener('resize', evaluate);
     return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
       window.removeEventListener('scroll', evaluate);
       window.removeEventListener('resize', evaluate);
     };
-  }, []);
+  }, [pathname]);
 
   return (
     <a
