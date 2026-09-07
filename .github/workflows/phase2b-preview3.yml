@@ -46,8 +46,9 @@ jobs:
             for(const n of ['uksofashop_vid','uksofashop_sid','uksofashop_aid']) assert(names.includes(n),`missing ${n}`);
             const essential=page.getByRole('button',{name:'Essential only'});
             await essential.waitFor({state:'visible',timeout:6000});
-            await essential.click(); await page.waitForTimeout(300);
-            const consent=await page.evaluate(()=>localStorage.getItem('cookie_consent'));
+            await essential.click();
+            let consent=null;
+            for(let i=0;i<20;i++){ consent=await page.evaluate(()=>localStorage.getItem('cookie_consent')); if(consent==='denied') break; await page.waitForTimeout(100); }
             assert(consent==='denied',`consent source expected denied, got ${consent}`);
             const wa=page.locator('a[href*="wa.me"]:visible').first(); assert(await wa.count()>0,'WhatsApp link missing');
             const href=await wa.getAttribute('href'); assert(href&&href.includes('wa.me'),'WhatsApp href invalid');
