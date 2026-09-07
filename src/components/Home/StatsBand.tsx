@@ -4,6 +4,7 @@
 import Image from 'next/image';
 import { CountUp, Reveal, Stagger } from '@/components/Motion';
 import { HOME_ART, hasArt } from '@/constants/homeArt';
+import { PROMISES } from '@/constants/promises';
 import { blurDataURL, darkened } from '@/utils/cloudinary';
 
 interface Props {
@@ -28,7 +29,7 @@ interface Props {
  * being invented. So the rule is that a figure appears here only if something
  * in Postgres can be counted to produce it: how many sofas are live, how many
  * categories they fall into, how many matching sets there are, and the two
- * fixed terms of the offer — nothing paid up front, two to four working days.
+ * fixed terms of the offer — nothing paid up front, plus the qualified delivery window.
  *
  * Four columns, in Geist Mono, tabular. A price or a count that changes width
  * while it animates drags the layout along with it, which is the entire reason
@@ -123,11 +124,11 @@ export default function StatsBand({ sofaCount, categoryCount, collectionCount }:
         <Reveal delay={0.3} distance={14} amount={0.2}>
           <p className="ring-gradient glass-dark-panel m-0 mt-9 inline-flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md px-5 py-3 sm:rounded-pill lg:mt-12">
             <span className="font-data text-data font-semibold tabular-nums text-ember-300">
-              2–4 working days
+              {PROMISES.delivery.timingShort}
             </span>
             <span aria-hidden="true" className="h-3 w-px bg-calico-50/25" />
             <span className="text-body-sm text-calico-300">
-              Free delivery to UK mainland, brought to the ground floor
+              {PROMISES.delivery.timingException}
             </span>
           </p>
         </Reveal>

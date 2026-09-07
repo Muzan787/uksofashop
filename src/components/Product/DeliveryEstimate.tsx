@@ -12,10 +12,10 @@ import type { DeliveryWindow } from '@/utils/delivery';
  * from a customer whose entire decision is "will I be in the house, and what
  * do I have to pay on the day". It is now the first thing under the price.
  *
- * The dates are real. `deliveryWindow()` turns "2–4 working days" into two
- * calendar dates on the server, so the page answers the question rather than
- * restating the policy and leaving the customer to count weekends. The <time>
- * elements carry the machine-readable dates for anything parsing the page.
+ * `deliveryWindow()` turns the normal 2–4-working-day mainland window into
+ * two calendar dates on the server. The visible label qualifies that window,
+ * because some Wales and Scotland postcodes take 5–7 working days and no
+ * regional postcode mapping exists here.
  *
  * Both rows are rendered from PROMISES, so nothing here can drift away from
  * what the footer, checkout and delivery page say.
@@ -33,7 +33,7 @@ export default function DeliveryEstimate({ estimate }: { estimate: DeliveryWindo
         <div className="min-w-0">
           <p className="eyebrow text-ink-500">Free delivery</p>
           <p className="mt-1.5 text-body font-semibold leading-snug text-ink-900">
-            Arrives{' '}
+            Most UK Mainland: arrives{' '}
             <time dateTime={estimate.fromISO} className="font-data font-semibold tabular-nums">
               {estimate.label.split(' – ')[0]}
             </time>
@@ -42,6 +42,7 @@ export default function DeliveryEstimate({ estimate }: { estimate: DeliveryWindo
               {estimate.label.split(' – ')[1]}
             </time>
           </p>
+          <p className="mt-1 text-body-sm text-ink-500">{PROMISES.delivery.timingException}</p>
           <p className="mt-1 text-body-sm text-ink-500">{PROMISES.delivery.long}</p>
         </div>
       </div>

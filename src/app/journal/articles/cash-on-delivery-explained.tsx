@@ -24,9 +24,10 @@ export default function CashOnDeliveryExplained() {
         the ground floor, or to a ground-floor room of your choice — not left on the drive.
       </p>
       <p>
-        Delivery runs to two to four working days across the whole of UK Mainland. Northern
-        Ireland, the Isle of Man and the Scottish Islands are not refused — we just do not quote
-        for them automatically, so get in touch before ordering and we will arrange it.
+        Most UK Mainland orders arrive in two to four working days. Some Wales and Scotland
+        postcodes take five to seven working days. Northern Ireland, the Isle of Man and the Scottish
+        Islands are not refused — we just do not quote for them automatically, so get in touch before
+        ordering and we will arrange it.
       </p>
 
       <h2 id="methods">Cash or bank transfer</h2>

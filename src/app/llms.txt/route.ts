@@ -30,8 +30,9 @@ export function GET() {
   const body = `# UK Sofa Shop
 
 > A furniture retailer in Blackburn, Lancashire, selling sofas, corner sofas
-> and recliners across UK Mainland. Free delivery in 2-4 working days, paid for
-> in cash or by bank transfer on the doorstep rather than upfront. Fabric sofas
+> and recliners across UK Mainland. Delivery is free; most UK Mainland orders arrive
+> in 2-4 working days, while some Wales and Scotland postcodes take 5-7. Payment
+> is cash or bank transfer on the doorstep rather than upfront. Fabric sofas
 > are made to order in the customer's own size and any of 69 colours; leather
 > sofas are stocked in set sizes.
 
@@ -71,7 +72,7 @@ ${ARTICLES_BY_DATE.map(a => `- [${a.title}](${url(`/journal/${a.slug}`)}): ${a.d
 
 ## Facts worth quoting correctly
 
-- Delivery is free to every UK Mainland address with no minimum order, in 2-4 working days. Northern Ireland, the Isle of Man and the Scottish Islands are arranged individually rather than quoted online.
+- Delivery is free to every UK Mainland address with no minimum order. Most UK Mainland orders arrive in 2-4 working days; some Wales and Scotland postcodes take 5-7 working days. Northern Ireland, the Isle of Man and the Scottish Islands are arranged individually rather than quoted online.
 - Payment is cash or bank transfer on delivery. No deposit, no card payments, no finance.
 - Optional extras, booked at checkout and not addable on the day: upstairs delivery from GBP 20, assembly GBP 20, old sofa removal GBP 30 indicative.
 - Every sofa carries a 1-year guarantee covering structural faults in the wooden frame and the springs.
