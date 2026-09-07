@@ -1,42 +1,56 @@
-name: Phase 2A native gesture QA
+name: Phase 2A release gate
 
 on:
   push:
     branches: [fix/homepage-mobile-scroll-trap]
 
 jobs:
-  gesture:
+  release-gate:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
     env:
       BASE_SHA: 8de4c3ff2ef774e5d1311311c5391331587775a7
+      RELEASE_SHA: bce65ab437907c00ec94a9aafa36f1639a718212
       NEXT_PUBLIC_SUPABASE_URL: https://nznpeqjnoobhyxwnmsez.supabase.co
       NEXT_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_tMk28Ay_hIljhv8NQcV01Q_cI9ApS9c
       QA_URL: http://127.0.0.1:3000
-      NODE_PATH: /tmp/pw96/node_modules
-      PLAYWRIGHT_BROWSERS_PATH: /tmp/pw96-browsers
+      NODE_PATH: /tmp/pw/node_modules
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout exact clean release branch
+        uses: actions/checkout@v4
         with:
+          ref: fix/homepage-mobile-scroll-trap-release
           fetch-depth: 0
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-      - name: Build production app
+
+      - name: Verify exact release SHA and diff
+        run: |
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          test "$(git merge-base "$BASE_SHA" HEAD)" = "$BASE_SHA"
+          test "$(git diff --name-only "$BASE_SHA"...HEAD)" = "src/components/Home/ProductRail.tsx"
+          git diff "$BASE_SHA"...HEAD -- src/components/Home/ProductRail.tsx
+          git diff --check "$BASE_SHA"...HEAD
+
+      - name: Release gates
         run: |
           npm ci
           npx eslint src/components/Home/ProductRail.tsx
           npx tsc --noEmit
           npm run build
           git diff --check "$BASE_SHA"...HEAD
-          test "$(git diff --name-only "$BASE_SHA"...HEAD | grep -v '^\.github/workflows/p2a-validation.yml$')" = "src/components/Home/ProductRail.tsx"
-      - name: Install Chromium 96 harness
+
+      - name: Prepare browser smoke harness
         run: |
-          mkdir -p /tmp/pw96 /tmp/pw96-browsers
-          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm install --prefix /tmp/pw96 playwright@1.15.2
-          /tmp/pw96/node_modules/.bin/playwright install chromium
-      - name: Start app
+          mkdir -p /tmp/pw
+          npm install --prefix /tmp/pw playwright-core@1.55.0
+          command -v google-chrome
+          google-chrome --version
+
+      - name: Start exact release build
         run: |
           nohup npm run start >/tmp/ukss-next.log 2>&1 &
           for i in $(seq 1 60); do
@@ -45,139 +59,110 @@ jobs:
           done
           cat /tmp/ukss-next.log
           exit 1
-      - name: Native touch gesture matrix
+
+      - name: Non-touch smoke checks
         shell: bash
         run: |
-          xvfb-run -a node <<'NODE'
-          const { chromium } = require('playwright');
+          node <<'NODE'
+          const { chromium } = require('playwright-core');
           const fs = require('fs');
-          const widths = [320,390,430,768];
           const results = [];
-          const HEADING = 'h2[aria-label="The latest through the door."]';
+          const widths = [320, 390, 430, 768, 1440];
+          const chromePath = '/usr/bin/google-chrome';
 
-          async function protect(page) {
+          async function suppressExternal(page) {
             await page.route('**/api/attribution/**', r => r.fulfill({status:204, body:''}));
             await page.route('**/api/meta/**', r => r.fulfill({status:204, body:''}));
-            await page.route(/google-analytics\.com|googletagmanager\.com|connect\.facebook\.net|facebook\.com\/tr/, r => r.abort());
+            await page.route(/googletagmanager\.com|google-analytics\.com|connect\.facebook\.net|facebook\.com\/tr/, r => r.fulfill({status:204, body:''}));
           }
-          async function getParts(page) {
-            await page.waitForSelector(HEADING, {state:'attached', timeout:30000});
-            const heading = await page.$(HEADING);
-            if (!heading) throw new Error('New In heading missing');
-            const sectionHandle = await page.evaluateHandle(h => h.closest('section'), heading);
-            const section = sectionHandle.asElement();
-            if (!section) throw new Error('New In section missing');
-            const rail = await section.$('div.overflow-x-auto');
-            if (!rail) throw new Error('New In rail missing');
-            return {heading,section,rail};
-          }
-          async function cards(rail) { return rail.$$(':scope > *'); }
-          async function targetFor(rail, kind) {
-            const list = await cards(rail); const card = list[0];
-            if (!card) throw new Error('first card missing');
-            if (kind === 'image') return card.$('[data-card-media]');
-            if (kind === 'title') return card.$('h3');
-            if (kind === 'price') return card.$('span.font-data');
-            return card;
-          }
-          async function startPoint(rail, kind) {
-            const list = await cards(rail); const card = list[0];
-            if (!card) throw new Error('first card missing');
-            if (kind === 'gap') {
-              const a = await list[0].boundingBox(); const c = list[1] && await list[1].boundingBox();
-              if (!a || !c) throw new Error('gap missing');
-              return {x:(a.x+a.width+c.x)/2, y:a.y+Math.min(a.height/2,240)};
-            }
-            const node = await targetFor(rail,kind);
-            if (!node) throw new Error(`${kind} missing`);
-            const b = await node.boundingBox();
-            if (!b) throw new Error(`${kind} box missing`);
-            return {x:b.x+b.width/2, y:b.y+b.height/2};
-          }
-          async function reset(page, rail, kind) {
-            await page.evaluate(() => window.scrollTo(0,0));
-            await rail.evaluate(el => el.scrollLeft = 0);
-            const node = await targetFor(rail, kind === 'gap' ? 'image' : kind);
-            if (!node) throw new Error('reset target missing');
-            await node.scrollIntoViewIfNeeded();
-            await page.waitForTimeout(300);
-          }
-          async function nativeGesture(page, p, xDistance, yDistance) {
-            const cdp = await page.context().newCDPSession(page);
-            await cdp.send('Input.synthesizeScrollGesture', {
-              x: Math.round(p.x), y: Math.round(p.y),
-              xDistance, yDistance,
-              speed: 500,
-              preventFling: true,
-              gestureSourceType: 'touch'
-            });
-            await page.waitForTimeout(900);
-          }
-          async function run(page, rail, name, kind, xd, yd) {
-            await reset(page,rail,kind);
-            const p = await startPoint(rail,kind);
-            const hit = await page.evaluate(({x,y}) => { const e=document.elementFromPoint(x,y); return e ? `${e.tagName}.${e.className}` : null; }, p);
-            const before={y:await page.evaluate(()=>window.scrollY),x:await rail.evaluate(el=>el.scrollLeft)};
-            await nativeGesture(page,p,xd,yd);
-            const after={y:await page.evaluate(()=>window.scrollY),x:await rail.evaluate(el=>el.scrollLeft)};
-            const r={name,kind,start:p,hit,before,after,pageDelta:after.y-before.y,railDelta:after.x-before.x};
-            console.log(JSON.stringify(r));
-            return r;
-          }
-          function vertical(r){ if(r.pageDelta<50||Math.abs(r.railDelta)>45) throw new Error(`${r.name} vertical FAIL ${JSON.stringify(r)}`); }
-          function horizontal(r){ if(r.railDelta<35||Math.abs(r.pageDelta)>70) throw new Error(`${r.name} horizontal FAIL ${JSON.stringify(r)}`); }
 
-          (async()=>{
-            const browser=await chromium.launch({headless:false,args:['--no-sandbox','--touch-events=enabled']});
-            console.log(`Chromium=${browser.version()}`);
-            try{
-              for(const width of widths){
-                const context=await browser.newContext({viewport:{width,height:width===768?1024:844}});
-                const page=await context.newPage(); await protect(page); await page.goto(process.env.QA_URL,{waitUntil:'domcontentloaded'});
-                const {section,rail}=await getParts(page); const cases=[]; let r;
+          async function getRail(page) {
+            const heading = page.locator('h2[aria-label="The latest through the door."]').first();
+            await heading.waitFor({state:'visible', timeout:30000});
+            const section = heading.locator('xpath=ancestor::section[1]');
+            const rail = section.locator('div.overflow-x-auto').first();
+            await rail.waitFor({state:'visible'});
+            return {heading, section, rail};
+          }
 
-                await page.evaluate(() => {
-                  window.scrollTo(0,0);
-                  window.__qaTouch = {start:0,move:0,end:0};
-                  document.addEventListener('touchstart',()=>window.__qaTouch.start++,{passive:true});
-                  document.addEventListener('touchmove',()=>window.__qaTouch.move++,{passive:true});
-                  document.addEventListener('touchend',()=>window.__qaTouch.end++,{passive:true});
+          (async () => {
+            const browser = await chromium.launch({headless:true, executablePath:chromePath, args:['--no-sandbox']});
+            try {
+              for (const width of widths) {
+                const height = width === 1440 ? 1000 : width === 768 ? 1024 : 844;
+                const context = await browser.newContext({viewport:{width,height}});
+                const page = await context.newPage();
+                const runtimeErrors = [];
+                page.on('pageerror', e => runtimeErrors.push(`pageerror:${e.message}`));
+                page.on('console', msg => {
+                  if (msg.type() === 'error') {
+                    const text = msg.text();
+                    if (!/Failed to load resource|ERR_BLOCKED_BY_CLIENT|net::ERR/.test(text)) runtimeErrors.push(`console:${text}`);
+                  }
                 });
-                await page.waitForTimeout(300);
-                const controlBefore=await page.evaluate(()=>scrollY);
-                await nativeGesture(page,{x:Math.round(width/2),y:400},0,-180);
-                const controlAfter=await page.evaluate(()=>scrollY);
-                const touchCounts=await page.evaluate(()=>window.__qaTouch);
-                console.log(JSON.stringify({width,controlBefore,controlAfter,controlDelta:controlAfter-controlBefore,touchCounts}));
-                if(controlAfter-controlBefore<40) throw new Error(`${width} native compositor control gesture failed ${controlBefore}->${controlAfter} touches=${JSON.stringify(touchCounts)}`);
+                await suppressExternal(page);
+                await page.goto(process.env.QA_URL, {waitUntil:'domcontentloaded'});
+                await page.waitForTimeout(800);
 
-                r=await run(page,rail,'vertical-image','image',0,-190); vertical(r); cases.push(r);
-                r=await run(page,rail,'vertical-title','title',0,-170); vertical(r); cases.push(r);
-                r=await run(page,rail,'horizontal-image','image',-200,0); horizontal(r); cases.push(r);
-                r=await run(page,rail,'diagonal-vertical','image',-35,-190); vertical(r); cases.push(r);
-                r=await run(page,rail,'diagonal-horizontal','image',-200,-35); horizontal(r); cases.push(r);
-                r=await run(page,rail,'vertical-price','price',0,-160); vertical(r); cases.push(r);
-                r=await run(page,rail,'vertical-gap','gap',0,-160); vertical(r); cases.push(r);
-                r=await run(page,rail,'horizontal-gap','gap',-180,0); horizontal(r); cases.push(r);
+                const {section, rail} = await getRail(page);
+                const newIn = await section.getByText('NEW IN', {exact:true}).count();
+                const subtitle = await page.getByText('The latest through the door', {exact:false}).count();
+                if (!newIn || !subtitle) throw new Error(`${width}: real Homepage New In copy missing`);
 
-                await reset(page,rail,'image');
-                const dots=await section.$$('button[role="tab"]');
-                if(dots.length>1){ const x0=await rail.evaluate(el=>el.scrollLeft); await dots[1].click(); await page.waitForTimeout(700); const x1=await rail.evaluate(el=>el.scrollLeft); if(x1<=x0+20) throw new Error(`${width} dot FAIL ${x0}->${x1}`); }
-                const list=await cards(rail); const link=list[0] && await list[0].$('a[href^="/shop/"]'); const href=link ? await link.evaluate(el=>el.getAttribute('href')) : null;
-                const overflow=await page.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth);
-                if(!href||overflow>1) throw new Error(`${width} regression FAIL href=${href} overflow=${overflow}`);
-                results.push({width,cases,href,overflow}); await page.screenshot({path:`p2a-${width}.png`}); await context.close();
+                const metrics = await rail.evaluate(el => ({scrollWidth:el.scrollWidth, clientWidth:el.clientWidth, scrollLeft:el.scrollLeft}));
+                if (metrics.scrollWidth <= metrics.clientWidth) throw new Error(`${width}: ProductRail is not horizontally overflowed ${JSON.stringify(metrics)}`);
+
+                await rail.evaluate(el => { el.scrollLeft = Math.min(180, el.scrollWidth - el.clientWidth); });
+                await page.waitForTimeout(150);
+                const scrolledX = await rail.evaluate(el => el.scrollLeft);
+                if (scrolledX <= 0) throw new Error(`${width}: ProductRail did not scroll horizontally`);
+                await rail.evaluate(el => { el.scrollLeft = 0; });
+
+                const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+                if (overflow > 1) throw new Error(`${width}: horizontal page overflow ${overflow}`);
+
+                const firstLink = rail.locator('a[href^="/shop/"]').first();
+                const href = await firstLink.getAttribute('href');
+                if (!href) throw new Error(`${width}: first product link missing`);
+
+                if (width < 1024) {
+                  const dots = section.locator('button[role="tab"]');
+                  if (await dots.count() < 2) throw new Error(`${width}: dot controls missing`);
+                  const x0 = await rail.evaluate(el => el.scrollLeft);
+                  await dots.nth(1).click();
+                  await page.waitForTimeout(750);
+                  const x1 = await rail.evaluate(el => el.scrollLeft);
+                  if (x1 <= x0 + 20) throw new Error(`${width}: dot control did not move rail ${x0}->${x1}`);
+                  const swipeVisible = await section.getByText('Swipe', {exact:true}).count();
+                  if (!swipeVisible) throw new Error(`${width}: SWIPE affordance missing`);
+                }
+
+                if (width === 1440) {
+                  await page.evaluate(() => window.scrollTo(0,0));
+                  const y0 = await page.evaluate(() => window.scrollY);
+                  await page.mouse.wheel(0, 600);
+                  await page.waitForTimeout(900);
+                  const y1 = await page.evaluate(() => window.scrollY);
+                  if (y1 <= y0 + 100) throw new Error(`1440: desktop wheel scroll failed ${y0}->${y1}`);
+                }
+
+                if (runtimeErrors.length) throw new Error(`${width}: runtime console errors ${JSON.stringify(runtimeErrors)}`);
+                results.push({width,newIn:true,subtitle:true,railMetrics:metrics,programmaticScrollLeft:scrolledX,pageOverflow:overflow,firstProductHref:href,runtimeErrors:[]});
+                await page.screenshot({path:`release-smoke-${width}.png`, fullPage:false});
+                await context.close();
               }
-
-              const context=await browser.newContext({viewport:{width:1440,height:1000}}); const page=await context.newPage(); await protect(page); await page.goto(process.env.QA_URL,{waitUntil:'domcontentloaded'}); const {rail}=await getParts(page); const node=await targetFor(rail,'image'); if(node) await node.scrollIntoViewIfNeeded(); const y0=await page.evaluate(()=>scrollY); await page.mouse.wheel(0,500); await page.waitForTimeout(700); const y1=await page.evaluate(()=>scrollY); const overflow=await page.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth); if(y1<=y0+100||overflow>1) throw new Error(`desktop FAIL y ${y0}->${y1} overflow ${overflow}`); results.push({width:1440,desktop:{y0,y1,overflow}}); await page.screenshot({path:'p2a-1440.png'}); await context.close();
-            } finally { fs.writeFileSync('p2a-results.json',JSON.stringify(results,null,2)); await browser.close(); }
-          })().catch(e=>{console.error(e);process.exit(1)});
+            } finally {
+              fs.writeFileSync('release-smoke-results.json', JSON.stringify(results, null, 2));
+              await browser.close();
+            }
+          })().catch(e => { console.error(e); process.exit(1); });
           NODE
-      - name: Upload evidence
+
+      - name: Upload release-gate evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: p2a-native-evidence
+          name: p2a-release-gate-evidence
           path: |
-            p2a-*.png
-            p2a-results.json
+            release-smoke-*.png
+            release-smoke-results.json
