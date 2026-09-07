@@ -12,7 +12,7 @@
 // the call site already has - deliberately not a component, so none of the
 // five very different visual treatments of these buttons has to change.
 
-import { useEffect, useMemo, useRef } from 'react'
+import { useRef, type MouseEvent } from 'react'
 import { whatsAppHref } from '@/constants/contact'
 import { trackContactEvent } from '@/utils/tracking'
 import {
@@ -35,48 +35,53 @@ export interface WhatsAppCTAOptions {
 
 export interface WhatsAppCTA {
   href: string
-  onClick: () => void
+  onClick: (event: MouseEvent<HTMLAnchorElement>) => void
 }
 
 export function useWhatsAppCTA(opts: WhatsAppCTAOptions): WhatsAppCTA {
   const acquisition = opts.acquisition !== false
-  // One reference per mounted button, generated once and reused for every
-  // click of that same instance - a rapid double-click opens two tabs with
-  // the same ref rather than minting a second enquiry.
-  const referenceContext = [
-    opts.pageContext,
-    opts.productId ?? '',
-    opts.variantId ?? '',
-    opts.productName ?? '',
-  ].join('\u0000')
-  const reference = useMemo(
-    () => {
-      void referenceContext
-      return acquisition ? generateWhatsAppReference() : ''
-    },
-    [acquisition, referenceContext],
-  )
-  const sent = useRef(false)
+  const preparedReferenceRef = useRef('')
+  const preparedContextKeyRef = useRef('')
+  const sentReferenceRef = useRef('')
 
-  // Product/variant selectors can update in-place without remounting the CTA.
-  // A new context must get a new enquiry reference; otherwise a second click
-  // could reuse a reference whose stored product context belongs to the
-  // previous variant.
-  useEffect(() => {
-    sent.current = false
-  }, [reference])
+  // Keep a normal href in the markup for accessibility/no-JS fallback. For an
+  // acquisition click the handler below synchronously replaces this href with
+  // the reference-bearing URL before the browser performs the anchor's default
+  // navigation.
+  const href = whatsAppHref(opts.message)
 
-  const href = useMemo(
-    () => whatsAppHref(acquisition ? withReferenceLine(opts.message, reference) : opts.message),
-    [acquisition, opts.message, reference],
-  )
-
-  function onClick() {
+  function onClick(event: MouseEvent<HTMLAnchorElement>) {
     // Existing-order/account support should remain reachable via WhatsApp, but
     // it must not create a new acquisition reference or Contact conversion.
     if (!acquisition) return
-    if (sent.current) return
-    sent.current = true
+
+    // Build this from the values in the CURRENT render at click time. Product
+    // and variant selectors update these props in-place, so comparing this key
+    // here avoids both effect-driven state and stale prepared references.
+    const currentContextKey = [
+      opts.pageContext,
+      opts.productId ?? '',
+      opts.variantId ?? '',
+      opts.productName ?? '',
+    ].join('\u0000')
+
+    let reference = preparedReferenceRef.current
+    if (!reference || preparedContextKeyRef.current !== currentContextKey) {
+      reference = generateWhatsAppReference()
+      preparedReferenceRef.current = reference
+      preparedContextKeyRef.current = currentContextKey
+    }
+
+    // Changing the DOM href inside the click handler happens before the
+    // browser's default anchor navigation. Repeated clicks in the same context
+    // therefore reuse the same prepared reference, while a new product/variant
+    // gets a new one without needing React state or an effect.
+    event.currentTarget.href = whatsAppHref(withReferenceLine(opts.message, reference))
+
+    // One enquiry row per prepared reference. Re-rendering or clicking the same
+    // prepared CTA twice must not duplicate the acquisition beacon.
+    if (sentReferenceRef.current === reference) return
+    sentReferenceRef.current = reference
 
     const path = typeof window !== 'undefined' ? window.location.pathname : ''
 
