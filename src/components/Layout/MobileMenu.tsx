@@ -9,6 +9,7 @@ import {
   Phone, ShoppingBag, X, ArrowRight, type LucideIcon,
 } from 'lucide-react';
 import { PHONE_HREF, PHONE_DISPLAY } from '@/constants/contact';
+import { usePhoneClick } from '@/utils/attribution/usePhoneClick';
 import { STAGGER_STEP, STAGGER_CAP } from '@/components/Motion/tokens';
 
 interface Category { id: string; name: string; slug: string }
@@ -42,6 +43,7 @@ const FOCUSABLE = 'a[href], button:not([disabled]), input, [tabindex]:not([tabin
 export default function MobileMenu({ open, onClose, categories, itemCount, triggerRef }: Props) {
   const pathname = usePathname();
   const sheet = useRef<HTMLDivElement>(null);
+  const onPhoneClick = usePhoneClick();
 
   /**
    * A real focus trap. This one is a modal sheet opened by an explicit tap, so
@@ -241,6 +243,7 @@ export default function MobileMenu({ open, onClose, categories, itemCount, trigg
         <div className="relative flex shrink-0 flex-wrap items-center gap-3 border-t border-calico-50/10 px-4 pt-4 pb-safe">
           <a
             href={PHONE_HREF}
+            onClick={onPhoneClick}
             className="glass-dark-panel hover-btn hover-btn-dark flex min-h-11 items-center gap-2 rounded-pill px-3.5 font-data text-caption tabular-nums text-calico-300 no-underline"
           >
             <Phone aria-hidden="true" className="h-3.5 w-3.5 text-ember-300" />

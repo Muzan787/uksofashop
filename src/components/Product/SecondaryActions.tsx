@@ -2,13 +2,14 @@
 
 import { AlertTriangle, ChevronDown, Ruler } from 'lucide-react';
 import { PROMISES } from '@/constants/promises';
+import type { WhatsAppCTA } from '@/utils/attribution/useWhatsAppCTA';
 import WhatsAppIcon from './WhatsAppIcon';
 
 interface Props {
   /** Only products flagged custom_made in the admin panel offer this. */
   customMade: boolean;
-  customEnquiryHref: string;
-  agentHref: string;
+  customEnquiryCta: WhatsAppCTA;
+  agentCta: WhatsAppCTA;
 }
 
 /**
@@ -26,13 +27,14 @@ interface Props {
  * majority of visitors buy a sofa, and together they were adding around 500px
  * between the add-to-cart button and the description.
  */
-export default function SecondaryActions({ customMade, customEnquiryHref, agentHref }: Props) {
+export default function SecondaryActions({ customMade, customEnquiryCta, agentCta }: Props) {
   return (
     <div className="flex flex-col gap-4">
-      {customMade && <MadeToOrder href={customEnquiryHref} />}
+      {customMade && <MadeToOrder cta={customEnquiryCta} />}
 
       <a
-        href={agentHref}
+        href={agentCta.href}
+        onClick={agentCta.onClick}
         target="_blank"
         rel="noopener noreferrer"
         className="hover-btn hover-btn-dark flex items-center gap-3 rounded-md bg-ink-900 p-3 no-underline shadow-e1"
@@ -66,7 +68,7 @@ export default function SecondaryActions({ customMade, customEnquiryHref, agentH
  * the same construction as the specifications accordion further down, so the
  * page has one disclosure pattern rather than two.
  */
-function MadeToOrder({ href }: { href: string }) {
+function MadeToOrder({ cta }: { cta: WhatsAppCTA }) {
   return (
     <section aria-label={PROMISES.custom.label}>
       <details className="group rounded-md border border-[var(--pdp-accent-line)] bg-[var(--pdp-accent-tint)]">
@@ -113,7 +115,8 @@ function MadeToOrder({ href }: { href: string }) {
           </p>
 
           <a
-            href={href}
+            href={cta.href}
+            onClick={cta.onClick}
             target="_blank"
             rel="noopener noreferrer"
             className="hover-btn mt-4 flex h-12 items-center justify-center gap-2 rounded-sm bg-whatsapp text-body-sm font-semibold text-calico-50 no-underline"

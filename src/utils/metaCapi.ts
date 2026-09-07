@@ -25,6 +25,7 @@
 import 'server-only'
 import { createHash } from 'crypto'
 import { normaliseUkMobile } from '@/utils/phone'
+import { isServerTrackingEnabled } from '@/utils/trackingEnv'
 
 const API_VERSION = 'v21.0'
 
@@ -98,7 +99,7 @@ export interface CapiContent {
 export type CapiActionSource = 'website' | 'chat'
 
 export interface CapiEvent {
-  eventName: 'Purchase' | 'InitiateCheckout' | 'AddToCart' | 'ViewContent' | 'OrderDelivered'
+  eventName: 'Purchase' | 'InitiateCheckout' | 'AddToCart' | 'ViewContent' | 'OrderDelivered' | 'Contact'
   /** MUST equal the event_id the browser sent for the same action. */
   eventId: string
   eventSourceUrl?: string
@@ -142,6 +143,10 @@ function userData(u: CapiUser): Record<string, unknown> {
  */
 export async function sendCapiEvent(event: CapiEvent): Promise<void> {
   if (!isCapiConfigured()) return
+  // Production gate (utils/trackingEnv.ts): a preview deployment or local
+  // build must never post a real conversion to the live Meta account, even
+  // if META_CAPI_ACCESS_TOKEN happens to be present in that environment.
+  if (!isServerTrackingEnabled()) return
 
   const payload = {
     data: [

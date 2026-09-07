@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 // src/app/admin/orders/page.tsx
 import { createClient } from '@/utils/supabase/server'
-import { Package, Inbox, Printer, MapPin, User, Phone, Truck } from 'lucide-react'
+import { Package, Inbox, MapPin, User, Truck } from 'lucide-react'
 import { updateOrderStatus } from '@/app/actions/orders'
 import DirectPrintButton from './DirectPrintButton'
 import CopyOrderButton from './CopyOrderButton'
@@ -267,7 +267,7 @@ export default async function AdminOrdersPage(props: { searchParams: SearchParam
                 {order.order_items.length} Item(s) in Order (Tap to expand)
               </summary>
               <div className="mt-2 space-y-2 px-1">
-                {order.order_items.map((item: any) => (
+                {order.order_items.map((item) => (
                   <div key={item.id} className="flex justify-between items-center text-sm py-2 border-b border-stone-100 last:border-0">
                     <div className="flex flex-col">
                       <span className="font-semibold text-stone-800">{item.quantity}x {item.product_variants?.products?.title}</span>
@@ -310,6 +310,15 @@ export default async function AdminOrdersPage(props: { searchParams: SearchParam
                   <option value="delivered">Delivered</option>
                   <option value="cancelled">Cancelled</option>
                 </select>
+                {/* Only read when status is set to cancelled - see updateOrderStatus.
+                    Left visible regardless of the selected status rather than
+                    shown/hidden with client JS, since this form has none. */}
+                <input
+                  type="text"
+                  name="cancellationReason"
+                  placeholder="Reason, if cancelling"
+                  className="flex-1 text-sm border-2 border-stone-200 rounded-sm p-3 bg-white focus:ring-0 focus:border-orange-500 outline-none"
+                />
                 <button type="submit" className="bg-stone-900 text-white p-3 rounded-sm text-sm font-bold hover:bg-stone-800 active:scale-[0.98] transition">
                   Update
                 </button>

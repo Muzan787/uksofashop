@@ -1,54 +1,45 @@
 'use client';
 // src/components/Layout/WhatsAppFab.tsx
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { whatsAppHref } from '@/constants/contact';
-
-/** How far down the page before the button is allowed to exist. */
-const REVEAL_AFTER = 340;
-/** How long the label stays out once something has opened it. */
-const COLLAPSE_AFTER = 2800;
+import { useEffect, useRef, useState } from 'react';
+import { usePathname } from 'next/navigation';
+import { useWhatsAppCTA } from '@/utils/attribution/useWhatsAppCTA';
 
 /**
- * Is anything already pinned to the bottom of the viewport?
+ * Height of whatever full-width bar is currently pinned to the same edge -
+ * the product page's add-to-cart bar, the checkout total bar - so this
+ * button can be pushed up clear of it rather than hidden.
  *
- * The product page raises an add-to-cart bar once you scroll past the real
- * button, and checkout carries a total bar with an expanding summary drawer.
- * Both are `position: fixed` across the foot of the screen, both are on the
- * same z-layer as this button, and both own that space for a better reason
- * than a chat shortcut does. So this button stands down while one is up rather
- * than trying to share the corner with it.
- *
- * Standing down beats lifting above them. A green pill hovering directly over
- * "Add to basket" competes with the one action the page exists to get, and it
- * would be at its loudest at exactly the wrong moment.
+ * REPOSITION, NEVER HIDE. An earlier version of this button stood down
+ * entirely while one of those bars was up, on the reasoning that a green
+ * pill hovering over "Add to basket" competes with the one action the page
+ * exists to get. That is still true, but the acquisition CTA now has to be
+ * visible at every scroll position and on every page without exception - so
+ * the fix is to give it somewhere else to stand rather than to remove it.
  *
  * Two tests, because a bar can be inactive in two different ways:
  *
  *   ITS RECTANGLE, not its computed `display`. Both bars are hidden by a
- *   breakpoint — the add-to-cart bar is `md:hidden` on itself, but the
+ *   breakpoint - the add-to-cart bar is `md:hidden` on itself, but the
  *   checkout bar sits inside an `lg:hidden` wrapper. Computed style is
  *   resolved per element, so a bar whose PARENT is display:none still reports
- *   `display: block` for itself, and reading that alone had the button
- *   standing down on desktop checkout for a bar nobody could see. A rectangle
- *   collapses to 0x0 anywhere in a hidden subtree, however far up it starts.
+ *   `display: block` for itself; a rectangle collapses to 0x0 anywhere in a
+ *   hidden subtree, however far up it starts.
  *
- *   (offsetParent would have been the obvious check and is wrong twice over:
- *   it is always null for a fixed element.)
- *
- *   `inert`, because the add-to-cart bar does not unmount when it is down. It
- *   translates off the bottom of the screen and marks itself inert, which is
- *   the same signal a keyboard uses to skip it.
+ *   `inert`, because the add-to-cart bar does not unmount when it is down -
+ *   it translates off the bottom of the screen and marks itself inert, which
+ *   is the same signal a keyboard uses to skip it.
  */
-function bottomBarShowing(): boolean {
+function coveringBarHeight(): number {
   const bars = document.querySelectorAll<HTMLElement>('[data-bottom-bar]');
+  let tallest = 0;
   for (const bar of bars) {
     if (bar.hasAttribute('inert')) continue;
     const rect = bar.getBoundingClientRect();
     if (rect.width === 0 || rect.height === 0) continue;
-    return true;
+    tallest = Math.max(tallest, rect.height);
   }
-  return false;
+  return tallest;
 }
 
 /**
@@ -56,127 +47,148 @@ function bottomBarShowing(): boolean {
  *  THE WHATSAPP BUTTON
  * ─────────────────────────────────────────────────────────────────────────────
  *
- * Mounted once in MainLayoutWrapper, so it is on every storefront page rather
- * than only the homepage. A contact shortcut that disappears on the product
- * page — where the questions about fabric, size and delivery actually get
- * asked — had it exactly backwards.
+ * Mounted once in MainLayoutWrapper (suppressed in /admin there), so it is on
+ * every storefront page. Visible immediately on mount - no scroll threshold,
+ * no delayed entrance, no viewport-section logic - because it is an
+ * acquisition control, not a decoration: a visitor who wants to ask a
+ * question before reading a word should be able to.
  *
- * Four things were wrong with it against the rebuilt homepage.
+ * ICON + WORD, ALWAYS. A round icon-only pill photographs well but tells a
+ * first-time visitor nothing; the label reads "WhatsApp" permanently rather
+ * than expanding on hover, because hover has no equivalent on a touch device
+ * and a mobile visitor was previously left to guess what a green circle was
+ * for.
  *
- * IT SAT ON THE HERO. Fixed to the bottom right from the first frame, it
- * parked a bright green pill over the bottom-right corner of the hero sofa —
- * the single most composed image on the site — before a visitor had read a
- * word. It now waits until the hero has been scrolled past and arrives with a
- * short rise. Nothing floats over the first screen.
+ * CONTRAST. Calico 50 on WhatsApp green is 2.15:1 - it does not pass for text
+ * at any size. It carries Ink 900, which is 9.4:1 on the flat green and about
+ * 7.6:1 against the darkest stop of the gradient - the same rule the palette
+ * already applies to Ember: a saturated mid-tone fill is a LIGHT surface and
+ * takes dark type, whatever the brand's own marketing does with it.
  *
- * IT COULD NOT BE READ ON A PHONE. The label only appeared on hover or focus,
- * which on a touch device is never: every mobile visitor got a bare green
- * circle and was left to guess, which is the exact complaint the previous pass
- * on this file set out to fix and only fixed for desktop. It now introduces
- * itself once, the first time it appears, then collapses and stays quiet.
+ * POSITION. `.fab-offset` (globals.css) clears the bottom navigation and the
+ * safe-area inset on mobile, and drops to a plain 24px edge inset at the `lg`
+ * breakpoint where there is no bottom navigation to clear - both as a single
+ * CSS rule, because the mobile figure is a calc() no Tailwind utility can
+ * express. `--fab-extra`, set below, adds the height of any covering bar on
+ * top of that.
  *
- * THE LABEL FAILED CONTRAST. Calico 50 on WhatsApp green is 2.15:1 — it did
- * not pass for text at any size. It carries Ink 900 now, which is 9.4:1 on the
- * flat green and about 7.6:1 against the darkest stop of the gradient. This is
- * the same rule the palette already applies to Ember: a saturated mid-tone
- * fill is a LIGHT surface and takes dark type, whatever the brand's own
- * marketing does with it.
- *
- * IT WAS THE ONE FLAT ELEMENT LEFT. Everything else on the page is a gradient
- * on a colour-tinted shadow; this was a solid fill with a grey drop shadow. It
- * now uses --grad-whatsapp and --shadow-whatsapp, which are built the same way
- * as the ember pair.
- *
- * The colour itself is untouched — it is WhatsApp's and it is what makes the
- * button recognisable at a glance.
+ * STACKING. z-sticky-bar (30): below the bottom navigation (40, so this never
+ * sits over the primary nav), below the cookie-consent banner (60, so a
+ * visitor resolves consent before anything else claims that corner) and well
+ * below any drawer or modal (70/80).
  */
+interface ProductWhatsAppContext {
+  productId?: string;
+  variantId?: string;
+  productName: string;
+}
+
 export default function WhatsAppFab() {
-  const [shown, setShown] = useState(false);
-  const [open, setOpen] = useState(false);
-  const introduced = useRef(false);
-  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const pathname = usePathname();
+  const routeIsSupport = Boolean(
+    pathname?.startsWith('/confirm-order/') ||
+    pathname?.startsWith('/track-order') ||
+    pathname?.startsWith('/account')
+  );
+  const [checkoutHasOrder, setCheckoutHasOrder] = useState(false);
+  const [productContext, setProductContext] = useState<ProductWhatsAppContext | null>(null);
+  const supportOnly = routeIsSupport || checkoutHasOrder;
 
-  const expand = useCallback(() => {
-    clearTimeout(timer.current);
-    setOpen(true);
-    timer.current = setTimeout(() => setOpen(false), COLLAPSE_AFTER);
-  }, []);
-
-  const collapse = useCallback(() => {
-    clearTimeout(timer.current);
-    setOpen(false);
-  }, []);
+  const cta = useWhatsAppCTA({
+    message: supportOnly
+      ? 'Hi, I need some help with an existing order or account.'
+      : productContext
+        ? `Hi, I'm enquiring about this product: ${productContext.productName}.`
+        : 'Hi, I’d like some help with a sofa enquiry.',
+    pageContext: supportOnly
+      ? 'whatsapp_fab_support'
+      : productContext
+        ? 'whatsapp_fab_product'
+        : 'whatsapp_fab',
+    productId: supportOnly ? undefined : productContext?.productId,
+    variantId: supportOnly ? undefined : productContext?.variantId,
+    productName: supportOnly ? undefined : productContext?.productName,
+    acquisition: !supportOnly,
+  });
+  const [extra, setExtra] = useState(0);
+  const ref = useRef<HTMLAnchorElement>(null);
 
   useEffect(() => {
-    const evaluate = () => {
-      const past = window.scrollY > REVEAL_AFTER;
-      const visible = past && !bottomBarShowing();
+    // Checkout keeps the same pathname after a successful order, so route
+    // matching alone cannot tell acquisition from post-purchase support.
+    // SuccessStep marks the DOM while it is mounted; observe that marker and
+    // switch this always-visible FAB to support-only semantics without hiding it.
+    //
+    // ProductPageClient also exposes the currently selected product/variant on
+    // a hidden DOM marker. Reading it here keeps the site-wide fixed FAB product
+    // aware without making the root layout fetch product data a second time.
+    const evaluateContext = () => {
+      setCheckoutHasOrder(Boolean(document.querySelector('[data-existing-order-context]')));
 
-      // Passing the same boolean is a no-op in React, so this does not
-      // re-render on every frame of a scroll.
-      setShown(visible);
-
-      // The one-time introduction. It runs on the button's first appearance
-      // rather than on a timer, so it happens when the button is actually on
-      // screen to be seen — and never again, because a control that keeps
-      // announcing itself is an advert.
-      if (visible && !introduced.current) {
-        introduced.current = true;
-        expand();
+      const marker = document.querySelector<HTMLElement>('[data-whatsapp-product-context]');
+      const productName = marker?.dataset.productName?.trim();
+      if (!marker || !productName) {
+        setProductContext(null);
+        return;
       }
+
+      setProductContext({
+        productId: marker.dataset.productId || undefined,
+        variantId: marker.dataset.variantId || undefined,
+        productName,
+      });
     };
 
-    // Scroll is the only thing that changes either input. The reveal threshold
-    // is a scroll position, and the add-to-cart bar it has to yield to is
-    // itself raised by scrolling — so re-checking here covers both without a
-    // second observer. The initial call catches checkout, where the total bar
-    // is up from the moment the page loads.
+    evaluateContext();
+    const observer = new MutationObserver(evaluateContext);
+    observer.observe(document.body, { childList: true, subtree: true, attributes: true });
+    return () => observer.disconnect();
+  }, [pathname]);
+
+  useEffect(() => {
+    const evaluate = () => setExtra(coveringBarHeight());
+
+    // A bottom bar can mount after this persistent layout component has already
+    // measured the page (notably when client navigation enters checkout). Keep
+    // the existing scroll/resize checks, but also remeasure when the DOM gains
+    // or changes a sticky bar so the FAB cannot remain at its base offset.
     evaluate();
+    const frame = requestAnimationFrame(evaluate);
+    const observer = new MutationObserver(evaluate);
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['inert', 'class', 'style'],
+    });
+
     window.addEventListener('scroll', evaluate, { passive: true });
     // A resize can cross the breakpoint where a bar stops being display:none.
     window.addEventListener('resize', evaluate);
     return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
       window.removeEventListener('scroll', evaluate);
       window.removeEventListener('resize', evaluate);
     };
-  }, [expand]);
-
-  useEffect(() => () => clearTimeout(timer.current), []);
+  }, [pathname]);
 
   return (
     <a
-      href={whatsAppHref('I have a question about your sofas')}
+      ref={ref}
+      href={cta.href}
+      onClick={cta.onClick}
       target="_blank"
       rel="noopener noreferrer"
-      aria-label="Ask us anything on WhatsApp"
-      // Not merely invisible: while it is up on the hero it is out of the tab
-      // order and out of the accessibility tree entirely. A control nobody can
-      // see should not be the next thing a keyboard lands on.
-      inert={!shown}
-      onPointerEnter={expand}
-      onPointerLeave={collapse}
-      onFocus={expand}
-      onBlur={collapse}
-      // `.fab-offset` clears the bottom navigation and the safe-area inset on
-      // mobile, and drops to the ordinary edge inset at lg where there is no
-      // navigation to clear. It lives in globals.css because the two values
-      // cannot both be written here — see the note on that rule.
-      className={`hover-btn btn-whatsapp shadow-whatsapp fab-offset fixed right-4 z-sticky-bar flex h-12 items-center gap-2.5 overflow-hidden rounded-pill bg-whatsapp px-3.5 text-ink-900 no-underline transition-[opacity,transform,padding] duration-base ease-out-expo ${
-        shown ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-4 opacity-0'
-      }`}
+      aria-label="Chat with us on WhatsApp"
+      style={extra > 0 ? ({ '--fab-extra': `${extra + 12}px` } as React.CSSProperties) : undefined}
+      className="hover-btn btn-whatsapp shadow-whatsapp fab-offset fixed right-4 z-sticky-bar flex h-12 items-center gap-2 rounded-pill bg-whatsapp px-4 text-ink-900 no-underline transition-[bottom] duration-base ease-out-expo focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-900"
     >
       <svg viewBox="0 0 24 24" aria-hidden="true" className="h-6 w-6 shrink-0 fill-current">
         <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
       </svg>
 
-      {/* Width, not display: a hidden label would jump the layout open. */}
-      <span
-        className={`whitespace-nowrap text-body-sm font-semibold transition-[max-width,opacity] duration-base ease-out-expo ${
-          open ? 'max-w-[180px] opacity-100' : 'max-w-0 opacity-0'
-        }`}
-      >
-        Ask us anything
-      </span>
+      <span className="whitespace-nowrap text-body-sm font-semibold">WhatsApp</span>
     </a>
   );
 }

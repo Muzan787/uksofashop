@@ -29,6 +29,8 @@ import type { Database } from '@/types/supabase'
 import { sendCapiEvent } from '@/utils/metaCapi'
 import { sendGa4Event, clientIdFromGaCookie } from '@/utils/ga4Server'
 import { SITE_URL } from '@/constants/site'
+import { isServerTrackingEnabled } from '@/utils/trackingEnv'
+import { createAdminClient } from '@/utils/supabase/admin'
 
 type Client = SupabaseClient<Database>
 
@@ -57,6 +59,14 @@ export async function reportOrderConversion(
   kind: ConversionKind,
 ): Promise<void> {
   try {
+    // Production gate (utils/trackingEnv.ts). Placed BEFORE the guard column
+    // is claimed below, deliberately: an order confirmed in a preview
+    // deployment or during local testing must report nothing at all, and
+    // because the guard column is never claimed here, the same order still
+    // reports correctly later if it turns out to belong to production after
+    // all - see the note on isServerTrackingEnabled for why that matters.
+    if (!isServerTrackingEnabled()) return
+
     const sentColumn = SENT_COLUMN[kind]
 
     // One string literal, not a concatenation: Supabase infers the row type by
@@ -64,7 +74,7 @@ export async function reportOrderConversion(
     // which collapses every field below to an error type.
     const { data: order } = await supabase
       .from('orders')
-      .select('id, customer_name, customer_email, customer_phone, shipping_address, total_amount, purchase_event_id, ga_client_id, meta_fbp, meta_fbc, customer_user_agent, customer_ip, purchase_event_sent_at, delivered_event_sent_at, source')
+      .select('id, customer_name, customer_email, customer_phone, shipping_address, total_amount, purchase_event_id, ga_client_id, meta_fbp, meta_fbc, customer_user_agent, customer_ip, purchase_event_sent_at, delivered_event_sent_at, source, gclid, gbraid, wbraid, visitor_id, confirmed_at, delivered_at')
       .eq('id', orderId)
       .single()
 
@@ -139,8 +149,12 @@ export async function reportOrderConversion(
           firstName: name.split(/\s+/)[0] || null,
           lastName: name.split(/\s+/).slice(1).join(' ') || null,
           postcode: order.shipping_address?.split(',').pop()?.trim() ?? null,
-          fbp: fromChat ? null : order.meta_fbp,
-          fbc: fromChat ? null : order.meta_fbc,
+          // A WhatsApp order may still have originated from a tracked website
+          // visit. If a linked enquiry supplied _fbp/_fbc, keep them: action
+          // source remains 'chat', but the browser identifiers materially
+          // improve match quality and are genuine customer-side evidence.
+          fbp: order.meta_fbp,
+          fbc: order.meta_fbc,
           // Captured with the request that PLACED the order, not this one.
           // Meta lists client_user_agent as required for website events, and
           // both improve match quality - but at confirmation time the only
@@ -148,6 +162,7 @@ export async function reportOrderConversion(
           // the shop owner's device.
           userAgent: fromChat ? null : order.customer_user_agent,
           clientIp: fromChat ? null : order.customer_ip,
+          externalId: order.visitor_id,
         },
         contents,
         value,
@@ -174,6 +189,73 @@ export async function reportOrderConversion(
           })
         : Promise.resolve(),
     ])
+
+    // Audit trail and offline-conversion staging both go through the
+    // service-role client, deliberately independent of whichever `supabase`
+    // was passed in above: this function is called from three places (the
+    // admin panel's own session, an unauthenticated customer confirming their
+    // own order, and the cron backstop's own admin client), and only the
+    // last of those already carries admin privileges. Recording that a
+    // conversion was sent has no meaningful caller identity to check - the
+    // same reasoning utils/supabase/admin.ts documents - so every caller
+    // gets the same, consistent write rather than three different outcomes.
+    const admin = createAdminClient()
+
+    // Best-effort and never allowed to affect anything above - both sends
+    // already happened by this point. sendCapiEvent/sendGa4Event never throw
+    // and report nothing about success beyond a console.error, so 'sent' here
+    // means "the attempt completed", not "Meta/Google accepted it" - see
+    // utils/metaCapi.ts and utils/ga4Server.ts for the actual acceptance
+    // logging.
+    await admin.from('conversion_events').insert([
+      {
+        order_id: orderId,
+        platform: 'meta' as const,
+        event_name: kind === 'purchase' ? 'Purchase' : 'OrderDelivered',
+        event_id: kind === 'purchase' ? order.purchase_event_id : `${order.purchase_event_id}-delivered`,
+        sent_at: new Date().toISOString(),
+        status: 'sent' as const,
+      },
+      ...(kind === 'purchase' && order.ga_client_id
+        ? [{
+            order_id: orderId,
+            platform: 'ga4' as const,
+            event_name: 'purchase',
+            event_id: shortCode,
+            sent_at: new Date().toISOString(),
+            status: 'sent' as const,
+          }]
+        : []),
+    ])
+
+    // Stage a row for a FUTURE, separate Google Ads offline/enhanced
+    // conversion import - see docs/TRACKING_V2_EXPORT_CONTRACT.md. Nothing
+    // here uploads to Google. Idempotent via the (order_id, conversion_stage)
+    // unique constraint: onConflict + ignoreDuplicates means a repeated
+    // confirmed->shipped->confirmed toggle never creates a second row.
+    const postcode = order.shipping_address?.split(',').pop()?.trim() ?? null
+    await admin
+      .from('google_offline_conversions')
+      .upsert(
+        {
+          order_id: orderId,
+          conversion_stage: kind === 'purchase' ? 'confirmed' : 'delivered',
+          conversion_time:
+            (kind === 'purchase' ? order.confirmed_at : order.delivered_at)
+            ?? new Date().toISOString(),
+          value,
+          currency: 'GBP',
+          gclid: order.gclid,
+          gbraid: order.gbraid,
+          wbraid: order.wbraid,
+          customer_email: order.customer_email,
+          customer_phone: order.customer_phone,
+          customer_first_name: name.split(/\s+/)[0] || null,
+          customer_last_name: name.split(/\s+/).slice(1).join(' ') || null,
+          customer_postcode: postcode,
+        },
+        { onConflict: 'order_id,conversion_stage', ignoreDuplicates: true },
+      )
   } catch (err) {
     console.error(`Failed to report ${kind} conversion for order ${orderId}`, err)
   }

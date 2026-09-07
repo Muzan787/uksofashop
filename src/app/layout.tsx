@@ -9,6 +9,7 @@ import { Toaster } from "react-hot-toast";
 import CookieConsent from '@/components/UI/CookieConsent';
 import AnalyticsRedaction from '@/components/UI/AnalyticsRedaction';
 import TrackingScripts from '@/components/UI/TrackingScripts';
+import AttributionBoot from '@/components/UI/AttributionBoot';
 import { META_DESCRIPTION } from '@/constants/promises';
 import { localBusinessSchema, jsonLd } from '@/utils/schema';
 import { METADATA_BASE } from '@/constants/site';
@@ -224,6 +225,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
           <AnalyticsRedaction />
           <TrackingScripts />
+          <AttributionBoot />
 
           <CookieConsent />
           

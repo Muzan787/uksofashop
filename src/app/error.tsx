@@ -13,6 +13,7 @@ import { useEffect } from 'react'
 import Link from 'next/link'
 import { AlertCircle, RotateCw, Home, Phone } from 'lucide-react'
 import { PHONE_DISPLAY, PHONE_HREF } from '@/constants/contact'
+import { usePhoneClick } from '@/utils/attribution/usePhoneClick'
 
 export default function Error({
   error,
@@ -21,6 +22,8 @@ export default function Error({
   error: Error & { digest?: string }
   reset: () => void
 }) {
+  const onPhoneClick = usePhoneClick()
+
   useEffect(() => {
     console.error('Storefront error:', error)
   }, [error])
@@ -59,6 +62,7 @@ export default function Error({
 
         <a
           href={PHONE_HREF}
+          onClick={onPhoneClick}
           className="inline-flex items-center gap-2 text-ember-700 font-semibold text-body-sm hover:underline"
         >
           <Phone className="w-4 h-4" /> {PHONE_DISPLAY}

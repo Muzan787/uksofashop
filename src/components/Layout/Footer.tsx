@@ -15,6 +15,7 @@ import {
 } from '@/constants/contact';
 import TikTokIcon from '@/components/UI/TikTokIcon';
 import type { NavCategory } from '@/utils/navigation';
+import { usePhoneClick } from '@/utils/attribution/usePhoneClick';
 
 /**
  * ─────────────────────────────────────────────────────────────────────────────
@@ -287,6 +288,7 @@ export default function Footer({ categories }: { categories: NavCategory[] }) {
   // became a client fetch, and is now handed down from the root layout, which
   // is what finally puts these links in the server HTML.
   const year = new Date().getFullYear();
+  const onPhoneClick = usePhoneClick();
 
   const shopLinks = [
     { href: '/shop/all', label: 'All Sofas' },
@@ -393,7 +395,7 @@ export default function Footer({ categories }: { categories: NavCategory[] }) {
 
               <p className="m-0 mt-3 flex items-center gap-2 text-body-sm">
                 <Phone aria-hidden="true" className="h-4 w-4 shrink-0 text-ember-300" />
-                <a href={PHONE_HREF} className="hover-link font-data tabular-nums text-calico-50 no-underline">
+                <a href={PHONE_HREF} onClick={onPhoneClick} className="hover-link font-data tabular-nums text-calico-50 no-underline">
                   {PHONE_DISPLAY}
                 </a>
               </p>

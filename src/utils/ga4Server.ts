@@ -18,6 +18,7 @@
 // No-ops unless GA4_MEASUREMENT_ID and GA4_API_SECRET are set.
 
 import 'server-only'
+import { isServerTrackingEnabled } from '@/utils/trackingEnv'
 
 const MEASUREMENT_ID = process.env.GA4_MEASUREMENT_ID
 const API_SECRET = process.env.GA4_API_SECRET
@@ -54,6 +55,9 @@ export function clientIdFromGaCookie(cookieValue: string | null | undefined): st
 /** Never throws: a reporting failure must not affect the order behind it. */
 export async function sendGa4Event(event: Ga4Event): Promise<void> {
   if (!isGa4ServerConfigured()) return
+  // Production gate (utils/trackingEnv.ts) - see the matching note in
+  // utils/metaCapi.ts.
+  if (!isServerTrackingEnabled()) return
 
   const url =
     `https://www.google-analytics.com/mp/collect` +

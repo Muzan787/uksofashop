@@ -33,6 +33,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/utils/supabase/server'
 import { isAdmin } from '@/utils/auth'
 import { isValidUkMobile, UK_MOBILE_ERROR } from '@/utils/phone'
+import { isValidWhatsAppReference } from '@/utils/attribution/whatsapp'
 
 const itemSchema = z.object({
   variant_id: z.string().uuid(),
@@ -68,6 +69,13 @@ const schema = z.object({
   /** One negotiated figure. There is no extras matrix on a phone call. */
   deliveryCharge: z.number().nonnegative().max(10_000),
   items: z.array(itemSchema).min(1, 'Add at least one sofa.'),
+  /**
+   * Optional. Most WhatsApp sales still won't carry one - direct WhatsApp,
+   * referrals, repeat customers, a phone call - and the order must save
+   * exactly as it did before this field existed either way. See
+   * 20260906160000_manual_order_whatsapp_reference.sql.
+   */
+  whatsappReference: z.string().trim().max(32).optional(),
 })
 
 export type ManualOrderInput = z.input<typeof schema>
@@ -112,6 +120,14 @@ export async function createWhatsAppOrder(input: ManualOrderInput): Promise<Manu
     })),
     p_delivery_charge: v.deliveryCharge,
     p_source: 'whatsapp',
+    // Malformed input is passed through as null rather than rejecting the
+    // whole order over a typo'd reference - the database function already
+    // treats an unmatched reference as a no-op, so this only avoids sending
+    // it a value that could never match anything.
+    p_whatsapp_reference:
+      v.whatsappReference && isValidWhatsAppReference(v.whatsappReference)
+        ? v.whatsappReference.toUpperCase()
+        : null,
   })
 
   if (error || !data) {

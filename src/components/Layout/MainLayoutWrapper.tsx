@@ -66,10 +66,9 @@ export default function MainLayoutWrapper({
       </main>
       <Footer categories={categories} />
       {/* Storefront only, and mounted here rather than on the homepage so it
-          exists on the product page too — which is where somebody actually has
-          a question about fabric, size or delivery. It hides itself on the
-          first screen of every page and stands down wherever a page pins its
-          own bar to the bottom of the viewport. */}
+          exists on every customer-facing route. It stays visible at every
+          scroll position, repositions above pinned bottom bars, and switches
+          to support-only semantics in known existing-order contexts. */}
       <WhatsAppFab />
       <MobileNav />
     </SmoothScroll>

@@ -10,6 +10,7 @@ import { useSearchParams } from 'next/navigation'
 import Timeline from '@/components/UI/Timeline'
 import { STATUS } from '@/utils/orderStatus'
 import { PHONE_DISPLAY, PHONE_HREF } from '@/constants/contact'
+import { usePhoneClick } from '@/utils/attribution/usePhoneClick'
 
 /**
  * Where is it.
@@ -24,6 +25,7 @@ import { PHONE_DISPLAY, PHONE_HREF } from '@/constants/contact'
  * email should recognise the picture they were shown when they ordered.
  */
 function TrackInterface() {
+  const onPhoneClick = usePhoneClick()
   const sp = useSearchParams()
   // `code` is the parameter older status emails used, kept so links already
   // sitting in customers' inboxes still fill the field in.
@@ -149,7 +151,7 @@ function TrackInterface() {
           {error}
           <span className="mt-2 block text-caption text-ink-500">
             Still stuck? Call us on{' '}
-            <a href={PHONE_HREF} className="hover-link font-semibold text-ember-700 no-underline">
+            <a href={PHONE_HREF} onClick={onPhoneClick} className="hover-link font-semibold text-ember-700 no-underline">
               {PHONE_DISPLAY}
             </a>.
           </span>

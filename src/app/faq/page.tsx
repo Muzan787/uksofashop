@@ -6,7 +6,8 @@ import EditorialHero from '@/components/Editorial/EditorialHero'
 import FaqList from './FaqList'
 import { allFaqs } from './faqData'
 import { breadcrumbSchema, jsonLd, SITE_URL } from '@/utils/schema'
-import { PHONE_DISPLAY, PHONE_HREF } from '@/constants/contact'
+import { PHONE_DISPLAY } from '@/constants/contact'
+import PhoneLink from '@/components/UI/PhoneLink'
 
 export const metadata: Metadata = {
   title: 'Frequently Asked Questions',
@@ -85,12 +86,9 @@ export default function FAQPage() {
             </div>
 
             <div className="flex shrink-0 flex-wrap gap-3">
-              <a
-                href={PHONE_HREF}
-                className="hover-btn hover-btn-dark flex h-12 items-center rounded-sm border border-calico-50/25 px-5 font-data text-eyebrow font-bold uppercase tracking-[0.1em] text-calico-50 no-underline"
-              >
+              <PhoneLink className="hover-btn hover-btn-dark flex h-12 items-center rounded-sm border border-calico-50/25 px-5 font-data text-eyebrow font-bold uppercase tracking-[0.1em] text-calico-50 no-underline">
                 {PHONE_DISPLAY}
-              </a>
+              </PhoneLink>
               <Link
                 href="/contact"
                 className="hover-btn flex h-12 items-center rounded-sm bg-ember-500 px-5 font-data text-eyebrow font-bold uppercase tracking-[0.1em] text-ink-900 no-underline"

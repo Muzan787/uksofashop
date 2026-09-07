@@ -285,6 +285,24 @@ export type Database = {
           total_amount: number
           wants_assembly: boolean
           wants_sofa_removal: boolean
+          visitor_id: string | null
+          session_id: string | null
+          arrival_id: string | null
+          gclid: string | null
+          gbraid: string | null
+          wbraid: string | null
+          fbclid: string | null
+          utm_source: string | null
+          utm_medium: string | null
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_term: string | null
+          landing_page: string | null
+          referrer: string | null
+          whatsapp_reference: string | null
+          confirmed_at: string | null
+          cancelled_at: string | null
+          cancellation_reason: string | null
         }
         Insert: {
           created_at?: string | null
@@ -317,6 +335,24 @@ export type Database = {
           total_amount: number
           wants_assembly?: boolean
           wants_sofa_removal?: boolean
+          visitor_id?: string | null
+          session_id?: string | null
+          arrival_id?: string | null
+          gclid?: string | null
+          gbraid?: string | null
+          wbraid?: string | null
+          fbclid?: string | null
+          utm_source?: string | null
+          utm_medium?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_term?: string | null
+          landing_page?: string | null
+          referrer?: string | null
+          whatsapp_reference?: string | null
+          confirmed_at?: string | null
+          cancelled_at?: string | null
+          cancellation_reason?: string | null
         }
         Update: {
           created_at?: string | null
@@ -349,6 +385,345 @@ export type Database = {
           total_amount?: number
           wants_assembly?: boolean
           wants_sofa_removal?: boolean
+          visitor_id?: string | null
+          session_id?: string | null
+          arrival_id?: string | null
+          gclid?: string | null
+          gbraid?: string | null
+          wbraid?: string | null
+          fbclid?: string | null
+          utm_source?: string | null
+          utm_medium?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_term?: string | null
+          landing_page?: string | null
+          referrer?: string | null
+          whatsapp_reference?: string | null
+          confirmed_at?: string | null
+          cancelled_at?: string | null
+          cancellation_reason?: string | null
+        }
+        Relationships: []
+      }
+      attribution_sessions: {
+        Row: {
+          id: string
+          visitor_id: string
+          session_id: string
+          arrival_id: string
+          created_at: string
+          last_seen_at: string
+          first_touch_source: string | null
+          first_touch_medium: string | null
+          first_touch_campaign: string | null
+          first_touch_content: string | null
+          first_touch_term: string | null
+          last_touch_source: string | null
+          last_touch_medium: string | null
+          last_touch_campaign: string | null
+          last_touch_content: string | null
+          last_touch_term: string | null
+          gclid: string | null
+          gbraid: string | null
+          wbraid: string | null
+          fbclid: string | null
+          ga_client_id: string | null
+          meta_fbp: string | null
+          meta_fbc: string | null
+          landing_page: string | null
+          referrer: string | null
+          initial_product_id: string | null
+          initial_variant_id: string | null
+        }
+        Insert: {
+          id?: string
+          visitor_id: string
+          session_id: string
+          arrival_id: string
+          created_at?: string
+          last_seen_at?: string
+          first_touch_source?: string | null
+          first_touch_medium?: string | null
+          first_touch_campaign?: string | null
+          first_touch_content?: string | null
+          first_touch_term?: string | null
+          last_touch_source?: string | null
+          last_touch_medium?: string | null
+          last_touch_campaign?: string | null
+          last_touch_content?: string | null
+          last_touch_term?: string | null
+          gclid?: string | null
+          gbraid?: string | null
+          wbraid?: string | null
+          fbclid?: string | null
+          ga_client_id?: string | null
+          meta_fbp?: string | null
+          meta_fbc?: string | null
+          landing_page?: string | null
+          referrer?: string | null
+          initial_product_id?: string | null
+          initial_variant_id?: string | null
+        }
+        Update: {
+          id?: string
+          visitor_id?: string
+          session_id?: string
+          arrival_id?: string
+          created_at?: string
+          last_seen_at?: string
+          first_touch_source?: string | null
+          first_touch_medium?: string | null
+          first_touch_campaign?: string | null
+          first_touch_content?: string | null
+          first_touch_term?: string | null
+          last_touch_source?: string | null
+          last_touch_medium?: string | null
+          last_touch_campaign?: string | null
+          last_touch_content?: string | null
+          last_touch_term?: string | null
+          gclid?: string | null
+          gbraid?: string | null
+          wbraid?: string | null
+          fbclid?: string | null
+          ga_client_id?: string | null
+          meta_fbp?: string | null
+          meta_fbc?: string | null
+          landing_page?: string | null
+          referrer?: string | null
+          initial_product_id?: string | null
+          initial_variant_id?: string | null
+        }
+        Relationships: []
+      }
+      whatsapp_enquiries: {
+        Row: {
+          id: string
+          reference: string
+          created_at: string
+          visitor_id: string | null
+          session_id: string | null
+          arrival_id: string | null
+          page_url: string | null
+          page_context: string | null
+          product_id: string | null
+          variant_id: string | null
+          product_name: string | null
+          gclid: string | null
+          gbraid: string | null
+          wbraid: string | null
+          fbclid: string | null
+          utm_source: string | null
+          utm_medium: string | null
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_term: string | null
+          ga_client_id: string | null
+          meta_fbp: string | null
+          meta_fbc: string | null
+          converted_order_id: string | null
+          converted_at: string | null
+        }
+        Insert: {
+          id?: string
+          reference: string
+          created_at?: string
+          visitor_id?: string | null
+          session_id?: string | null
+          arrival_id?: string | null
+          page_url?: string | null
+          page_context?: string | null
+          product_id?: string | null
+          variant_id?: string | null
+          product_name?: string | null
+          gclid?: string | null
+          gbraid?: string | null
+          wbraid?: string | null
+          fbclid?: string | null
+          utm_source?: string | null
+          utm_medium?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_term?: string | null
+          ga_client_id?: string | null
+          meta_fbp?: string | null
+          meta_fbc?: string | null
+          converted_order_id?: string | null
+          converted_at?: string | null
+        }
+        Update: {
+          id?: string
+          reference?: string
+          created_at?: string
+          visitor_id?: string | null
+          session_id?: string | null
+          arrival_id?: string | null
+          page_url?: string | null
+          page_context?: string | null
+          product_id?: string | null
+          variant_id?: string | null
+          product_name?: string | null
+          gclid?: string | null
+          gbraid?: string | null
+          wbraid?: string | null
+          fbclid?: string | null
+          utm_source?: string | null
+          utm_medium?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_term?: string | null
+          ga_client_id?: string | null
+          meta_fbp?: string | null
+          meta_fbc?: string | null
+          converted_order_id?: string | null
+          converted_at?: string | null
+        }
+        Relationships: []
+      }
+      attribution_actions: {
+        Row: {
+          id: string
+          created_at: string
+          visitor_id: string | null
+          session_id: string | null
+          arrival_id: string | null
+          action_type: string
+          page_url: string | null
+          product_id: string | null
+          variant_id: string | null
+          whatsapp_reference: string | null
+          order_id: string | null
+          metadata: Json | null
+        }
+        Insert: {
+          id?: string
+          created_at?: string
+          visitor_id?: string | null
+          session_id?: string | null
+          arrival_id?: string | null
+          action_type: string
+          page_url?: string | null
+          product_id?: string | null
+          variant_id?: string | null
+          whatsapp_reference?: string | null
+          order_id?: string | null
+          metadata?: Json | null
+        }
+        Update: {
+          id?: string
+          created_at?: string
+          visitor_id?: string | null
+          session_id?: string | null
+          arrival_id?: string | null
+          action_type?: string
+          page_url?: string | null
+          product_id?: string | null
+          variant_id?: string | null
+          whatsapp_reference?: string | null
+          order_id?: string | null
+          metadata?: Json | null
+        }
+        Relationships: []
+      }
+      google_offline_conversions: {
+        Row: {
+          id: string
+          order_id: string
+          conversion_stage: string
+          conversion_time: string
+          value: number
+          currency: string
+          gclid: string | null
+          gbraid: string | null
+          wbraid: string | null
+          customer_email: string | null
+          customer_phone: string | null
+          customer_first_name: string | null
+          customer_last_name: string | null
+          customer_postcode: string | null
+          upload_status: string
+          uploaded_at: string | null
+          error_message: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          order_id: string
+          conversion_stage: string
+          conversion_time: string
+          value: number
+          currency?: string
+          gclid?: string | null
+          gbraid?: string | null
+          wbraid?: string | null
+          customer_email?: string | null
+          customer_phone?: string | null
+          customer_first_name?: string | null
+          customer_last_name?: string | null
+          customer_postcode?: string | null
+          upload_status?: string
+          uploaded_at?: string | null
+          error_message?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          order_id?: string
+          conversion_stage?: string
+          conversion_time?: string
+          value?: number
+          currency?: string
+          gclid?: string | null
+          gbraid?: string | null
+          wbraid?: string | null
+          customer_email?: string | null
+          customer_phone?: string | null
+          customer_first_name?: string | null
+          customer_last_name?: string | null
+          customer_postcode?: string | null
+          upload_status?: string
+          uploaded_at?: string | null
+          error_message?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      conversion_events: {
+        Row: {
+          id: string
+          order_id: string | null
+          platform: string
+          event_name: string
+          event_id: string | null
+          created_at: string
+          sent_at: string | null
+          status: string
+          response_metadata: Json | null
+          error_metadata: Json | null
+        }
+        Insert: {
+          id?: string
+          order_id?: string | null
+          platform: string
+          event_name: string
+          event_id?: string | null
+          created_at?: string
+          sent_at?: string | null
+          status?: string
+          response_metadata?: Json | null
+          error_metadata?: Json | null
+        }
+        Update: {
+          id?: string
+          order_id?: string | null
+          platform?: string
+          event_name?: string
+          event_id?: string | null
+          created_at?: string
+          sent_at?: string | null
+          status?: string
+          response_metadata?: Json | null
+          error_metadata?: Json | null
         }
         Relationships: []
       }
@@ -735,6 +1110,8 @@ export type Database = {
           p_shipping_address: string
           p_source?: string
           p_special_instructions: string
+          // Optional. See 20260906160000_manual_order_whatsapp_reference.sql.
+          p_whatsapp_reference?: string | null
         }
         Returns: Json
       }
