@@ -53,6 +53,7 @@ jobs:
           const fs = require('fs');
           const widths = [320,390,430,768];
           const results = [];
+          const HEADING = 'h2[aria-label="The latest through the door."]';
 
           async function protect(page) {
             await page.route('**/api/attribution/**', r => r.fulfill({status:204, body:''}));
@@ -60,39 +61,45 @@ jobs:
             await page.route(/google-analytics\.com|googletagmanager\.com|connect\.facebook\.net|facebook\.com\/tr/, r => r.abort());
           }
           async function getParts(page) {
-            const heading = page.locator('h2[aria-label="The latest through the door."]').first();
-            await heading.waitFor({state:'attached', timeout:30000});
-            const section = heading.locator('xpath=ancestor::section[1]');
-            const rail = section.locator('div.overflow-x-auto').first();
-            await rail.waitFor({state:'visible'});
+            await page.waitForSelector(HEADING, {state:'attached', timeout:30000});
+            const heading = await page.$(HEADING);
+            if (!heading) throw new Error('New In heading missing');
+            const sectionHandle = await page.evaluateHandle(h => h.closest('section'), heading);
+            const section = sectionHandle.asElement();
+            if (!section) throw new Error('New In section missing');
+            const rail = await section.$('div.overflow-x-auto');
+            if (!rail) throw new Error('New In rail missing');
             return {heading,section,rail};
           }
+          async function cards(rail) { return rail.$$(':scope > *'); }
           async function targetFor(rail, kind) {
-            const card = rail.locator(':scope > *').first();
-            if (kind === 'image') return card.locator('[data-card-media]');
-            if (kind === 'title') return card.locator('h3');
-            if (kind === 'price') return card.locator('span.font-data').first();
+            const list = await cards(rail); const card = list[0];
+            if (!card) throw new Error('first card missing');
+            if (kind === 'image') return card.$('[data-card-media]');
+            if (kind === 'title') return card.$('h3');
+            if (kind === 'price') return card.$('span.font-data');
             return card;
           }
           async function startPoint(rail, kind) {
-            const card = rail.locator(':scope > *').first();
-            let b;
-            if (kind === 'image') b = await card.locator('[data-card-media]').boundingBox();
-            if (kind === 'title') b = await card.locator('h3').boundingBox();
-            if (kind === 'price') b = await card.locator('span.font-data').first().boundingBox();
+            const list = await cards(rail); const card = list[0];
+            if (!card) throw new Error('first card missing');
             if (kind === 'gap') {
-              const a = await rail.locator(':scope > *').nth(0).boundingBox();
-              const c = await rail.locator(':scope > *').nth(1).boundingBox();
+              const a = await list[0].boundingBox(); const c = list[1] && await list[1].boundingBox();
               if (!a || !c) throw new Error('gap missing');
               return {x:(a.x+a.width+c.x)/2, y:a.y+Math.min(a.height/2,240)};
             }
-            if (!b) throw new Error(`${kind} missing`);
+            const node = await targetFor(rail,kind);
+            if (!node) throw new Error(`${kind} missing`);
+            const b = await node.boundingBox();
+            if (!b) throw new Error(`${kind} box missing`);
             return {x:b.x+b.width/2, y:b.y+b.height/2};
           }
           async function reset(page, rail, kind) {
             await page.evaluate(() => window.scrollTo(0,0));
             await rail.evaluate(el => el.scrollLeft = 0);
-            await targetFor(rail, kind === 'gap' ? 'image' : kind).scrollIntoViewIfNeeded();
+            const node = await targetFor(rail, kind === 'gap' ? 'image' : kind);
+            if (!node) throw new Error('reset target missing');
+            await node.scrollIntoViewIfNeeded();
             await page.waitForTimeout(300);
           }
           async function nativeGesture(page, p, xDistance, yDistance) {
@@ -126,7 +133,7 @@ jobs:
             try{
               for(const width of widths){
                 const context=await browser.newContext({viewport:{width,height:width===768?1024:844},isMobile:width<768,hasTouch:true});
-                const page=await context.newPage(); await page.emulateMedia({reducedMotion:'no-preference'}); await protect(page); await page.goto(process.env.QA_URL,{waitUntil:'domcontentloaded'});
+                const page=await context.newPage(); await protect(page); await page.goto(process.env.QA_URL,{waitUntil:'domcontentloaded'});
                 const {section,rail}=await getParts(page); const cases=[]; let r;
 
                 await page.evaluate(()=>window.scrollTo(0,0)); await page.waitForTimeout(300);
@@ -144,15 +151,17 @@ jobs:
                 r=await run(page,rail,'vertical-price','price',0,-160); vertical(r); cases.push(r);
                 r=await run(page,rail,'vertical-gap','gap',0,-160); vertical(r); cases.push(r);
                 r=await run(page,rail,'horizontal-gap','gap',-180,0); horizontal(r); cases.push(r);
+
                 await reset(page,rail,'image');
-                const dots=section.getByRole('tab');
-                if(await dots.count()>1){ const x0=await rail.evaluate(el=>el.scrollLeft); await dots.nth(1).click(); await page.waitForTimeout(700); const x1=await rail.evaluate(el=>el.scrollLeft); if(x1<=x0+20) throw new Error(`${width} dot FAIL`); }
-                const href=await rail.locator(':scope > *').first().locator('a[href^="/shop/"]').first().getAttribute('href');
+                const dots=await section.$$('button[role="tab"]');
+                if(dots.length>1){ const x0=await rail.evaluate(el=>el.scrollLeft); await dots[1].click(); await page.waitForTimeout(700); const x1=await rail.evaluate(el=>el.scrollLeft); if(x1<=x0+20) throw new Error(`${width} dot FAIL ${x0}->${x1}`); }
+                const list=await cards(rail); const link=list[0] && await list[0].$('a[href^="/shop/"]'); const href=link ? await link.evaluate(el=>el.getAttribute('href')) : null;
                 const overflow=await page.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth);
                 if(!href||overflow>1) throw new Error(`${width} regression FAIL href=${href} overflow=${overflow}`);
                 results.push({width,cases,href,overflow}); await page.screenshot({path:`p2a-${width}.png`}); await context.close();
               }
-              const context=await browser.newContext({viewport:{width:1440,height:1000}}); const page=await context.newPage(); await protect(page); await page.goto(process.env.QA_URL,{waitUntil:'domcontentloaded'}); const {rail}=await getParts(page); await targetFor(rail,'image').scrollIntoViewIfNeeded(); const y0=await page.evaluate(()=>scrollY); await page.mouse.wheel(0,500); await page.waitForTimeout(700); const y1=await page.evaluate(()=>scrollY); const overflow=await page.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth); if(y1<=y0+100||overflow>1) throw new Error(`desktop FAIL y ${y0}->${y1} overflow ${overflow}`); results.push({width:1440,desktop:{y0,y1,overflow}}); await page.screenshot({path:'p2a-1440.png'}); await context.close();
+
+              const context=await browser.newContext({viewport:{width:1440,height:1000}}); const page=await context.newPage(); await protect(page); await page.goto(process.env.QA_URL,{waitUntil:'domcontentloaded'}); const {rail}=await getParts(page); const node=await targetFor(rail,'image'); if(node) await node.scrollIntoViewIfNeeded(); const y0=await page.evaluate(()=>scrollY); await page.mouse.wheel(0,500); await page.waitForTimeout(700); const y1=await page.evaluate(()=>scrollY); const overflow=await page.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth); if(y1<=y0+100||overflow>1) throw new Error(`desktop FAIL y ${y0}->${y1} overflow ${overflow}`); results.push({width:1440,desktop:{y0,y1,overflow}}); await page.screenshot({path:'p2a-1440.png'}); await context.close();
             } finally { fs.writeFileSync('p2a-results.json',JSON.stringify(results,null,2)); await browser.close(); }
           })().catch(e=>{console.error(e);process.exit(1)});
           NODE
