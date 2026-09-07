@@ -89,11 +89,13 @@ jobs:
               for(const [label,window] of expected){
                 assert(sectionText.includes(label),`section textContent missing ${label} @${width}`);
                 assert(sectionText.includes(window),`section textContent missing ${window} @${width}`);
-                assert(html.includes(label),`rendered HTML missing ${label} @${width}`);
+                const htmlLabel=label.replaceAll('&','&amp;');
+                assert(html.includes(htmlLabel),`rendered HTML missing ${label} @${width}`);
                 assert(html.includes(window),`rendered HTML missing ${window} @${width}`);
               }
               console.log(`DOM_CONTENT_${width}=PASS`);
               console.log(`ALL_TEXT_${width}=${JSON.stringify(allText)}`);
+              console.log(`RENDERED_HTML_${width}=PASS`);
 
               await section.scrollIntoViewIfNeeded();
               await page.waitForTimeout(500);
@@ -103,7 +105,18 @@ jobs:
               assert(sectionVisibility!=='hidden',`regional section hidden @${width}`);
 
               const rows=section.locator('dl > div');
-              let previousBottom=null;
+              const layout=await rows.evaluateAll((els)=>els.map(el=>{
+                const r=el.getBoundingClientRect();
+                return {x:r.x,y:r.y+window.scrollY,w:r.width,h:r.height,right:r.right,bottom:r.bottom+window.scrollY};
+              }));
+              for(let i=0;i<layout.length;i++){
+                const box=layout[i];
+                assert(box.x>=-1,`regional row ${i} clipped left x=${box.x} @${width}`);
+                assert(box.right<=width+1,`regional row ${i} clipped right edge=${box.right} @${width}`);
+                assert(box.w>0 && box.h>0,`regional row ${i} zero-size @${width}`);
+                if(i>0) assert(box.y>=layout[i-1].bottom-1,`regional rows ${i-1}/${i} overlap @${width}`);
+              }
+
               const rowMetrics=[];
               for(let i=0;i<4;i++){
                 const row=rows.nth(i);
@@ -112,11 +125,6 @@ jobs:
                 assert(await row.isVisible(),`regional row ${i} not visible after scroll @${width}`);
                 const box=await row.boundingBox();
                 assert(box,`regional row ${i} has no bounding box @${width}`);
-                assert(box.x>=-1,`regional row ${i} clipped left x=${box.x} @${width}`);
-                assert(box.x+box.width<=width+1,`regional row ${i} clipped right edge=${box.x+box.width} @${width}`);
-                assert(box.width>0 && box.height>0,`regional row ${i} zero-size @${width}`);
-                if(previousBottom!==null) assert(box.y>=previousBottom-1 || box.y<0,`regional rows overlap @${width}`);
-                previousBottom=box.y+box.height;
                 const label=await row.locator('dt span').first().textContent();
                 const windowText=await row.locator('dt span').nth(1).textContent();
                 assert((label||'').trim()===expected[i][0],`row ${i} label mismatch @${width}`);
@@ -132,7 +140,7 @@ jobs:
               assert(pageErrors.length===0,`page errors @${width}: ${pageErrors.join(' | ')}`);
               await section.screenshot({path:`regional-map-evidence/regional-map-${width}.png`});
               console.log(`VISUAL_${width}=PASS rows=${JSON.stringify(rowMetrics)} overflow=${pageOverflow}`);
-              results.push({width,pageOverflow,rowMetrics});
+              results.push({width,pageOverflow,rowMetrics,layout});
               await context.close();
             }
             console.log('SOURCE_CONTENT=PASS');
