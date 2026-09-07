@@ -84,7 +84,7 @@ jobs:
             const browser=await chromium.launch({executablePath:'/usr/bin/google-chrome',headless:true,args:['--no-sandbox']});
             const results=[];
             for(const width of [390,430,1440]){
-              const context=await browser.newContext({viewport:{width,height:1000},serviceWorkers:'block'});
+              const context=await browser.newContext({viewport:{width,height:1000}});
               await context.route('**/api/attribution/**',r=>r.abort());
               await context.route('**/api/meta/**',r=>r.abort());
               await context.route(/google-analytics|googletagmanager|googleadservices|connect\.facebook\.net|facebook\.com\/tr/i,r=>r.abort());
