@@ -15,9 +15,9 @@ async function fresh(browser) {
 }
 
 async function acceptAll(page) {
-  const button = page.getByRole('button', { name: 'Accept all' });
-  if (!(await button.count())) throw new Error('cookie banner Accept all button missing');
-  await button.first().click();
+  const button = page.getByRole('button', { name: 'Accept all' }).first();
+  await button.waitFor({ state: 'visible', timeout: 5000 });
+  await button.click();
   await page.waitForFunction(() => window.localStorage.getItem('cookie_consent') === 'granted', null, { timeout: 5000 });
 
   // CookieConsent dispatches this same event when consent is granted. Dispatch
