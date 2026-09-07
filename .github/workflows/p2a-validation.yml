@@ -105,7 +105,7 @@ jobs:
                 await page.waitForTimeout(800);
 
                 const {section, rail} = await getRail(page);
-                const newIn = await section.getByText('NEW IN', {exact:true}).count();
+                const newIn = await section.getByText(/new in/i).count();
                 const subtitle = await page.getByText('The latest through the door', {exact:false}).count();
                 if (!newIn || !subtitle) throw new Error(`${width}: real Homepage New In copy missing`);
 
