@@ -1,4 +1,4 @@
-name: Phase 2B live production QA
+name: Phase 2B final regional map gate
 
 on:
   push:
@@ -8,282 +8,148 @@ permissions:
   contents: read
 
 jobs:
-  live-production:
+  regional-map:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
-      PROD: https://www.uksofashop.co.uk
-      EXPECTED_MASTER: 8c95f41dab666b3af4dc8aa05a951f1193c8fa75
+      RELEASE_BRANCH: fix/cro-phase2b-trust-delivery-release
+      EXPECTED_RELEASE: b3955174c62639e65bf6b2eb2bdb57e71227e423
+      NEXT_PUBLIC_SUPABASE_URL: https://nznpeqjnoobhyxwnmsez.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_tMk28Ay_hIljhv8NQcV01Q_cI9ApS9c
+      NEXT_PUBLIC_SITE_URL: http://127.0.0.1:3000
     steps:
-      - name: Checkout production master for exact-SHA/source protection checks
+      - name: Checkout exact release candidate
         uses: actions/checkout@v4
         with:
-          ref: ${{ env.EXPECTED_MASTER }}
-          fetch-depth: 2
-      - name: Verify exact production SHA and protected source
+          ref: ${{ env.RELEASE_BRANCH }}
+          fetch-depth: 1
+
+      - name: Verify exact release and source content
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = "$EXPECTED_MASTER"
-          grep -Fq 'data-lenis-prevent-horizontal' src/components/Home/ProductRail.tsx
-          test -f supabase/migrations/20260907172933_atomic_confirm_order_timestamp.sql
-          grep -Fq "confirmed_at = coalesce(o.confirmed_at, now())" supabase/migrations/20260907172933_atomic_confirm_order_timestamp.sql
-          echo 'PROTECTED_SOURCE=PASS'
-      - name: Prepare browser harness
+          test "$(git rev-parse HEAD)" = "$EXPECTED_RELEASE"
+          grep -Fq "label: 'The North & Midlands'" src/components/Editorial/CoverageMap.tsx
+          grep -Fq "window: '2–3 working days'" src/components/Editorial/CoverageMap.tsx
+          grep -Fq "label: 'The South & East'" src/components/Editorial/CoverageMap.tsx
+          grep -Fq "window: '3–4 working days'" src/components/Editorial/CoverageMap.tsx
+          grep -Fq "label: 'Wales & Scotland'" src/components/Editorial/CoverageMap.tsx
+          grep -Fq "window: '5–7 working days'" src/components/Editorial/CoverageMap.tsx
+          grep -Fq "label: 'Islands & Northern Ireland'" src/components/Editorial/CoverageMap.tsx
+          grep -Fq "window: 'Ask us first'" src/components/Editorial/CoverageMap.tsx
+          echo 'SOURCE_CONTENT=PASS'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npm run build
+
+      - name: Prepare browser
         run: |
-          mkdir -p /tmp/pw live-evidence
+          mkdir -p /tmp/pw regional-evidence
           npm install --prefix /tmp/pw playwright-core@1.55.0
           google-chrome --version
-      - name: Live production matrix
+
+      - name: Start candidate
+        shell: bash
+        run: |
+          npm start -- --hostname 127.0.0.1 --port 3000 >/tmp/app.log 2>&1 &
+          for i in {1..60}; do
+            if curl -fsS http://127.0.0.1:3000/delivery-returns >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/app.log
+          exit 1
+
+      - name: DOM and visual regional map gate
         env:
           NODE_PATH: /tmp/pw/node_modules
         shell: bash
         run: |
           node <<'NODE'
           const { chromium } = require('playwright-core');
-          const assert = (c,m) => { if(!c) throw new Error(m); };
-          const PROD=process.env.PROD;
-          const custom='/shop/fabric-sofa/verona-high-back-4-seater-corner-1c2?variant=a5d2050d-c458-4e0c-b3b3-7b7c727845a0';
-          const fixed='/shop/recliner/roma-recliner-manual-armchair?variant=562327ad-ee1e-4683-8f39-28f1289f8696';
-          const expectedRegions=[
+          const assert=(c,m)=>{if(!c) throw new Error(m)};
+          const BASE='http://127.0.0.1:3000';
+          const expected=[
             ['The North & Midlands','2–3 working days'],
             ['The South & East','3–4 working days'],
             ['Wales & Scotland','5–7 working days'],
             ['Islands & Northern Ireland','Ask us first'],
           ];
-
-          async function quietContext(browser, viewport, mobile=false){
-            const context=await browser.newContext({viewport, isMobile:mobile, hasTouch:mobile, serviceWorkers:'block'});
-            await context.route(/google-analytics|googletagmanager|googleadservices|connect\.facebook\.net|facebook\.com\/tr/i, r=>r.abort());
-            await context.route('**/api/attribution/**', r=>r.abort());
-            await context.route('**/api/meta/**', r=>r.abort());
-            return context;
-          }
-          const bodyText = p => p.locator('body').textContent();
-          const noPageOverflow = async (p,label) => {
-            const overflow=await p.evaluate(()=>document.documentElement.scrollWidth-window.innerWidth);
-            assert(overflow<=1,`${label}: horizontal overflow ${overflow}px`);
-            return overflow;
-          };
-          const noClippedText = async (p,label) => {
-            const clipped=await p.evaluate(()=>{
-              const els=[...document.querySelectorAll('h1,h2,h3,p,a,span,dt,dd')];
-              return els.filter(el=>{
-                const r=el.getBoundingClientRect();
-                if(!r.width || !r.height) return false;
-                const cs=getComputedStyle(el);
-                if(cs.position==='fixed' || cs.position==='absolute') return false;
-                return r.right>document.documentElement.clientWidth+2 || r.left<-2;
-              }).slice(0,10).map(el=>({text:(el.textContent||'').trim().slice(0,80),rect:el.getBoundingClientRect().toJSON()}));
-            });
-            assert(clipped.length===0,`${label}: clipped text ${JSON.stringify(clipped)}`);
-          };
-
           (async()=>{
             const browser=await chromium.launch({executablePath:'/usr/bin/google-chrome',headless:true,args:['--no-sandbox']});
-
-            // Wait until the production alias serves the new Phase 2B hero, not merely until Vercel says deployment succeeded.
-            let productionReady=false;
-            for(let attempt=1; attempt<=10 && !productionReady; attempt++){
-              const context=await quietContext(browser,{width:390,height:900},true);
-              const p=await context.newPage();
-              try{
-                await p.goto(PROD+'/?phase2b_release_probe='+Date.now(),{waitUntil:'domcontentloaded',timeout:45000});
-                const t=(await bodyText(p))||'';
-                productionReady=t.includes('Fabric sofas made to your size. Delivered free. Pay on arrival.');
-              } finally { await context.close(); }
-              if(!productionReady) await new Promise(r=>setTimeout(r,6000));
-            }
-            assert(productionReady,'production alias did not serve Phase 2B release within retry window');
-            console.log('PRODUCTION_ALIAS_NEW_RELEASE=PASS');
-
-            // Homepage mobile + desktop.
-            for(const width of [320,390,430,1440]){
-              const context=await quietContext(browser,{width,height:900},width<768);
-              const p=await context.newPage();
-              const pageErrors=[]; p.on('pageerror',e=>pageErrors.push(e.message));
-              await p.goto(PROD+'/?phase2b_qa='+width+'_'+Date.now(),{waitUntil:'networkidle',timeout:60000});
-              const t=(await bodyText(p))||'';
-              assert(t.includes('Fabric sofas made to your size. Delivered free. Pay on arrival.'),`home ${width}: hero`);
-              assert(/\d+ sofas available/.test(t),`home ${width}: catalogue count wording`);
-              assert(t.includes('Most UK Mainland: 2–4 working days') || t.includes('Most UK Mainland orders arrive in 2–4 working days.'),`home ${width}: qualified delivery`);
-              assert(t.includes('Some Wales and Scotland postcodes take 5–7 working days.'),`home ${width}: Wales/Scotland exception`);
-              assert(!t.includes('Cash on Delivery Available Nationwide'),`home ${width}: old nationwide payment claim`);
-              assert(await p.locator('footer a[href="https://www.tiktok.com"]').count()===0,`home ${width}: placeholder TikTok`);
-              assert(await p.locator('[data-lenis-prevent-horizontal]').count()>=1,`home ${width}: Phase 2A attribute missing`);
-              const overflow=await noPageOverflow(p,`home ${width}`);
-              await noClippedText(p,`home ${width}`);
-              assert(pageErrors.length===0,`home ${width}: page errors ${pageErrors.join(' | ')}`);
-              await p.screenshot({path:`live-evidence/home-${width}.png`,fullPage:true});
-              console.log(`LIVE_HOME_${width}=PASS overflow=${overflow}`);
-              await context.close();
-            }
-
-            // Delivery page DOM + visual at required widths.
+            const results=[];
             for(const width of [390,430,1440]){
-              const context=await quietContext(browser,{width,height:900},width<768);
-              const p=await context.newPage();
-              await p.goto(PROD+'/delivery-returns?phase2b_qa='+Date.now(),{waitUntil:'networkidle',timeout:60000});
-              const section=p.locator('section[aria-labelledby="coverage-heading"]');
-              await section.waitFor({state:'attached',timeout:15000});
-              const allText=await section.locator('dl > div').allTextContents();
-              assert(allText.length===4,`delivery ${width}: regional row count ${allText.length}`);
-              const sectionText=(await section.textContent())||'';
-              for(const [label,window] of expectedRegions){
-                assert(sectionText.includes(label),`delivery ${width}: missing ${label}`);
-                assert(sectionText.includes(window),`delivery ${width}: missing ${window}`);
-              }
-              const rows=section.locator('dl > div');
-              const layout=await rows.evaluateAll(els=>els.map(el=>{const r=el.getBoundingClientRect();return {x:r.x,y:r.y+window.scrollY,w:r.width,h:r.height,right:r.right,bottom:r.bottom+window.scrollY};}));
-              for(let i=0;i<layout.length;i++){
-                assert(layout[i].x>=-1 && layout[i].right<=width+1,`delivery ${width}: row ${i} horizontal clipping`);
-                assert(layout[i].w>0 && layout[i].h>0,`delivery ${width}: row ${i} zero size`);
-                if(i>0) assert(layout[i].y>=layout[i-1].bottom-1,`delivery ${width}: rows overlap`);
-                const row=rows.nth(i);
-                await row.scrollIntoViewIfNeeded(); await p.waitForTimeout(120);
-                assert(await row.isVisible(),`delivery ${width}: row ${i} not visible after scroll`);
-              }
-              await section.scrollIntoViewIfNeeded(); await p.waitForTimeout(200);
-              const overflow=await noPageOverflow(p,`delivery ${width}`);
-              await section.screenshot({path:`live-evidence/delivery-${width}.png`});
-              console.log(`LIVE_DELIVERY_${width}=PASS overflow=${overflow} rows=${JSON.stringify(allText)}`);
-              await context.close();
-            }
-
-            // Category truth checks at desktop.
-            const categoryResults={};
-            for(const path of ['/shop/fabric-sofa','/shop/leather-sofa','/shop/electric-sofa']){
-              const context=await quietContext(browser,{width:1440,height:1000});
-              const p=await context.newPage();
-              await p.goto(PROD+path+'?phase2b_qa='+Date.now(),{waitUntil:'networkidle',timeout:60000});
-              const t=(await bodyText(p))||'';
-              assert(t.includes('Custom Options'),`${path}: Custom Options missing`);
-              assert(t.includes('Fabric & size options available'),`${path}: qualified global custom subcopy missing`);
-              assert(!t.includes('Your fabric and size'),`${path}: old universal custom promise visible`);
-              await noPageOverflow(p,path);
-              categoryResults[path]='PASS';
-              await context.close();
-            }
-            console.log('LIVE_CATEGORIES='+JSON.stringify(categoryResults));
-
-            // Custom and stocked PDP truth.
-            {
-              const context=await quietContext(browser,{width:1440,height:1000});
-              const p=await context.newPage();
-              await p.goto(PROD+custom,{waitUntil:'networkidle',timeout:60000});
-              const customSection=p.locator('section[aria-label="Made to Order"]');
-              await customSection.waitFor({state:'attached',timeout:15000});
-              await customSection.scrollIntoViewIfNeeded();
-              assert(await customSection.isVisible(),'custom PDP: Made to Order not visible');
-              let t=(await bodyText(p))||'';
-              assert(t.includes('Most UK Mainland: arrives'), 'custom PDP: delivery estimate not qualified');
-              assert(t.includes('Some Wales and Scotland postcodes take 5–7 working days.'),'custom PDP: Wales/Scotland exception missing');
-              await noPageOverflow(p,'custom PDP');
-              console.log('LIVE_CUSTOM_PDP=PASS url='+p.url());
-
-              await p.goto(PROD+fixed,{waitUntil:'networkidle',timeout:60000});
-              assert(await p.locator('section[aria-label="Made to Order"]').count()===0,'fixed PDP: false Made to Order section');
-              t=(await bodyText(p))||'';
-              assert(t.includes('Most UK Mainland: arrives'),'fixed PDP: delivery estimate not qualified');
-              await noPageOverflow(p,'fixed PDP');
-              console.log('LIVE_FIXED_PDP=PASS url='+p.url());
-              await context.close();
-            }
-
-            // Phase 2A quick native-touch regression, one mobile viewport.
-            {
-              const context=await quietContext(browser,{width:390,height:844},true);
-              const p=await context.newPage();
-              await p.goto(PROD+'/?phase2a_smoke='+Date.now(),{waitUntil:'networkidle',timeout:60000});
-              const banner=p.getByRole('dialog',{name:'Cookies on this site'});
-              if(await banner.count()){
-                await p.getByRole('button',{name:'Essential only'}).click();
-                await p.waitForTimeout(500);
-              }
-              const rail=p.locator('[data-lenis-prevent-horizontal]').first();
-              await rail.scrollIntoViewIfNeeded(); await p.waitForTimeout(500);
-              await rail.evaluate(el=>el.scrollLeft=0);
-              const box=await rail.boundingBox(); assert(box,'Phase2A: rail bounding box missing');
-              const x=Math.min(300,Math.max(60,box.x+Math.min(box.width*0.5,180)));
-              const y=Math.min(700,Math.max(100,box.y+Math.min(box.height*0.4,180)));
-              const cdp=await context.newCDPSession(p);
-              const beforeV=await p.evaluate(()=>({y:window.scrollY,left:document.querySelector('[data-lenis-prevent-horizontal]')?.scrollLeft||0}));
-              await cdp.send('Input.synthesizeScrollGesture',{x,y,yDistance:-220,speed:700,preventFling:true,gestureSourceType:'touch'});
-              await p.waitForTimeout(1200);
-              const afterV=await p.evaluate(()=>({y:window.scrollY,left:document.querySelector('[data-lenis-prevent-horizontal]')?.scrollLeft||0}));
-              assert(afterV.y-beforeV.y>80,`Phase2A vertical: page delta ${afterV.y-beforeV.y}`);
-              assert(Math.abs(afterV.left-beforeV.left)<30,`Phase2A vertical: rail delta ${afterV.left-beforeV.left}`);
-              await rail.scrollIntoViewIfNeeded(); await rail.evaluate(el=>el.scrollLeft=0); await p.waitForTimeout(400);
-              const box2=await rail.boundingBox(); assert(box2,'Phase2A horizontal: rail box missing');
-              const x2=Math.min(300,Math.max(80,box2.x+Math.min(box2.width*0.65,220)));
-              const y2=Math.min(700,Math.max(100,box2.y+Math.min(box2.height*0.4,180)));
-              const beforeH=await p.evaluate(()=>({y:window.scrollY,left:document.querySelector('[data-lenis-prevent-horizontal]')?.scrollLeft||0}));
-              await cdp.send('Input.synthesizeScrollGesture',{x:x2,y:y2,xDistance:-250,speed:700,preventFling:true,gestureSourceType:'touch'});
-              await p.waitForTimeout(1200);
-              const afterH=await p.evaluate(()=>({y:window.scrollY,left:document.querySelector('[data-lenis-prevent-horizontal]')?.scrollLeft||0}));
-              assert(afterH.left-beforeH.left>80,`Phase2A horizontal: rail delta ${afterH.left-beforeH.left}`);
-              assert(Math.abs(afterH.y-beforeH.y)<60,`Phase2A horizontal: page delta ${afterH.y-beforeH.y}`);
-              console.log(`LIVE_PHASE2A=PASS verticalPageDelta=${afterV.y-beforeV.y} verticalRailDelta=${afterV.left-beforeV.left} horizontalRailDelta=${afterH.left-beforeH.left} horizontalPageDelta=${afterH.y-beforeH.y}`);
-              await context.close();
-            }
-
-            // Tracking V2.1 lightweight, non-order smoke. Allow first-party arrival only; do not click WhatsApp.
-            {
-              const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,serviceWorkers:'block'});
+              const context=await browser.newContext({viewport:{width,height:1000},serviceWorkers:'block'});
+              await context.route('**/api/attribution/**',r=>r.abort());
+              await context.route('**/api/meta/**',r=>r.abort());
               await context.route(/google-analytics|googletagmanager|googleadservices|connect\.facebook\.net|facebook\.com\/tr/i,r=>r.abort());
-              const p=await context.newPage();
-              const pageErrors=[]; const consoleErrors=[]; const arrivalResponses=[];
-              p.on('pageerror',e=>pageErrors.push(e.message));
-              p.on('console',m=>{if(m.type()==='error') consoleErrors.push(m.text())});
-              p.on('response',r=>{if(r.url().includes('/api/attribution/arrival')) arrivalResponses.push(r.status())});
-              await p.goto(PROD+'/?tracking_v21_smoke='+Date.now(),{waitUntil:'networkidle',timeout:60000});
-              await p.waitForTimeout(1200);
-              const cookies=await context.cookies(PROD);
-              const names=new Set(cookies.map(c=>c.name));
-              for(const name of ['uksofashop_vid','uksofashop_sid','uksofashop_aid']) assert(names.has(name),`Tracking V2.1: missing ${name}`);
-              assert(arrivalResponses.some(s=>s>=200&&s<300),`Tracking V2.1: no successful arrival response ${arrivalResponses}`);
-              const dialog=p.getByRole('dialog',{name:'Cookies on this site'});
-              assert(await dialog.count()===1,'Tracking V2.1: consent dialog missing');
-              await p.getByRole('button',{name:'Essential only'}).click(); await p.waitForTimeout(600);
-              const consent=await p.evaluate(()=>localStorage.getItem('cookie_consent'));
-              assert(consent==='denied',`Tracking V2.1: consent value ${consent}`);
+              const page=await context.newPage();
+              const pageErrors=[]; page.on('pageerror',e=>pageErrors.push(e.message));
+              await page.goto(BASE+'/delivery-returns',{waitUntil:'networkidle',timeout:60000});
 
-              await p.goto(PROD+custom,{waitUntil:'networkidle',timeout:60000}); await p.waitForTimeout(700);
-              const fab=p.locator('a[aria-label="Chat with us on WhatsApp"]');
-              await fab.waitFor({state:'visible',timeout:15000});
-              await p.waitForFunction(()=>{const a=document.querySelector('a[aria-label="Chat with us on WhatsApp"]');return !!a && /Verona/i.test(a.getAttribute('href')||'');},{timeout:10000});
-              const fabHref=await fab.getAttribute('href');
-              assert(fabHref && /wa\.me|whatsapp/i.test(fabHref),'Tracking V2.1: WhatsApp FAB href invalid');
-              assert(/Verona/i.test(fabHref),'Tracking V2.1: product-aware WhatsApp FAB missing product');
+              const section=page.locator('section[aria-labelledby="coverage-heading"]');
+              await section.waitFor({state:'attached',timeout:15000});
+              const rows=section.locator('dl > div');
+              assert(await rows.count()===4,`row count @${width}`);
+              const rowTexts=(await rows.allTextContents()).map(s=>s.replace(/\s+/g,' ').trim());
+              const sectionText=((await section.textContent())||'').replace(/\s+/g,' ').trim();
+              const html=await section.evaluate(el=>el.outerHTML);
+              for(let i=0;i<expected.length;i++){
+                const [label,window]=expected[i];
+                assert(rowTexts[i].includes(label),`row ${i} label missing @${width}: ${rowTexts[i]}`);
+                assert(rowTexts[i].includes(window),`row ${i} window missing @${width}: ${rowTexts[i]}`);
+                assert(sectionText.includes(label) && sectionText.includes(window),`section text missing ${label}/${window} @${width}`);
+                assert(html.includes(label) && html.includes(window),`rendered HTML missing ${label}/${window} @${width}`);
+              }
+              console.log(`DOM_CONTENT_${width}=PASS rows=${JSON.stringify(rowTexts)}`);
 
-              await p.goto(PROD+'/checkout',{waitUntil:'domcontentloaded',timeout:60000});
-              assert(((await bodyText(p))||'').trim().length>0,'Tracking V2.1: checkout route blank');
-              assert(pageErrors.length===0,`Tracking V2.1 runtime page errors: ${pageErrors.join(' | ')}`);
-              // Network-blocked third-party console noise is excluded; report any first-party JS errors separately.
-              const firstPartyConsoleErrors=consoleErrors.filter(x=>!/(ERR_FAILED|google|facebook|gtag|pixel)/i.test(x));
-              assert(firstPartyConsoleErrors.length===0,`Tracking V2.1 console errors: ${firstPartyConsoleErrors.join(' | ')}`);
-              console.log(`LIVE_TRACKING_V21=PASS ids=${[...names].filter(n=>n.startsWith('uksofashop_')).join(',')} arrivalStatuses=${arrivalResponses.join(',')} consent=${consent} fabProductAware=true checkout=true`);
+              await section.scrollIntoViewIfNeeded();
+              await page.waitForTimeout(300);
+              for(let i=0;i<4;i++){
+                const row=rows.nth(i);
+                await row.scrollIntoViewIfNeeded();
+                await page.waitForTimeout(120);
+                assert(await row.isVisible(),`row ${i} not visible after scroll @${width}`);
+                const opacity=await row.evaluate(el=>getComputedStyle(el).opacity);
+                const visibility=await row.evaluate(el=>getComputedStyle(el).visibility);
+                assert(Number(opacity)>0.99,`row ${i} opacity ${opacity} @${width}`);
+                assert(visibility==='visible',`row ${i} visibility ${visibility} @${width}`);
+              }
+              console.log(`VISIBLE_AFTER_SCROLL_${width}=PASS`);
+
+              const geom=await rows.evaluateAll(els=>els.map(el=>{
+                const r=el.getBoundingClientRect();
+                return {left:r.left,right:r.right,top:r.top+scrollY,bottom:r.bottom+scrollY,width:r.width,height:r.height};
+              }));
+              for(let i=0;i<geom.length;i++){
+                const g=geom[i];
+                assert(g.width>0 && g.height>0,`zero-size row ${i} @${width}`);
+                assert(g.left>=-1 && g.right<=width+1,`horizontal clipping row ${i} @${width}: ${JSON.stringify(g)}`);
+                if(i>0) assert(g.top>=geom[i-1].bottom-1,`overlap rows ${i-1}/${i} @${width}`);
+              }
+              const overflow=await page.evaluate(()=>document.documentElement.scrollWidth-window.innerWidth);
+              assert(overflow<=1,`page horizontal overflow ${overflow}px @${width}`);
+              assert(pageErrors.length===0,`page errors @${width}: ${pageErrors.join(' | ')}`);
+              await section.screenshot({path:`regional-evidence/regional-${width}.png`});
+              results.push({width,rowTexts,overflow,geom});
               await context.close();
             }
-
-            console.log('PLACEHOLDER_TIKTOK=ABSENT');
-            console.log('LIVE_HOMEPAGE_MOBILE=PASS');
-            console.log('LIVE_HOMEPAGE_DESKTOP=PASS');
-            console.log('LIVE_DELIVERY_PAGE=PASS');
-            console.log('FABRIC_CATEGORY=PASS');
-            console.log('LEATHER_CATEGORY=PASS');
-            console.log('ELECTRIC_CATEGORY=PASS');
-            console.log('CUSTOM_PDP=PASS');
-            console.log('FIXED_PDP=PASS');
-            console.log('PHASE2A=UNCHANGED');
-            console.log('TRACKING_V21=UNCHANGED');
+            console.log('REGIONAL_MAP_RESULTS='+JSON.stringify(results));
+            console.log('DOM_CONTENT=PASS');
+            console.log('VISIBLE_AFTER_SCROLL=PASS');
+            console.log('REGIONAL_VISUAL_LAYOUT=PASS');
             await browser.close();
           })().catch(e=>{console.error(e.stack||e);process.exit(1)});
           NODE
-      - name: Upload live evidence
+
+      - name: Upload regional screenshots
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: phase2b-live-production-evidence
-          path: live-evidence/*.png
+          name: phase2b-regional-evidence
+          path: regional-evidence/
           if-no-files-found: warn
