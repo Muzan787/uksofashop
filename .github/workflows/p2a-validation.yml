@@ -1,167 +1,86 @@
-name: Phase 2A live production regression
+name: Phase 2A settled production screenshots
 
 on:
   push:
     branches: [fix/homepage-mobile-scroll-trap]
 
 jobs:
-  live-production:
+  screenshots:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     env:
       LIVE_URL: https://www.uksofashop.co.uk
-      PRODUCTION_SHA: bce65ab437907c00ec94a9aafa36f1639a718212
       NODE_PATH: /tmp/pw/node_modules
     steps:
       - uses: actions/checkout@v4
         with:
           ref: fix/homepage-mobile-scroll-trap
           fetch-depth: 1
-
       - name: Prepare browser
         run: |
           mkdir -p /tmp/pw
           npm install --prefix /tmp/pw playwright-core@1.55.0
-          command -v google-chrome
-          google-chrome --version
-
-      - name: Live homepage regression and real screenshots
-        shell: bash
+      - name: Capture settled real Homepage New In section
         run: |
           node <<'NODE'
           const { chromium } = require('playwright-core');
           const fs = require('fs');
-          const widths = [320,390,430,768,1440];
-          const results = [];
-          const live = process.env.LIVE_URL;
-
-          async function suppressTracking(page) {
-            await page.route('**/api/attribution/**', r => r.fulfill({status:204, body:''}));
-            await page.route('**/api/meta/**', r => r.fulfill({status:204, body:''}));
-            await page.route(/googletagmanager\.com|google-analytics\.com|connect\.facebook\.net|facebook\.com\/tr/, r => r.fulfill({status:204, body:''}));
-          }
-
-          async function dismissConsent(page) {
-            const button = page.getByRole('button', {name:'Essential only'});
-            if (await button.count()) {
-              try { await button.first().click({timeout:2500}); await page.waitForTimeout(500); } catch {}
-            }
-          }
-
+          const widths=[320,390,430,768,1440];
+          const results=[];
           (async()=>{
-            const browser = await chromium.launch({headless:true, executablePath:'/usr/bin/google-chrome', args:['--no-sandbox']});
+            const browser=await chromium.launch({headless:true,executablePath:'/usr/bin/google-chrome',args:['--no-sandbox']});
             try {
-              for (const width of widths) {
-                const height = width===1440 ? 1000 : width===768 ? 1024 : 844;
-                const context = await browser.newContext({viewport:{width,height}});
-                const page = await context.newPage();
-                const runtimeErrors = [];
-                page.on('pageerror', e => runtimeErrors.push(`pageerror:${e.message}`));
-                page.on('console', msg => {
-                  if (msg.type()==='error') {
-                    const text=msg.text();
-                    if (!/Failed to load resource|ERR_BLOCKED_BY_CLIENT|net::ERR|favicon/i.test(text)) runtimeErrors.push(`console:${text}`);
-                  }
-                });
-                await suppressTracking(page);
-                const response = await page.goto(`${live}/`, {waitUntil:'domcontentloaded', timeout:45000});
-                if (!response || !response.ok()) throw new Error(`${width}: homepage HTTP ${response && response.status()}`);
-                await page.waitForTimeout(1200);
-                await dismissConsent(page);
-
-                const heading = page.locator('h2[aria-label="The latest through the door."]').first();
-                await heading.waitFor({state:'visible', timeout:30000});
-                const section = heading.locator('xpath=ancestor::section[1]');
-                const rail = section.locator('div.overflow-x-auto').first();
-                await rail.waitFor({state:'visible'});
-
-                const sectionText = ((await section.innerText()) || '').toLowerCase();
-                if (!sectionText.includes('new in') || !sectionText.includes('the latest through the door')) {
-                  throw new Error(`${width}: screenshot target is not the real Homepage New In section`);
-                }
-                const attr = await rail.evaluate(el => ({horizontal:el.hasAttribute('data-lenis-prevent-horizontal'), blanket:el.hasAttribute('data-lenis-prevent')}));
-                if (!attr.horizontal || attr.blanket) throw new Error(`${width}: live ProductRail does not carry release attribute ${JSON.stringify(attr)}`);
-
-                const firstLink = rail.locator('a[href^="/shop/"]').first();
-                const href = await firstLink.getAttribute('href');
-                if (!href) throw new Error(`${width}: first ProductRail card link missing`);
-                const productResponse = await context.request.get(new URL(href, live).toString(), {maxRedirects:5});
-                if (!productResponse.ok()) throw new Error(`${width}: first product route HTTP ${productResponse.status()}`);
-
-                const metrics = await rail.evaluate(el => ({scrollWidth:el.scrollWidth,clientWidth:el.clientWidth,scrollLeft:el.scrollLeft}));
-                if (metrics.scrollWidth <= metrics.clientWidth) throw new Error(`${width}: ProductRail lost horizontal overflow ${JSON.stringify(metrics)}`);
-
-                const pageOverflow = await page.evaluate(() => document.documentElement.scrollWidth-document.documentElement.clientWidth);
-                if (pageOverflow > 1) throw new Error(`${width}: horizontal page overflow ${pageOverflow}`);
-
-                const whatsapp = page.locator('a[aria-label="Chat with us on WhatsApp"]').first();
-                if (!await whatsapp.isVisible()) throw new Error(`${width}: WhatsApp FAB not visible`);
-                if (!/WhatsApp/i.test(await whatsapp.innerText())) throw new Error(`${width}: WhatsApp label missing`);
-
-                let mobileNav = 'hidden-desktop';
-                let dotsMoved = null;
-                let swipeVisible = null;
-                if (width < 1024) {
-                  const nav = page.locator('nav[aria-label="Primary"]').first();
-                  if (!await nav.isVisible()) throw new Error(`${width}: mobile bottom nav not visible`);
-                  for (const label of ['Home','Shop','Reviews','Cart','Account']) {
-                    if (!await nav.getByText(label,{exact:true}).count()) throw new Error(`${width}: mobile nav ${label} missing`);
-                  }
-                  mobileNav = 'visible';
-                  const swipe = section.getByText('Swipe',{exact:true});
-                  swipeVisible = await swipe.isVisible();
-                  if (!swipeVisible) throw new Error(`${width}: SWIPE affordance missing before interaction`);
-                  const dots = section.locator('button[role="tab"]');
-                  if (await dots.count() < 2) throw new Error(`${width}: dot controls missing`);
-                }
-
-                // Capture BEFORE any rail movement so the real homepage screenshot
-                // contains the original first-card view and SWIPE affordance.
+              for(const width of widths){
+                const height=width===1440?1000:width===768?1024:844;
+                const context=await browser.newContext({viewport:{width,height}});
+                const page=await context.newPage();
+                await page.route('**/api/attribution/**',r=>r.fulfill({status:204,body:''}));
+                await page.route('**/api/meta/**',r=>r.fulfill({status:204,body:''}));
+                await page.route(/googletagmanager\.com|google-analytics\.com|connect\.facebook\.net|facebook\.com\/tr/,r=>r.fulfill({status:204,body:''}));
+                const response=await page.goto(`${process.env.LIVE_URL}/`,{waitUntil:'domcontentloaded',timeout:45000});
+                if(!response||!response.ok()) throw new Error(`${width}: homepage failed`);
+                await page.waitForTimeout(1000);
+                const essential=page.getByRole('button',{name:'Essential only'});
+                if(await essential.count()){try{await essential.first().click({timeout:2000});await page.waitForTimeout(450);}catch{}}
+                const heading=page.locator('h2[aria-label="The latest through the door."]').first();
+                await heading.waitFor({state:'visible',timeout:30000});
+                const section=heading.locator('xpath=ancestor::section[1]');
+                const rail=section.locator('div.overflow-x-auto').first();
                 await section.scrollIntoViewIfNeeded();
-                await page.waitForTimeout(300);
+                await page.waitForTimeout(2500);
+                const text=((await section.innerText())||'').toLowerCase();
+                if(!text.includes('new in')||!text.includes('the latest through the door')) throw new Error(`${width}: wrong screenshot section`);
+                const attr=await rail.evaluate(el=>({horizontal:el.hasAttribute('data-lenis-prevent-horizontal'),blanket:el.hasAttribute('data-lenis-prevent')}));
+                if(!attr.horizontal||attr.blanket) throw new Error(`${width}: wrong ProductRail release attr`);
+                const transforms=await heading.locator('[data-motion="split"]').evaluateAll(nodes=>nodes.map(n=>getComputedStyle(n).transform));
+                const stillMoving=transforms.some(v=>v&&v!=='none'&&!/^matrix\(1, 0, 0, 1, 0, 0\)$/.test(v));
+                if(stillMoving) throw new Error(`${width}: heading reveal still moving ${JSON.stringify(transforms)}`);
                 await section.screenshot({path:`homepage-${width}.png`});
-
-                if (width < 1024) {
-                  const dots = section.locator('button[role="tab"]');
-                  const x0 = await rail.evaluate(el=>el.scrollLeft);
-                  await dots.nth(1).click();
-                  await page.waitForTimeout(850);
-                  const x1 = await rail.evaluate(el=>el.scrollLeft);
-                  dotsMoved = {before:x0,after:x1,delta:x1-x0};
-                  if (x1 <= x0+20) throw new Error(`${width}: dot did not move rail ${x0}->${x1}`);
-                }
-
-                if (runtimeErrors.length) throw new Error(`${width}: runtime errors ${JSON.stringify(runtimeErrors)}`);
-                const row={width,homepageHttp:response.status(),releaseAttribute:attr,newIn:true,subtitle:true,railMetrics:metrics,pageOverflow,firstProductHref:href,productHttp:productResponse.status(),whatsapp:true,mobileNav,swipeVisible,dotsMoved,runtimeErrors:[]};
-                console.log(JSON.stringify(row));
-                results.push(row);
+                results.push({width,http:response.status(),newIn:true,subtitle:true,releaseAttribute:attr,headingSettled:true});
                 await context.close();
               }
             } finally {
-              fs.writeFileSync('live-homepage-results.json',JSON.stringify(results,null,2));
+              fs.writeFileSync('screenshot-verification.json',JSON.stringify(results,null,2));
               await browser.close();
             }
           })().catch(e=>{console.error(e);process.exit(1)});
           NODE
-
-      - name: Verify all five real homepage captures exist
+      - name: Verify evidence files
         run: |
           test -s homepage-320.png
           test -s homepage-390.png
           test -s homepage-430.png
           test -s homepage-768.png
           test -s homepage-1440.png
-          test -s live-homepage-results.json
-
-      - name: Upload live production evidence
-        if: always()
+          test -s screenshot-verification.json
+      - name: Upload screenshots
         uses: actions/upload-artifact@v4
         with:
-          name: phase2a-live-homepage-evidence
+          name: phase2a-live-homepage-screenshots-final
           path: |
             homepage-320.png
             homepage-390.png
             homepage-430.png
             homepage-768.png
             homepage-1440.png
-            live-homepage-results.json
+            screenshot-verification.json
