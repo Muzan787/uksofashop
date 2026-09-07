@@ -14,18 +14,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: tracking-v2-attribution
+          ref: r2-final-signoff-hotfix
           fetch-depth: 0
       - run: npm ci
       - name: Changed-file ESLint
-        run: npx eslint src/utils/attribution/useWhatsAppCTA.ts
+        run: npx eslint src/components/Layout/WhatsAppFab.tsx
       - name: TypeScript
         run: npx tsc --noEmit
       - name: Production build
         run: npm run build
       - name: Diff gate
         run: |
-          git diff --check d787931d9f9e8556f026d11dd9758fbb3ac95e04..HEAD
-          test "$(git diff --name-only d787931d9f9e8556f026d11dd9758fbb3ac95e04..HEAD)" = "src/utils/attribution/useWhatsAppCTA.ts"
-
-# validation rerun: event-time reference preparation
+          git diff --check 197d81a5a676e12cdd05e6696e5f3c7954d6332c..HEAD
+          test "$(git diff --name-only 197d81a5a676e12cdd05e6696e5f3c7954d6332c..HEAD)" = "src/components/Layout/WhatsAppFab.tsx"
