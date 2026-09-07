@@ -1,0 +1,137 @@
+name: Tracking V2.1 real-order linkage validation
+
+on:
+  push:
+    branches: [qa/tracking-v21-real-order-linkage]
+
+permissions:
+  contents: write
+
+jobs:
+  validate-and-stage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      BASE_SHA: bf2eeab6e1f3c1984ecfaf0e2fd1aac5715aeb47
+      FEATURE_BRANCH: fix/tracking-v2-real-order-linkage
+      PHASE2B_SHA: 99e8fd026c3f9ff2eb03a117ba57d6cd58edd595
+      NEXT_PUBLIC_SUPABASE_URL: https://nznpeqjnoobhyxwnmsez.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_tMk28Ay_hIljhv8NQcV01Q_cI9ApS9c
+      QA_URL: http://127.0.0.1:3000
+      NODE_PATH: /tmp/pw/node_modules
+
+    steps:
+      - name: Checkout QA harness
+        uses: actions/checkout@v4
+        with:
+          ref: qa/tracking-v21-real-order-linkage
+          path: qa
+          fetch-depth: 1
+
+      - name: Checkout clean Tracking V2.1 branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/tracking-v2-real-order-linkage
+          path: work
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: work/package-lock.json
+
+      - name: Verify protected bases and apply patch
+        working-directory: work
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$BASE_SHA"
+          test -z "$(git status --porcelain)"
+          test "$(git ls-remote origin refs/heads/fix/cro-phase2b-trust-delivery | cut -f1)" = "$PHASE2B_SHA"
+          grep -q 'data-lenis-prevent-horizontal' src/components/Home/ProductRail.tsx
+          python ../qa/.github/scripts/tracking_v21_apply.py
+
+      - name: Verify exact Tracking V2.1 scope
+        working-directory: work
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --name-only "$BASE_SHA" | sort > /tmp/v21-actual.txt
+          cat > /tmp/v21-expected.txt <<'EOF'
+          src/app/actions/checkout.ts
+          src/app/actions/orders.ts
+          src/app/api/cron/conversions/route.ts
+          src/utils/attribution/checkoutLinkage.ts
+          src/utils/attribution/useWhatsAppCTA.ts
+          src/utils/attribution/whatsapp.ts
+          src/utils/orderConversions.ts
+          EOF
+          sort -o /tmp/v21-expected.txt /tmp/v21-expected.txt
+          diff -u /tmp/v21-expected.txt /tmp/v21-actual.txt
+          ! grep -E '^(supabase/|src/components/Home/ProductRail\.tsx$|src/constants/(delivery|promises|categorySeo)\.ts$|src/components/Home/|src/components/Layout/Footer\.tsx$)' /tmp/v21-actual.txt
+          git diff --check "$BASE_SHA"
+          python ../qa/.github/scripts/tracking_v21_source_contract.py
+
+      - name: Static release gates
+        working-directory: work
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci
+          FILES=$(git diff --name-only "$BASE_SHA" -- '*.ts' '*.tsx')
+          test -n "$FILES"
+          npx eslint $FILES
+          npx tsc --noEmit
+          npm run build
+          git diff --check "$BASE_SHA"
+
+      - name: Deterministic linkage tests
+        working-directory: work
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp ../qa/.github/scripts/tracking_v21_linkage_test.ts .tracking_v21_linkage_test.ts
+          npx --yes tsx .tracking_v21_linkage_test.ts
+          rm .tracking_v21_linkage_test.ts
+
+      - name: Prepare preview browser
+        working-directory: work
+        run: |
+          mkdir -p /tmp/pw
+          npm install --prefix /tmp/pw playwright-core@1.55.0
+          command -v google-chrome
+          google-chrome --version
+
+      - name: Start Tracking V2.1 preview
+        working-directory: work
+        shell: bash
+        run: |
+          nohup npm run start >/tmp/ukss-v21-next.log 2>&1 &
+          for i in $(seq 1 60); do
+            curl -fsS "$QA_URL/shop/corner-sofa/verona-high-back-4-seater-corner-1c2" >/dev/null 2>&1 && exit 0
+            sleep 2
+          done
+          cat /tmp/ukss-v21-next.log
+          exit 1
+
+      - name: Browser tracking smoke
+        working-directory: work
+        run: node ../qa/.github/scripts/tracking_v21_browser_smoke.js
+
+      - name: Recheck protected branch and commit clean feature branch
+        working-directory: work
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git ls-remote origin refs/heads/fix/cro-phase2b-trust-delivery | cut -f1)" = "$PHASE2B_SHA"
+          test ! -e .tracking_v21_linkage_test.ts
+          git config user.name Muzan787
+          git config user.email 109960574+Muzan787@users.noreply.github.com
+          git add -A
+          git status --short
+          git commit -m 'Fix Tracking V2.1 real-order attribution linkage'
+          test "$(git rev-parse HEAD^1)" = "$BASE_SHA"
+          git push origin HEAD:refs/heads/$FEATURE_BRANCH
+          git diff --name-status "$BASE_SHA"...HEAD
+          git diff --stat "$BASE_SHA"...HEAD
