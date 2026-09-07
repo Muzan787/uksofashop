@@ -86,10 +86,16 @@ jobs:
               const page=await ctx.newPage();
               const errors=[]; page.on('pageerror',e=>errors.push(e.message));
               await page.goto('http://127.0.0.1:3000/delivery-returns',{waitUntil:'networkidle',timeout:60000});
+              const essential=page.getByRole('button',{name:'Essential only'}).first();
+              if (await essential.count()) {
+                await essential.waitFor({state:'visible',timeout:3000}).catch(()=>{});
+                if (await essential.isVisible()) { await essential.click(); await page.waitForTimeout(200); }
+              }
               const section=page.locator('section[aria-labelledby="coverage-heading"]');
               await section.waitFor({state:'attached',timeout:15000});
               const text=await section.textContent();
-              const texts=await section.locator('dl > div').allTextContents();
+              const rows=section.locator('dl > div');
+              const texts=await rows.allTextContents();
               const html=await section.evaluate(el=>el.outerHTML);
               assert(text && text.includes('North & Midlands') && text.includes('2–3 working days'),`DOM north missing @${width}`);
               assert(text.includes('South & East') && text.includes('3–4 working days'),`DOM south missing @${width}`);
@@ -103,24 +109,26 @@ jobs:
               }
               await section.scrollIntoViewIfNeeded();
               await page.waitForTimeout(250);
-              const visible=await section.isVisible();
-              assert(visible,`section not visible after scroll @${width}`);
-              const rowState=await section.locator('dl > div').evaluateAll(rows=>rows.map(r=>{
+              assert(await section.isVisible(),`section not visible after scroll @${width}`);
+              const rowState=await rows.evaluateAll(rs=>rs.map(r=>{
                 const s=getComputedStyle(r); const b=r.getBoundingClientRect();
-                return {text:r.textContent,display:s.display,visibility:s.visibility,opacity:s.opacity,width:b.width,height:b.height,left:b.left,right:b.right,top:b.top,bottom:b.bottom,clientWidth:r.clientWidth,scrollWidth:r.scrollWidth};
+                return {text:r.textContent,display:s.display,visibility:s.visibility,opacity:s.opacity,width:b.width,height:b.height,clientWidth:r.clientWidth,scrollWidth:r.scrollWidth};
               }));
-              assert(rowState.length===4,`row state count @${width}`);
               for (const r of rowState) {
-                assert(r.display!=='none' && r.visibility!=='hidden' && Number(r.opacity)>0 && r.width>0 && r.height>0,`hidden/clipped row @${width}: ${JSON.stringify(r)}`);
+                assert(r.display!=='none' && r.visibility!=='hidden' && Number(r.opacity)>0 && r.width>0 && r.height>0,`hidden row @${width}: ${JSON.stringify(r)}`);
                 assert(r.scrollWidth<=r.clientWidth+1,`row horizontal clipping @${width}: ${JSON.stringify(r)}`);
+              }
+              for (let i=0;i<4;i++) {
+                const row=rows.nth(i); await row.scrollIntoViewIfNeeded(); await page.waitForTimeout(60);
+                assert(await row.isVisible(),`row ${i} not visible after ordinary scroll @${width}`);
               }
               const pageOverflow=await page.evaluate(()=>document.documentElement.scrollWidth-window.innerWidth);
               const sectionOverflow=await section.evaluate(el=>el.scrollWidth-el.clientWidth);
               assert(pageOverflow<=1,`page horizontal overflow ${pageOverflow}px @${width}`);
               assert(sectionOverflow<=1,`section horizontal overflow ${sectionOverflow}px @${width}`);
               assert(errors.length===0,`runtime errors @${width}: ${errors.join(' | ')}`);
-              await section.screenshot({path:`/tmp/map-evidence/delivery-map-${width}.png`});
-              results.push({width,domContent:'PASS',visibleAfterScroll:'PASS',rows:rowState.map(r=>r.text?.replace(/\s+/g,' ').trim()),pageOverflow,sectionOverflow});
+              await rows.screenshot({path:`/tmp/map-evidence/delivery-map-rows-${width}.png`});
+              results.push({width,domContent:'PASS',visibleAfterScroll:'PASS',rowVisibility:'PASS',pageOverflow,sectionOverflow,rows:texts.map(t=>t.replace(/\s+/g,' ').trim())});
               await ctx.close();
             }
             console.log('REGIONAL_MAP_RESULTS='+JSON.stringify(results));
@@ -134,5 +142,5 @@ jobs:
       - name: Upload regional map evidence
         uses: actions/upload-artifact@v4
         with:
-          name: phase2b-regional-map-evidence
+          name: phase2b-regional-map-evidence-final
           path: /tmp/map-evidence/*.png
