@@ -1,0 +1,86 @@
+name: Phase 2A settled production screenshots
+
+on:
+  push:
+    branches: [fix/homepage-mobile-scroll-trap]
+
+jobs:
+  screenshots:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      LIVE_URL: https://www.uksofashop.co.uk
+      NODE_PATH: /tmp/pw/node_modules
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/homepage-mobile-scroll-trap
+          fetch-depth: 1
+      - name: Prepare browser
+        run: |
+          mkdir -p /tmp/pw
+          npm install --prefix /tmp/pw playwright-core@1.55.0
+      - name: Capture settled real Homepage New In section
+        run: |
+          node <<'NODE'
+          const { chromium } = require('playwright-core');
+          const fs = require('fs');
+          const widths=[320,390,430,768,1440];
+          const results=[];
+          (async()=>{
+            const browser=await chromium.launch({headless:true,executablePath:'/usr/bin/google-chrome',args:['--no-sandbox']});
+            try {
+              for(const width of widths){
+                const height=width===1440?1000:width===768?1024:844;
+                const context=await browser.newContext({viewport:{width,height}});
+                const page=await context.newPage();
+                await page.route('**/api/attribution/**',r=>r.fulfill({status:204,body:''}));
+                await page.route('**/api/meta/**',r=>r.fulfill({status:204,body:''}));
+                await page.route(/googletagmanager\.com|google-analytics\.com|connect\.facebook\.net|facebook\.com\/tr/,r=>r.fulfill({status:204,body:''}));
+                const response=await page.goto(`${process.env.LIVE_URL}/`,{waitUntil:'domcontentloaded',timeout:45000});
+                if(!response||!response.ok()) throw new Error(`${width}: homepage failed`);
+                await page.waitForTimeout(1000);
+                const essential=page.getByRole('button',{name:'Essential only'});
+                if(await essential.count()){try{await essential.first().click({timeout:2000});await page.waitForTimeout(450);}catch{}}
+                const heading=page.locator('h2[aria-label="The latest through the door."]').first();
+                await heading.waitFor({state:'visible',timeout:30000});
+                const section=heading.locator('xpath=ancestor::section[1]');
+                const rail=section.locator('div.overflow-x-auto').first();
+                await section.scrollIntoViewIfNeeded();
+                await page.waitForTimeout(2500);
+                const text=((await section.innerText())||'').toLowerCase();
+                if(!text.includes('new in')||!text.includes('the latest through the door')) throw new Error(`${width}: wrong screenshot section`);
+                const attr=await rail.evaluate(el=>({horizontal:el.hasAttribute('data-lenis-prevent-horizontal'),blanket:el.hasAttribute('data-lenis-prevent')}));
+                if(!attr.horizontal||attr.blanket) throw new Error(`${width}: wrong ProductRail release attr`);
+                const transforms=await heading.locator('[data-motion="split"]').evaluateAll(nodes=>nodes.map(n=>getComputedStyle(n).transform));
+                const stillMoving=transforms.some(v=>v&&v!=='none'&&!/^matrix\(1, 0, 0, 1, 0, 0\)$/.test(v));
+                if(stillMoving) throw new Error(`${width}: heading reveal still moving ${JSON.stringify(transforms)}`);
+                await section.screenshot({path:`homepage-${width}.png`});
+                results.push({width,http:response.status(),newIn:true,subtitle:true,releaseAttribute:attr,headingSettled:true});
+                await context.close();
+              }
+            } finally {
+              fs.writeFileSync('screenshot-verification.json',JSON.stringify(results,null,2));
+              await browser.close();
+            }
+          })().catch(e=>{console.error(e);process.exit(1)});
+          NODE
+      - name: Verify evidence files
+        run: |
+          test -s homepage-320.png
+          test -s homepage-390.png
+          test -s homepage-430.png
+          test -s homepage-768.png
+          test -s homepage-1440.png
+          test -s screenshot-verification.json
+      - name: Upload screenshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase2a-live-homepage-screenshots-final
+          path: |
+            homepage-320.png
+            homepage-390.png
+            homepage-430.png
+            homepage-768.png
+            homepage-1440.png
+            screenshot-verification.json
