@@ -1,0 +1,186 @@
+name: Phase 2B release validation
+
+on:
+  push:
+    branches: [qa/cro-phase2b-release]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      RELEASE_BRANCH: fix/cro-phase2b-trust-delivery-release
+      EXPECTED_MASTER: b385a2dbcded6fa9e65fe2d30e8af185f82c7088
+      NEXT_PUBLIC_SUPABASE_URL: https://nznpeqjnoobhyxwnmsez.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_tMk28Ay_hIljhv8NQcV01Q_cI9ApS9c
+      NEXT_PUBLIC_SITE_URL: http://127.0.0.1:3000
+    steps:
+      - name: Checkout exact release candidate
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_BRANCH }}
+          fetch-depth: 0
+
+      - name: Verify base and scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD^)" = "$EXPECTED_MASTER"
+          git fetch origin master --quiet
+          git diff --check origin/master...HEAD
+          mapfile -t files < <(git diff --name-only origin/master...HEAD)
+          printf '%s\n' "${files[@]}"
+          expected=(
+            'src/app/delivery-returns/page.tsx'
+            'src/app/faq/faqData.ts'
+            'src/app/journal/articles/cash-on-delivery-explained.tsx'
+            'src/app/journal/articles/delivery-day-preparation.tsx'
+            'src/app/llms.txt/route.ts'
+            'src/app/shop/[category]/page.tsx'
+            'src/components/Editorial/CoverageMap.tsx'
+            'src/components/Home/CraftStory.tsx'
+            'src/components/Home/Hero.tsx'
+            'src/components/Home/StatsBand.tsx'
+            'src/components/Layout/Footer.tsx'
+            'src/components/Product/DeliveryEstimate.tsx'
+            'src/components/Product/DeliveryEstimator.tsx'
+            'src/constants/categorySeo.ts'
+            'src/constants/promises.ts'
+          )
+          test "${#files[@]}" -eq "${#expected[@]}"
+          for i in "${!expected[@]}"; do test "${files[$i]}" = "${expected[$i]}"; done
+          grep -q 'data-lenis-prevent-horizontal' src/components/Home/ProductRail.tsx
+          test -f supabase/migrations/20260907172933_atomic_confirm_order_timestamp.sql
+          echo 'SCOPE=PASS'
+          echo 'DIFF_CHECK=PASS'
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Changed-file ESLint
+        shell: bash
+        run: |
+          npx eslint \
+            src/app/delivery-returns/page.tsx \
+            src/app/faq/faqData.ts \
+            src/app/journal/articles/cash-on-delivery-explained.tsx \
+            src/app/journal/articles/delivery-day-preparation.tsx \
+            src/app/llms.txt/route.ts \
+            'src/app/shop/[category]/page.tsx' \
+            src/components/Editorial/CoverageMap.tsx \
+            src/components/Home/CraftStory.tsx \
+            src/components/Home/Hero.tsx \
+            src/components/Home/StatsBand.tsx \
+            src/components/Layout/Footer.tsx \
+            src/components/Product/DeliveryEstimate.tsx \
+            src/components/Product/DeliveryEstimator.tsx \
+            src/constants/categorySeo.ts \
+            src/constants/promises.ts
+          echo 'ESLINT=PASS'
+
+      - name: TypeScript
+        run: npx tsc --noEmit && echo 'TYPESCRIPT=PASS'
+
+      - name: Production build
+        run: npm run build && echo 'BUILD=PASS'
+
+      - name: Install browser harness
+        run: |
+          mkdir -p /tmp/pw
+          npm install --prefix /tmp/pw playwright-core@1.55.0
+          command -v google-chrome
+          google-chrome --version
+
+      - name: Start production build
+        shell: bash
+        run: |
+          npm start -- --hostname 127.0.0.1 --port 3000 > /tmp/phase2b-app.log 2>&1 &
+          echo $! > /tmp/phase2b-app.pid
+          for i in {1..60}; do
+            if curl -fsS http://127.0.0.1:3000/ >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/phase2b-app.log
+          exit 1
+
+      - name: Preview responsive QA
+        env:
+          NODE_PATH: /tmp/pw/node_modules
+        shell: bash
+        run: |
+          node <<'NODE'
+          const { chromium } = require('playwright-core');
+          const assert = (c,m) => { if(!c) throw new Error(m); };
+          const BASE='http://127.0.0.1:3000';
+          const widths=[320,390,430,768,1440];
+          const custom='/shop/fabric-sofa/verona-high-back-4-seater-corner-1c2?variant=a5d2050d-c458-4e0c-b3b3-7b7c727845a0';
+          const fixed='/shop/recliner/roma-recliner-manual-armchair?variant=562327ad-ee1e-4683-8f39-28f1289f8696';
+          (async()=>{
+            const browser=await chromium.launch({executablePath:'/usr/bin/google-chrome',headless:true,args:['--no-sandbox']});
+            const results=[];
+            for(const width of widths){
+              const context=await browser.newContext({viewport:{width,height:900}});
+              const page=await context.newPage();
+              const errors=[];
+              page.on('pageerror',e=>errors.push(e.message));
+              await page.goto(BASE+'/',{waitUntil:'networkidle',timeout:60000});
+              const text=await page.locator('body').innerText();
+              assert(text.includes('Fabric sofas made to your size. Delivered free. Pay on arrival.'),`home hero copy missing @${width}`);
+              assert(/\d+ sofas available/.test(text),`catalogue available wording missing @${width}`);
+              assert(text.includes('Most UK Mainland: 2–4 working days'),`qualified delivery headline missing @${width}`);
+              assert(text.includes('Some Wales and Scotland postcodes take 5–7 working days.'),`delivery exception missing @${width}`);
+              assert(!text.includes('Cash on Delivery Available Nationwide'),`nationwide payment copy still visible @${width}`);
+              assert(await page.locator('[data-lenis-prevent-horizontal]').count()>=1,`Phase 2A rail attr missing @${width}`);
+              assert(await page.locator('footer a[href="https://www.tiktok.com"]').count()===0,`placeholder TikTok visible @${width}`);
+              const overflow=await page.evaluate(()=>document.documentElement.scrollWidth-window.innerWidth);
+              assert(overflow<=1,`homepage horizontal overflow ${overflow}px @${width}`);
+              assert(errors.length===0,`homepage page errors @${width}: ${errors.join(' | ')}`);
+              results.push({width,overflow,home:true});
+              await context.close();
+            }
+
+            const context=await browser.newContext({viewport:{width:1440,height:1000}});
+            const page=await context.newPage();
+            for(const path of ['/shop/fabric-sofa','/shop/leather-sofa','/shop/electric-sofa']){
+              await page.goto(BASE+path,{waitUntil:'networkidle',timeout:60000});
+              const t=await page.locator('body').innerText();
+              assert(t.includes('Custom Options'),`${path}: safe global custom trust label missing`);
+              assert(t.includes('Fabric & size options available'),`${path}: safe global custom trust subcopy missing`);
+              assert(!t.includes('Your fabric and size'),`${path}: old universal custom promise still visible`);
+              const overflow=await page.evaluate(()=>document.documentElement.scrollWidth-window.innerWidth);
+              assert(overflow<=1,`${path}: overflow ${overflow}`);
+            }
+
+            await page.goto(BASE+custom,{waitUntil:'networkidle',timeout:60000});
+            let t=await page.locator('body').innerText();
+            assert(t.includes('Made to Order'),'custom PDP lost Made to Order block');
+            assert(t.includes('Most UK Mainland: arrives'),'custom PDP missing qualified date estimate');
+            assert(t.includes('Some Wales and Scotland postcodes take 5–7 working days.'),'custom PDP missing Wales/Scotland exception');
+
+            await page.goto(BASE+fixed,{waitUntil:'networkidle',timeout:60000});
+            t=await page.locator('body').innerText();
+            assert(!t.includes('Made to Order'),'fixed PDP falsely shows Made to Order block');
+            assert(t.includes('Most UK Mainland: arrives'),'fixed PDP missing qualified date estimate');
+
+            await page.goto(BASE+'/delivery-returns',{waitUntil:'networkidle',timeout:60000});
+            t=await page.locator('body').innerText();
+            for(const s of ['2–3 working days','3–4 working days','5–7 working days','Ask us first']) assert(t.includes(s),`delivery page missing ${s}`);
+            assert(await page.locator('footer a[href="https://www.tiktok.com"]').count()===0,'delivery footer exposes placeholder TikTok');
+
+            await page.goto(BASE+'/checkout',{waitUntil:'domcontentloaded',timeout:60000});
+            assert((await page.locator('body').innerText()).length>0,'checkout route did not render');
+            console.log('PHASE2B_PREVIEW_QA='+JSON.stringify(results));
+            await context.close();
+            await browser.close();
+          })().catch(e=>{console.error(e.stack||e);process.exit(1)});
+          NODE
+          echo 'PREVIEW_QA=PASS'
