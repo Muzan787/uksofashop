@@ -1,0 +1,49 @@
+name: Tracking V2.1 confirm route production proof
+
+on:
+  push:
+    branches: [qa/tracking-v21-confirm-proof]
+
+permissions:
+  contents: read
+
+jobs:
+  confirm-route:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      EXPECTED_MASTER: b385a2dbcded6fa9e65fe2d30e8af185f82c7088
+      PHASE2B_SHA: 99e8fd026c3f9ff2eb03a117ba57d6cd58edd595
+      ORDER_ID: 92fcdb8e-ed78-46a4-a607-a67ed0ef63c6
+      BASE_URL: https://www.uksofashop.co.uk
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify protected production state
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git ls-remote origin refs/heads/master | cut -f1)" = "$EXPECTED_MASTER"
+          test "$(git ls-remote origin refs/heads/fix/cro-phase2b-trust-delivery | cut -f1)" = "$PHASE2B_SHA"
+      - name: First actual confirmation route request
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --location \
+            -H 'Cache-Control: no-cache' \
+            "$BASE_URL/confirm-order/$ORDER_ID?qa=first-$(date +%s%N)" \
+            -o /tmp/first.html
+          grep -q 'Order Confirmed' /tmp/first.html
+          grep -q '#92FCDB8E' /tmp/first.html
+          echo 'FIRST_CONFIRM_ROUTE=PASS'
+      - name: Repeat actual confirmation route request
+        shell: bash
+        run: |
+          set -euo pipefail
+          sleep 1
+          curl --fail --silent --show-error --location \
+            -H 'Cache-Control: no-cache' \
+            "$BASE_URL/confirm-order/$ORDER_ID?qa=repeat-$(date +%s%N)" \
+            -o /tmp/repeat.html
+          grep -q 'Order Confirmed' /tmp/repeat.html
+          grep -q '#92FCDB8E' /tmp/repeat.html
+          echo 'REPEAT_CONFIRM_ROUTE=PASS'
