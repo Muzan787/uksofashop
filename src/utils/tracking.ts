@@ -27,6 +27,7 @@
 import { META_PIXEL_ID, META_PIXEL_READY_EVENT } from '@/utils/consentMode'
 import { getConsent } from '@/utils/consent'
 import { normaliseUkMobile } from '@/utils/phone'
+import { isBrowserTrackingEnabled } from '@/utils/trackingEnv'
 
 const CURRENCY = 'GBP'
 
@@ -112,6 +113,12 @@ const PENDING_MAX = 20
 /** Safe call into the Meta Pixel. Held, not lost, while it is still loading. */
 function fbq(...args: FbqArgs): void {
   if (typeof window === 'undefined') return
+  // Production hostname gate (utils/trackingEnv.ts). A non-production host
+  // never has window.fbq defined either (TrackingScripts.tsx does not mount
+  // the Pixel there), so this would already queue harmlessly - but checking
+  // here means it never even queues, and never fires retroactively if the
+  // Pixel were ever mounted for some other reason.
+  if (!isBrowserTrackingEnabled()) return
   const w = window as TagWindow
 
   if (typeof w.fbq !== 'function') {
@@ -171,9 +178,9 @@ function applyAdvancedMatching(): void {
   const matching: AdvancedMatching = { country: 'gb' }
   if (identity.email) matching.em = identity.email.trim().toLowerCase()
   if (phone) matching.ph = phone
-  if (name) matching.fn = name.split(/s+/)[0]
-  if (name.includes(' ')) matching.ln = name.split(/s+/).slice(1).join(' ')
-  if (identity.postcode) matching.zp = identity.postcode.replace(/s+/g, '').toLowerCase()
+  if (name) matching.fn = name.split(/\s+/)[0]
+  if (name.includes(' ')) matching.ln = name.split(/\s+/).slice(1).join(' ')
+  if (identity.postcode) matching.zp = identity.postcode.replace(/\s+/g, '').toLowerCase()
 
   w.fbq('init', META_PIXEL_ID, matching)
 }
@@ -209,6 +216,7 @@ export function setMetaIdentity(who: MetaIdentity): void {
  */
 function ga(event: string, params: Record<string, unknown>): void {
   if (typeof window === 'undefined') return
+  if (!isBrowserTrackingEnabled()) return
   const w = window as TagWindow
   if (typeof w.gtag !== 'function') return
   w.gtag('event', event, params)
@@ -273,7 +281,7 @@ function totalOf(items: TrackedItem[]): number {
 // ─── The server copy ───────────────────────────────────────────────────────
 
 /** Events that have a Conversions API twin. See app/api/meta/event. */
-type MirroredEvent = 'ViewContent' | 'AddToCart' | 'InitiateCheckout'
+type MirroredEvent = 'ViewContent' | 'AddToCart' | 'InitiateCheckout' | 'Contact'
 
 /**
  * A fresh id, shared by the two copies of one event so Meta counts it once.
@@ -308,12 +316,29 @@ function newEventId(): string {
  * Pixel already has; no customer should ever see a console error or a slower
  * page because an advertising endpoint was unhappy.
  */
+/** attribution_actions.action_type values this module can write, via the same request as the Meta mirror. */
+type LedgerAction = 'product_view' | 'add_to_cart' | 'checkout_start' | 'call_click'
+
 function mirror(
   event: MirroredEvent,
   eventId: string,
-  body: { value: number; contents: ReturnType<typeof contentsOf> },
+  body: {
+    value: number
+    contents: ReturnType<typeof contentsOf>
+    /**
+     * Piggybacks one attribution_actions row onto this same request, rather
+     * than firing a second one - see the note on /api/meta/event/route.ts.
+     * Only set for events that do not already have their own ledger writer
+     * (utils/attribution/whatsapp.ts covers whatsapp_click itself).
+     */
+    ledgerAction?: LedgerAction
+  },
 ): void {
   if (typeof window === 'undefined') return
+  // Production hostname gate. Without this, a preview or dev environment
+  // would still POST a real Meta CAPI event through our own domain even
+  // though window.fbq was never mounted to send the browser copy.
+  if (!isBrowserTrackingEnabled()) return
 
   const name = (identity?.name ?? '').trim()
 
@@ -334,6 +359,7 @@ function mirror(
         value: body.value,
         currency: CURRENCY,
         contents: body.contents,
+        ledgerAction: body.ledgerAction,
         user: identity
           ? {
               email: identity.email?.trim().toLowerCase() || undefined,
@@ -364,7 +390,7 @@ export function trackViewContent(item: TrackedItem): void {
   const value = Number((item.price * item.quantity).toFixed(2))
 
   fbq('track', 'ViewContent', metaPayload([item]), { eventID: eventId })
-  mirror('ViewContent', eventId, { value, contents: contentsOf([item]) })
+  mirror('ViewContent', eventId, { value, contents: contentsOf([item]), ledgerAction: 'product_view' })
   ga('view_item', {
     currency: CURRENCY,
     value,
@@ -377,7 +403,7 @@ export function trackAddToCart(item: TrackedItem): void {
   const value = Number((item.price * item.quantity).toFixed(2))
 
   fbq('track', 'AddToCart', metaPayload([item]), { eventID: eventId })
-  mirror('AddToCart', eventId, { value, contents: contentsOf([item]) })
+  mirror('AddToCart', eventId, { value, contents: contentsOf([item]), ledgerAction: 'add_to_cart' })
   ga('add_to_cart', {
     currency: CURRENCY,
     value,
@@ -396,6 +422,7 @@ export function trackInitiateCheckout(items: TrackedItem[], value: number): void
   mirror('InitiateCheckout', eventId, {
     value: Number(value.toFixed(2)),
     contents: contentsOf(items),
+    ledgerAction: 'checkout_start',
   })
   ga('begin_checkout', {
     currency: CURRENCY,
@@ -434,62 +461,97 @@ export function trackOrderPlaced(orderId: string, total: number, items: TrackedI
   })
 }
 
+// ─── Contact events (WhatsApp / phone) ──────────────────────────────────────
+
+/** Context describing where a Contact event happened, for reporting only. */
+export interface ContactContext {
+  /** 'whatsapp' or 'phone' - never a monetary event, never given order revenue. */
+  channel: 'whatsapp' | 'phone'
+  path: string
+  productId?: string
+  variantId?: string
+  /** Present only for WhatsApp clicks that minted a reference. */
+  whatsappReference?: string
+}
+
+/**
+ * Someone clicked a WhatsApp button or a click-to-call phone link.
+ *
+ * Meta's 'Contact' is a standard event and is used as such (fbq('track', ...),
+ * not 'trackCustom') so it benefits from the same optimisation Meta gives its
+ * other standard events. GA4 gets two distinct custom events instead of one,
+ * because "someone messaged us" and "someone rang us" are different channels
+ * a campaign report needs to tell apart.
+ *
+ * Deliberately carries no `value` and no `contents` - this is an enquiry, not
+ * a sale. See utils/orderConversions.ts for where the eventual order, if any,
+ * is what actually reports Purchase.
+ */
+export function trackContactEvent(ctx: ContactContext): void {
+  const eventId = newEventId()
+
+  fbq('track', 'Contact', {
+    content_category: ctx.channel,
+    content_ids: ctx.variantId ? [ctx.variantId] : undefined,
+  }, { eventID: eventId })
+
+  // Only a phone click gets its ledger row here. A WhatsApp click already has
+  // its own writer (utils/attribution/whatsapp.ts -> whatsapp_enquiries +
+  // attribution_actions), with the reference and enquiry linkage this route
+  // has no way to attach - writing a second, poorer row here would duplicate
+  // it rather than complete it.
+  mirror('Contact', eventId, {
+    value: 0,
+    contents: [],
+    ledgerAction: ctx.channel === 'phone' ? 'call_click' : undefined,
+  })
+
+  ga(ctx.channel === 'whatsapp' ? 'whatsapp_click' : 'phone_click', {
+    link_url: ctx.path,
+    item_id: ctx.variantId,
+  })
+}
+
 // ─── Google Ads ──────────────────────────────────────────────────────────────
 
 /**
- * The conversion action to report against, as "AW-<account>/<label>".
+ * An OPTIONAL, SECONDARY diagnostic conversion action - never Purchase.
  *
- * Read from the environment rather than hardcoded because the label is the one
- * value here that changes without the code changing: creating a new conversion
- * action in the Ads UI issues a new label, and a stale one reports into an
- * action nobody is bidding on. Absent, this whole function is a no-op - the
- * same way every other optional integration in this project behaves.
+ * THE DEFECT THIS REPLACES. This used to be `trackAdsPurchase`, read
+ * NEXT_PUBLIC_ADS_PURCHASE_SEND_TO, and fired at raw checkout submission - the
+ * moment a cash-on-delivery order is PLACED, before anyone has confirmed
+ * anything. Meta's Purchase and GA4's purchase were both moved off that exact
+ * trigger for the exact reason documented on trackOrderPlaced above and in
+ * utils/orderConversions.ts: roughly a quarter of COD orders never complete,
+ * so treating "placed" as "sold" overstates revenue by about a third and
+ * trains the optimiser toward people who submit a form rather than people who
+ * pay. Google Ads had never been fixed to match - this closes that gap.
  *
- * NEXT_PUBLIC_ is required: the value is inlined at build time and read in the
- * browser. It is not a secret; the label is visible in any page that fires it.
+ * THE NEW SHAPE. Google Ads has no server-side path on this site the way Meta
+ * and GA4 do (see utils/orderConversions.ts), so "confirmed" and "delivered"
+ * cannot be reported as a live browser conversion at all - the browser that
+ * placed the order is long gone by the time either happens. Those are instead
+ * staged in Supabase (google_offline_conversions, written from
+ * utils/orderConversions.ts) for a SEPARATE, later offline-conversion or
+ * enhanced-conversion import - not implemented by this change; see
+ * docs/TRACKING_V2_EXPORT_CONTRACT.md.
+ *
+ * What remains here is deliberately downgraded to an optional diagnostic: a
+ * distinct env var (NEXT_PUBLIC_ADS_ORDER_PLACED_SEND_TO) naming its own
+ * conversion action, configured separately in the Ads UI - never the same
+ * action as a future Purchase/offline import, and never labelled "Purchase".
+ * Absent, this is a no-op, like every optional integration on this site.
+ *
+ * `reference` and `total` are unchanged: the order's short reference as
+ * transaction_id, and the database's own total_amount, GBP unconditionally.
  */
-const ADS_SEND_TO = process.env.NEXT_PUBLIC_ADS_PURCHASE_SEND_TO
+const ADS_ORDER_PLACED_SEND_TO = process.env.NEXT_PUBLIC_ADS_ORDER_PLACED_SEND_TO
 
-/**
- * Report one order to Google Ads.
- *
- * Deliberately NOT paired with a GA4 'purchase' here. GA4 already receives one
- * for every order, server-side, when it reaches 'confirmed' - see
- * utils/orderConversions.ts. Sending a second from the browser would double
- * the revenue in the Monetisation reports and re-introduce the cash-on-delivery
- * overstatement that the server-side design exists to remove.
- *
- * Google Ads has no such server-side path on this site, which is why this one
- * is a browser event.
- *
- * `reference` is the order's SHORT code - the first 8 characters of its uuid,
- * uppercased - and it is the canonical transaction id for this order
- * everywhere. The server-side GA4 purchase and the Meta CAPI event in
- * utils/orderConversions.ts already report against the same value, so one
- * order carries one identifier across all three platforms and the three
- * reports can be reconciled against each other.
- *
- * It is deliberately not the full uuid: that is the access token for
- * /confirm-order/[id], where holding it is enough to confirm the order and
- * read the customer's name, total and address. A transaction_id is transmitted
- * to Google and retained in its logs, which is no place for a bearer token.
- *
- * Google Ads treats transaction_id as the deduplication key. This event is
- * sent from two places - the checkout success step and /confirm-order/[id] -
- * and they agree on this value, so an order reported by both is counted once.
- * That is also the only guard that works across devices, where the local
- * storage check in components/Checkout/AdsPurchaseConversion.tsx cannot see
- * that the order has already been reported.
- *
- * Currency is GBP unconditionally. Google converts into the Ads account's
- * currency itself, so declaring the account's currency here instead would
- * silently mis-state the value of every order.
- */
-export function trackAdsPurchase(reference: string, total: number): void {
-  if (!ADS_SEND_TO) return
+export function trackAdsOrderPlaced(reference: string, total: number): void {
+  if (!ADS_ORDER_PLACED_SEND_TO) return
 
   ga('conversion', {
-    send_to: ADS_SEND_TO,
+    send_to: ADS_ORDER_PLACED_SEND_TO,
     value: Number(total.toFixed(2)),
     currency: CURRENCY,
     transaction_id: reference,

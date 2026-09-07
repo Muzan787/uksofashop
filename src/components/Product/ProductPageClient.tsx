@@ -20,9 +20,11 @@ import Link from 'next/link';
 import { ChevronRight, Phone, Sparkles } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { toggleWishlist } from '@/app/actions/wishlist';
-import { PHONE_HREF, whatsAppHref } from '@/constants/contact';
+import { PHONE_HREF } from '@/constants/contact';
 import { useCart } from '@/context/CartContext';
 import { trackAddToCart, trackViewContent } from '@/utils/tracking';
+import { useWhatsAppCTA } from '@/utils/attribution/useWhatsAppCTA';
+import { usePhoneClick } from '@/utils/attribution/usePhoneClick';
 import type { DeliveryWindow } from '@/utils/delivery';
 import { accentVars } from './accent';
 import BuyBox from './BuyBox';
@@ -268,13 +270,26 @@ export default function ProductPageClient({
   }, [product.id]);
 
   // ── Enquiry links ────────────────────────────────────────────────────────
-  const agentHref = whatsAppHref(`Hi, I have a query about your product: ${product.title}`);
+  // Each mints its own UKSS-WA-... reference before the visitor leaves for
+  // WhatsApp - see utils/attribution/useWhatsAppCTA.ts - so a conversation
+  // that becomes a sale can be linked back to this exact product/variant.
+  const agentCta = useWhatsAppCTA({
+    message: `Hi, I'm enquiring about the ${product.title}.`,
+    pageContext: 'product_agent',
+    productId: product.id,
+    variantId: selVariant?.id,
+    productName: product.title,
+  });
 
   // Structured so a made-to-order enquiry arrives with the answers already
   // prompted, rather than as an open-ended message.
-  const customEnquiryHref = whatsAppHref(
-    `Hi, I'd like a made-to-order ${product.title}.\n\nColour:\nFabric / material:\nSize or layout:\nAnything else:\n`,
-  );
+  const customEnquiryCta = useWhatsAppCTA({
+    message: `Hi, I'd like a made-to-order ${product.title}.\n\nColour:\nFabric / material:\nSize or layout:\nAnything else:\n`,
+    pageContext: 'product_custom_enquiry',
+    productId: product.id,
+    variantId: selVariant?.id,
+    productName: product.title,
+  });
 
   const [showCustomSize, setShowCustomSize] = useState(false);
 
@@ -303,6 +318,17 @@ export default function ProductPageClient({
           main landmarks in a document is invalid and leaves a screen reader
           with two "main" regions to choose between. */}
       <div className="grad-calico grain-light relative bg-calico-50" style={accent}>
+        {/* Exposes the live product + selected variant to the global fixed
+            WhatsApp button. The marker is hidden and carries no user-visible
+            content; React updates its data attributes whenever the variant
+            changes, and WhatsAppFab observes those updates. */}
+        <span
+          hidden
+          data-whatsapp-product-context
+          data-product-id={product.id}
+          data-variant-id={selVariant?.id ?? ''}
+          data-product-name={product.title}
+        />
         {/* ── Breadcrumb ───────────────────────────────────────────────────
             The category link used to print the URL slug with its first letter
             capitalised, so it read "Corner-sofas". It carries the category's
@@ -415,8 +441,8 @@ export default function ProductPageClient({
           <div className="order-3 md:col-start-1 md:row-start-2">
             <SecondaryActions
               customMade={Boolean(product.custom_made)}
-              customEnquiryHref={customEnquiryHref}
-              agentHref={agentHref}
+              customEnquiryCta={customEnquiryCta}
+              agentCta={agentCta}
             />
           </div>
 
@@ -484,6 +510,13 @@ export default function ProductPageClient({
 function CustomSizeModal({ title, accent, onClose }: {
   title: string; accent: React.CSSProperties; onClose: () => void;
 }) {
+  const configCta = useWhatsAppCTA({
+    message: `Hi, I'm interested in a custom configuration for the ${title}. Can you help me out?`,
+    pageContext: 'product_custom_size_modal',
+    productName: title,
+  });
+  const onPhoneClick = usePhoneClick();
+
   return (
     <Modal
       title="Custom configuration"
@@ -501,7 +534,8 @@ function CustomSizeModal({ title, accent, onClose }: {
 
         <div className="mt-5 flex flex-col gap-3">
           <a
-            href={whatsAppHref(`Hi, I'm interested in a custom configuration for the ${title}. Can you help me out?`)}
+            href={configCta.href}
+            onClick={configCta.onClick}
             target="_blank"
             rel="noopener noreferrer"
             className="hover-btn flex h-12 items-center justify-center gap-2 rounded-sm bg-whatsapp text-body-sm font-semibold text-calico-50 no-underline"
@@ -511,6 +545,7 @@ function CustomSizeModal({ title, accent, onClose }: {
           </a>
           <a
             href={PHONE_HREF}
+            onClick={onPhoneClick}
             className="hover-btn hover-btn-dark flex h-12 items-center justify-center gap-2 rounded-sm bg-ink-900 text-body-sm font-semibold text-calico-50 no-underline"
           >
             <Phone aria-hidden="true" className="h-4 w-4" />

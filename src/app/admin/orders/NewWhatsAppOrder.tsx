@@ -64,6 +64,7 @@ export default function NewWhatsAppOrder({
   const [postcode, setPostcode] = useState('')
   const [notes, setNotes] = useState('')
   const [delivery, setDelivery] = useState('')
+  const [whatsappReference, setWhatsappReference] = useState('')
   const [lines, setLines] = useState<Line[]>([{ ...BLANK }])
 
   const priceOf = useMemo(() => {
@@ -87,7 +88,7 @@ export default function NewWhatsAppOrder({
 
   const reset = () => {
     setName(''); setPhone(''); setEmail(''); setAddress(''); setPostcode('')
-    setNotes(''); setDelivery(''); setLines([{ ...BLANK }]); setError('')
+    setNotes(''); setDelivery(''); setWhatsappReference(''); setLines([{ ...BLANK }]); setError('')
   }
 
   const submit = async (e: React.FormEvent) => {
@@ -124,6 +125,7 @@ export default function NewWhatsAppOrder({
       specialInstructions: notes,
       deliveryCharge: delivery.trim() === '' ? 0 : Number(delivery),
       items,
+      whatsappReference: whatsappReference.trim() || undefined,
     })
     setPending(false)
 
@@ -288,6 +290,20 @@ export default function NewWhatsAppOrder({
             <Plus className="h-3.5 w-3.5" />
             Another sofa
           </button>
+        </div>
+
+        <div>
+          <label className={label} htmlFor="wa-reference">
+            WhatsApp reference <span className="font-normal normal-case tracking-normal text-stone-400">— optional, e.g. UKSS-WA-260906-A7F31C, if the customer quoted one</span>
+          </label>
+          <input
+            id="wa-reference"
+            className={`${field} uppercase`}
+            value={whatsappReference}
+            onChange={e => setWhatsappReference(e.target.value.toUpperCase())}
+            placeholder="UKSS-WA-260906-A7F31C"
+            autoComplete="off"
+          />
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">

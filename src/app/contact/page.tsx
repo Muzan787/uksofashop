@@ -5,8 +5,10 @@ import { Mail, Phone, MapPin, Clock, CheckCircle, MessageSquare, ArrowRight } fr
 import { submitContactForm } from '@/app/actions/contact'
 import Field, { SubmitButton } from '@/components/UI/Field'
 import Link from 'next/link'
-
+
 import { PHONE_HREF, PHONE_DISPLAY } from '@/constants/contact'
+import { useWhatsAppCTA } from '@/utils/attribution/useWhatsAppCTA'
+import { usePhoneClick } from '@/utils/attribution/usePhoneClick'
 const ACCENT = 'var(--color-ember-500)'      // fills: buttons, rules, icons, badges
 const ACCENT_TEXT = 'var(--color-ember-700)' // letterforms on a light ground
 
@@ -18,6 +20,11 @@ const CONTACT_INFO = [
 ]
 
 export default function ContactPage() {
+  const whatsappCta = useWhatsAppCTA({
+    message: "Hi, I'd like some help with an enquiry.",
+    pageContext: 'contact_page',
+  })
+  const onPhoneClick = usePhoneClick()
   const [pending, setPending] = useState(false)
   const [status, setStatus]   = useState<'idle' | 'success' | 'error'>('idle')
   const [errMsg, setErrMsg]   = useState('')
@@ -58,7 +65,12 @@ export default function ContactPage() {
                 </div>
                 <div style={{ fontFamily: 'var(--font-data)', fontSize: 'var(--text-eyebrow)', color: 'var(--color-ink-500)', textTransform: 'uppercase', letterSpacing: '0.15em', fontWeight: 700, marginBottom: 4 }}>{label}</div>
                 {href
-                  ? <a href={href} style={{ fontSize: 'var(--text-caption)', fontWeight: 700, color: 'var(--color-ink-900)', textDecoration: 'none', display: 'block', marginBottom: 4 }} className="hover:text-ember-700 transition-colors">{value}</a>
+                  ? <a
+                      href={href}
+                      onClick={href === PHONE_HREF ? onPhoneClick : undefined}
+                      style={{ fontSize: 'var(--text-caption)', fontWeight: 700, color: 'var(--color-ink-900)', textDecoration: 'none', display: 'block', marginBottom: 4 }}
+                      className="hover:text-ember-700 transition-colors"
+                    >{value}</a>
                   : <div style={{ fontSize: 'var(--text-caption)', fontWeight: 700, color: 'var(--color-ink-900)', marginBottom: 4 }}>{value}</div>
                 }
                 <div style={{ fontSize: 'var(--text-caption)', color: 'var(--color-ink-500)' }}>{sub}</div>
@@ -67,7 +79,7 @@ export default function ContactPage() {
           </div>
 
           {/* WhatsApp */}
-          <a href="https://wa.me/447476616022" target="_blank" rel="noopener noreferrer"
+          <a href={whatsappCta.href} onClick={whatsappCta.onClick} target="_blank" rel="noopener noreferrer"
             data-ground="dark"
             style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px', borderRadius: 'var(--radius-sm)', background: 'var(--color-ink-900)', textDecoration: 'none', border: '1px solid rgba(255,255,255,0.06)', marginBottom: 16 }}
             className="hover:border-whatsapp/30 transition-colors group"

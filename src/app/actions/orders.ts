@@ -39,19 +39,33 @@ export async function updateOrderStatus(formData: FormData) {
 
   // shipping_address is fetched so the tracking link in the status email can
   // carry the postcode - tracking now needs the reference AND the postcode.
+  // confirmed_at/cancelled_at are fetched so they can be stamped once, the
+  // first time an order reaches that status, and never overwritten after -
+  // the same "first time only" guarantee delivered_at already has.
   const { data: order } = await supabase
     .from('orders')
-    .select('customer_email, customer_name, customer_phone, shipping_address')
+    .select('customer_email, customer_name, customer_phone, shipping_address, confirmed_at, delivered_at, cancelled_at')
     .eq('id', orderId)
     .single()
 
   // delivered_at is stamped the first time an order reaches 'delivered' and
   // never moved again, so the review-request delay is measured from the real
   // delivery rather than from a later status correction.
-  const patch: { status: string; delivered_at?: string } =
-    newStatus === 'delivered'
-      ? { status: newStatus, delivered_at: new Date().toISOString() }
-      : { status: newStatus }
+  const patch: {
+    status: string
+    delivered_at?: string
+    confirmed_at?: string
+    cancelled_at?: string
+    cancellation_reason?: string
+  } = { status: newStatus }
+
+  if (newStatus === 'delivered' && !order?.delivered_at) patch.delivered_at = new Date().toISOString()
+  if (newStatus === 'confirmed' && !order?.confirmed_at) patch.confirmed_at = new Date().toISOString()
+  if (newStatus === 'cancelled' && !order?.cancelled_at) {
+    patch.cancelled_at = new Date().toISOString()
+    const reason = formData.get('cancellationReason')
+    if (typeof reason === 'string' && reason.trim()) patch.cancellation_reason = reason.trim()
+  }
 
   const { error } = await supabase
     .from('orders')
@@ -118,6 +132,17 @@ export async function confirmCustomerOrder(orderId: string) {
   if (error) {
     return { error: 'Failed to confirm order. Please contact support.' }
   }
+
+  // confirm_order (the RPC) predates confirmed_at and isn't tracked in this
+  // repository's migrations, so it doesn't know about the column. Stamped
+  // here instead, guarded the same "first time only" way updateOrderStatus
+  // does it - the `is('confirmed_at', null)` predicate means a customer
+  // re-opening the confirmation link never moves the timestamp a second time.
+  await supabase
+    .from('orders')
+    .update({ confirmed_at: new Date().toISOString() })
+    .eq('id', orderId)
+    .is('confirmed_at', null)
 
   // The customer confirming from their email reaches 'confirmed' too, so the
   // Purchase conversion has to be reported here as well. The guard column

@@ -5,6 +5,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Check, Copy, Landmark, Phone, Star, Truck, Wallet } from 'lucide-react';
 import { PHONE_DISPLAY, PHONE_HREF, whatsAppHref } from '@/constants/contact';
+import { usePhoneClick } from '@/utils/attribution/usePhoneClick';
 import { deliveryWindow } from '@/utils/delivery';
 import WhatsAppIcon from '@/components/Product/WhatsAppIcon';
 import Timeline from '@/components/UI/Timeline';
@@ -38,6 +39,7 @@ const MONEY = new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP
  */
 export default function SuccessStep({ orderId, postcode, amount }: Props) {
   const [copied, setCopied] = useState(false);
+  const onPhoneClick = usePhoneClick();
 
   const reference = `#${orderId.split('-')[0].toUpperCase()}`;
   const window = deliveryWindow();
@@ -58,7 +60,7 @@ export default function SuccessStep({ orderId, postcode, amount }: Props) {
   }
 
   return (
-    <div className="mx-auto max-w-[560px]">
+    <div data-existing-order-context className="mx-auto max-w-[560px]">
       {/* ── The tick ───────────────────────────────────────────────────── */}
       <Reveal index={0} className="flex justify-center">
         <DrawnTick />
@@ -166,6 +168,7 @@ export default function SuccessStep({ orderId, postcode, amount }: Props) {
           </a>
           <a
             href={PHONE_HREF}
+            onClick={onPhoneClick}
             className="hover-btn hover-btn-dark grad-ink flex h-12 flex-1 items-center justify-center gap-2 rounded-pill bg-ink-900 text-body-sm font-semibold text-calico-50 no-underline"
           >
             <Phone aria-hidden="true" className="h-4 w-4" />

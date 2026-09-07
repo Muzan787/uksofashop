@@ -1500,10 +1500,18 @@ html.entrance .brand-entrance__rule {
  *
  * A media query has nothing to beat.
  */
+/*
+ * --fab-extra is set from JS (components/Layout/WhatsAppFab.tsx) to the
+ * measured height of whatever full-width bar - the product add-to-cart bar,
+ * the checkout total bar - is currently pinned to the same edge, so the
+ * button is pushed up clear of it rather than hidden. Defaults to 0px, so a
+ * page with no such bar (and every desktop width, where none of them render)
+ * is unaffected.
+ */
 .fab-offset {
-  bottom: calc(var(--bottom-nav) + env(safe-area-inset-bottom) + 16px);
+  bottom: calc(var(--bottom-nav) + env(safe-area-inset-bottom) + 16px + var(--fab-extra, 0px));
 }
 
 @media (width >= 64rem) {
-  .fab-offset { bottom: 1.5rem; }
+  .fab-offset { bottom: calc(1.5rem + var(--fab-extra, 0px)); }
 }

@@ -27,6 +27,8 @@ const TRACKING_COOKIE_PREFIXES = [
   '_gat',  // Google Analytics throttling
   '_fbp',  // Meta Pixel browser id
   '_fbc',  // Meta Pixel click id
+  'uksofashop_ft', // first-touch paid/UTM attribution
+  'uksofashop_lt', // last-touch paid/UTM attribution
 ]
 
 export function getConsent(): ConsentValue | null {

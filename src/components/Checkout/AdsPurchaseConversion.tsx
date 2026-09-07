@@ -2,32 +2,29 @@
 // src/components/Checkout/AdsPurchaseConversion.tsx
 
 import { useEffect } from 'react'
-import { trackAdsPurchase } from '@/utils/tracking'
+import { trackAdsOrderPlaced } from '@/utils/tracking'
+import { isBrowserTrackingEnabled } from '@/utils/trackingEnv'
 
 /**
- * Fires the Google Ads purchase conversion for one order, once.
+ * Fires the OPTIONAL, SECONDARY Google Ads "order placed" diagnostic
+ * conversion for one order, once. Renders nothing.
  *
- * Renders nothing. It exists because both places that report an order are
- * server-rendered, and gtag lives in the browser.
+ * NOT A PURCHASE CONVERSION. This component and trackAdsOrderPlaced used to
+ * report a live Google Ads Purchase at raw checkout submission - before any
+ * order was confirmed, on a cash-on-delivery business where roughly a
+ * quarter of orders never complete. That was the same overstatement Meta's
+ * Purchase and GA4's purchase were both moved off this exact trigger to
+ * avoid (see utils/orderConversions.ts) - Google Ads had simply never been
+ * fixed to match. It now fires only if NEXT_PUBLIC_ADS_ORDER_PLACED_SEND_TO
+ * names a conversion action configured for that purpose in the Ads UI, and
+ * is a no-op otherwise. See utils/tracking.ts for the full history.
  *
- * TWO FIRING SITES, ONE CONVERSION
- *
- * Mounted on the checkout success step, and again on /confirm-order/[id].
- *
- *   - Checkout success is the reliable one. It runs in the session that
- *     clicked the ad, so the _gcl cookie is present and Google can attribute
- *     the conversion to the click.
- *   - /confirm-order/[id] is the backstop. It only runs if the customer opens
- *     the confirmation email, and if they open it on another device there is
- *     no _gcl cookie there to attribute against. It catches the case where the
- *     first site never ran - a closed tab, a blocked script, a crash.
- *
- * Firing from both is deliberate, and safe, because both emit the SAME
- * `transaction_id`: the order's short reference. Google Ads discards a
- * conversion whose order id it has already recorded, so the pair counts once.
- * If the two sites ever disagree about that identifier, every order that
- * reaches both is counted twice - which is why the value is threaded through
- * this one component rather than built independently at each call site.
+ * ONE FIRING SITE. Previously mounted here AND on /confirm-order/[id] as a
+ * cross-device backstop for a live Purchase conversion. There is no browser
+ * "Purchase" left to back up: confirmed/delivered are staged in Supabase
+ * (google_offline_conversions) for a separate offline-conversion import
+ * instead - see docs/TRACKING_V2_EXPORT_CONTRACT.md. So this now mounts only
+ * on the checkout success step, in the session that actually clicked the ad.
  *
  * WHY IT CANNOT SIMPLY FIRE ON MOUNT
  *
@@ -85,6 +82,7 @@ interface Props {
 
 export default function AdsPurchaseConversion({ reference, total }: Props) {
   useEffect(() => {
+    if (!isBrowserTrackingEnabled()) return
     // A total of zero is only possible if something upstream is broken, and a
     // zero-value conversion is worse than none.
     if (!reference || !Number.isFinite(total) || total <= 0) return
@@ -110,7 +108,7 @@ export default function AdsPurchaseConversion({ reference, total }: Props) {
       // Nothing to do. The Set still holds for this page load.
     }
 
-    trackAdsPurchase(reference, total)
+    trackAdsOrderPlaced(reference, total)
   }, [reference, total])
 
   return null

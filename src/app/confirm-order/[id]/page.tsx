@@ -4,7 +4,6 @@ import { createClient } from '@/utils/supabase/server'
 import { notFound } from 'next/navigation'
 import { CheckCircle, MessageCircle, Package, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
-import AdsPurchaseConversion from '@/components/Checkout/AdsPurchaseConversion'
 
 
 export const metadata: Metadata = {
@@ -35,29 +34,16 @@ export default async function ConfirmOrderPage({ params }: { params: Promise<{ i
 
   return (
     <div className="min-h-screen bg-calico-50 flex items-center justify-center p-4">
-      {/* Reports the Google Ads conversion. Renders nothing.
-
-          The BACKSTOP firing site. Checkout success reports the same order at
-          the moment it is placed, in the session that clicked the ad; this one
-          only runs if the customer opens the confirmation email, which may be
-          on a device with no _gcl cookie to attribute against. It is here for
-          the order whose checkout event never ran at all.
-
-          Both sites emit `shortCode` as the transaction id - the same value
-          the server-side GA4 purchase and the Meta CAPI event use - so an
-          order that fires from both is counted once. Changing the identifier
-          here without changing it in CheckoutClient would double-count every
-          order that reaches both.
-
-          The value is the database's own total_amount, read above, rather than
-          anything carried from the browser's cart - this link is opened from an
-          email, often on a different device and days later, so there is no cart
-          to trust even in principle.
-
-          GA4 is deliberately not reported here. It already receives a purchase
-          server-side when the order reaches 'confirmed'; a second one from the
-          browser would double the revenue. See utils/orderConversions.ts. */}
-      <AdsPurchaseConversion reference={shortCode} total={Number(order.total_amount)} />
+      {/* No Google Ads conversion fires from this page.
+          Previously mounted AdsPurchaseConversion here as a cross-device
+          backstop for a live browser "Purchase" - but a browser conversion at
+          this point can never be a real Purchase signal (see the note on
+          trackAdsOrderPlaced in utils/tracking.ts): there is no reliable ad
+          click context here at all, only whichever device happened to open a
+          confirmation email. Google's confirmed/delivered signal is now
+          staged server-side instead - see utils/orderConversions.ts and
+          google_offline_conversions - for a separate offline-conversion
+          import, not a live browser event. */}
 
       <div className="max-w-xl w-full bg-white rounded-md shadow-e3 border border-calico-300 overflow-hidden">
 

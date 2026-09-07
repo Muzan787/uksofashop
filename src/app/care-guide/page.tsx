@@ -5,7 +5,8 @@ import { Phone } from 'lucide-react'
 import EditorialHero from '@/components/Editorial/EditorialHero'
 import EditorialSchema from '@/components/Editorial/EditorialSchema'
 import EditorialLayout, { Note, PullQuote } from '@/components/Editorial/EditorialLayout'
-import { PHONE_DISPLAY, PHONE_HREF } from '@/constants/contact'
+import { PHONE_DISPLAY } from '@/constants/contact'
+import PhoneLink from '@/components/UI/PhoneLink'
 
 /**
  * Said once, used twice: as the meta description, and as the description on
@@ -202,13 +203,10 @@ export default function CareGuidePage() {
             </p>
           </div>
           <div className="flex shrink-0 flex-wrap gap-3">
-            <a
-              href={PHONE_HREF}
-              className="hover-btn hover-btn-dark flex h-12 items-center gap-2 rounded-sm border border-calico-50/25 px-5 font-data text-eyebrow font-bold uppercase tracking-[0.1em] text-calico-50 no-underline"
-            >
+            <PhoneLink className="hover-btn hover-btn-dark flex h-12 items-center gap-2 rounded-sm border border-calico-50/25 px-5 font-data text-eyebrow font-bold uppercase tracking-[0.1em] text-calico-50 no-underline">
               <Phone aria-hidden="true" className="h-4 w-4" />
               {PHONE_DISPLAY}
-            </a>
+            </PhoneLink>
             <Link
               href="/contact"
               className="hover-btn flex h-12 items-center rounded-sm bg-ember-500 px-5 font-data text-eyebrow font-bold uppercase tracking-[0.1em] text-ink-900 no-underline"

@@ -29,6 +29,7 @@ import {
   META_PIXEL_READY_EVENT,
 } from '@/utils/consentMode';
 import { isSensitiveUrl } from '@/utils/redactUrl';
+import { isBrowserTrackingEnabled } from '@/utils/trackingEnv';
 import {
   CONSENT_KEY,
   CONSENT_CHANGED_EVENT,
@@ -77,6 +78,17 @@ export default function TrackingScripts() {
     () => false,
   );
 
+  /**
+   * Production-only gate (utils/trackingEnv.ts). Read the same way as
+   * `sensitive` above and for the same reason: it must never affect the
+   * server render or the hydration pass, only what mounts afterwards.
+   */
+  const productionHost = useSyncExternalStore(
+    subscribeToNothing,
+    () => isBrowserTrackingEnabled(),
+    () => false,
+  );
+
   useEffect(() => {
     // grantConsent() dispatches both event names, and both are listened to so
     // the banner keeps working whichever it uses. Remembering the last value
@@ -106,6 +118,13 @@ export default function TrackingScripts() {
       window.removeEventListener(CONSENT_GRANTED_EVENT, read);
     };
   }, []);
+
+  // Production hostname gate (utils/trackingEnv.ts). Neither the Google tag
+  // nor the Meta Pixel loads at all outside www.uksofashop.co.uk/
+  // uksofashop.co.uk - a developer's laptop, a LAN preview and every Vercel
+  // preview deployment now send nothing, rather than contributing real
+  // traffic to the live ad accounts.
+  if (!productionHost) return null;
 
   return (
     <>

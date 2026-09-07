@@ -2,12 +2,14 @@
 
 import { after } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
+import { createAdminClient } from '@/utils/supabase/admin'
 import { sendOrderConfirmation, sendAdminOrderNotification } from '@/utils/email'
 import { deliveryBreakdown, NO_EXTRAS, type DeliveryOptions } from '@/constants/delivery'
 import { isValidUkMobile, UK_MOBILE_ERROR } from '@/utils/phone'
 import { z } from 'zod'
 import { cookies, headers } from 'next/headers'
 import { rateLimit, callerKey } from '@/utils/rateLimit'
+import { metaFbcFromTouch } from '@/utils/attribution/fbc'
 
 /** What the browser is allowed to tell us: what was ordered, never what it costs. */
 export interface CartItem {
@@ -185,10 +187,24 @@ export async function placeOrder(
   const jar = await cookies()
   const hdrs = await headers()
 
+  // First-party visitor/session/arrival ids and last-touch click ids/UTMs -
+  // all read from cookies written client-side by utils/attribution/ids.ts,
+  // never trusted from the browser's form submission. Last-touch, not
+  // first-touch: attribution_sessions (20260906100000) keeps both, but the
+  // order itself records the touch responsible for the visit that actually
+  // converted - see the migration's own note for why.
+  let lastTouch: Record<string, string | undefined> = {}
+  try {
+    const raw = jar.get('uksofashop_lt')?.value
+    if (raw) lastTouch = JSON.parse(raw)
+  } catch {
+    // Malformed cookie. Nothing to recover; the order still places fine.
+  }
+
   const attribution = {
     ga_client_id: jar.get('_ga')?.value ?? null,
     meta_fbp: jar.get('_fbp')?.value ?? null,
-    meta_fbc: jar.get('_fbc')?.value ?? null,
+    meta_fbc: jar.get('_fbc')?.value ?? metaFbcFromTouch(lastTouch),
     // Meta requires client_user_agent for website events, and the IP
     // materially improves match quality. They have to be taken from THIS
     // request: at confirmation time the only headers available belong to the
@@ -198,9 +214,29 @@ export async function placeOrder(
       hdrs.get('x-forwarded-for')?.split(',')[0].trim() ||
       hdrs.get('x-real-ip') ||
       null,
+
+    visitor_id: jar.get('uksofashop_vid')?.value ?? null,
+    session_id: jar.get('uksofashop_sid')?.value ?? null,
+    arrival_id: jar.get('uksofashop_aid')?.value ?? null,
+
+    gclid: lastTouch.gclid ?? null,
+    gbraid: lastTouch.gbraid ?? null,
+    wbraid: lastTouch.wbraid ?? null,
+    fbclid: lastTouch.fbclid ?? null,
+
+    utm_source: lastTouch.source ?? null,
+    utm_medium: lastTouch.medium ?? null,
+    utm_campaign: lastTouch.campaign ?? null,
+    utm_content: lastTouch.content ?? null,
+    utm_term: lastTouch.term ?? null,
+
+    landing_page: lastTouch.landingPage ?? null,
+    referrer: lastTouch.referrer ?? null,
   }
 
-  if (attribution.ga_client_id || attribution.meta_fbp || attribution.meta_fbc) {
+  const hasAnyAttribution = Object.values(attribution).some(v => v !== null && v !== undefined)
+
+  if (hasAnyAttribution) {
     after(async () => {
       const { error: attrError } = await supabase
         .from('orders')
@@ -209,6 +245,27 @@ export async function placeOrder(
       if (attrError) {
         // Costs attribution quality on this one order, nothing more.
         console.error(`Could not store attribution ids for order ${shortCode}`, attrError)
+      }
+
+      // Best-effort action-ledger row, via the admin client: attribution_actions
+      // has no anon/authenticated RLS policy (see 20260906120000), the same way
+      // the other new attribution tables do not - this is server code, not a
+      // browser write, so bypassing RLS here is the intended path, not a leak.
+      // Never allowed to affect the order itself, which is already committed.
+      try {
+        const admin = createAdminClient()
+        const { error: actionError } = await admin.from('attribution_actions').insert({
+          visitor_id: attribution.visitor_id,
+          session_id: attribution.session_id,
+          arrival_id: attribution.arrival_id,
+          action_type: 'order_placed',
+          order_id: order.id,
+        })
+        if (actionError) {
+          console.error(`Could not write attribution_actions row for order ${shortCode}`, actionError)
+        }
+      } catch (err) {
+        console.error(`Could not write attribution_actions row for order ${shortCode}`, err)
       }
     })
   }

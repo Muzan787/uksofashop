@@ -34,20 +34,34 @@
 // numbers here mis-report ROAS, they cannot mis-charge anybody. The order
 // Purchase - the one number that has to be right - is still read from the
 // database in utils/orderConversions.ts and never from a request body.
+//
+// LEDGERACTION. Piggybacks one attribution_actions row onto this same
+// request when the browser supplies one (utils/tracking.ts sets it for
+// ViewContent/AddToCart/InitiateCheckout and for a phone Contact click) -
+// deliberately not a second fetch, since the Meta mirror already made one for
+// the same user action. A WhatsApp Contact click never sets this: it has its
+// own, richer writer in utils/attribution/whatsapp.ts (reference + enquiry
+// linkage this route cannot attach), and writing a second, poorer row here
+// would duplicate it rather than complete it. Visitor/session/arrival ids are
+// read from cookies, never trusted from the body, the same way every other
+// attribution route in this codebase does it.
 
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { cookies, headers } from 'next/headers'
 import { rateLimit, callerKey } from '@/utils/rateLimit'
-import { isCapiConfigured, sendCapiEvent } from '@/utils/metaCapi'
+import { sendCapiEvent } from '@/utils/metaCapi'
 import { createClient } from '@/utils/supabase/server'
+import { createAdminClient } from '@/utils/supabase/admin'
 import { isSensitiveUrl } from '@/utils/redactUrl'
 import { SITE_URL } from '@/constants/site'
+import { isServerTrackingEnabled } from '@/utils/trackingEnv'
+import { metaFbcFromTouch } from '@/utils/attribution/fbc'
 
 export const dynamic = 'force-dynamic'
 
 const schema = z.object({
-  event: z.enum(['ViewContent', 'AddToCart', 'InitiateCheckout']),
+  event: z.enum(['ViewContent', 'AddToCart', 'InitiateCheckout', 'Contact']),
   /** Must equal the eventID the same call passed to fbq. */
   eventId: z.string().min(8).max(64),
   /** A path with its query, as location.pathname + location.search gives it. */
@@ -70,16 +84,18 @@ const schema = z.object({
     lastName: z.string().max(100).optional(),
     postcode: z.string().max(16).optional(),
   }).optional(),
+  ledgerAction: z.enum(['product_view', 'add_to_cart', 'checkout_start', 'call_click']).optional(),
 })
 
 /** Accepted, ignored, or rejected - the browser is told nothing either way. */
 const noContent = (status: number) => new NextResponse(null, { status })
 
 export async function POST(request: Request) {
-  // Before the token is configured this is a no-op, like every other optional
-  // integration here. 204 rather than an error: the caller is fire-and-forget
-  // and there is nothing it could usefully do about it.
-  if (!isCapiConfigured()) return noContent(204)
+  // Production gate (utils/trackingEnv.ts). The client already checks this
+  // before calling here (utils/tracking.ts), but sendCapiEvent enforces it
+  // independently too - this early return just avoids the rate-limit and
+  // Supabase auth lookup below for a request that will be a no-op regardless.
+  if (!isServerTrackingEnabled()) return noContent(204)
 
   const hdrs = await headers()
 
@@ -108,6 +124,21 @@ export async function POST(request: Request) {
   if (isSensitiveUrl(event.path)) return noContent(204)
 
   const jar = await cookies()
+
+  let firstTouch: Record<string, string | number | undefined> = {}
+  let lastTouch: Record<string, string | number | undefined> = {}
+  try {
+    const raw = jar.get('uksofashop_ft')?.value
+    if (raw) firstTouch = JSON.parse(raw)
+  } catch {}
+  try {
+    const raw = jar.get('uksofashop_lt')?.value
+    if (raw) lastTouch = JSON.parse(raw)
+  } catch {}
+  const metaFbc = jar.get('_fbc')?.value
+    ?? metaFbcFromTouch(lastTouch)
+    ?? metaFbcFromTouch(firstTouch)
+
 
   // The signed-in customer, when there is one.
   //
@@ -144,7 +175,7 @@ export async function POST(request: Request) {
       postcode: event.user?.postcode,
       externalId,
       fbp: jar.get('_fbp')?.value ?? null,
-      fbc: jar.get('_fbc')?.value ?? null,
+      fbc: metaFbc,
       userAgent: hdrs.get('user-agent'),
       clientIp:
         hdrs.get('x-forwarded-for')?.split(',')[0].trim() ||
@@ -155,6 +186,24 @@ export async function POST(request: Request) {
     value: event.value,
     currency: event.currency ?? 'GBP',
   })
+
+  if (event.ledgerAction) {
+    try {
+      const admin = createAdminClient()
+      await admin.from('attribution_actions').insert({
+        visitor_id: jar.get('uksofashop_vid')?.value ?? null,
+        session_id: jar.get('uksofashop_sid')?.value ?? null,
+        arrival_id: jar.get('uksofashop_aid')?.value ?? null,
+        action_type: event.ledgerAction,
+        page_url: event.path,
+        // The first content line's id is the variant id for these events -
+        // see contentsOf() in utils/tracking.ts. Absent for a phone click.
+        variant_id: event.contents?.[0]?.id ?? null,
+      })
+    } catch (err) {
+      console.error(`Failed to write attribution_actions row for ${event.ledgerAction}`, err)
+    }
+  }
 
   return noContent(204)
 }

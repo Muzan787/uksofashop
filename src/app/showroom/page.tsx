@@ -8,6 +8,8 @@ import EditorialSchema from '@/components/Editorial/EditorialSchema'
 import EditorialLayout, { Note, PullQuote } from '@/components/Editorial/EditorialLayout'
 import { blurDataURL } from '@/utils/cloudinary'
 import { PHONE_DISPLAY, PHONE_HREF } from '@/constants/contact'
+import WhatsAppLink from '@/components/UI/WhatsAppLink'
+import PhoneLink from '@/components/UI/PhoneLink'
 
 /**
  * Said once, used twice: as the meta description, and as the description on
@@ -50,10 +52,10 @@ const HOURS = [
 ]
 
 const BOOKING = [
-  { icon: Phone, label: 'Call', value: PHONE_DISPLAY, href: PHONE_HREF },
-  { icon: MessageCircle, label: 'WhatsApp', value: 'Message us', href: 'https://wa.me/447476616022' },
-  { icon: Mail, label: 'Email', value: SUPPORT_EMAIL, href: `mailto:${SUPPORT_EMAIL}` },
-]
+  { id: 'call', icon: Phone, label: 'Call', value: PHONE_DISPLAY, href: PHONE_HREF },
+  { id: 'whatsapp', icon: MessageCircle, label: 'WhatsApp', value: 'Message us', href: undefined },
+  { id: 'email', icon: Mail, label: 'Email', value: SUPPORT_EMAIL, href: `mailto:${SUPPORT_EMAIL}` },
+] as const
 
 const WHAT_TO_EXPECT = [
   {
@@ -232,27 +234,58 @@ export default function ShowroomPage() {
               </p>
 
               <div className="mt-6 grid gap-3 sm:grid-cols-3">
-                {BOOKING.map(({ icon: Icon, label, value, href }) => (
-                  <a
-                    key={label}
-                    href={href}
-                    target={href.startsWith('http') ? '_blank' : undefined}
-                    rel={href.startsWith('http') ? 'noopener noreferrer' : undefined}
-                    className="flex items-center gap-4 rounded-md border border-calico-300 bg-calico-50 p-4 no-underline transition-colors duration-swift ease-out-expo hover:border-ink-400 sm:flex-col sm:items-start sm:gap-3"
-                  >
-                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-sm bg-ember-500/12">
-                      <Icon aria-hidden="true" className="h-5 w-5 text-ember-700" />
-                    </span>
-                    <span className="min-w-0">
-                      <span className="block font-data text-eyebrow uppercase tracking-[0.14em] text-ink-500">
-                        {label}
+                {BOOKING.map(({ id, icon: Icon, label, value, href }) => {
+                  const className =
+                    'flex items-center gap-4 rounded-md border border-calico-300 bg-calico-50 p-4 no-underline transition-colors duration-swift ease-out-expo hover:border-ink-400 sm:flex-col sm:items-start sm:gap-3'
+                  const inner = (
+                    <>
+                      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-sm bg-ember-500/12">
+                        <Icon aria-hidden="true" className="h-5 w-5 text-ember-700" />
                       </span>
-                      <span className="mt-1 block truncate text-body-sm font-semibold text-ink-900">
-                        {value}
+                      <span className="min-w-0">
+                        <span className="block font-data text-eyebrow uppercase tracking-[0.14em] text-ink-500">
+                          {label}
+                        </span>
+                        <span className="mt-1 block truncate text-body-sm font-semibold text-ink-900">
+                          {value}
+                        </span>
                       </span>
-                    </span>
-                  </a>
-                ))}
+                    </>
+                  )
+
+                  if (id === 'whatsapp') {
+                    return (
+                      <WhatsAppLink
+                        key={label}
+                        message="Hi, I'd like to enquire about visiting the UK Sofa Shop showroom."
+                        pageContext="showroom_booking"
+                        className={className}
+                      >
+                        {inner}
+                      </WhatsAppLink>
+                    )
+                  }
+
+                  if (id === 'call') {
+                    return (
+                      <PhoneLink key={label} className={className}>
+                        {inner}
+                      </PhoneLink>
+                    )
+                  }
+
+                  return (
+                    <a
+                      key={label}
+                      href={href}
+                      target={href!.startsWith('http') ? '_blank' : undefined}
+                      rel={href!.startsWith('http') ? 'noopener noreferrer' : undefined}
+                      className={className}
+                    >
+                      {inner}
+                    </a>
+                  )
+                })}
               </div>
             </section>
 

@@ -6,7 +6,7 @@ import EditorialSchema from '@/components/Editorial/EditorialSchema'
 import { SamplesProvider, SampleBar } from '@/components/Product/FabricSamples'
 import { getFabricLibrary } from '@/utils/fabrics'
 import { MAX_SAMPLES } from '@/constants/swatches'
-import { whatsAppHref } from '@/constants/contact'
+import WhatsAppLink from '@/components/UI/WhatsAppLink'
 import { ogImage } from '@/utils/socialImage'
 import SwatchBrowser from './SwatchBrowser'
 
@@ -210,15 +210,14 @@ export default async function SwatchesPage() {
             </ol>
 
             <div className="mt-10 flex flex-wrap gap-3">
-              <a
-                href={whatsAppHref('Hi — I was looking at your fabric samples page and had a question')}
-                target="_blank"
-                rel="noopener noreferrer"
+              <WhatsAppLink
+                message="Hi, I'd like to enquire about fabric/colour samples."
+                pageContext="swatches_page"
                 className="hover-btn btn-whatsapp shadow-whatsapp flex h-12 items-center gap-2.5 rounded-pill bg-whatsapp px-5 text-body-sm font-semibold text-ink-900 no-underline"
               >
                 <MessageCircle aria-hidden="true" className="h-4 w-4" />
                 Ask us on WhatsApp
-              </a>
+              </WhatsAppLink>
               <Link
                 href="/fabrics"
                 className="hover-btn flex h-12 items-center gap-2.5 rounded-pill border border-calico-300 bg-calico-50 px-5 text-body-sm font-semibold text-ink-900 no-underline"
