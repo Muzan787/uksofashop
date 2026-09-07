@@ -1,0 +1,56 @@
+name: R2 final production sign-off
+
+on:
+  push:
+    branches:
+      - r2-live-qa
+    paths:
+      - '.github/workflows/r2-final-signoff.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  signoff:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: r2-live-qa
+          fetch-depth: 0
+      - name: Install repo dependencies
+        run: npm ci
+      - name: Install Playwright core
+        run: npm install --no-save playwright-core@latest
+      - name: Run final production browser QA
+        id: qa
+        shell: bash
+        run: |
+          set +e
+          rm -rf qa-artifacts-final
+          node qa/r2-final-signoff.mjs
+          code=$?
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          exit 0
+      - name: Upload final QA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: r2-final-production-signoff
+          path: qa-artifacts-final
+          if-no-files-found: error
+      - name: Commit final QA evidence to QA branch
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -f qa-artifacts-final
+          if git diff --cached --quiet; then
+            echo 'No QA evidence changes to commit'
+          else
+            git commit -m 'Record final R2 production sign-off evidence'
+            git push origin HEAD:r2-live-qa
+          fi
+      - name: Enforce final QA result
+        if: steps.qa.outputs.code != '0'
+        run: exit 1
