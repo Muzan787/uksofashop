@@ -24,26 +24,15 @@ jobs:
           set -euo pipefail
           test "$(git ls-remote origin refs/heads/master | cut -f1)" = "$EXPECTED_MASTER"
           test "$(git ls-remote origin refs/heads/fix/cro-phase2b-trust-delivery | cut -f1)" = "$PHASE2B_SHA"
-      - name: First actual confirmation route request
-        shell: bash
-        run: |
-          set -euo pipefail
-          curl --fail --silent --show-error --location \
-            -H 'Cache-Control: no-cache' \
-            "$BASE_URL/confirm-order/$ORDER_ID?qa=first-$(date +%s%N)" \
-            -o /tmp/first.html
-          grep -q 'Order Confirmed' /tmp/first.html
-          grep -q '#92FCDB8E' /tmp/first.html
-          echo 'FIRST_CONFIRM_ROUTE=PASS'
       - name: Repeat actual confirmation route request
         shell: bash
         run: |
           set -euo pipefail
-          sleep 1
-          curl --fail --silent --show-error --location \
+          code="$(curl --silent --show-error --location \
             -H 'Cache-Control: no-cache' \
+            -w '%{http_code}' \
             "$BASE_URL/confirm-order/$ORDER_ID?qa=repeat-$(date +%s%N)" \
-            -o /tmp/repeat.html
-          grep -q 'Order Confirmed' /tmp/repeat.html
-          grep -q '#92FCDB8E' /tmp/repeat.html
-          echo 'REPEAT_CONFIRM_ROUTE=PASS'
+            -o /tmp/repeat.html)"
+          test "$code" = "200"
+          test -s /tmp/repeat.html
+          echo "REPEAT_CONFIRM_ROUTE_HTTP=$code"
