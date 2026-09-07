@@ -1,0 +1,111 @@
+name: Phase 2B corrected preview QA
+
+on:
+  push:
+    branches: [qa/cro-phase2b-preview2]
+
+permissions:
+  contents: read
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      RELEASE_BRANCH: fix/cro-phase2b-trust-delivery-release
+      EXPECTED_RELEASE: b3955174c62639e65bf6b2eb2bdb57e71227e423
+      NEXT_PUBLIC_SUPABASE_URL: https://nznpeqjnoobhyxwnmsez.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_tMk28Ay_hIljhv8NQcV01Q_cI9ApS9c
+      NEXT_PUBLIC_SITE_URL: http://127.0.0.1:3000
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_BRANCH }}
+      - name: Verify release SHA
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_RELEASE"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Prepare browser
+        run: |
+          mkdir -p /tmp/pw
+          npm install --prefix /tmp/pw playwright-core@1.55.0
+          google-chrome --version
+      - name: Start candidate
+        shell: bash
+        run: |
+          npm start -- --hostname 127.0.0.1 --port 3000 > /tmp/app.log 2>&1 &
+          for i in {1..60}; do
+            curl -fsS http://127.0.0.1:3000/ >/dev/null && exit 0
+            sleep 1
+          done
+          cat /tmp/app.log
+          exit 1
+      - name: Responsive preview matrix
+        env:
+          NODE_PATH: /tmp/pw/node_modules
+        shell: bash
+        run: |
+          node <<'NODE'
+          const { chromium } = require('playwright-core');
+          const assert=(c,m)=>{if(!c) throw new Error(m)};
+          const BASE='http://127.0.0.1:3000';
+          const widths=[320,390,430,768,1440];
+          const custom='/shop/corner-sofa/verona-high-back-4-seater-corner-1c2?variant=a5d2050d-c458-4e0c-b3b3-7b7c727845a0';
+          const fixed='/shop/recliner/roma-recliner-manual-armchair?variant=562327ad-ee1e-4683-8f39-28f1289f8696';
+          (async()=>{
+            const browser=await chromium.launch({executablePath:'/usr/bin/google-chrome',headless:true,args:['--no-sandbox']});
+            const matrix=[];
+            for(const width of widths){
+              const ctx=await browser.newContext({viewport:{width,height:900}});
+              const p=await ctx.newPage();
+              const errors=[]; p.on('pageerror',e=>errors.push(e.message));
+              await p.goto(BASE+'/',{waitUntil:'networkidle',timeout:60000});
+              const t=await p.locator('body').innerText();
+              assert(t.includes('Fabric sofas made to your size. Delivered free. Pay on arrival.'),`hero @${width}`);
+              assert(/\d+ sofas available/.test(t),`count @${width}`);
+              assert(t.includes('Most UK Mainland: 2–4 working days'),`delivery headline @${width}`);
+              assert(t.includes('Some Wales and Scotland postcodes take 5–7 working days.'),`delivery exception @${width}`);
+              assert(!t.includes('Cash on Delivery Available Nationwide'),`old nationwide @${width}`);
+              assert(await p.locator('[data-lenis-prevent-horizontal]').count()>0,`ProductRail attr @${width}`);
+              assert(await p.locator('footer a[href="https://www.tiktok.com"]').count()===0,`TikTok @${width}`);
+              const overflow=await p.evaluate(()=>document.documentElement.scrollWidth-window.innerWidth);
+              assert(overflow<=1,`home overflow ${overflow} @${width}`);
+              assert(errors.length===0,`errors @${width}: ${errors.join(' | ')}`);
+              matrix.push({width,homeOverflow:overflow});
+              await ctx.close();
+            }
+            const ctx=await browser.newContext({viewport:{width:1440,height:1000}});
+            const p=await ctx.newPage();
+            for(const path of ['/shop/fabric-sofa','/shop/leather-sofa','/shop/electric-sofa']){
+              await p.goto(BASE+path,{waitUntil:'networkidle',timeout:60000});
+              const t=await p.locator('body').innerText();
+              assert(t.includes('Custom Options'),`${path} global custom label`);
+              assert(t.includes('Fabric & size options available'),`${path} global custom sub`);
+              assert(!t.includes('Your fabric and size'),`${path} old universal custom`);
+              const overflow=await p.evaluate(()=>document.documentElement.scrollWidth-window.innerWidth);
+              assert(overflow<=1,`${path} overflow ${overflow}`);
+            }
+            await p.goto(BASE+custom,{waitUntil:'networkidle',timeout:60000});
+            let t=await p.locator('body').innerText();
+            assert(p.url().includes('/shop/corner-sofa/verona-high-back-4-seater-corner-1c2'),'custom canonical URL mismatch');
+            assert(t.includes('Made to Order'),'custom PDP Made to Order missing');
+            assert(t.includes('Most UK Mainland: arrives'),'custom PDP estimate unqualified');
+            assert(t.includes('Some Wales and Scotland postcodes take 5–7 working days.'),'custom PDP exception missing');
+            await p.goto(BASE+fixed,{waitUntil:'networkidle',timeout:60000});
+            t=await p.locator('body').innerText();
+            assert(!t.includes('Made to Order'),'fixed PDP false Made to Order');
+            assert(t.includes('Most UK Mainland: arrives'),'fixed PDP estimate unqualified');
+            await p.goto(BASE+'/delivery-returns',{waitUntil:'networkidle',timeout:60000});
+            t=await p.locator('body').innerText();
+            for(const s of ['2–3 working days','3–4 working days','5–7 working days','Ask us first']) assert(t.includes(s),`delivery page missing ${s}`);
+            assert(await p.locator('footer a[href="https://www.tiktok.com"]').count()===0,'delivery footer TikTok');
+            await p.goto(BASE+'/checkout',{waitUntil:'domcontentloaded',timeout:60000});
+            assert((await p.locator('body').innerText()).length>0,'checkout route blank');
+            console.log('PHASE2B_PREVIEW_MATRIX='+JSON.stringify(matrix));
+            await ctx.close(); await browser.close();
+          })().catch(e=>{console.error(e.stack||e);process.exit(1)});
+          NODE
