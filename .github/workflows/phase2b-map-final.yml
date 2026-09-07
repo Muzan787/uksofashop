@@ -1,0 +1,137 @@
+name: Phase 2B final regional map QA
+
+on:
+  push:
+    branches: [qa/cro-phase2b-map-final]
+
+permissions:
+  contents: read
+
+jobs:
+  map-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      RELEASE_BRANCH: fix/cro-phase2b-trust-delivery-release
+      EXPECTED_RELEASE: b3955174c62639e65bf6b2eb2bdb57e71227e423
+      NEXT_PUBLIC_SUPABASE_URL: https://nznpeqjnoobhyxwnmsez.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_tMk28Ay_hIljhv8NQcV01Q_cI9ApS9c
+      NEXT_PUBLIC_SITE_URL: http://127.0.0.1:3000
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_BRANCH }}
+          fetch-depth: 1
+
+      - name: Verify exact release and source content
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_RELEASE"
+          file='src/components/Editorial/CoverageMap.tsx'
+          grep -Fq "label: 'The North & Midlands'" "$file"
+          grep -Fq "window: '2–3 working days'" "$file"
+          grep -Fq "label: 'The South & East'" "$file"
+          grep -Fq "window: '3–4 working days'" "$file"
+          grep -Fq "label: 'Wales & Scotland'" "$file"
+          grep -Fq "window: '5–7 working days'" "$file"
+          grep -Fq "label: 'Islands & Northern Ireland'" "$file"
+          grep -Fq "window: 'Ask us first'" "$file"
+          echo 'SOURCE_CONTENT=PASS'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npm run build
+
+      - name: Prepare browser
+        run: |
+          mkdir -p /tmp/pw
+          npm install --prefix /tmp/pw playwright-core@1.55.0
+          mkdir -p /tmp/map-evidence
+
+      - name: Start candidate
+        shell: bash
+        run: |
+          npm start -- --hostname 127.0.0.1 --port 3000 >/tmp/app.log 2>&1 &
+          for i in {1..60}; do
+            if curl -fsS http://127.0.0.1:3000/delivery-returns >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/app.log
+          exit 1
+
+      - name: DOM scoped and visual map QA
+        env:
+          NODE_PATH: /tmp/pw/node_modules
+        shell: bash
+        run: |
+          node <<'NODE'
+          const { chromium } = require('playwright-core');
+          const assert = (c,m) => { if (!c) throw new Error(m); };
+          const pairs = [
+            ['North & Midlands','2–3 working days'],
+            ['South & East','3–4 working days'],
+            ['Wales & Scotland','5–7 working days'],
+            ['Islands & Northern Ireland','Ask us first'],
+          ];
+          (async()=>{
+            const browser = await chromium.launch({executablePath:'/usr/bin/google-chrome',headless:true,args:['--no-sandbox']});
+            const results=[];
+            for (const width of [390,430,1440]) {
+              const ctx=await browser.newContext({viewport:{width,height:900}});
+              const page=await ctx.newPage();
+              const errors=[]; page.on('pageerror',e=>errors.push(e.message));
+              await page.goto('http://127.0.0.1:3000/delivery-returns',{waitUntil:'networkidle',timeout:60000});
+              const section=page.locator('section[aria-labelledby="coverage-heading"]');
+              await section.waitFor({state:'attached',timeout:15000});
+              const text=await section.textContent();
+              const texts=await section.locator('dl > div').allTextContents();
+              const html=await section.evaluate(el=>el.outerHTML);
+              assert(text && text.includes('North & Midlands') && text.includes('2–3 working days'),`DOM north missing @${width}`);
+              assert(text.includes('South & East') && text.includes('3–4 working days'),`DOM south missing @${width}`);
+              assert(text.includes('Wales & Scotland') && text.includes('5–7 working days'),`DOM far missing @${width}`);
+              assert(text.includes('Islands & Northern Ireland') && text.includes('Ask us first'),`DOM islands missing @${width}`);
+              assert(texts.length===4,`Expected 4 regional rows, got ${texts.length} @${width}`);
+              for (const [label,window] of pairs) {
+                assert(texts.some(t=>t.includes(label) && t.includes(window)),`row pair missing ${label}/${window} @${width}`);
+                assert(html.includes(label) && html.includes(window),`rendered HTML missing ${label}/${window} @${width}`);
+              }
+              await section.scrollIntoViewIfNeeded();
+              await page.waitForTimeout(250);
+              const visible=await section.isVisible();
+              assert(visible,`section not visible after scroll @${width}`);
+              const rowState=await section.locator('dl > div').evaluateAll(rows=>rows.map(r=>{
+                const s=getComputedStyle(r); const b=r.getBoundingClientRect();
+                return {text:r.textContent,display:s.display,visibility:s.visibility,opacity:s.opacity,width:b.width,height:b.height,left:b.left,right:b.right,top:b.top,bottom:b.bottom,clientWidth:r.clientWidth,scrollWidth:r.scrollWidth};
+              }));
+              assert(rowState.length===4,`row state count @${width}`);
+              for (const r of rowState) {
+                assert(r.display!=='none' && r.visibility!=='hidden' && Number(r.opacity)>0 && r.width>0 && r.height>0,`hidden/clipped row @${width}: ${JSON.stringify(r)}`);
+                assert(r.scrollWidth<=r.clientWidth+1,`row horizontal clipping @${width}: ${JSON.stringify(r)}`);
+              }
+              const pageOverflow=await page.evaluate(()=>document.documentElement.scrollWidth-window.innerWidth);
+              const sectionOverflow=await section.evaluate(el=>el.scrollWidth-el.clientWidth);
+              assert(pageOverflow<=1,`page horizontal overflow ${pageOverflow}px @${width}`);
+              assert(sectionOverflow<=1,`section horizontal overflow ${sectionOverflow}px @${width}`);
+              assert(errors.length===0,`runtime errors @${width}: ${errors.join(' | ')}`);
+              await section.screenshot({path:`/tmp/map-evidence/delivery-map-${width}.png`});
+              results.push({width,domContent:'PASS',visibleAfterScroll:'PASS',rows:rowState.map(r=>r.text?.replace(/\s+/g,' ').trim()),pageOverflow,sectionOverflow});
+              await ctx.close();
+            }
+            console.log('REGIONAL_MAP_RESULTS='+JSON.stringify(results));
+            console.log('DOM_CONTENT=PASS');
+            console.log('VISIBLE_AFTER_SCROLL=PASS');
+            console.log('VISUAL_LAYOUT=PASS');
+            await browser.close();
+          })().catch(e=>{console.error(e.stack||e);process.exit(1)});
+          NODE
+
+      - name: Upload regional map evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase2b-regional-map-evidence
+          path: /tmp/map-evidence/*.png
