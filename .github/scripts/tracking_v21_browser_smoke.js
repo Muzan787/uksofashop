@@ -16,10 +16,15 @@ async function fresh(browser) {
 
 async function acceptAll(page) {
   const button = page.getByRole('button', { name: 'Accept all' });
-  if (await button.count()) {
-    await button.first().click();
-    await page.waitForFunction(() => window.localStorage.getItem('cookie_consent') === 'granted', null, { timeout: 5000 });
-  }
+  if (!(await button.count())) throw new Error('cookie banner Accept all button missing');
+  await button.first().click();
+  await page.waitForFunction(() => window.localStorage.getItem('cookie_consent') === 'granted', null, { timeout: 5000 });
+
+  // CookieConsent dispatches this same event when consent is granted. Dispatch
+  // it once more after localStorage has definitely committed, making the local
+  // preview smoke deterministic rather than depending on the banner's 380ms
+  // close animation racing AttributionBoot's listener registration.
+  await page.evaluate(() => window.dispatchEvent(new Event('cookies_accepted')));
 }
 
 async function waitForCookie(context, name, timeoutMs = 5000) {
@@ -64,7 +69,14 @@ async function operationalIds(context) {
       await page.goto(base + productPath + '?gclid=QA-GCLID&utm_source=google&utm_medium=cpc&utm_campaign=v21qa', { waitUntil: 'domcontentloaded', timeout: 45000 });
       await acceptAll(page);
       const rawLt = await waitForCookie(context, 'uksofashop_lt');
-      if (!rawLt) throw new Error('Google-tagged visitor missing last-touch after consent');
+      if (!rawLt) {
+        const diagnostic = await page.evaluate(() => ({
+          href: location.href,
+          consent: localStorage.getItem('cookie_consent'),
+          cookies: document.cookie,
+        }));
+        throw new Error(`Google-tagged visitor missing last-touch after consent: ${JSON.stringify(diagnostic)}`);
+      }
       const c = await operationalIds(context);
       const lt = JSON.parse(c.uksofashop_lt);
       if (lt.gclid !== 'QA-GCLID' || lt.source !== 'google' || lt.medium !== 'cpc' || lt.campaign !== 'v21qa') {
