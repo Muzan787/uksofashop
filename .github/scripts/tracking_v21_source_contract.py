@@ -47,6 +47,20 @@ require(
     "after(() => reportOrderConversion(orderId, 'purchase'))",
 )
 
+# The emailed link renders this page directly. It must not stop at the
+# SECURITY DEFINER RPC; the real page path itself must stamp confirmed_at and
+# schedule conversion reporting through server-only privileged code.
+require(
+    'src/app/confirm-order/[id]/page.tsx',
+    "const confirmedAt = new Date().toISOString()",
+    "const admin = createAdminClient()",
+    ".update({ confirmed_at: confirmedAt })",
+    ".eq('id', id)",
+    ".eq('status', 'confirmed')",
+    ".is('confirmed_at', null)",
+    "after(() => reportOrderConversion(id, 'purchase'))",
+)
+
 require(
     'src/utils/orderConversions.ts',
     "const admin = createAdminClient()",
