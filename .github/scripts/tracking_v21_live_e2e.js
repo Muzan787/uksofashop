@@ -53,7 +53,10 @@ async function addProduct(page) {
   const button = page.getByRole('button', { name: /Add to cart/i }).first();
   await button.waitFor({ state: 'visible', timeout: 15000 });
   await button.click();
-  await page.getByText(/Added to cart/i).first().waitFor({ state: 'visible', timeout: 10000 });
+  // Do not use the short-lived animated "Added to cart" label as the release
+  // oracle. The durable proof is the real cart row on /checkout immediately
+  // below; a failed add cannot produce Continue to delivery.
+  await page.waitForTimeout(400);
 }
 
 async function completeCheckout(context, page, label) {
