@@ -115,8 +115,8 @@ async function operationalIds(context) {
           if (a) e.preventDefault();
         }, true);
       });
-      const wa = page.locator('a[href^="https://wa.me/"]').first();
-      if (!(await wa.count())) throw new Error('product page has no WhatsApp acquisition link');
+      const wa = page.locator('a[href^="https://wa.me/"]:visible').first();
+      if (!(await wa.count())) throw new Error('product page has no visible WhatsApp acquisition link');
       await wa.click({ timeout: 5000 });
       const ref = await waitForCookie(context, 'uksofashop_wa');
       if (!/^UKSS-WA-\d{6}-[A-Z0-9]{6}$/.test(ref || '')) throw new Error(`bad persisted WhatsApp reference: ${ref}`);
@@ -138,7 +138,7 @@ async function operationalIds(context) {
           if (a) e.preventDefault();
         }, true);
       });
-      const wa = page.locator('a[href^="https://wa.me/"]').first();
+      const wa = page.locator('a[href^="https://wa.me/"]:visible').first();
       if (await wa.count()) {
         await wa.click({ timeout: 5000 });
         await page.waitForTimeout(200);
