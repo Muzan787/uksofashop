@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { isDeterministicCheckoutWhatsAppMatch } from '../../src/utils/attribution/checkoutLinkage'
+import { isDeterministicCheckoutWhatsAppMatch } from './src/utils/attribution/checkoutLinkage'
 
 const NOW = Date.parse('2026-09-07T14:00:00Z')
 const MAX = 30 * 24 * 60 * 60
