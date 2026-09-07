@@ -27,6 +27,10 @@ async function go(page, path) {
   await dismiss(page);
 }
 
+async function bodyText(page) {
+  return ((await page.locator('body').textContent()) || '').replace(/\s+/g, ' ');
+}
+
 async function uniqueProductHrefs(page, category) {
   await go(page, `/shop/${category}`);
   return page.locator(`a[href^="/shop/${category}/"]`).evaluateAll(as =>
@@ -60,7 +64,7 @@ async function findPdp(page, category, wantCustom) {
       page.on('pageerror', e => errors.push(e.message));
 
       await go(page, '/');
-      const home = (await page.locator('body').innerText()).replace(/\s+/g, ' ');
+      const home = await bodyText(page);
       if (!/sofas available/i.test(home)) throw new Error(`${width}: catalogue availability wording missing`);
       if (/\bin stock\b/i.test(home)) throw new Error(`${width}: homepage still says in stock`);
       if (!/Fabric sofas made to your size\. Delivered free\. Pay on arrival\./i.test(home)) throw new Error(`${width}: hero customisation wording missing`);
@@ -69,7 +73,7 @@ async function findPdp(page, category, wantCustom) {
 
       const footer = page.locator('footer');
       await footer.scrollIntoViewIfNeeded();
-      const footerText = (await footer.innerText()).replace(/\s+/g, ' ');
+      const footerText = ((await footer.textContent()) || '').replace(/\s+/g, ' ');
       if (!/Custom Options/i.test(footerText) || !/Fabric & size options available/i.test(footerText)) {
         throw new Error(`${width}: safe global custom promise missing`);
       }
@@ -78,7 +82,7 @@ async function findPdp(page, category, wantCustom) {
       if (overflow > 1) throw new Error(`${width}: homepage horizontal overflow ${overflow}`);
 
       await go(page, '/delivery-returns');
-      const delivery = (await page.locator('body').innerText()).replace(/\s+/g, ' ');
+      const delivery = await bodyText(page);
       for (const s of ['2–3 working days', '3–4 working days', '5–7 working days', 'Ask us first']) {
         if (!delivery.includes(s)) throw new Error(`${width}: delivery band missing ${s}`);
       }
@@ -86,7 +90,7 @@ async function findPdp(page, category, wantCustom) {
 
       for (const cat of ['fabric-sofa', 'leather-sofa', 'electric-sofa']) {
         await go(page, `/shop/${cat}`);
-        const txt = (await page.locator('body').innerText()).replace(/\s+/g, ' ');
+        const txt = await bodyText(page);
         if (!/5–7 working days/.test(txt)) throw new Error(`${width}: ${cat} missing slower-band qualification`);
         const ov = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
         if (ov > 1) throw new Error(`${width}: ${cat} horizontal overflow ${ov}`);
@@ -94,7 +98,7 @@ async function findPdp(page, category, wantCustom) {
 
       if (width === 390) {
         const customHref = await findPdp(page, 'fabric-sofa', true);
-        const customText = (await page.locator('body').innerText()).replace(/\s+/g, ' ');
+        const customText = await bodyText(page);
         if (!/Made to Order/.test(customText)) throw new Error('custom PDP lost Made to Order');
         if (!/Some Wales and Scotland postcodes take 5–7 working days/.test(customText)) throw new Error('custom PDP missing slower-band qualification');
 
@@ -103,7 +107,7 @@ async function findPdp(page, category, wantCustom) {
           await input.fill('BB6 7LS');
           await page.getByRole('button', { name: 'Check', exact: true }).click();
           await page.waitForTimeout(600);
-          const txt = (await page.locator('body').innerText()).replace(/\s+/g, ' ');
+          const txt = await bodyText(page);
           if (!/Most UK Mainland orders arrive in 2–4 working days/.test(txt)) {
             throw new Error('postcode estimator still uses false exact timing');
           }
