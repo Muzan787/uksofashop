@@ -18,8 +18,18 @@ async function acceptAll(page) {
   const button = page.getByRole('button', { name: 'Accept all' });
   if (await button.count()) {
     await button.first().click();
-    await page.waitForTimeout(250);
+    await page.waitForFunction(() => window.localStorage.getItem('cookie_consent') === 'granted', null, { timeout: 5000 });
   }
+}
+
+async function waitForCookie(context, name, timeoutMs = 5000) {
+  const started = Date.now();
+  while (Date.now() - started < timeoutMs) {
+    const c = cookieMap(await context.cookies());
+    if (c[name]) return c[name];
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+  return null;
 }
 
 async function operationalIds(context) {
@@ -48,14 +58,14 @@ async function operationalIds(context) {
       await context.close();
     }
 
-    // B. Google-tagged visitor: after consent, the URL gclid/UTMs are retained in last-touch.
+    // B. Google-tagged visitor: after consent, the supplied gclid/UTMs are retained in last-touch.
     {
       const { context, page } = await fresh(browser);
       await page.goto(base + productPath + '?gclid=QA-GCLID&utm_source=google&utm_medium=cpc&utm_campaign=v21qa', { waitUntil: 'domcontentloaded', timeout: 45000 });
       await acceptAll(page);
-      await page.waitForTimeout(400);
+      const rawLt = await waitForCookie(context, 'uksofashop_lt');
+      if (!rawLt) throw new Error('Google-tagged visitor missing last-touch after consent');
       const c = await operationalIds(context);
-      if (!c.uksofashop_lt) throw new Error('Google-tagged visitor missing last-touch after consent');
       const lt = JSON.parse(c.uksofashop_lt);
       if (lt.gclid !== 'QA-GCLID' || lt.source !== 'google' || lt.medium !== 'cpc' || lt.campaign !== 'v21qa') {
         throw new Error(`Google last-touch mismatch: ${JSON.stringify(lt)}`);
@@ -63,12 +73,13 @@ async function operationalIds(context) {
       await context.close();
     }
 
-    // C. Meta-tagged visitor: fbclid is retained only as the real URL identifier supplied.
+    // C. Meta-tagged visitor: only the explicit QA fbclid/UTMs are retained.
     {
       const { context, page } = await fresh(browser);
       await page.goto(base + productPath + '?fbclid=QA-FBCLID&utm_source=facebook&utm_medium=paid_social&utm_campaign=v21qa', { waitUntil: 'domcontentloaded', timeout: 45000 });
       await acceptAll(page);
-      await page.waitForTimeout(400);
+      const rawLt = await waitForCookie(context, 'uksofashop_lt');
+      if (!rawLt) throw new Error('Meta-tagged visitor missing last-touch after consent');
       const c = await operationalIds(context);
       const lt = JSON.parse(c.uksofashop_lt || '{}');
       if (lt.fbclid !== 'QA-FBCLID' || lt.source !== 'facebook' || lt.medium !== 'paid_social') {
@@ -91,18 +102,37 @@ async function operationalIds(context) {
       const wa = page.locator('a[href^="https://wa.me/"]').first();
       if (!(await wa.count())) throw new Error('product page has no WhatsApp acquisition link');
       await wa.click({ timeout: 5000 });
-      await page.waitForTimeout(250);
-      const c = await operationalIds(context);
-      const ref = c.uksofashop_wa;
+      const ref = await waitForCookie(context, 'uksofashop_wa');
       if (!/^UKSS-WA-\d{6}-[A-Z0-9]{6}$/.test(ref || '')) throw new Error(`bad persisted WhatsApp reference: ${ref}`);
       const href = await wa.getAttribute('href');
-      if (!href || !href.includes(encodeURIComponent(ref)) && !decodeURIComponent(href).includes(ref)) {
+      if (!href || (!href.includes(encodeURIComponent(ref)) && !decodeURIComponent(href).includes(ref))) {
         throw new Error(`WhatsApp href does not carry persisted reference ${ref}`);
       }
       await context.close();
     }
 
-    // E. Direct website checkout remains reachable and does not invent campaign attribution.
+    // E. Support-only WhatsApp must not mint an acquisition reference cookie.
+    {
+      const { context, page } = await fresh(browser);
+      await page.goto(base + '/track-order', { waitUntil: 'domcontentloaded', timeout: 45000 });
+      await page.waitForTimeout(500);
+      await page.evaluate(() => {
+        document.addEventListener('click', e => {
+          const a = e.target instanceof Element ? e.target.closest('a[href^="https://wa.me/"]') : null;
+          if (a) e.preventDefault();
+        }, true);
+      });
+      const wa = page.locator('a[href^="https://wa.me/"]').first();
+      if (await wa.count()) {
+        await wa.click({ timeout: 5000 });
+        await page.waitForTimeout(200);
+      }
+      const c = cookieMap(await context.cookies());
+      if (c.uksofashop_wa) throw new Error('support-only WhatsApp minted an acquisition reference');
+      await context.close();
+    }
+
+    // F. Direct website checkout remains reachable and does not invent campaign attribution.
     {
       const { context, page } = await fresh(browser);
       const r = await page.goto(base + '/checkout', { waitUntil: 'domcontentloaded', timeout: 45000 });
