@@ -15,15 +15,14 @@ function parseJsonCookie(raw) {
 
 async function fresh(browser) {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
-
   await context.addInitScript(() => {
     const started = Date.now();
     const push = (type, data = {}) => {
-      window.__trackingV21QaTimeline = window.__trackingV21QaTimeline || [];
-      window.__trackingV21QaTimeline.push({ t: Date.now() - started, type, ...data });
+      window.__v21 = window.__v21 || [];
+      window.__v21.push({ t: Date.now() - started, type, ...data });
     };
-    window.__trackingV21QaTimeline = [];
-    window.__trackingV21QaPush = push;
+    window.__v21 = [];
+    window.__v21Push = push;
 
     const originalAdd = EventTarget.prototype.addEventListener;
     EventTarget.prototype.addEventListener = function(type, listener, options) {
@@ -36,9 +35,11 @@ async function fresh(browser) {
     const originalDispatch = EventTarget.prototype.dispatchEvent;
     EventTarget.prototype.dispatchEvent = function(event) {
       if (event?.type === 'cookies_accepted' || event?.type === 'cookie_consent_changed') {
-        let consent = null;
-        try { consent = localStorage.getItem('cookie_consent'); } catch {}
-        push('event_dispatched', { event: event.type, consent, search: location.search });
+        push('event_dispatched', {
+          event: event.type,
+          consent: localStorage.getItem('cookie_consent'),
+          search: location.search,
+        });
       }
       return originalDispatch.call(this, event);
     };
@@ -57,11 +58,9 @@ async function fresh(browser) {
           get() { return descriptor.get.call(document); },
           set(value) {
             if (String(value).includes('uksofashop_ft') || String(value).includes('uksofashop_lt')) {
-              let consent = null;
-              try { consent = localStorage.getItem('cookie_consent'); } catch {}
               push('touch_cookie_write_attempt', {
                 value: String(value),
-                consent,
+                consent: localStorage.getItem('cookie_consent'),
                 search: location.search,
                 hostname: location.hostname,
               });
@@ -74,56 +73,60 @@ async function fresh(browser) {
       push('cookie_instrumentation_error', { message: String(error) });
     }
   });
-
   const page = await context.newPage();
   await page.route(/googletagmanager\.com|google-analytics\.com|connect\.facebook\.net|facebook\.com\/tr/, r => r.fulfill({ status: 204, body: '' }));
   return { context, page };
 }
 
-async function waitForCookie(context, name, timeoutMs = 5000) {
+async function waitForCookie(context, name, timeoutMs = 10000) {
   const started = Date.now();
   while (Date.now() - started < timeoutMs) {
-    const c = cookieMap(await context.cookies());
-    if (c[name]) return c[name];
+    const cookies = cookieMap(await context.cookies());
+    if (cookies[name]) return cookies[name];
     await new Promise(resolve => setTimeout(resolve, 100));
   }
   return null;
 }
 
-async function waitForNoCookie(context, name, timeoutMs = 5000) {
+async function waitForNoCookie(context, name, timeoutMs = 10000) {
   const started = Date.now();
   while (Date.now() - started < timeoutMs) {
-    const c = cookieMap(await context.cookies());
-    if (!c[name]) return true;
+    const cookies = cookieMap(await context.cookies());
+    if (!cookies[name]) return true;
     await new Promise(resolve => setTimeout(resolve, 100));
   }
   return false;
 }
 
-async function operationalIds(context) {
-  const c = cookieMap(await context.cookies());
-  for (const name of ['uksofashop_vid', 'uksofashop_sid', 'uksofashop_aid']) {
-    if (!c[name]) throw new Error(`missing operational cookie ${name}`);
+async function operationalIds(context, timeoutMs = 10000) {
+  const started = Date.now();
+  while (Date.now() - started < timeoutMs) {
+    const c = cookieMap(await context.cookies());
+    if (c.uksofashop_vid && c.uksofashop_sid && c.uksofashop_aid) return c;
+    await new Promise(resolve => setTimeout(resolve, 100));
   }
-  return c;
+  const c = cookieMap(await context.cookies());
+  throw new Error(`missing operational cookies after ${timeoutMs}ms: ${JSON.stringify(Object.keys(c))}`);
 }
 
 async function state(page, context) {
-  const browserState = await page.evaluate(() => ({
-    href: location.href,
-    hostname: location.hostname,
-    search: location.search,
-    consent: localStorage.getItem('cookie_consent'),
-    documentCookie: document.cookie,
-    timeline: window.__trackingV21QaTimeline || [],
-  }));
-  return { ...browserState, cookieStore: cookieMap(await context.cookies()) };
+  return {
+    ...(await page.evaluate(() => ({
+      href: location.href,
+      hostname: location.hostname,
+      search: location.search,
+      consent: localStorage.getItem('cookie_consent'),
+      documentCookie: document.cookie,
+      timeline: window.__v21 || [],
+    }))),
+    cookieStore: cookieMap(await context.cookies()),
+  };
 }
 
 async function acceptAll(page) {
   const button = page.getByRole('button', { name: 'Accept all' }).first();
   await button.waitFor({ state: 'visible', timeout: 10000 });
-  await page.evaluate(() => window.__trackingV21QaPush?.('qa_click_accept', { search: location.search }));
+  await page.evaluate(() => window.__v21Push?.('qa_click_accept', { search: location.search }));
   await button.click();
   await page.waitForFunction(() => localStorage.getItem('cookie_consent') === 'granted', null, { timeout: 10000 });
 }
@@ -131,7 +134,7 @@ async function acceptAll(page) {
 async function essentialOnly(page) {
   const button = page.getByRole('button', { name: 'Essential only' }).first();
   await button.waitFor({ state: 'visible', timeout: 10000 });
-  await page.evaluate(() => window.__trackingV21QaPush?.('qa_click_reject', { search: location.search }));
+  await page.evaluate(() => window.__v21Push?.('qa_click_reject', { search: location.search }));
   await button.click();
   await page.waitForFunction(() => localStorage.getItem('cookie_consent') === 'denied', null, { timeout: 10000 });
 }
@@ -145,63 +148,57 @@ function assertGoogleTouch(raw) {
 }
 
 (async () => {
-  const browser = await chromium.launch({
-    headless: true,
-    executablePath: '/usr/bin/google-chrome',
-    args: ['--no-sandbox'],
-  });
+  const browser = await chromium.launch({ headless: true, executablePath: '/usr/bin/google-chrome', args: ['--no-sandbox'] });
+  const result = { host: new URL(base).hostname, consentMatrix: {}, google: null, meta: null, whatsapp: null };
 
   try {
-    const result = { host: new URL(base).hostname, consentMatrix: {}, google: null, meta: null, whatsapp: null };
-
-    // CASE A — tagged + no consent.
+    // A. Tagged, no consent.
     {
       const { context, page } = await fresh(browser);
       await page.goto(base + productPath + googleQuery, { waitUntil: 'domcontentloaded', timeout: 45000 });
       await page.getByRole('button', { name: 'Accept all' }).first().waitFor({ state: 'visible', timeout: 10000 });
-      const before = await state(page, context);
       await operationalIds(context);
-      if (!before.search.includes('gclid=QA-GCLID')) throw new Error('Case A query parameters did not survive initial landing');
+      const before = await state(page, context);
+      if (!before.search.includes('gclid=QA-GCLID')) throw new Error('Case A query did not survive initial landing');
       if (before.cookieStore.uksofashop_lt || before.cookieStore.uksofashop_ft) throw new Error('Case A persisted marketing touch before consent');
       result.consentMatrix.A = { consent: before.consent, search: before.search, lt: false, ft: false };
       await context.close();
     }
 
-    // CASE B — tagged + accept.
+    // B. Tagged, accept.
     {
       const { context, page } = await fresh(browser);
       await page.goto(base + productPath + googleQuery, { waitUntil: 'domcontentloaded', timeout: 45000 });
       await page.getByRole('button', { name: 'Accept all' }).first().waitFor({ state: 'visible', timeout: 10000 });
       const before = await state(page, context);
       await acceptAll(page);
-      const rawLt = await waitForCookie(context, 'uksofashop_lt', 10000);
-      const rawFt = await waitForCookie(context, 'uksofashop_ft', 10000);
+      const rawLt = await waitForCookie(context, 'uksofashop_lt');
+      const rawFt = await waitForCookie(context, 'uksofashop_ft');
       const after = await state(page, context);
-      if (!rawLt || !rawFt) throw new Error(`Case B missing touch cookie after consent: ${JSON.stringify(after)}`);
-      if (before.search !== after.search || !after.search.includes('gclid=QA-GCLID')) throw new Error(`Case B query changed across consent: ${before.search} -> ${after.search}`);
-      const lt = assertGoogleTouch(rawLt);
+      if (!rawLt || !rawFt) throw new Error(`Case B missing touch cookie: ${JSON.stringify(after)}`);
+      if (before.search !== after.search || !after.search.includes('gclid=QA-GCLID')) throw new Error(`Case B query changed: ${before.search} -> ${after.search}`);
       result.consentMatrix.B = { consent: after.consent, searchBefore: before.search, searchAfter: after.search, lt: true, ft: true };
-      result.google = { touch: lt, timeline: after.timeline };
+      result.google = { touch: assertGoogleTouch(rawLt), timeline: after.timeline };
       await context.close();
     }
 
-    // CASE C — tagged + reject.
+    // C. Tagged, reject.
     {
       const { context, page } = await fresh(browser);
       await page.goto(base + productPath + googleQuery, { waitUntil: 'domcontentloaded', timeout: 45000 });
       await essentialOnly(page);
       const after = await state(page, context);
-      if (after.cookieStore.uksofashop_lt || after.cookieStore.uksofashop_ft) throw new Error(`Case C retained marketing touch after reject: ${JSON.stringify(after)}`);
+      if (after.cookieStore.uksofashop_lt || after.cookieStore.uksofashop_ft) throw new Error('Case C retained marketing touch after reject');
       result.consentMatrix.C = { consent: after.consent, search: after.search, lt: false, ft: false };
       await context.close();
     }
 
-    // CASE D — accept, then withdraw via the real /cookies preference control.
+    // D. Accept then withdraw through the real preferences UI.
     {
       const { context, page } = await fresh(browser);
       await page.goto(base + productPath + googleQuery, { waitUntil: 'domcontentloaded', timeout: 45000 });
       await acceptAll(page);
-      if (!await waitForCookie(context, 'uksofashop_lt', 10000)) throw new Error('Case D setup did not create last-touch');
+      if (!await waitForCookie(context, 'uksofashop_lt')) throw new Error('Case D setup did not create last-touch');
       await page.goto(base + '/cookies', { waitUntil: 'domcontentloaded', timeout: 45000 });
       const withdraw = page.getByRole('button', { name: 'Essential only' }).first();
       await withdraw.waitFor({ state: 'visible', timeout: 10000 });
@@ -210,9 +207,7 @@ function assertGoogleTouch(raw) {
         withdraw.click(),
       ]);
       await page.waitForFunction(() => localStorage.getItem('cookie_consent') === 'denied', null, { timeout: 10000 });
-      if (!await waitForNoCookie(context, 'uksofashop_lt', 10000) || !await waitForNoCookie(context, 'uksofashop_ft', 10000)) {
-        throw new Error(`Case D failed to clear touch cookies: ${JSON.stringify(await state(page, context))}`);
-      }
+      if (!await waitForNoCookie(context, 'uksofashop_lt') || !await waitForNoCookie(context, 'uksofashop_ft')) throw new Error('Case D failed to clear touch cookies');
       const c = await operationalIds(context);
       result.consentMatrix.D = { consent: 'denied', lt: false, ft: false, operationalIdsRemain: Boolean(c.uksofashop_vid && c.uksofashop_sid && c.uksofashop_aid) };
       await context.close();
@@ -223,36 +218,25 @@ function assertGoogleTouch(raw) {
       const { context, page } = await fresh(browser);
       await page.goto(base + productPath + metaQuery, { waitUntil: 'domcontentloaded', timeout: 45000 });
       await acceptAll(page);
-      const rawLt = await waitForCookie(context, 'uksofashop_lt', 10000);
+      const rawLt = await waitForCookie(context, 'uksofashop_lt');
       if (!rawLt) throw new Error(`Meta-tagged visitor missing last-touch: ${JSON.stringify(await state(page, context))}`);
       const lt = parseJsonCookie(rawLt);
-      if (lt.fbclid !== 'QA-FBCLID' || lt.source !== 'facebook' || lt.medium !== 'paid_social' || lt.campaign !== 'v21qa') {
-        throw new Error(`Meta last-touch mismatch: ${JSON.stringify(lt)}`);
-      }
+      if (lt.fbclid !== 'QA-FBCLID' || lt.source !== 'facebook' || lt.medium !== 'paid_social' || lt.campaign !== 'v21qa') throw new Error(`Meta last-touch mismatch: ${JSON.stringify(lt)}`);
       result.meta = { touch: lt };
       await context.close();
     }
 
-    // Persist the consent evidence before unrelated UI smoke runs.
-    console.log('TRACKING_V21_CONSENT_DIAGNOSTIC=' + JSON.stringify({
-      host: result.host,
-      consentMatrix: result.consentMatrix,
-      google: result.google,
-      meta: result.meta,
-    }));
+    console.log('TRACKING_V21_CONSENT_DIAGNOSTIC=' + JSON.stringify({ host: result.host, consentMatrix: result.consentMatrix, google: result.google, meta: result.meta }));
 
     // Product acquisition WhatsApp persists reference before navigation.
     {
       const { context, page } = await fresh(browser);
       await page.goto(base + productPath, { waitUntil: 'domcontentloaded', timeout: 45000 });
       await essentialOnly(page);
-      await page.waitForTimeout(450);
-      await page.evaluate(() => {
-        document.addEventListener('click', e => {
-          const a = e.target instanceof Element ? e.target.closest('a[href^="https://wa.me/"]') : null;
-          if (a) e.preventDefault();
-        }, true);
-      });
+      await page.evaluate(() => document.addEventListener('click', e => {
+        const a = e.target instanceof Element ? e.target.closest('a[href^="https://wa.me/"]') : null;
+        if (a) e.preventDefault();
+      }, true));
       const wa = page.locator('a[href^="https://wa.me/"]:visible').first();
       await wa.waitFor({ state: 'visible', timeout: 10000 });
       await wa.click();
@@ -269,20 +253,17 @@ function assertGoogleTouch(raw) {
       const { context, page } = await fresh(browser);
       await page.goto(base + '/track-order', { waitUntil: 'domcontentloaded', timeout: 45000 });
       await essentialOnly(page);
-      await page.waitForTimeout(450);
-      await page.evaluate(() => {
-        document.addEventListener('click', e => {
-          const a = e.target instanceof Element ? e.target.closest('a[href^="https://wa.me/"]') : null;
-          if (a) e.preventDefault();
-        }, true);
-      });
+      await page.evaluate(() => document.addEventListener('click', e => {
+        const a = e.target instanceof Element ? e.target.closest('a[href^="https://wa.me/"]') : null;
+        if (a) e.preventDefault();
+      }, true));
       const wa = page.locator('a[href^="https://wa.me/"]:visible').first();
       if (await wa.count()) await wa.click();
       if ((await cookieMap(await context.cookies())).uksofashop_wa) throw new Error('support-only WhatsApp minted acquisition cookie');
       await context.close();
     }
 
-    // Direct checkout remains reachable and invents no marketing attribution.
+    // Direct checkout remains reachable and eventually gets operational IDs only.
     {
       const { context, page } = await fresh(browser);
       const response = await page.goto(base + '/checkout', { waitUntil: 'domcontentloaded', timeout: 45000 });
