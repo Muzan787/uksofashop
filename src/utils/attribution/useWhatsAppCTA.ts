@@ -12,7 +12,7 @@
 // the call site already has - deliberately not a component, so none of the
 // five very different visual treatments of these buttons has to change.
 
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { whatsAppHref } from '@/constants/contact'
 import { trackContactEvent } from '@/utils/tracking'
 import {
@@ -40,34 +40,26 @@ export interface WhatsAppCTA {
 
 export function useWhatsAppCTA(opts: WhatsAppCTAOptions): WhatsAppCTA {
   const acquisition = opts.acquisition !== false
-  // One reference per mounted button, generated once and reused for every
-  // click of that same instance - a rapid double-click opens two tabs with
-  // the same ref rather than minting a second enquiry.
   const referenceContext = [
     opts.pageContext,
     opts.productId ?? '',
     opts.variantId ?? '',
     opts.productName ?? '',
   ].join('\u0000')
-  const reference = useMemo(
-    () => {
-      void referenceContext
-      return acquisition ? generateWhatsAppReference() : ''
-    },
-    [acquisition, referenceContext],
-  )
   const sent = useRef(false)
+  const [reference, setReference] = useState('')
 
-  // Product/variant selectors can update in-place without remounting the CTA.
-  // A new context must get a new enquiry reference; otherwise a second click
-  // could reuse a reference whose stored product context belongs to the
-  // previous variant.
+  // Generate after hydration, and regenerate whenever the live enquiry context
+  // changes in-place. Reset the one-beacon guard in the same transition so a
+  // newly selected product/variant cannot inherit the previous context's sent
+  // state or reference.
   useEffect(() => {
     sent.current = false
-  }, [reference])
+    setReference(acquisition ? generateWhatsAppReference() : '')
+  }, [acquisition, referenceContext])
 
   const href = useMemo(
-    () => whatsAppHref(acquisition ? withReferenceLine(opts.message, reference) : opts.message),
+    () => whatsAppHref(acquisition && reference ? withReferenceLine(opts.message, reference) : opts.message),
     [acquisition, opts.message, reference],
   )
 
@@ -75,6 +67,7 @@ export function useWhatsAppCTA(opts: WhatsAppCTAOptions): WhatsAppCTA {
     // Existing-order/account support should remain reachable via WhatsApp, but
     // it must not create a new acquisition reference or Contact conversion.
     if (!acquisition) return
+    if (!reference) return
     if (sent.current) return
     sent.current = true
 
