@@ -1,7 +1,11 @@
 const { chromium } = require('playwright-core');
 
 const BASE = 'https://www.uksofashop.co.uk';
-const PRODUCT = '/shop/corner-sofa/verona-high-back-4-seater-corner-1c2';
+// Stocked/non-made-to-order QA product so the real Add to cart control commits
+// immediately without opening the fabric picker. The explicit variant makes the
+// WhatsApp matcher test exact rather than product-only.
+const PRODUCT = '/shop/recliner/roma-recliner-manual-armchair';
+const VARIANT = '562327ad-ee1e-4683-8f39-28f1289f8696';
 const RUN = `v21-${Date.now()}`;
 
 function assert(cond, msg) {
@@ -41,7 +45,8 @@ async function prepareContext(browser) {
 
 async function goProduct(browser, suffix = '', accept = false) {
   const { context, page } = await prepareContext(browser);
-  await page.goto(`${BASE}${PRODUCT}${suffix}`, { waitUntil: 'domcontentloaded', timeout: 45000 });
+  const query = `?variant=${encodeURIComponent(VARIANT)}${suffix ? `&${suffix.replace(/^\?/, '')}` : ''}`;
+  await page.goto(`${BASE}${PRODUCT}${query}`, { waitUntil: 'domcontentloaded', timeout: 45000 });
   await dismissConsent(page, accept);
   const vid = await waitForCookie(context, 'uksofashop_vid');
   const sid = await waitForCookie(context, 'uksofashop_sid');
@@ -53,10 +58,14 @@ async function addProduct(page) {
   const button = page.getByRole('button', { name: /Add to cart/i }).first();
   await button.waitFor({ state: 'visible', timeout: 15000 });
   await button.click();
-  // Do not use the short-lived animated "Added to cart" label as the release
-  // oracle. The durable proof is the real cart row on /checkout immediately
-  // below; a failed add cannot produce Continue to delivery.
-  await page.waitForTimeout(400);
+  // Durable state, not the two-second animated label. The exact variant must be
+  // present in the persisted cart before navigation to checkout.
+  await page.waitForFunction((variantId) => {
+    try {
+      const cart = JSON.parse(localStorage.getItem('uksofashop_cart') || '[]');
+      return Array.isArray(cart) && cart.some(item => item?.variant_id === variantId && Number(item?.quantity) > 0);
+    } catch { return false; }
+  }, VARIANT, { timeout: 10000 });
 }
 
 async function completeCheckout(context, page, label) {
@@ -110,7 +119,7 @@ async function clickAcquisitionWhatsApp(context, page) {
 
 (async () => {
   const browser = await chromium.launch({ executablePath: '/usr/bin/google-chrome', headless: true, args: ['--no-sandbox'] });
-  const result = { run: RUN, direct: null, google: null, meta: null, whatsapp: null, crossBrowser: null, support: null };
+  const result = { run: RUN, product: PRODUCT, variant: VARIANT, direct: null, google: null, meta: null, whatsapp: null, crossBrowser: null, support: null };
   try {
     // A. Direct/organic, essential-only consent: operational attribution only.
     {
@@ -121,31 +130,31 @@ async function clickAcquisitionWhatsApp(context, page) {
       await s.context.close();
     }
 
-    // B. Google tagged + granted consent.
+    // B. Google tagged + granted consent. IDs are deliberately impossible QA values.
     {
-      const gclid = `QA-GCLID-${RUN}`;
-      const qs = `?gclid=${encodeURIComponent(gclid)}&utm_source=google&utm_medium=cpc&utm_campaign=tracking_v21_e2e`;
+      const gclid = `QA-V21-GCLID-${RUN}`;
+      const qs = `gclid=${encodeURIComponent(gclid)}&utm_source=google&utm_medium=cpc&utm_campaign=tracking_v21_final_${RUN}`;
       const s = await goProduct(browser, qs, true);
       await waitForCookie(s.context, 'uksofashop_lt');
       result.google = await completeCheckout(s.context, s.page, 'GOOGLE');
       assert(result.google.lastTouch?.gclid === gclid, 'GOOGLE gclid not retained before checkout');
       assert(result.google.lastTouch?.source === 'google', 'GOOGLE source mismatch');
       assert(result.google.lastTouch?.medium === 'cpc', 'GOOGLE medium mismatch');
-      assert(result.google.lastTouch?.campaign === 'tracking_v21_e2e', 'GOOGLE campaign mismatch');
+      assert(result.google.lastTouch?.campaign === `tracking_v21_final_${RUN}`, 'GOOGLE campaign mismatch');
       await s.context.close();
     }
 
-    // C. Meta tagged + granted consent.
+    // C. Meta tagged + granted consent. ID is deliberately an impossible QA value.
     {
-      const fbclid = `QA-FBCLID-${RUN}`;
-      const qs = `?fbclid=${encodeURIComponent(fbclid)}&utm_source=facebook&utm_medium=paid_social&utm_campaign=tracking_v21_e2e`;
+      const fbclid = `QA-V21-FBCLID-${RUN}`;
+      const qs = `fbclid=${encodeURIComponent(fbclid)}&utm_source=facebook&utm_medium=paid_social&utm_campaign=tracking_v21_final_${RUN}`;
       const s = await goProduct(browser, qs, true);
       await waitForCookie(s.context, 'uksofashop_lt');
       result.meta = await completeCheckout(s.context, s.page, 'META');
       assert(result.meta.lastTouch?.fbclid === fbclid, 'META fbclid not retained before checkout');
       assert(result.meta.lastTouch?.source === 'facebook', 'META source mismatch');
       assert(result.meta.lastTouch?.medium === 'paid_social', 'META medium mismatch');
-      assert(result.meta.lastTouch?.campaign === 'tracking_v21_e2e', 'META campaign mismatch');
+      assert(result.meta.lastTouch?.campaign === `tracking_v21_final_${RUN}`, 'META campaign mismatch');
       await s.context.close();
     }
 
