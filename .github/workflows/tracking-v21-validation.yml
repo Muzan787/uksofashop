@@ -52,6 +52,7 @@ jobs:
           grep -q 'data-lenis-prevent-horizontal' src/components/Home/ProductRail.tsx
           python ../qa/.github/scripts/tracking_v21_apply.py
           python ../qa/.github/scripts/tracking_v21_fix_syntax.py
+          python ../qa/.github/scripts/tracking_v21_refine.py
 
       - name: Verify exact Tracking V2.1 scope
         working-directory: work
