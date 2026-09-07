@@ -23,16 +23,25 @@ require(
     "isDeterministicCheckoutWhatsAppMatch",
     ".from('whatsapp_enquiries')",
     ".is('converted_order_id', null)",
-    "whatsapp_reference: linkedWhatsAppReference",
+    ".eq('arrival_id', currentArrivalId)",
+    "retireWhatsAppReferenceCookie",
+    ".eq('converted_order_id', order.id)",
+    "whatsapp_reference: attrError ? null : linkedWhatsAppReference",
 )
 forbid(
     'src/app/actions/checkout.ts',
     "await supabase\n        .from('orders')\n        .update(attribution)",
+    "linkedEnquiry?.gclid",
+    "linkedEnquiry?.ga_client_id",
+    "linkedEnquiry?.meta_fbp",
+    ".eq('session_id', currentSessionId)",
 )
 
 require(
     'src/app/actions/orders.ts',
+    "const confirmedAt = new Date().toISOString()",
     "const admin = createAdminClient()",
+    ".update({ confirmed_at: confirmedAt })",
     ".eq('status', 'confirmed')",
     ".is('confirmed_at', null)",
     "after(() => reportOrderConversion(orderId, 'purchase'))",
@@ -41,12 +50,19 @@ require(
 require(
     'src/utils/orderConversions.ts',
     "const admin = createAdminClient()",
-    "if (kind === 'purchase' && !order.confirmed_at) return",
-    "if (kind === 'delivered' && !order.delivered_at) return",
+    "const conversionTime = kind === 'purchase' ? order.confirmed_at : order.delivered_at",
+    "if (!conversionTime) return",
     ".is(sentColumn, null)",
     ".from('conversion_events').insert",
     ".from('google_offline_conversions')",
+    "conversion_time: conversionTime",
+    "platform: 'google_offline_staging' as const",
     "onConflict: 'order_id,conversion_stage'",
+)
+forbid(
+    'src/utils/orderConversions.ts',
+    "?? new Date().toISOString()",
+    "supabase: Client",
 )
 
 require(
@@ -62,6 +78,7 @@ require(
 require(
     'src/utils/attribution/whatsapp.ts',
     "export const WHATSAPP_REFERENCE_COOKIE = 'uksofashop_wa'",
+    "window.location.protocol === 'https:' ? '; secure' : ''",
 )
 
 print('Tracking V2.1 source contract PASS')
