@@ -51,6 +51,7 @@ jobs:
           test "$(git ls-remote origin refs/heads/fix/cro-phase2b-trust-delivery | cut -f1)" = "$PHASE2B_SHA"
           grep -q 'data-lenis-prevent-horizontal' src/components/Home/ProductRail.tsx
           python ../qa/.github/scripts/tracking_v21_apply.py
+          python ../qa/.github/scripts/tracking_v21_fix_syntax.py
 
       - name: Verify exact Tracking V2.1 scope
         working-directory: work
