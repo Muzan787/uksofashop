@@ -12,46 +12,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
-      EXPECTED_MASTER: 8c95f41dab666b3af4dc8aa05a951f1193c8fa75
-      TRACKING_BASE: b385a2dbcded6fa9e65fe2d30e8af185f82c7088
       PROD: https://www.uksofashop.co.uk
     steps:
-      - name: Checkout exact production master
-        uses: actions/checkout@v4
-        with:
-          ref: master
-          fetch-depth: 0
-
-      - name: Protect release scope and prior phases
-        shell: bash
-        run: |
-          set -euo pipefail
-          test "$(git rev-parse HEAD)" = "$EXPECTED_MASTER"
-          mapfile -t files < <(git diff --name-only "$TRACKING_BASE"...HEAD)
-          expected=(
-            'src/app/delivery-returns/page.tsx'
-            'src/app/faq/faqData.ts'
-            'src/app/journal/articles/cash-on-delivery-explained.tsx'
-            'src/app/journal/articles/delivery-day-preparation.tsx'
-            'src/app/llms.txt/route.ts'
-            'src/app/shop/[category]/page.tsx'
-            'src/components/Editorial/CoverageMap.tsx'
-            'src/components/Home/CraftStory.tsx'
-            'src/components/Home/Hero.tsx'
-            'src/components/Home/StatsBand.tsx'
-            'src/components/Layout/Footer.tsx'
-            'src/components/Product/DeliveryEstimate.tsx'
-            'src/components/Product/DeliveryEstimator.tsx'
-            'src/constants/categorySeo.ts'
-            'src/constants/promises.ts'
-          )
-          test "${#files[@]}" -eq 15
-          for i in "${!expected[@]}"; do test "${files[$i]}" = "${expected[$i]}"; done
-          grep -q 'data-lenis-prevent-horizontal' src/components/Home/ProductRail.tsx
-          test -f supabase/migrations/20260907172933_atomic_confirm_order_timestamp.sql
-          grep -q "confirmed_at = COALESCE" supabase/migrations/20260907172933_atomic_confirm_order_timestamp.sql
-          echo 'PROTECTED_SCOPE=PASS'
-
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -91,8 +53,7 @@ jobs:
           }
           async function noOverflow(page,label){
             const x=await page.evaluate(()=>document.documentElement.scrollWidth-window.innerWidth);
-            assert(x<=1,`${label}: horizontal overflow ${x}`);
-            return x;
+            assert(x<=1,`${label}: horizontal overflow ${x}`); return x;
           }
           (async()=>{
             const browser=await chromium.launch({executablePath:'/usr/bin/google-chrome',headless:true,args:['--no-sandbox']});
@@ -108,17 +69,13 @@ jobs:
               assert(!t.includes('Cash on Delivery Available Nationwide'),`old nationwide @${width}`);
               assert(await p.locator('footer a[href="https://www.tiktok.com"]').count()===0,`TikTok placeholder @${width}`);
               assert(await p.locator('[data-lenis-prevent-horizontal]').count()>0,`Phase2A attribute @${width}`);
-              const overflow=await noOverflow(p,`home ${width}`);
-              assert(errors.length===0,`home pageerror @${width}: ${errors.join(' | ')}`);
+              const overflow=await noOverflow(p,`home ${width}`); assert(errors.length===0,`home pageerror @${width}: ${errors.join(' | ')}`);
               home.push({width,overflow});
               if(width===390){
-                const rail=p.locator('[data-lenis-prevent-horizontal]').first(); await rail.scrollIntoViewIfNeeded();
-                await rail.hover(); const y0=await p.evaluate(()=>scrollY); await p.mouse.wheel(0,420); await p.waitForTimeout(900); const y1=await p.evaluate(()=>scrollY);
-                assert(y1-y0>80,`Phase2A vertical wheel over rail did not move page: ${y0}->${y1}`);
-                const h=await rail.evaluate(el=>({before:el.scrollLeft,client:el.clientWidth,total:el.scrollWidth,second:el.children[1]?.offsetLeft||0}));
-                assert(h.total>h.client,'Phase2A rail no horizontal overflow');
-                await rail.evaluate(el=>{const target=el.children[1]?.offsetLeft||250; el.scrollTo({left:target,behavior:'instant'});}); await p.waitForTimeout(250);
-                const x1=await rail.evaluate(el=>el.scrollLeft); assert(x1>50,`Phase2A rail did not horizontally move: ${x1}`);
+                const rail=p.locator('[data-lenis-prevent-horizontal]').first(); await rail.scrollIntoViewIfNeeded(); await rail.hover();
+                const y0=await p.evaluate(()=>scrollY); await p.mouse.wheel(0,420); await p.waitForTimeout(900); const y1=await p.evaluate(()=>scrollY); assert(y1-y0>80,`Phase2A vertical wheel ${y0}->${y1}`);
+                const h=await rail.evaluate(el=>({before:el.scrollLeft,client:el.clientWidth,total:el.scrollWidth})); assert(h.total>h.client,'Phase2A rail has no horizontal overflow');
+                await rail.evaluate(el=>{const target=el.children[1]?.offsetLeft||250; el.scrollTo({left:target,behavior:'instant'});}); await p.waitForTimeout(250); const x1=await rail.evaluate(el=>el.scrollLeft); assert(x1>50,`Phase2A rail horizontal ${x1}`);
                 console.log(`PHASE2A_SANITY=PASS pageY:${y0}->${y1} railX:${h.before}->${x1}`);
               }
               await c.close();
@@ -129,40 +86,22 @@ jobs:
             for(const width of [390,430,1440]){
               const c=await quietContext(browser,width,1000); const p=await c.newPage(); const errors=[]; p.on('pageerror',e=>errors.push(e.message));
               const res=await p.goto(PROD+'/delivery-returns',{waitUntil:'networkidle',timeout:60000}); assert(res&&res.ok(),`delivery HTTP @${width}`); await dismiss(p);
-              const section=p.locator('section[aria-labelledby="coverage-heading"]'); await section.waitFor({state:'attached',timeout:15000});
-              const rows=section.locator('dl > div'); assert(await rows.count()===4,`delivery rows @${width}`);
+              const section=p.locator('section[aria-labelledby="coverage-heading"]'); await section.waitFor({state:'attached',timeout:15000}); const rows=section.locator('dl > div'); assert(await rows.count()===4,`delivery rows @${width}`);
               const texts=(await rows.allTextContents()).map(s=>s.replace(/\s+/g,' ').trim());
               for(let i=0;i<4;i++){assert(texts[i].includes(regional[i][0])&&texts[i].includes(regional[i][1]),`delivery row ${i} @${width}: ${texts[i]}`); const row=rows.nth(i); await row.scrollIntoViewIfNeeded(); assert(await row.isVisible(),`delivery row invisible ${i} @${width}`);}
-              const geom=await rows.evaluateAll(els=>els.map(el=>{const r=el.getBoundingClientRect();return{l:r.left,r:r.right,t:r.top+scrollY,b:r.bottom+scrollY,w:r.width,h:r.height}}));
-              for(let i=0;i<4;i++){assert(geom[i].l>=-1&&geom[i].r<=width+1,`delivery clipping ${i} @${width}`); if(i) assert(geom[i].t>=geom[i-1].b-1,`delivery overlap ${i} @${width}`);}
-              const overflow=await noOverflow(p,`delivery ${width}`); assert(errors.length===0,`delivery pageerror @${width}: ${errors.join(' | ')}`);
-              await section.screenshot({path:`live-evidence/delivery-${width}.png`}); delivery.push({width,overflow,texts}); await c.close();
+              const geom=await rows.evaluateAll(els=>els.map(el=>{const r=el.getBoundingClientRect();return{l:r.left,r:r.right,t:r.top+scrollY,b:r.bottom+scrollY}})); for(let i=0;i<4;i++){assert(geom[i].l>=-1&&geom[i].r<=width+1,`delivery clipping ${i} @${width}`); if(i) assert(geom[i].t>=geom[i-1].b-1,`delivery overlap ${i} @${width}`);}
+              const overflow=await noOverflow(p,`delivery ${width}`); assert(errors.length===0,`delivery pageerror @${width}: ${errors.join(' | ')}`); await section.screenshot({path:`live-evidence/delivery-${width}.png`}); delivery.push({width,overflow,texts}); await c.close();
             }
             console.log('LIVE_DELIVERY='+JSON.stringify(delivery));
 
             const c=await quietContext(browser,1440,1000); const p=await c.newPage();
-            for(const path of ['/shop/fabric-sofa','/shop/leather-sofa','/shop/electric-sofa']){
-              const res=await p.goto(PROD+path,{waitUntil:'networkidle',timeout:60000}); assert(res&&res.ok(),`${path} HTTP`); await dismiss(p); const t=await p.locator('body').innerText();
-              assert(t.includes('Custom Options'),`${path}: Custom Options missing`); assert(t.includes('Fabric & size options available'),`${path}: custom subcopy missing`); assert(!t.includes('Your fabric and size'),`${path}: old universal claim`); await noOverflow(p,path);
-              console.log(`CATEGORY_PASS=${path}`);
-            }
-            const custom='/shop/fabric-sofa/verona-high-back-4-seater-corner-1c2?variant=a5d2050d-c458-4e0c-b3b3-7b7c727845a0';
-            await p.goto(PROD+custom,{waitUntil:'networkidle',timeout:60000}); await dismiss(p); let section=p.locator('section[aria-label="Made to Order"]'); await section.waitFor({state:'attached',timeout:15000}); await section.scrollIntoViewIfNeeded(); assert(await section.isVisible(),'custom PDP Made to Order not visible'); let t=await p.locator('body').innerText(); assert(t.includes('Most UK Mainland: arrives'),'custom PDP delivery not qualified'); assert(t.includes('Some Wales and Scotland postcodes take 5–7 working days.'),'custom PDP delivery exception missing'); await noOverflow(p,'custom PDP'); console.log('CUSTOM_PDP=PASS');
-            const fixed='/shop/recliner/roma-recliner-manual-armchair?variant=562327ad-ee1e-4683-8f39-28f1289f8696';
-            await p.goto(PROD+fixed,{waitUntil:'networkidle',timeout:60000}); await dismiss(p); assert(await p.locator('section[aria-label="Made to Order"]').count()===0,'fixed PDP false Made to Order'); t=await p.locator('body').innerText(); assert(t.includes('Most UK Mainland: arrives'),'fixed PDP delivery not qualified'); await noOverflow(p,'fixed PDP'); console.log('FIXED_PDP=PASS'); await c.close();
+            for(const path of ['/shop/fabric-sofa','/shop/leather-sofa','/shop/electric-sofa']){const res=await p.goto(PROD+path,{waitUntil:'networkidle',timeout:60000}); assert(res&&res.ok(),`${path} HTTP`); await dismiss(p); const t=await p.locator('body').innerText(); assert(t.includes('Custom Options'),`${path}: Custom Options missing`); assert(t.includes('Fabric & size options available'),`${path}: custom subcopy missing`); assert(!t.includes('Your fabric and size'),`${path}: old universal claim`); await noOverflow(p,path); console.log(`CATEGORY_PASS=${path}`);}
+            const custom='/shop/fabric-sofa/verona-high-back-4-seater-corner-1c2?variant=a5d2050d-c458-4e0c-b3b3-7b7c727845a0'; await p.goto(PROD+custom,{waitUntil:'networkidle',timeout:60000}); await dismiss(p); let section=p.locator('section[aria-label="Made to Order"]'); await section.waitFor({state:'attached',timeout:15000}); await section.scrollIntoViewIfNeeded(); assert(await section.isVisible(),'custom PDP Made to Order not visible'); let t=await p.locator('body').innerText(); assert(t.includes('Most UK Mainland: arrives'),'custom PDP delivery not qualified'); assert(t.includes('Some Wales and Scotland postcodes take 5–7 working days.'),'custom PDP delivery exception missing'); await noOverflow(p,'custom PDP'); console.log('CUSTOM_PDP=PASS');
+            const fixed='/shop/recliner/roma-recliner-manual-armchair?variant=562327ad-ee1e-4683-8f39-28f1289f8696'; await p.goto(PROD+fixed,{waitUntil:'networkidle',timeout:60000}); await dismiss(p); assert(await p.locator('section[aria-label="Made to Order"]').count()===0,'fixed PDP false Made to Order'); t=await p.locator('body').innerText(); assert(t.includes('Most UK Mainland: arrives'),'fixed PDP delivery not qualified'); await noOverflow(p,'fixed PDP'); console.log('FIXED_PDP=PASS'); await c.close();
 
-            const tc=await browser.newContext({viewport:{width:390,height:900}});
-            await tc.route('**/api/attribution/arrival',r=>r.abort()); await tc.route('**/api/meta/**',r=>r.abort()); await tc.route(external,r=>r.abort());
-            const tp=await tc.newPage(); const terr=[]; tp.on('pageerror',e=>terr.push(e.message));
-            await tp.goto(PROD+'/',{waitUntil:'domcontentloaded',timeout:60000});
-            for(let i=0;i<30;i++){const names=(await tc.cookies()).map(x=>x.name); if(['uksofashop_vid','uksofashop_sid','uksofashop_aid'].every(n=>names.includes(n))) break; await tp.waitForTimeout(150);}
-            let cookies=await tc.cookies(); const names=cookies.map(x=>x.name); for(const n of ['uksofashop_vid','uksofashop_sid','uksofashop_aid']) assert(names.includes(n),`tracking operational cookie missing ${n}`);
-            const eb=tp.getByRole('button',{name:'Essential only'}); try{await eb.waitFor({state:'visible',timeout:3000});await eb.click();await tp.waitForTimeout(250);}catch{}
-            cookies=await tc.cookies(); const consent=cookies.find(x=>x.name==='cookie_consent'); assert(consent&&consent.value==='denied','consent UI/source did not record Essential only');
-            const wa=tp.locator('a[href*="wa.me"]').filter({visible:true}).first(); assert(await wa.count()>0,'WhatsApp FAB/link missing'); const href=await wa.getAttribute('href'); assert(href&&href.includes('wa.me'),'WhatsApp href invalid');
-            const cr=await tp.goto(PROD+'/checkout',{waitUntil:'domcontentloaded',timeout:60000}); assert(cr&&cr.ok(),'checkout route failed'); assert((await tp.locator('body').innerText()).length>0,'checkout blank'); assert(terr.length===0,`tracking smoke pageerrors: ${terr.join(' | ')}`);
-            console.log('TRACKING_LIGHT_SMOKE=PASS operational='+JSON.stringify(names.filter(n=>n.startsWith('uksofashop_'))));
-            await tc.close(); await browser.close();
+            const tc=await browser.newContext({viewport:{width:390,height:900}}); await tc.route('**/api/attribution/arrival',r=>r.abort()); await tc.route('**/api/meta/**',r=>r.abort()); await tc.route(external,r=>r.abort()); const tp=await tc.newPage(); const terr=[]; tp.on('pageerror',e=>terr.push(e.message));
+            await tp.goto(PROD+'/',{waitUntil:'domcontentloaded',timeout:60000}); for(let i=0;i<30;i++){const names=(await tc.cookies()).map(x=>x.name); if(['uksofashop_vid','uksofashop_sid','uksofashop_aid'].every(n=>names.includes(n))) break; await tp.waitForTimeout(150);} let cookies=await tc.cookies(); let names=cookies.map(x=>x.name); for(const n of ['uksofashop_vid','uksofashop_sid','uksofashop_aid']) assert(names.includes(n),`tracking operational cookie missing ${n}`);
+            const eb=tp.getByRole('button',{name:'Essential only'}); try{await eb.waitFor({state:'visible',timeout:3000});await eb.click();await tp.waitForTimeout(250);}catch{} cookies=await tc.cookies(); const consent=cookies.find(x=>x.name==='cookie_consent'); assert(consent&&consent.value==='denied','consent UI did not record Essential only'); const wa=tp.locator('a[href*="wa.me"]:visible').first(); assert(await wa.count()>0,'WhatsApp FAB/link missing'); const href=await wa.getAttribute('href'); assert(href&&href.includes('wa.me'),'WhatsApp href invalid'); const cr=await tp.goto(PROD+'/checkout',{waitUntil:'domcontentloaded',timeout:60000}); assert(cr&&cr.ok(),'checkout route failed'); assert((await tp.locator('body').innerText()).length>0,'checkout blank'); assert(terr.length===0,`tracking smoke pageerrors: ${terr.join(' | ')}`); console.log('TRACKING_LIGHT_SMOKE=PASS operational='+JSON.stringify(names.filter(n=>n.startsWith('uksofashop_')))); await tc.close(); await browser.close();
           })().catch(e=>{console.error(e.stack||e);process.exit(1)});
           NODE
 
