@@ -1,7 +1,7 @@
 from pathlib import Path
 
 BASE = Path('.')
-MIGRATION = BASE / 'supabase/migrations/20260907140000_atomic_confirm_order_timestamp.sql'
+MIGRATION = BASE / 'supabase/migrations/20260907172933_atomic_confirm_order_timestamp.sql'
 
 
 def require(path: str, *needles: str) -> None:
