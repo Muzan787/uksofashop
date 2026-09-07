@@ -61,7 +61,7 @@ insert into public.orders(id, status, customer_name, total_amount, shipping_addr
 ('00000000-0000-0000-0000-000000000004', 'cancelled', 'QA Cancelled', 100, 'Test', '2026-09-07T10:00:00Z', null),
 ('00000000-0000-0000-0000-000000000005', 'delivered', 'QA Delivered', 100, 'Test', '2026-09-07T10:00:00Z', '2026-09-07T10:06:00Z');
 
-\i supabase/migrations/20260907140000_atomic_confirm_order_timestamp.sql
+\i supabase/migrations/20260907172933_atomic_confirm_order_timestamp.sql
 
 -- Function security/signature/ACL must survive CREATE OR REPLACE unchanged.
 do $$
