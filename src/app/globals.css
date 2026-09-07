@@ -192,6 +192,31 @@
     .pb-bottom-nav { padding-bottom: 0; }
   }
 
+  /* A bar of our own, parked on top of that navigation.
+   *
+   * The sibling of .pb-bottom-nav, for the other half of the same problem.
+   * That one keeps a page's last CONTENT clear of the bar; this one positions
+   * a fixed or sticky bar of ours flush against its top edge.
+   *
+   * Flush, rather than the 68px of breathing room .pb-bottom-nav leaves: two
+   * stacked bars with a strip of page showing between them reads as a mistake,
+   * and the product page's add-to-cart bar has always sat directly on the
+   * navigation. It is the same expression StickyBar writes inline, lifted here
+   * because a second bar now needs it and a third will.
+   *
+   * The media query is built in for exactly the reason it is built into
+   * .pb-bottom-nav: the navigation is lg:hidden, so above the breakpoint there
+   * is nothing to clear, and leaving every caller to remember `lg:bottom-0`
+   * makes correctness depend on which equal-specificity utility happens to
+   * land last in the stylesheet. */
+  .above-bottom-nav {
+    bottom: calc(var(--bottom-nav) + env(safe-area-inset-bottom));
+  }
+
+  @media (width >= 64rem) {
+    .above-bottom-nav { bottom: 0; }
+  }
+
   /* Snap scrolling for carousels */
   .snap-x-mandatory { scroll-snap-type: x mandatory; }
   .snap-start  { scroll-snap-align: start; }

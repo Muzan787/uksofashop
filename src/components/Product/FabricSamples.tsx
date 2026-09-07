@@ -188,7 +188,14 @@ export function SampleBar() {
   return (
     <>
       {!sent && (
-        <div className="sticky bottom-0 z-30 border-t border-calico-300 bg-calico-50/95 backdrop-blur-sm">
+        <div
+          // Tells the floating WhatsApp button to stand down while this is up,
+          // which it was not doing: the green pill sits at the bottom right on
+          // exactly the spot this bar puts its one button.
+          // See bottomBarShowing() in src/components/Layout/WhatsAppFab.tsx.
+          data-bottom-bar=""
+          className="sticky above-bottom-nav z-sticky-bar border-t border-calico-300 bg-calico-50/95 backdrop-blur-sm"
+        >
           <div className="mx-auto flex max-w-shell flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
             <div className="flex min-w-0 items-center gap-3">
               <span className="shrink-0 font-data text-caption uppercase tracking-widest text-ink-500">
@@ -248,7 +255,10 @@ export function SampleBar() {
       )}
 
       {sent && (
-        <div className="sticky bottom-0 z-30 border-t border-sage-700/30 bg-sage-50">
+        <div
+          data-bottom-bar=""
+          className="sticky above-bottom-nav z-sticky-bar border-t border-sage-700/30 bg-sage-50"
+        >
           <div className="mx-auto flex max-w-shell items-center gap-3 px-4 py-4 sm:px-6 lg:px-8">
             <span
               aria-hidden="true"
