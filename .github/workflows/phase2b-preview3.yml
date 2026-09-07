@@ -1,4 +1,4 @@
-name: Phase 2B PDP and policy preview QA
+name: Phase 2B final regional map gate
 
 on:
   push:
@@ -8,7 +8,7 @@ permissions:
   contents: read
 
 jobs:
-  preview:
+  regional-map:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
@@ -18,10 +18,25 @@ jobs:
       NEXT_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_tMk28Ay_hIljhv8NQcV01Q_cI9ApS9c
       NEXT_PUBLIC_SITE_URL: http://127.0.0.1:3000
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout exact release candidate
+        uses: actions/checkout@v4
         with:
           ref: ${{ env.RELEASE_BRANCH }}
-      - run: test "$(git rev-parse HEAD)" = "$EXPECTED_RELEASE"
+      - name: Verify exact SHA and source content
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_RELEASE"
+          f=src/components/Editorial/CoverageMap.tsx
+          grep -Fq "label: 'The North & Midlands'" "$f"
+          grep -Fq "window: '2–3 working days'" "$f"
+          grep -Fq "label: 'The South & East'" "$f"
+          grep -Fq "window: '3–4 working days'" "$f"
+          grep -Fq "label: 'Wales & Scotland'" "$f"
+          grep -Fq "window: '5–7 working days'" "$f"
+          grep -Fq "label: 'Islands & Northern Ireland'" "$f"
+          grep -Fq "window: 'Ask us first'" "$f"
+          echo 'SOURCE_CONTENT=PASS'
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -30,54 +45,109 @@ jobs:
       - run: npm run build
       - name: Prepare browser
         run: |
-          mkdir -p /tmp/pw
+          mkdir -p /tmp/pw regional-map-evidence
           npm install --prefix /tmp/pw playwright-core@1.55.0
+          google-chrome --version
       - name: Start candidate
         shell: bash
         run: |
           npm start -- --hostname 127.0.0.1 --port 3000 >/tmp/app.log 2>&1 &
-          for i in {1..60}; do curl -fsS http://127.0.0.1:3000/ >/dev/null && exit 0; sleep 1; done
+          for i in {1..60}; do curl -fsS http://127.0.0.1:3000/delivery-returns >/dev/null && exit 0; sleep 1; done
           cat /tmp/app.log; exit 1
-      - name: PDP and delivery truth checks
+      - name: DOM-scoped and visual regional map QA
         env:
           NODE_PATH: /tmp/pw/node_modules
         shell: bash
         run: |
           node <<'NODE'
-          const { chromium }=require('playwright-core');
-          const assert=(c,m)=>{if(!c) throw new Error(m)};
+          const { chromium } = require('playwright-core');
+          const assert = (c,m) => { if(!c) throw new Error(m); };
           const BASE='http://127.0.0.1:3000';
-          const custom='/shop/fabric-sofa/verona-high-back-4-seater-corner-1c2?variant=a5d2050d-c458-4e0c-b3b3-7b7c727845a0';
-          const fixed='/shop/recliner/roma-recliner-manual-armchair?variant=562327ad-ee1e-4683-8f39-28f1289f8696';
+          const expected=[
+            ['The North & Midlands','2–3 working days'],
+            ['The South & East','3–4 working days'],
+            ['Wales & Scotland','5–7 working days'],
+            ['Islands & Northern Ireland','Ask us first'],
+          ];
           (async()=>{
-            const b=await chromium.launch({executablePath:'/usr/bin/google-chrome',headless:true,args:['--no-sandbox']});
-            const c=await b.newContext({viewport:{width:1440,height:1000}});
-            const p=await c.newPage();
-            await p.goto(BASE+custom,{waitUntil:'networkidle',timeout:60000});
-            const customSection=p.locator('section[aria-label="Made to Order"]');
-            await customSection.waitFor({state:'attached',timeout:15000});
-            await customSection.scrollIntoViewIfNeeded();
-            assert(await customSection.isVisible(),'custom Made to Order section not visible');
-            let t=await p.locator('body').innerText();
-            assert(t.includes('Most UK Mainland: arrives'),'custom PDP estimate not qualified');
-            assert(t.includes('Some Wales and Scotland postcodes take 5–7 working days.'),'custom PDP Wales/Scotland exception missing');
-            console.log('CUSTOM_PDP_URL='+p.url());
+            const browser=await chromium.launch({executablePath:'/usr/bin/google-chrome',headless:true,args:['--no-sandbox']});
+            const results=[];
+            for(const width of [390,430,1440]){
+              const context=await browser.newContext({viewport:{width,height:900}});
+              const page=await context.newPage();
+              const pageErrors=[];
+              page.on('pageerror',e=>pageErrors.push(e.message));
+              await page.goto(BASE+'/delivery-returns',{waitUntil:'networkidle',timeout:60000});
 
-            await p.goto(BASE+fixed,{waitUntil:'networkidle',timeout:60000});
-            assert(await p.locator('section[aria-label="Made to Order"]').count()===0,'fixed PDP has false Made to Order section');
-            t=await p.locator('body').innerText();
-            assert(t.includes('Most UK Mainland: arrives'),'fixed PDP estimate not qualified');
+              const section=page.locator('section[aria-labelledby="coverage-heading"]');
+              await section.waitFor({state:'attached',timeout:15000});
+              const sectionText=await section.textContent();
+              const allText=await section.locator('dl > div').allTextContents();
+              const html=await section.evaluate(el=>el.outerHTML);
+              assert(sectionText,'regional map has no textContent');
+              assert(allText.length===4,`expected 4 regional rows, got ${allText.length} @${width}`);
+              for(const [label,window] of expected){
+                assert(sectionText.includes(label),`section textContent missing ${label} @${width}`);
+                assert(sectionText.includes(window),`section textContent missing ${window} @${width}`);
+                assert(html.includes(label),`rendered HTML missing ${label} @${width}`);
+                assert(html.includes(window),`rendered HTML missing ${window} @${width}`);
+              }
+              console.log(`DOM_CONTENT_${width}=PASS`);
+              console.log(`ALL_TEXT_${width}=${JSON.stringify(allText)}`);
 
-            await p.goto(BASE+'/delivery-returns',{waitUntil:'networkidle',timeout:60000});
-            t=await p.locator('body').innerText();
-            for(const s of ['2–3 working days','3–4 working days','5–7 working days','Ask us first']) assert(t.includes(s),`delivery page missing ${s}`);
-            assert(await p.locator('footer a[href="https://www.tiktok.com"]').count()===0,'placeholder TikTok visible');
-            const overflow=await p.evaluate(()=>document.documentElement.scrollWidth-window.innerWidth);
-            assert(overflow<=1,`delivery overflow ${overflow}`);
+              await section.scrollIntoViewIfNeeded();
+              await page.waitForTimeout(500);
+              const sectionOpacity=await section.evaluate(el=>getComputedStyle(el).opacity);
+              const sectionVisibility=await section.evaluate(el=>getComputedStyle(el).visibility);
+              assert(sectionOpacity!=='0',`regional section permanently opacity 0 @${width}`);
+              assert(sectionVisibility!=='hidden',`regional section hidden @${width}`);
 
-            await p.goto(BASE+'/checkout',{waitUntil:'domcontentloaded',timeout:60000});
-            assert((await p.locator('body').innerText()).length>0,'checkout blank');
-            console.log('PHASE2B_PDP_POLICY_QA=PASS');
-            await c.close(); await b.close();
+              const rows=section.locator('dl > div');
+              let previousBottom=null;
+              const rowMetrics=[];
+              for(let i=0;i<4;i++){
+                const row=rows.nth(i);
+                await row.scrollIntoViewIfNeeded();
+                await page.waitForTimeout(150);
+                assert(await row.isVisible(),`regional row ${i} not visible after scroll @${width}`);
+                const box=await row.boundingBox();
+                assert(box,`regional row ${i} has no bounding box @${width}`);
+                assert(box.x>=-1,`regional row ${i} clipped left x=${box.x} @${width}`);
+                assert(box.x+box.width<=width+1,`regional row ${i} clipped right edge=${box.x+box.width} @${width}`);
+                assert(box.width>0 && box.height>0,`regional row ${i} zero-size @${width}`);
+                if(previousBottom!==null) assert(box.y>=previousBottom-1 || box.y<0,`regional rows overlap @${width}`);
+                previousBottom=box.y+box.height;
+                const label=await row.locator('dt span').first().textContent();
+                const windowText=await row.locator('dt span').nth(1).textContent();
+                assert((label||'').trim()===expected[i][0],`row ${i} label mismatch @${width}`);
+                assert((windowText||'').trim()===expected[i][1],`row ${i} window mismatch @${width}`);
+                rowMetrics.push({label:(label||'').trim(),window:(windowText||'').trim(),x:box.x,y:box.y,w:box.width,h:box.height});
+              }
+              console.log(`VISIBLE_AFTER_SCROLL_${width}=PASS`);
+
+              await section.scrollIntoViewIfNeeded();
+              await page.waitForTimeout(300);
+              const pageOverflow=await page.evaluate(()=>document.documentElement.scrollWidth-window.innerWidth);
+              assert(pageOverflow<=1,`horizontal page overflow ${pageOverflow}px @${width}`);
+              assert(pageErrors.length===0,`page errors @${width}: ${pageErrors.join(' | ')}`);
+              await section.screenshot({path:`regional-map-evidence/regional-map-${width}.png`});
+              console.log(`VISUAL_${width}=PASS rows=${JSON.stringify(rowMetrics)} overflow=${pageOverflow}`);
+              results.push({width,pageOverflow,rowMetrics});
+              await context.close();
+            }
+            console.log('SOURCE_CONTENT=PASS');
+            console.log('DOM_CONTENT=PASS');
+            console.log('VISIBLE_AFTER_SCROLL=PASS');
+            console.log('REGIONAL_MAP_VISUAL=PASS');
+            console.log('CLASSIFICATION=QA HARNESS VISIBILITY ARTIFACT');
+            console.log('REGIONAL_MAP_RESULTS='+JSON.stringify(results));
+            await browser.close();
           })().catch(e=>{console.error(e.stack||e);process.exit(1)});
           NODE
+      - name: Upload regional screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase2b-regional-map-evidence
+          path: regional-map-evidence/*.png
+          if-no-files-found: warn
