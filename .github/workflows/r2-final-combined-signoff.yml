@@ -58,3 +58,5 @@ jobs:
             qa-artifacts-pass
             qa-checkout-start.json
             qa-checkout-start.png
+
+# Final combined gate: the checkout route-load assertion is superseded only by the verified Continue-to-delivery trigger.
