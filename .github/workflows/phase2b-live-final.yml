@@ -46,7 +46,7 @@ jobs:
           const text=async p=>(await p.locator('body').textContent())||'';
           const overflow=async p=>p.evaluate(()=>document.documentElement.scrollWidth-window.innerWidth);
           async function quiet(browser,width,height=900,mobile=width<768){
-            const c=await browser.newContext({viewport:{width,height},isMobile:mobile,hasTouch:mobile,serviceWorkers:'block'});
+            const c=await browser.newContext({viewport:{width,height},isMobile:mobile,hasTouch:mobile});
             await c.route(/google-analytics|googletagmanager|googleadservices|connect\.facebook\.net|facebook\.com\/tr/i,r=>r.abort());
             await c.route('**/api/attribution/**',r=>r.abort());
             await c.route('**/api/meta/**',r=>r.abort());
@@ -55,7 +55,6 @@ jobs:
           (async()=>{
             const browser=await chromium.launch({executablePath:'/usr/bin/google-chrome',headless:true,args:['--no-sandbox']});
 
-            // Homepage 320/390/430/1440. Page-level overflow plus screenshots cover visible layout without flagging intentional off-canvas nav/rails.
             for(const width of [320,390,430,1440]){
               const c=await quiet(browser,width); const p=await c.newPage(); const errs=[]; p.on('pageerror',e=>errs.push(e.message));
               await p.goto(PROD+'/?phase2b_final='+width+'_'+Date.now(),{waitUntil:'networkidle',timeout:60000});
@@ -75,7 +74,6 @@ jobs:
             }
             console.log('LIVE_HOMEPAGE_MOBILE=PASS'); console.log('LIVE_HOMEPAGE_DESKTOP=PASS');
 
-            // Delivery regional component, DOM + visibility + geometry.
             for(const width of [390,430,1440]){
               const c=await quiet(browser,width); const p=await c.newPage();
               await p.goto(PROD+'/delivery-returns?phase2b_final='+Date.now(),{waitUntil:'networkidle',timeout:60000});
@@ -94,20 +92,17 @@ jobs:
             }
             console.log('LIVE_DELIVERY_PAGE=PASS');
 
-            // Categories.
             for(const [path,label] of [['/shop/fabric-sofa','FABRIC'],['/shop/leather-sofa','LEATHER'],['/shop/electric-sofa','ELECTRIC']]){
               const c=await quiet(browser,1440,1000,false); const p=await c.newPage(); await p.goto(PROD+path+'?phase2b_final='+Date.now(),{waitUntil:'networkidle',timeout:60000});
               const t=await text(p); assert(t.includes('Custom Options'),`${label} custom label`); assert(t.includes('Fabric & size options available'),`${label} custom subcopy`); assert(!t.includes('Your fabric and size'),`${label} old universal custom claim`); assert(await overflow(p)<=1,`${label} overflow`); console.log(`${label}_CATEGORY=PASS`); await c.close();
             }
 
-            // PDP truth.
             {
               const c=await quiet(browser,1440,1000,false); const p=await c.newPage();
               await p.goto(PROD+custom,{waitUntil:'networkidle',timeout:60000}); const sec=p.locator('section[aria-label="Made to Order"]'); await sec.waitFor({state:'attached'}); await sec.scrollIntoViewIfNeeded(); assert(await sec.isVisible(),'custom PDP Made to Order invisible'); let t=await text(p); assert(t.includes('Most UK Mainland: arrives'),'custom PDP estimate unqualified'); assert(t.includes('Some Wales and Scotland postcodes take 5–7 working days.'),'custom PDP exception'); console.log('CUSTOM_PDP=PASS');
               await p.goto(PROD+fixed,{waitUntil:'networkidle',timeout:60000}); assert(await p.locator('section[aria-label="Made to Order"]').count()===0,'fixed PDP false Made to Order'); t=await text(p); assert(t.includes('Most UK Mainland: arrives'),'fixed PDP estimate unqualified'); console.log('FIXED_PDP=PASS'); await c.close();
             }
 
-            // Phase 2A quick native gesture smoke on live production.
             {
               const c=await quiet(browser,390,844,true); const p=await c.newPage(); await p.goto(PROD+'/?phase2a_final='+Date.now(),{waitUntil:'networkidle',timeout:60000});
               const dlg=p.getByRole('dialog',{name:'Cookies on this site'}); if(await dlg.count()){await p.getByRole('button',{name:'Essential only'}).click();await p.waitForTimeout(500)}
@@ -117,9 +112,8 @@ jobs:
               await rail.scrollIntoViewIfNeeded(); await rail.evaluate(e=>e.scrollLeft=0); await p.waitForTimeout(400); box=await rail.boundingBox(); assert(box,'rail box2'); pt=point(box); const h0=await p.evaluate(()=>({y:scrollY,l:document.querySelector('[data-lenis-prevent-horizontal]')?.scrollLeft||0})); await cdp.send('Input.synthesizeScrollGesture',{...pt,xDistance:-250,speed:700,preventFling:true,gestureSourceType:'touch'}); await p.waitForTimeout(1200); const h1=await p.evaluate(()=>({y:scrollY,l:document.querySelector('[data-lenis-prevent-horizontal]')?.scrollLeft||0})); assert(h1.l-h0.l>80,`horizontal rail delta ${h1.l-h0.l}`); assert(Math.abs(h1.y-h0.y)<60,`horizontal page delta ${h1.y-h0.y}`); console.log(`PHASE2A=UNCHANGED verticalPageDelta=${v1.y-v0.y} verticalRailDelta=${v1.l-v0.l} horizontalRailDelta=${h1.l-h0.l} horizontalPageDelta=${h1.y-h0.y}`); await c.close();
             }
 
-            // Tracking V2.1 lightweight smoke: one real first-party arrival, no fake order, no WhatsApp click.
             {
-              const c=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,serviceWorkers:'block'}); await c.route(/google-analytics|googletagmanager|googleadservices|connect\.facebook\.net|facebook\.com\/tr/i,r=>r.abort()); const p=await c.newPage(); const pageErrors=[]; const arrival=[]; p.on('pageerror',e=>pageErrors.push(e.message)); p.on('response',r=>{if(r.url().includes('/api/attribution/arrival'))arrival.push(r.status())});
+              const c=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true}); await c.route(/google-analytics|googletagmanager|googleadservices|connect\.facebook\.net|facebook\.com\/tr/i,r=>r.abort()); const p=await c.newPage(); const pageErrors=[]; const arrival=[]; p.on('pageerror',e=>pageErrors.push(e.message)); p.on('response',r=>{if(r.url().includes('/api/attribution/arrival'))arrival.push(r.status())});
               await p.goto(PROD+'/?tracking_v21_final='+Date.now(),{waitUntil:'networkidle',timeout:60000}); await p.waitForTimeout(1000); const names=new Set((await c.cookies(PROD)).map(x=>x.name)); for(const n of ['uksofashop_vid','uksofashop_sid','uksofashop_aid'])assert(names.has(n),`tracking missing ${n}`); assert(arrival.some(s=>s>=200&&s<300),`tracking arrival status ${arrival}`); const dlg=p.getByRole('dialog',{name:'Cookies on this site'}); assert(await dlg.count()===1,'consent dialog missing'); await p.getByRole('button',{name:'Essential only'}).click(); await p.waitForTimeout(600); assert(await p.evaluate(()=>localStorage.getItem('cookie_consent'))==='denied','consent did not persist denied');
               await p.goto(PROD+custom,{waitUntil:'networkidle',timeout:60000}); await p.waitForTimeout(700); const fab=p.locator('a[aria-label="Chat with us on WhatsApp"]'); await fab.waitFor({state:'visible'}); await p.waitForFunction(()=>/Verona/i.test(document.querySelector('a[aria-label="Chat with us on WhatsApp"]')?.getAttribute('href')||'')); const href=await fab.getAttribute('href'); assert(href&&/wa\.me|whatsapp/i.test(href)&&/Verona/i.test(href),'product WhatsApp FAB not operational/product-aware'); await p.goto(PROD+'/checkout',{waitUntil:'domcontentloaded',timeout:60000}); assert((await text(p)).trim().length>0,'checkout blank'); assert(pageErrors.length===0,`tracking runtime pageerrors ${pageErrors.join(' | ')}`); console.log(`TRACKING_V21=UNCHANGED ids=PASS arrival=${arrival.join(',')} consent=PASS fab=PASS checkout=PASS`); await c.close();
             }
