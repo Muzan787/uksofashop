@@ -39,8 +39,23 @@ export function generateWhatsAppReference(): string {
 /** Matches what the database's check constraint accepts. Used to validate input, not just generate it. */
 export const WHATSAPP_REFERENCE_PATTERN = /^UKSS-WA-\d{6}-[A-Z0-9]{6}$/
 
+/** Functional first-party cookie carrying the most recent acquisition WhatsApp reference. */
+export const WHATSAPP_REFERENCE_COOKIE = 'uksofashop_wa'
+/** Long enough for a normal WhatsApp-assisted purchase, bounded to avoid stale automatic linkage. */
+export const WHATSAPP_REFERENCE_MAX_AGE_S = 30 * 24 * 60 * 60
+
 export function isValidWhatsAppReference(value: string): boolean {
   return WHATSAPP_REFERENCE_PATTERN.test(value.trim().toUpperCase())
+}
+
+/** Persist only acquisition references; support-only CTAs never call this. */
+export function persistWhatsAppReference(reference: string): void {
+  if (typeof document === 'undefined') return
+  const clean = reference.trim().toUpperCase()
+  if (!isValidWhatsAppReference(clean)) return
+  const secure = window.location.protocol === 'https:' ? '; secure' : ''
+  document.cookie =
+    `${WHATSAPP_REFERENCE_COOKIE}=${encodeURIComponent(clean)}; path=/; max-age=${WHATSAPP_REFERENCE_MAX_AGE_S}; samesite=lax${secure}`
 }
 
 /** Appends the reference on its own line, kept out of the readable part of the message. */

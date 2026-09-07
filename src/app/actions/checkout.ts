@@ -10,6 +10,12 @@ import { z } from 'zod'
 import { cookies, headers } from 'next/headers'
 import { rateLimit, callerKey } from '@/utils/rateLimit'
 import { metaFbcFromTouch } from '@/utils/attribution/fbc'
+import {
+  WHATSAPP_REFERENCE_COOKIE,
+  WHATSAPP_REFERENCE_MAX_AGE_S,
+  isValidWhatsAppReference,
+} from '@/utils/attribution/whatsapp'
+import { isDeterministicCheckoutWhatsAppMatch } from '@/utils/attribution/checkoutLinkage'
 
 /** What the browser is allowed to tell us: what was ordered, never what it costs. */
 export interface CartItem {
@@ -201,10 +207,124 @@ export async function placeOrder(
     // Malformed cookie. Nothing to recover; the order still places fine.
   }
 
+  const admin = createAdminClient()
+
+  // The session ledger is a server-side fallback for operational context that
+  // may not live in the consent-gated last-touch cookie (notably landing page
+  // and referrer). Current request cookies remain the first choice.
+  const currentVisitorId = jar.get('uksofashop_vid')?.value ?? null
+  const currentSessionId = jar.get('uksofashop_sid')?.value ?? null
+  const currentArrivalId = jar.get('uksofashop_aid')?.value ?? null
+
+  let sessionEvidence: {
+    gclid: string | null
+    gbraid: string | null
+    wbraid: string | null
+    fbclid: string | null
+    last_touch_source: string | null
+    last_touch_medium: string | null
+    last_touch_campaign: string | null
+    last_touch_content: string | null
+    last_touch_term: string | null
+    ga_client_id: string | null
+    meta_fbp: string | null
+    meta_fbc: string | null
+    landing_page: string | null
+    referrer: string | null
+  } | null = null
+
+  if (currentArrivalId) {
+    const { data: evidence, error: evidenceError } = await admin
+      .from('attribution_sessions')
+      .select('gclid, gbraid, wbraid, fbclid, last_touch_source, last_touch_medium, last_touch_campaign, last_touch_content, last_touch_term, ga_client_id, meta_fbp, meta_fbc, landing_page, referrer')
+      .eq('arrival_id', currentArrivalId)
+      .maybeSingle()
+    if (evidenceError) {
+      console.error(`Could not read checkout attribution arrival for order ${shortCode}`, evidenceError)
+    } else {
+      sessionEvidence = evidence
+    }
+  }
+
+  let linkedWhatsAppReference: string | null = null
+
+
+  const retireWhatsAppReferenceCookie = () => {
+    try {
+      jar.set(WHATSAPP_REFERENCE_COOKIE, '', {
+        path: '/',
+        maxAge: 0,
+        sameSite: 'lax',
+        secure: process.env.VERCEL_ENV === 'production',
+      })
+    } catch {
+      // Database state is authoritative; cookie cleanup is best-effort hygiene.
+    }
+  }
+
+  const rawWhatsAppReference = jar.get(WHATSAPP_REFERENCE_COOKIE)?.value
+  if (rawWhatsAppReference) {
+    if (!isValidWhatsAppReference(rawWhatsAppReference)) {
+      retireWhatsAppReferenceCookie()
+    } else {
+      const candidateReference = rawWhatsAppReference.trim().toUpperCase()
+      const { data: enquiry, error: enquiryError } = await admin
+        .from('whatsapp_enquiries')
+        .select('reference, created_at, visitor_id, product_id, variant_id, converted_order_id')
+        .eq('reference', candidateReference)
+        .maybeSingle()
+
+      if (enquiryError) {
+        console.error(`Could not read WhatsApp enquiry ${candidateReference}`, enquiryError)
+      } else if (!enquiry) {
+        retireWhatsAppReferenceCookie()
+      } else {
+        const createdAtMs = Date.parse(enquiry.created_at)
+        const ageMs = Date.now() - createdAtMs
+        const stale =
+          !Number.isFinite(createdAtMs) ||
+          ageMs < 0 ||
+          ageMs > WHATSAPP_REFERENCE_MAX_AGE_S * 1000
+        const wrongVisitor =
+          !currentVisitorId ||
+          !enquiry.visitor_id ||
+          enquiry.visitor_id !== currentVisitorId
+        const permanentlyAmbiguousProduct = Boolean(enquiry.product_id && !enquiry.variant_id)
+
+        if (stale || enquiry.converted_order_id || wrongVisitor || permanentlyAmbiguousProduct) {
+          retireWhatsAppReferenceCookie()
+        } else if (isDeterministicCheckoutWhatsAppMatch({
+          visitorId: currentVisitorId,
+          cartVariantIds: validatedItems.data.map(item => item.variant_id),
+          enquiry,
+          maxAgeSeconds: WHATSAPP_REFERENCE_MAX_AGE_S,
+        })) {
+          const linkedAt = new Date().toISOString()
+          const { data: claimed, error: claimError } = await admin
+            .from('whatsapp_enquiries')
+            .update({ converted_order_id: order.id, converted_at: linkedAt })
+            .eq('reference', candidateReference)
+            .is('converted_order_id', null)
+            .select('reference')
+
+          if (claimError) {
+            console.error(`Could not link WhatsApp enquiry ${candidateReference} to order ${shortCode}`, claimError)
+          } else if (claimed?.length === 1) {
+            linkedWhatsAppReference = candidateReference
+          }
+        }
+      }
+    }
+  }
+
   const attribution = {
-    ga_client_id: jar.get('_ga')?.value ?? null,
-    meta_fbp: jar.get('_fbp')?.value ?? null,
-    meta_fbc: jar.get('_fbc')?.value ?? metaFbcFromTouch(lastTouch),
+    ga_client_id:
+      jar.get('_ga')?.value ?? sessionEvidence?.ga_client_id ?? null,
+    meta_fbp:
+      jar.get('_fbp')?.value ?? sessionEvidence?.meta_fbp ?? null,
+    meta_fbc:
+      jar.get('_fbc')?.value ?? metaFbcFromTouch(lastTouch) ??
+      sessionEvidence?.meta_fbc ?? null,
     // Meta requires client_user_agent for website events, and the IP
     // materially improves match quality. They have to be taken from THIS
     // request: at confirmation time the only headers available belong to the
@@ -215,59 +335,75 @@ export async function placeOrder(
       hdrs.get('x-real-ip') ||
       null,
 
-    visitor_id: jar.get('uksofashop_vid')?.value ?? null,
-    session_id: jar.get('uksofashop_sid')?.value ?? null,
-    arrival_id: jar.get('uksofashop_aid')?.value ?? null,
+    visitor_id: currentVisitorId,
+    session_id: currentSessionId,
+    arrival_id: currentArrivalId,
 
-    gclid: lastTouch.gclid ?? null,
-    gbraid: lastTouch.gbraid ?? null,
-    wbraid: lastTouch.wbraid ?? null,
-    fbclid: lastTouch.fbclid ?? null,
+    gclid: lastTouch.gclid ?? sessionEvidence?.gclid ?? null,
+    gbraid: lastTouch.gbraid ?? sessionEvidence?.gbraid ?? null,
+    wbraid: lastTouch.wbraid ?? sessionEvidence?.wbraid ?? null,
+    fbclid: lastTouch.fbclid ?? sessionEvidence?.fbclid ?? null,
 
-    utm_source: lastTouch.source ?? null,
-    utm_medium: lastTouch.medium ?? null,
-    utm_campaign: lastTouch.campaign ?? null,
-    utm_content: lastTouch.content ?? null,
-    utm_term: lastTouch.term ?? null,
+    utm_source:
+      lastTouch.source ?? sessionEvidence?.last_touch_source ?? null,
+    utm_medium:
+      lastTouch.medium ?? sessionEvidence?.last_touch_medium ?? null,
+    utm_campaign:
+      lastTouch.campaign ?? sessionEvidence?.last_touch_campaign ?? null,
+    utm_content:
+      lastTouch.content ?? sessionEvidence?.last_touch_content ?? null,
+    utm_term:
+      lastTouch.term ?? sessionEvidence?.last_touch_term ?? null,
 
-    landing_page: lastTouch.landingPage ?? null,
-    referrer: lastTouch.referrer ?? null,
+    landing_page: lastTouch.landingPage ?? sessionEvidence?.landing_page ?? null,
+    referrer: lastTouch.referrer ?? sessionEvidence?.referrer ?? null,
+    whatsapp_reference: linkedWhatsAppReference,
   }
 
   const hasAnyAttribution = Object.values(attribution).some(v => v !== null && v !== undefined)
 
   if (hasAnyAttribution) {
-    after(async () => {
-      const { error: attrError } = await supabase
-        .from('orders')
-        .update(attribution)
-        .eq('id', order.id)
-      if (attrError) {
-        // Costs attribution quality on this one order, nothing more.
-        console.error(`Could not store attribution ids for order ${shortCode}`, attrError)
-      }
+    // This must use service role. The checkout visitor is anonymous and the
+    // orders table intentionally permits UPDATE only to authenticated admins;
+    // the previous anon update was therefore rejected by RLS on every website
+    // order even though place_order itself had succeeded.
+    const { error: attrError } = await admin
+      .from('orders')
+      .update(attribution)
+      .eq('id', order.id)
 
-      // Best-effort action-ledger row, via the admin client: attribution_actions
-      // has no anon/authenticated RLS policy (see 20260906120000), the same way
-      // the other new attribution tables do not - this is server code, not a
-      // browser write, so bypassing RLS here is the intended path, not a leak.
-      // Never allowed to affect the order itself, which is already committed.
-      try {
-        const admin = createAdminClient()
-        const { error: actionError } = await admin.from('attribution_actions').insert({
-          visitor_id: attribution.visitor_id,
-          session_id: attribution.session_id,
-          arrival_id: attribution.arrival_id,
-          action_type: 'order_placed',
-          order_id: order.id,
-        })
-        if (actionError) {
-          console.error(`Could not write attribution_actions row for order ${shortCode}`, actionError)
+    if (attrError) {
+      console.error(`Could not store attribution ids for order ${shortCode}`, attrError)
+
+      // The enquiry was claimed first to prevent two orders racing for it. If
+      // the corresponding order update fails, release only our own claim so
+      // the database cannot be left saying the enquiry converted to an order
+      // that does not carry the same reference.
+      if (linkedWhatsAppReference) {
+        const { error: rollbackError } = await admin
+          .from('whatsapp_enquiries')
+          .update({ converted_order_id: null, converted_at: null })
+          .eq('reference', linkedWhatsAppReference)
+          .eq('converted_order_id', order.id)
+        if (rollbackError) {
+          console.error(`Could not release WhatsApp claim ${linkedWhatsAppReference}`, rollbackError)
         }
-      } catch (err) {
-        console.error(`Could not write attribution_actions row for order ${shortCode}`, err)
       }
+    } else if (linkedWhatsAppReference) {
+      retireWhatsAppReferenceCookie()
+    }
+
+    const { error: actionError } = await admin.from('attribution_actions').insert({
+      visitor_id: attribution.visitor_id,
+      session_id: attribution.session_id,
+      arrival_id: attribution.arrival_id,
+      action_type: 'order_placed',
+      order_id: order.id,
+      whatsapp_reference: attrError ? null : linkedWhatsAppReference,
     })
+    if (actionError) {
+      console.error(`Could not write attribution_actions row for order ${shortCode}`, actionError)
+    }
   }
 
   return { success: true, orderId: shortCode, total: Number(order.total_amount) }
