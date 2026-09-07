@@ -127,7 +127,7 @@ jobs:
               assert(pageOverflow<=1,`page horizontal overflow ${pageOverflow}px @${width}`);
               assert(sectionOverflow<=1,`section horizontal overflow ${sectionOverflow}px @${width}`);
               assert(errors.length===0,`runtime errors @${width}: ${errors.join(' | ')}`);
-              await rows.screenshot({path:`/tmp/map-evidence/delivery-map-rows-${width}.png`});
+              await section.locator('dl').screenshot({path:`/tmp/map-evidence/delivery-map-rows-${width}.png`});
               results.push({width,domContent:'PASS',visibleAfterScroll:'PASS',rowVisibility:'PASS',pageOverflow,sectionOverflow,rows:texts.map(t=>t.replace(/\s+/g,' ').trim())});
               await ctx.close();
             }
