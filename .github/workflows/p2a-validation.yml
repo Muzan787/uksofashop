@@ -47,7 +47,7 @@ jobs:
       - name: Native touch gesture matrix
         shell: bash
         run: |
-          node <<'NODE'
+          xvfb-run -a node <<'NODE'
           const { chromium } = require('playwright');
           const fs = require('fs');
           const widths = [320,390,430,768];
@@ -66,6 +66,13 @@ jobs:
             await rail.waitFor({state:'visible'});
             return {heading,section,rail};
           }
+          async function targetFor(rail, kind) {
+            const card = rail.locator(':scope > *').first();
+            if (kind === 'image') return card.locator('[data-card-media]');
+            if (kind === 'title') return card.locator('h3');
+            if (kind === 'price') return card.locator('span.font-data').first();
+            return card;
+          }
           async function startPoint(rail, kind) {
             const card = rail.locator(':scope > *').first();
             let b;
@@ -81,11 +88,11 @@ jobs:
             if (!b) throw new Error(`${kind} missing`);
             return {x:b.x+b.width/2, y:b.y+b.height/2};
           }
-          async function reset(page, heading, rail) {
+          async function reset(page, rail, kind) {
             await page.evaluate(() => window.scrollTo(0,0));
             await rail.evaluate(el => el.scrollLeft = 0);
-            await heading.scrollIntoViewIfNeeded();
-            await page.waitForTimeout(250);
+            await targetFor(rail, kind === 'gap' ? 'image' : kind).scrollIntoViewIfNeeded();
+            await page.waitForTimeout(300);
           }
           async function gesture(page, p, xDistance, yDistance) {
             const cdp = await page.context().newCDPSession(page);
@@ -98,13 +105,17 @@ jobs:
             });
             await page.waitForTimeout(700);
           }
-          async function run(page, heading, rail, name, kind, xd, yd) {
-            await reset(page,heading,rail);
+          async function run(page, rail, name, kind, xd, yd) {
+            await reset(page,rail,kind);
             const p = await startPoint(rail,kind);
+            const hit = await page.evaluate(({x,y}) => {
+              const e=document.elementFromPoint(x,y); return e ? `${e.tagName}.${e.className}` : null;
+            }, p);
             const before={y:await page.evaluate(()=>window.scrollY),x:await rail.evaluate(el=>el.scrollLeft)};
+            console.log(JSON.stringify({name,start:p,hit,before}));
             await gesture(page,p,xd,yd);
             const after={y:await page.evaluate(()=>window.scrollY),x:await rail.evaluate(el=>el.scrollLeft)};
-            const r={name,kind,before,after,pageDelta:after.y-before.y,railDelta:after.x-before.x};
+            const r={name,kind,start:p,hit,before,after,pageDelta:after.y-before.y,railDelta:after.x-before.x};
             console.log(JSON.stringify(r));
             return r;
           }
@@ -112,21 +123,29 @@ jobs:
           function horizontal(r){ if(r.railDelta<35||Math.abs(r.pageDelta)>70) throw new Error(`${r.name} horizontal FAIL ${JSON.stringify(r)}`); }
 
           (async()=>{
-            const browser=await chromium.launch({headless:true});
+            const browser=await chromium.launch({headless:false});
             try{
               for(const width of widths){
                 const context=await browser.newContext({viewport:{width,height:width===768?1024:844},isMobile:width<768,hasTouch:true});
-                const page=await context.newPage(); await protect(page); await page.goto(process.env.QA_URL,{waitUntil:'domcontentloaded'});
-                const {heading,section,rail}=await getParts(page); const cases=[]; let r;
-                r=await run(page,heading,rail,'vertical-image','image',0,-190); vertical(r); cases.push(r);
-                r=await run(page,heading,rail,'vertical-title','title',0,-170); vertical(r); cases.push(r);
-                r=await run(page,heading,rail,'horizontal-image','image',-200,0); horizontal(r); cases.push(r);
-                r=await run(page,heading,rail,'diagonal-vertical','image',-35,-190); vertical(r); cases.push(r);
-                r=await run(page,heading,rail,'diagonal-horizontal','image',-200,-35); horizontal(r); cases.push(r);
-                r=await run(page,heading,rail,'vertical-price','price',0,-160); vertical(r); cases.push(r);
-                r=await run(page,heading,rail,'vertical-gap','gap',0,-160); vertical(r); cases.push(r);
-                r=await run(page,heading,rail,'horizontal-gap','gap',-180,0); horizontal(r); cases.push(r);
-                await reset(page,heading,rail);
+                const page=await context.newPage(); await page.emulateMedia({reducedMotion:'no-preference'}); await protect(page); await page.goto(process.env.QA_URL,{waitUntil:'domcontentloaded'});
+                const {section,rail}=await getParts(page); const cases=[]; let r;
+
+                await page.evaluate(()=>window.scrollTo(0,0)); await page.waitForTimeout(200);
+                const controlBefore=await page.evaluate(()=>scrollY);
+                await gesture(page,{x:Math.min(50,width-10),y:Math.min(650,(width===768?1024:844)-40)},0,-180);
+                const controlAfter=await page.evaluate(()=>scrollY);
+                console.log(JSON.stringify({width,controlBefore,controlAfter,controlDelta:controlAfter-controlBefore}));
+                if(controlAfter-controlBefore<40) throw new Error(`${width} native compositor control gesture failed ${controlBefore}->${controlAfter}`);
+
+                r=await run(page,rail,'vertical-image','image',0,-190); vertical(r); cases.push(r);
+                r=await run(page,rail,'vertical-title','title',0,-170); vertical(r); cases.push(r);
+                r=await run(page,rail,'horizontal-image','image',-200,0); horizontal(r); cases.push(r);
+                r=await run(page,rail,'diagonal-vertical','image',-35,-190); vertical(r); cases.push(r);
+                r=await run(page,rail,'diagonal-horizontal','image',-200,-35); horizontal(r); cases.push(r);
+                r=await run(page,rail,'vertical-price','price',0,-160); vertical(r); cases.push(r);
+                r=await run(page,rail,'vertical-gap','gap',0,-160); vertical(r); cases.push(r);
+                r=await run(page,rail,'horizontal-gap','gap',-180,0); horizontal(r); cases.push(r);
+                await reset(page,rail,'image');
                 const dots=section.getByRole('tab');
                 if(await dots.count()>1){ const x0=await rail.evaluate(el=>el.scrollLeft); await dots.nth(1).click(); await page.waitForTimeout(700); const x1=await rail.evaluate(el=>el.scrollLeft); if(x1<=x0+20) throw new Error(`${width} dot FAIL`); }
                 const href=await rail.locator(':scope > *').first().locator('a[href^="/shop/"]').first().getAttribute('href');
@@ -134,7 +153,7 @@ jobs:
                 if(!href||overflow>1) throw new Error(`${width} regression FAIL href=${href} overflow=${overflow}`);
                 results.push({width,cases,href,overflow}); await page.screenshot({path:`p2a-${width}.png`}); await context.close();
               }
-              const context=await browser.newContext({viewport:{width:1440,height:1000}}); const page=await context.newPage(); await protect(page); await page.goto(process.env.QA_URL,{waitUntil:'domcontentloaded'}); const {heading,rail}=await getParts(page); await heading.scrollIntoViewIfNeeded(); const y0=await page.evaluate(()=>scrollY); await page.mouse.wheel(0,500); await page.waitForTimeout(700); const y1=await page.evaluate(()=>scrollY); const overflow=await page.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth); if(y1<=y0+100||overflow>1) throw new Error(`desktop FAIL y ${y0}->${y1} overflow ${overflow}`); results.push({width:1440,desktop:{y0,y1,overflow}}); await page.screenshot({path:'p2a-1440.png'}); await context.close();
+              const context=await browser.newContext({viewport:{width:1440,height:1000}}); const page=await context.newPage(); await protect(page); await page.goto(process.env.QA_URL,{waitUntil:'domcontentloaded'}); const {rail}=await getParts(page); await targetFor(rail,'image').scrollIntoViewIfNeeded(); const y0=await page.evaluate(()=>scrollY); await page.mouse.wheel(0,500); await page.waitForTimeout(700); const y1=await page.evaluate(()=>scrollY); const overflow=await page.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth); if(y1<=y0+100||overflow>1) throw new Error(`desktop FAIL y ${y0}->${y1} overflow ${overflow}`); results.push({width:1440,desktop:{y0,y1,overflow}}); await page.screenshot({path:'p2a-1440.png'}); await context.close();
             } finally { fs.writeFileSync('p2a-results.json',JSON.stringify(results,null,2)); await browser.close(); }
           })().catch(e=>{console.error(e);process.exit(1)});
           NODE
