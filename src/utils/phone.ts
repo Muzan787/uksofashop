@@ -65,3 +65,17 @@ export function whatsAppLink(input: string, message?: string): string | null {
 
 export const UK_MOBILE_ERROR =
   'Please enter a UK mobile number, for example 07700 900123.'
+
+/**
+ * 447435202636 -> +44 7435 202636.
+ *
+ * The readable international form, for text that gets pasted somewhere the
+ * reader may not be in the UK - a delivery partner, or a WhatsApp thread with
+ * the number shown in full. Falls back to whatever was stored when the number
+ * isn't a UK mobile, rather than mangling it.
+ */
+export function formatUkMobileIntl(input: string): string {
+  const n = normaliseUkMobile(input)
+  if (!n) return (input || '').trim()
+  return `+${n.slice(0, 2)} ${n.slice(2, 6)} ${n.slice(6)}`
+}

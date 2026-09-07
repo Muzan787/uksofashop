@@ -4,6 +4,7 @@ import { createClient } from '@/utils/supabase/server'
 import { Package, Inbox, Printer, MapPin, User, Phone, Truck } from 'lucide-react'
 import { updateOrderStatus } from '@/app/actions/orders'
 import DirectPrintButton from './DirectPrintButton'
+import CopyOrderButton from './CopyOrderButton'
 import NewWhatsAppOrder from './NewWhatsAppOrder'
 import Link from 'next/link'
 
@@ -252,6 +253,8 @@ export default async function AdminOrdersPage(props: { searchParams: SearchParam
                 WhatsApp
               </a>
               )}
+
+              <CopyOrderButton order={order} />
 
               <DirectPrintButton order={order} />
 
