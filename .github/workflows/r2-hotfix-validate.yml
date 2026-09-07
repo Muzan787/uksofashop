@@ -1,0 +1,29 @@
+name: R2 live-QA hotfix validation
+
+on:
+  push:
+    branches:
+      - r2-live-qa
+    paths:
+      - '.github/workflows/r2-hotfix-validate.yml'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: tracking-v2-attribution
+          fetch-depth: 0
+      - run: npm ci
+      - name: Changed-file ESLint
+        run: npx eslint src/utils/attribution/useWhatsAppCTA.ts
+      - name: TypeScript
+        run: npx tsc --noEmit
+      - name: Production build
+        run: npm run build
+      - name: Diff gate
+        run: |
+          git diff --check d787931d9f9e8556f026d11dd9758fbb3ac95e04..HEAD
+          test "$(git diff --name-only d787931d9f9e8556f026d11dd9758fbb3ac95e04..HEAD)" = "src/utils/attribution/useWhatsAppCTA.ts"
