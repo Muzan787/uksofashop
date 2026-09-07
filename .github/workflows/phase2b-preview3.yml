@@ -1,0 +1,83 @@
+name: Phase 2B PDP and policy preview QA
+
+on:
+  push:
+    branches: [qa/cro-phase2b-preview3]
+
+permissions:
+  contents: read
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      RELEASE_BRANCH: fix/cro-phase2b-trust-delivery-release
+      EXPECTED_RELEASE: b3955174c62639e65bf6b2eb2bdb57e71227e423
+      NEXT_PUBLIC_SUPABASE_URL: https://nznpeqjnoobhyxwnmsez.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_tMk28Ay_hIljhv8NQcV01Q_cI9ApS9c
+      NEXT_PUBLIC_SITE_URL: http://127.0.0.1:3000
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_BRANCH }}
+      - run: test "$(git rev-parse HEAD)" = "$EXPECTED_RELEASE"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Prepare browser
+        run: |
+          mkdir -p /tmp/pw
+          npm install --prefix /tmp/pw playwright-core@1.55.0
+      - name: Start candidate
+        shell: bash
+        run: |
+          npm start -- --hostname 127.0.0.1 --port 3000 >/tmp/app.log 2>&1 &
+          for i in {1..60}; do curl -fsS http://127.0.0.1:3000/ >/dev/null && exit 0; sleep 1; done
+          cat /tmp/app.log; exit 1
+      - name: PDP and delivery truth checks
+        env:
+          NODE_PATH: /tmp/pw/node_modules
+        shell: bash
+        run: |
+          node <<'NODE'
+          const { chromium }=require('playwright-core');
+          const assert=(c,m)=>{if(!c) throw new Error(m)};
+          const BASE='http://127.0.0.1:3000';
+          const custom='/shop/fabric-sofa/verona-high-back-4-seater-corner-1c2?variant=a5d2050d-c458-4e0c-b3b3-7b7c727845a0';
+          const fixed='/shop/recliner/roma-recliner-manual-armchair?variant=562327ad-ee1e-4683-8f39-28f1289f8696';
+          (async()=>{
+            const b=await chromium.launch({executablePath:'/usr/bin/google-chrome',headless:true,args:['--no-sandbox']});
+            const c=await b.newContext({viewport:{width:1440,height:1000}});
+            const p=await c.newPage();
+            await p.goto(BASE+custom,{waitUntil:'networkidle',timeout:60000});
+            const customSection=p.locator('section[aria-label="Made to Order"]');
+            await customSection.waitFor({state:'attached',timeout:15000});
+            await customSection.scrollIntoViewIfNeeded();
+            assert(await customSection.isVisible(),'custom Made to Order section not visible');
+            let t=await p.locator('body').innerText();
+            assert(t.includes('Most UK Mainland: arrives'),'custom PDP estimate not qualified');
+            assert(t.includes('Some Wales and Scotland postcodes take 5–7 working days.'),'custom PDP Wales/Scotland exception missing');
+            console.log('CUSTOM_PDP_URL='+p.url());
+
+            await p.goto(BASE+fixed,{waitUntil:'networkidle',timeout:60000});
+            assert(await p.locator('section[aria-label="Made to Order"]').count()===0,'fixed PDP has false Made to Order section');
+            t=await p.locator('body').innerText();
+            assert(t.includes('Most UK Mainland: arrives'),'fixed PDP estimate not qualified');
+
+            await p.goto(BASE+'/delivery-returns',{waitUntil:'networkidle',timeout:60000});
+            t=await p.locator('body').innerText();
+            for(const s of ['2–3 working days','3–4 working days','5–7 working days','Ask us first']) assert(t.includes(s),`delivery page missing ${s}`);
+            assert(await p.locator('footer a[href="https://www.tiktok.com"]').count()===0,'placeholder TikTok visible');
+            const overflow=await p.evaluate(()=>document.documentElement.scrollWidth-window.innerWidth);
+            assert(overflow<=1,`delivery overflow ${overflow}`);
+
+            await p.goto(BASE+'/checkout',{waitUntil:'domcontentloaded',timeout:60000});
+            assert((await p.locator('body').innerText()).length>0,'checkout blank');
+            console.log('PHASE2B_PDP_POLICY_QA=PASS');
+            await c.close(); await b.close();
+          })().catch(e=>{console.error(e.stack||e);process.exit(1)});
+          NODE
