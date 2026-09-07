@@ -85,7 +85,7 @@ async function completeCheckout(context, page, label) {
 
   const before = await cookiesByName(context);
   await page.getByRole('button', { name: /^Place Order$/i }).click();
-  await page.getByText('Order confirmed', { exact: true }).waitFor({ state: 'visible', timeout: 30000 });
+  await page.locator('[data-existing-order-context]').waitFor({ state: 'visible', timeout: 30000 });
   const body = await page.locator('body').innerText();
   const match = body.match(/#([0-9A-F]{8})\b/);
   assert(match, `${label}: no short order reference on success page`);
