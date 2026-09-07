@@ -19,6 +19,7 @@ import {
   generateWhatsAppReference,
   withReferenceLine,
   sendWhatsAppEnquiry,
+  persistWhatsAppReference,
 } from './whatsapp'
 
 export interface WhatsAppCTAOptions {
@@ -71,6 +72,11 @@ export function useWhatsAppCTA(opts: WhatsAppCTAOptions): WhatsAppCTA {
       preparedReferenceRef.current = reference
       preparedContextKeyRef.current = currentContextKey
     }
+
+    // Keep the exact acquisition reference in a functional first-party cookie
+    // before WhatsApp opens. Checkout can then link the later website order
+    // back to this enquiry, but only after server-side visitor/context checks.
+    persistWhatsAppReference(reference)
 
     // Changing the DOM href inside the click handler happens before the
     // browser's default anchor navigation. Repeated clicks in the same context

@@ -74,6 +74,7 @@ export async function GET(request: Request) {
     .select('id')
     .in('status', SOLD)
     .is('purchase_event_sent_at', null)
+    .not('confirmed_at', 'is', null)
     .gte('created_at', since)
     .limit(BATCH)
 
@@ -100,10 +101,10 @@ export async function GET(request: Request) {
   // against a handful of rows, and two ad platforms per order. There is nothing
   // to gain from hammering them and something to lose if one rate-limits.
   for (const order of purchases) {
-    await reportOrderConversion(supabase, order.id, 'purchase')
+    await reportOrderConversion(order.id, 'purchase')
   }
   for (const order of deliveries) {
-    await reportOrderConversion(supabase, order.id, 'delivered')
+    await reportOrderConversion(order.id, 'delivered')
   }
 
   if (purchases.length || deliveries.length) {

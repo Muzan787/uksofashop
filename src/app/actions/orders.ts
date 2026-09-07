@@ -113,7 +113,6 @@ export async function updateOrderStatus(formData: FormData) {
   if (newStatus === 'confirmed' || newStatus === 'delivered') {
     after(() =>
       reportOrderConversion(
-        supabase,
         orderId,
         newStatus === 'confirmed' ? 'purchase' : 'delivered',
       ),
@@ -133,21 +132,11 @@ export async function confirmCustomerOrder(orderId: string) {
     return { error: 'Failed to confirm order. Please contact support.' }
   }
 
-  // confirm_order (the RPC) predates confirmed_at and isn't tracked in this
-  // repository's migrations, so it doesn't know about the column. Stamped
-  // here instead, guarded the same "first time only" way updateOrderStatus
-  // does it - the `is('confirmed_at', null)` predicate means a customer
-  // re-opening the confirmation link never moves the timestamp a second time.
-  await supabase
-    .from('orders')
-    .update({ confirmed_at: new Date().toISOString() })
-    .eq('id', orderId)
-    .is('confirmed_at', null)
-
-  // The customer confirming from their email reaches 'confirmed' too, so the
-  // Purchase conversion has to be reported here as well. The guard column
-  // means whichever path gets there first is the only one that reports.
-  after(() => reportOrderConversion(supabase, orderId, 'purchase'))
+  // confirm_order atomically performs pending_cod -> confirmed and stamps the
+  // first confirmed_at inside the database transaction. Do not add an app-side
+  // fallback timestamp here: a missing confirmed_at is an invariant violation,
+  // and reportOrderConversion deliberately refuses to invent one.
+  after(() => reportOrderConversion(orderId, 'purchase'))
 
   // Refresh the confirmation page and admin panel to show the new status
   revalidatePath(`/confirm-order/${orderId}`)

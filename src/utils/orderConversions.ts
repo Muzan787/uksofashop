@@ -24,15 +24,11 @@
 // signal. Comparing the two counts is what reveals the real completion rate.
 
 import 'server-only'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import type { Database } from '@/types/supabase'
 import { sendCapiEvent } from '@/utils/metaCapi'
 import { sendGa4Event, clientIdFromGaCookie } from '@/utils/ga4Server'
 import { SITE_URL } from '@/constants/site'
 import { isServerTrackingEnabled } from '@/utils/trackingEnv'
 import { createAdminClient } from '@/utils/supabase/admin'
-
-type Client = SupabaseClient<Database>
 
 export type ConversionKind = 'purchase' | 'delivered'
 
@@ -54,7 +50,6 @@ const SENT_COLUMN = {
  * that triggered it.
  */
 export async function reportOrderConversion(
-  supabase: Client,
   orderId: string,
   kind: ConversionKind,
 ): Promise<void> {
@@ -68,11 +63,16 @@ export async function reportOrderConversion(
     if (!isServerTrackingEnabled()) return
 
     const sentColumn = SENT_COLUMN[kind]
+    // Conversion reporting is a server-side business operation, not a caller-
+    // scoped customer query. Using one service-role client here avoids the
+    // anonymous customer-confirmation RLS dead end that previously returned
+    // before Meta, GA4, the audit ledger or Google staging could run.
+    const admin = createAdminClient()
 
     // One string literal, not a concatenation: Supabase infers the row type by
     // parsing this at compile time, and a joined string is just `string` to it,
     // which collapses every field below to an error type.
-    const { data: order } = await supabase
+    const { data: order } = await admin
       .from('orders')
       .select('id, customer_name, customer_email, customer_phone, shipping_address, total_amount, purchase_event_id, ga_client_id, meta_fbp, meta_fbc, customer_user_agent, customer_ip, purchase_event_sent_at, delivered_event_sent_at, source, gclid, gbraid, wbraid, visitor_id, confirmed_at, delivered_at')
       .eq('id', orderId)
@@ -80,13 +80,19 @@ export async function reportOrderConversion(
 
     if (!order) return
 
+    // Never invent the business-event time for a historical row. Future
+    // app confirmations stamp these first; a legacy/null timestamp must be
+    // corrected explicitly before any Purchase/Delivered conversion runs.
+    const conversionTime = kind === 'purchase' ? order.confirmed_at : order.delivered_at
+    if (!conversionTime) return
+
     const alreadySent = (order as Record<string, unknown>)[sentColumn]
     if (alreadySent) return
 
     // Claim it BEFORE sending. The `is null` predicate means two concurrent
     // requests cannot both win, so a double-click in the admin panel reports
     // one conversion rather than two.
-    const { data: claimed } = await supabase
+    const { data: claimed } = await admin
       .from('orders')
       .update({ [sentColumn]: new Date().toISOString() })
       .eq('id', orderId)
@@ -95,7 +101,7 @@ export async function reportOrderConversion(
 
     if (!claimed || claimed.length === 0) return
 
-    const { data: lines } = await supabase
+    const { data: lines } = await admin
       .from('order_items')
       .select('variant_id, quantity, price_at_time_of_purchase')
       .eq('order_id', orderId)
@@ -199,8 +205,6 @@ export async function reportOrderConversion(
     // conversion was sent has no meaningful caller identity to check - the
     // same reasoning utils/supabase/admin.ts documents - so every caller
     // gets the same, consistent write rather than three different outcomes.
-    const admin = createAdminClient()
-
     // Best-effort and never allowed to affect anything above - both sends
     // already happened by this point. sendCapiEvent/sendGa4Event never throw
     // and report nothing about success beyond a console.error, so 'sent' here
@@ -234,15 +238,14 @@ export async function reportOrderConversion(
     // unique constraint: onConflict + ignoreDuplicates means a repeated
     // confirmed->shipped->confirmed toggle never creates a second row.
     const postcode = order.shipping_address?.split(',').pop()?.trim() ?? null
-    await admin
+    const conversionStage = kind === 'purchase' ? 'confirmed' : 'delivered'
+    const { error: stagingError } = await admin
       .from('google_offline_conversions')
       .upsert(
         {
           order_id: orderId,
-          conversion_stage: kind === 'purchase' ? 'confirmed' : 'delivered',
-          conversion_time:
-            (kind === 'purchase' ? order.confirmed_at : order.delivered_at)
-            ?? new Date().toISOString(),
+          conversion_stage: conversionStage,
+          conversion_time: conversionTime,
           value,
           currency: 'GBP',
           gclid: order.gclid,
@@ -256,6 +259,17 @@ export async function reportOrderConversion(
         },
         { onConflict: 'order_id,conversion_stage', ignoreDuplicates: true },
       )
+
+    const stagingAttemptAt = new Date().toISOString()
+    await admin.from('conversion_events').insert({
+      order_id: orderId,
+      platform: 'google_offline_staging' as const,
+      event_name: conversionStage,
+      event_id: `${shortCode}-${conversionStage}`,
+      sent_at: stagingError ? null : stagingAttemptAt,
+      status: stagingError ? 'failed' as const : 'sent' as const,
+      error_metadata: stagingError ? { message: stagingError.message } : null,
+    })
   } catch (err) {
     console.error(`Failed to report ${kind} conversion for order ${orderId}`, err)
   }
