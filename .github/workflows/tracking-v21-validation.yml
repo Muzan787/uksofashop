@@ -57,7 +57,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          git diff --name-only "$BASE_SHA" | sort > /tmp/v21-actual.txt
+          { git diff --name-only "$BASE_SHA"; git ls-files --others --exclude-standard; } | sort -u > /tmp/v21-actual.txt
           cat > /tmp/v21-expected.txt <<'EOF'
           src/app/actions/checkout.ts
           src/app/actions/orders.ts
@@ -79,9 +79,9 @@ jobs:
         run: |
           set -euo pipefail
           npm ci
-          FILES=$(git diff --name-only "$BASE_SHA" -- '*.ts' '*.tsx')
-          test -n "$FILES"
-          npx eslint $FILES
+          { git diff --name-only "$BASE_SHA" -- '*.ts' '*.tsx'; git ls-files --others --exclude-standard -- '*.ts' '*.tsx'; } | sort -u > /tmp/v21-ts-files.txt
+          test -s /tmp/v21-ts-files.txt
+          xargs npx eslint < /tmp/v21-ts-files.txt
           npx tsc --noEmit
           npm run build
           git diff --check "$BASE_SHA"
