@@ -43,11 +43,9 @@ const BANDS: Band[] = [
   {
     id: 'far',
     label: 'Wales & Scotland',
-    // This band said 5-7, and was the source of that claim in the prose above
-    // the map, in the FAQ, in the category copy and in two Journal articles.
-    // The whole mainland is 2-4 working days; within that, Wales and Scotland
-    // are 3-4 rather than 2-4. Both figures confirmed by the owner.
-    window: '3–4 working days',
+    // Slower mainland band. Keep this explicit rather than deriving it from
+    // a postcode prefix: the site has no maintained region-to-postcode map.
+    window: '5–7 working days',
     places: 'All of Wales, and Scotland up to the central belt and beyond',
     fill: 'fill-ember-500/20',
     swatch: 'bg-ember-500/20',

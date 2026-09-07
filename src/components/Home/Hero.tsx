@@ -150,7 +150,7 @@ export default function Hero({ image, productTitle, productHref, fromPrice, sofa
                 <>
                   <span aria-hidden="true" className="h-3 w-px bg-calico-50/25" />
                   <span className="font-data text-caption tabular-nums text-ember-300">
-                    {sofaCount} in stock
+                    {sofaCount} sofas available
                   </span>
                 </>
               )}
@@ -176,7 +176,7 @@ export default function Hero({ image, productTitle, productHref, fromPrice, sofa
               loses 27px it cannot spare. */}
           <Reveal delay={0.25} distance={16} amount={0.1}>
             <p className="mt-4 max-w-[44ch] text-body text-calico-300 sm:text-lead">
-              Made to your size. Delivered free. Paid for on the doorstep.
+              Fabric sofas made to your size. Delivered free. Pay on arrival.
             </p>
           </Reveal>
 

@@ -5,6 +5,7 @@
 // without the client bundle pulling in the page.
 
 import { ASSEMBLY_FEE, SOFA_REMOVAL_FEE, UPSTAIRS_FIRST_FLOOR } from '@/constants/delivery'
+import { PROMISES } from '@/constants/promises'
 
 export const SUPPORT_EMAIL = 'uksofashop.co.uk@gmail.com'
 
@@ -17,7 +18,7 @@ export const faqGroups: FaqGroup[] = [
     items: [
       {
         q: 'How long does delivery take?',
-        a: 'Orders reach UK Mainland addresses within 2–4 working days of purchase — England, Scotland and Wales alike. Around 90% arrive inside that window, unless you have asked us to hold it back; if anything is going to run late on yours we will tell you as soon as the order reaches us rather than leaving you to find out on the day. Northern Ireland, the Isle of Man and the Scottish Islands sit outside the standard service, so please get in touch before ordering and we will arrange it.',
+        a: `${PROMISES.delivery.timingLong} Around 90% arrive inside the window for their delivery band, unless you have asked us to hold it back. Northern Ireland, the Isle of Man and the Scottish Islands sit outside the standard service, so please get in touch before ordering and we will arrange it.`,
       },
       {
         q: 'Where do you deliver?',

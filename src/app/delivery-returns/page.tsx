@@ -7,6 +7,7 @@ import EditorialSchema from '@/components/Editorial/EditorialSchema'
 import EditorialLayout, { Note, PullQuote } from '@/components/Editorial/EditorialLayout'
 import CoverageMap from '@/components/Editorial/CoverageMap'
 import { ASSEMBLY_FEE, SOFA_REMOVAL_FEE, UPSTAIRS_FIRST_FLOOR } from '@/constants/delivery'
+import { PROMISES } from '@/constants/promises'
 
 const SUPPORT_EMAIL = 'uksofashop.co.uk@gmail.com'
 
@@ -16,7 +17,7 @@ const SUPPORT_EMAIL = 'uksofashop.co.uk@gmail.com'
  * page is the sort of drift nobody notices and nothing benefits from.
  */
 const DESCRIPTION =
-  'Free delivery across UK Mainland in 2–4 working days, paid on delivery. What to do if your sofa arrives damaged, and your 14-day right to change your mind.'
+  `${PROMISES.delivery.short}. ${PROMISES.delivery.timingLong} Pay on delivery. What to do if your sofa arrives damaged, and your 14-day right to change your mind.`
 
 export const metadata: Metadata = {
   title: 'Delivery & Returns',
@@ -64,7 +65,7 @@ const CHARGES = [
 
 const FACTS = [
   { icon: Truck, label: 'Free UK Mainland delivery' },
-  { icon: Clock, label: '2–4 working days' },
+  { icon: Clock, label: PROMISES.delivery.timingShort },
   { icon: Wallet, label: 'Pay on delivery' },
   { icon: RotateCcw, label: '14 days to change your mind' },
 ]
@@ -77,7 +78,7 @@ export default function DeliveryReturnsPage() {
         headline="Delivery & Returns"
         current="Delivery & returns"
         path="/delivery-returns"
-        updated="2026-08-28"
+        updated="2026-09-07"
         description={DESCRIPTION}
       />
       <EditorialHero
@@ -101,9 +102,9 @@ export default function DeliveryReturnsPage() {
         <h2 id="delivery">Getting it to you</h2>
         <p>
           Delivery is free to every UK Mainland address, with no minimum order value. Our drivers
-          bring your sofa to the ground floor, or to a ground-floor room of your choice. Orders
-          arrive within two to four working days of purchase, anywhere on the mainland — England,
-          Scotland and Wales alike.
+          bring your sofa to the ground floor, or to a ground-floor room of your choice. Most UK
+          Mainland orders arrive in two to four working days. Some Wales and Scotland postcodes
+          take five to seven working days.
         </p>
         <p>
           Northern Ireland, the Isle of Man and the Scottish Islands sit outside that service. They

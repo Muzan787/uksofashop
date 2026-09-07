@@ -7,11 +7,12 @@ import Link from 'next/link';
 import { ArrowRight, ChevronDown } from 'lucide-react';
 import { SplitText } from '@/components/Motion';
 import { blurDataURL } from '@/utils/cloudinary';
+import { PROMISES } from '@/constants/promises';
 
 /**
  * Three panels. Every claim here is one the site can already stand behind:
  * free delivery to UK mainland, made-to-order fabric sofas, cash on delivery,
- * 2–4 working days. No founding date, no heritage, no workshop we do not have.
+ * qualified delivery timing. No founding date, no heritage, no workshop we do not have.
  */
 const PANELS = [
   {
@@ -34,7 +35,7 @@ const PANELS = [
     step: 'Three',
     heading: 'Nothing is paid for until\nit is in the room.',
     body:
-      'Cash on delivery means what it says. Our team carries it in, you look at it, and only then does any money change hands — by cash or bank transfer, on the doorstep. Delivery across UK mainland is free and usually takes two to four working days.',
+      `Cash on delivery means what it says. Our team carries it in, you look at it, and only then does any money change hands — by cash or bank transfer, on the doorstep. Delivery across UK Mainland is free. ${PROMISES.delivery.timingLong}`,
     image: 'https://res.cloudinary.com/dmlna04yk/image/upload/v1782255178/Home-Page-Furniture-Background-Image-4_j5camh.jpg',
     alt: 'A sofa delivered into a living room',
   },

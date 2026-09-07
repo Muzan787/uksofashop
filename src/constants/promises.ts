@@ -19,6 +19,9 @@ export const PROMISES = {
     sub: 'UK Mainland, ground floor',
     short: 'Free UK Mainland delivery',
     long: 'Free delivery to UK Mainland addresses, brought to the ground floor or a ground-floor room of your choice.',
+    timingShort: 'Most UK Mainland: 2–4 working days',
+    timingException: 'Some Wales and Scotland postcodes take 5–7 working days.',
+    timingLong: 'Most UK Mainland orders arrive in 2–4 working days. Some Wales and Scotland postcodes take 5–7 working days.',
   },
   guarantee: {
     label: '1-Year Guarantee',
@@ -44,14 +47,20 @@ export const PROMISES = {
     short: 'Fabric sofas made to order',
     long: 'Our fabric sofas are made to order in the colour, material and size you choose.',
   },
+  customGlobal: {
+    label: 'Custom Options',
+    sub: 'Fabric & size options available',
+    short: 'Custom fabric & size options available',
+    long: 'Custom fabric and size options are available on selected sofas.',
+  },
 } as const
 
 /** Rotating strip at the very top of the site. */
 export const ANNOUNCEMENTS = [
   'Free Delivery to UK Mainland',
   'Fabric Sofas Made to Your Own Size and Colour',
-  'Cash on Delivery Available Nationwide',
-  'Delivered in 2-4 Working Days',
+  'Pay Cash or by Bank Transfer on Delivery',
+  'Most UK Mainland Orders: 2-4 Working Days',
 ] as const
 
 /**
@@ -62,7 +71,7 @@ export const ANNOUNCEMENTS = [
 export const TRUST_POINTS = [
   PROMISES.delivery,
   PROMISES.payment,
-  PROMISES.custom,
+  PROMISES.customGlobal,
   PROMISES.guarantee,
 ] as const
 

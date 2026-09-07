@@ -22,6 +22,7 @@ import SortSelect from '@/components/Category/SortSelect'
 import ActiveFilterChips, { type Chip } from '@/components/Category/ActiveFilterChips'
 import CategoryCopy from '@/components/Category/CategoryCopy'
 import { CATEGORY_COPY } from '@/constants/categorySeo'
+import { PROMISES } from '@/constants/promises'
 
 type Params       = Promise<{ category: string }>
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>
@@ -77,7 +78,7 @@ export async function generateMetadata(
   const title = page > 1 ? `${baseTitle} - Page ${page}` : baseTitle
   const description =
     copy?.description ??
-    `Shop our ${name.toLowerCase()} at UK Sofa Shop. Free delivery across UK Mainland in 2-4 working days, and cash on delivery.`
+    `Shop our ${name.toLowerCase()} at UK Sofa Shop. Free delivery across UK Mainland and cash on delivery. ${PROMISES.delivery.timingLong}`
 
   return {
     title,
