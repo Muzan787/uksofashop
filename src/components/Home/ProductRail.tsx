@@ -111,7 +111,7 @@ export default function ProductRail({
         <div className="mx-auto max-w-shell pl-4 sm:pl-6">
           <div
             ref={rail}
-            data-lenis-prevent
+            data-lenis-prevent-horizontal
             className="no-scrollbar flex snap-x snap-mandatory gap-4 overflow-x-auto overflow-y-hidden pb-2 pr-4 sm:pr-6 lg:gap-6"
           >
             {items.map((item, i) => (
