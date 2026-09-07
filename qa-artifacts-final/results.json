@@ -1,0 +1,863 @@
+{
+  "productionSha": "197d81a5a676e12cdd05e6696e5f3c7954d6332c",
+  "startedAt": "2026-09-07T06:22:47.061Z",
+  "qaTag": "r2qa-postfix-1788762167062",
+  "checks": [
+    {
+      "name": "Generic repeated click reuses prepared reference",
+      "pass": true,
+      "details": {
+        "first": "UKSS-WA-260907-28GA97",
+        "second": "UKSS-WA-260907-28GA97"
+      }
+    },
+    {
+      "name": "Generic repeated click does not duplicate beacon",
+      "pass": true,
+      "details": {
+        "beaconCount": 1
+      }
+    },
+    {
+      "name": "Malibu loads exact Variant A",
+      "pass": true,
+      "details": {
+        "productId": "973aa493-e161-4875-a6a2-9e2438f1c927",
+        "variantId": "9cfdb758-3881-42ed-ab85-1b4a1518908c",
+        "productName": "Malibu 5 Seater Corner 2c2 High Back"
+      }
+    },
+    {
+      "name": "Malibu Variant A message/reference/payload",
+      "pass": true,
+      "details": {
+        "context": {
+          "productId": "973aa493-e161-4875-a6a2-9e2438f1c927",
+          "variantId": "9cfdb758-3881-42ed-ab85-1b4a1518908c",
+          "productName": "Malibu 5 Seater Corner 2c2 High Back"
+        },
+        "click": {
+          "href": "https://wa.me/447476616022?text=Hi%2C%20I'm%20enquiring%20about%20this%20product%3A%20Malibu%205%20Seater%20Corner%202c2%20High%20Back.%0A%0ARef%3A%20UKSS-WA-260907-NIVTA5",
+          "message": "Hi, I'm enquiring about this product: Malibu 5 Seater Corner 2c2 High Back.\n\nRef: UKSS-WA-260907-NIVTA5",
+          "reference": "UKSS-WA-260907-NIVTA5",
+          "beacon": {
+            "url": "https://www.uksofashop.co.uk/api/attribution/whatsapp-click",
+            "payload": {
+              "reference": "UKSS-WA-260907-NIVTA5",
+              "pageUrl": "https://www.uksofashop.co.uk/shop/corner-sofa/malibu-high-back-5-seater-corner-2c2",
+              "pageContext": "whatsapp_fab_product",
+              "productId": "973aa493-e161-4875-a6a2-9e2438f1c927",
+              "variantId": "9cfdb758-3881-42ed-ab85-1b4a1518908c",
+              "productName": "Malibu 5 Seater Corner 2c2 High Back"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Malibu selector reaches exact Variant B",
+      "pass": true,
+      "details": {
+        "changed": true,
+        "context": {
+          "productId": "973aa493-e161-4875-a6a2-9e2438f1c927",
+          "variantId": "8818f239-49b4-4bb7-8730-8021cf8f54b6",
+          "productName": "Malibu 5 Seater Corner 2c2 High Back"
+        },
+        "attempts": [
+          {
+            "label": "Marble",
+            "before": "9cfdb758-3881-42ed-ab85-1b4a1518908c",
+            "after": "9cfdb758-3881-42ed-ab85-1b4a1518908c"
+          },
+          {
+            "label": "Plush Velvet",
+            "before": "9cfdb758-3881-42ed-ab85-1b4a1518908c",
+            "after": "8818f239-49b4-4bb7-8730-8021cf8f54b6"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Malibu Variant B gets fresh reference",
+      "pass": true,
+      "details": {
+        "refA": "UKSS-WA-260907-NIVTA5",
+        "refB": "UKSS-WA-260907-4IJEJ0"
+      }
+    },
+    {
+      "name": "Malibu Variant B beacon contains only current variant context",
+      "pass": true,
+      "details": {
+        "payloadB": {
+          "reference": "UKSS-WA-260907-4IJEJ0",
+          "pageUrl": "https://www.uksofashop.co.uk/shop/corner-sofa/malibu-high-back-5-seater-corner-2c2",
+          "pageContext": "whatsapp_fab_product",
+          "productId": "973aa493-e161-4875-a6a2-9e2438f1c927",
+          "variantId": "8818f239-49b4-4bb7-8730-8021cf8f54b6",
+          "productName": "Malibu 5 Seater Corner 2c2 High Back"
+        },
+        "expectedVariant": "8818f239-49b4-4bb7-8730-8021cf8f54b6"
+      }
+    },
+    {
+      "name": "Malibu post-switch WhatsApp text retains actual product name",
+      "pass": true,
+      "details": {
+        "message": "Hi, I'm enquiring about this product: Malibu 5 Seater Corner 2c2 High Back.\n\nRef: UKSS-WA-260907-4IJEJ0",
+        "productName": "Malibu 5 Seater Corner 2c2 High Back"
+      }
+    },
+    {
+      "name": "Second multi-variant product found",
+      "pass": true,
+      "details": {
+        "path": "/shop/recliner/roma-recliner-manual-3-and-2",
+        "first": {
+          "productId": "dca5a543-4db8-40a5-95c6-d4acbef2ba51",
+          "variantId": "fdc54adb-777c-4dcd-83e1-64e5938b631a",
+          "productName": "Roma Recliner 3+2 Seater Manual Sofa"
+        },
+        "click1": {
+          "href": "https://wa.me/447476616022?text=Hi%2C%20I'm%20enquiring%20about%20this%20product%3A%20Roma%20Recliner%203%2B2%20Seater%20Manual%20Sofa.%0A%0ARef%3A%20UKSS-WA-260907-2UMCCS",
+          "message": "Hi, I'm enquiring about this product: Roma Recliner 3+2 Seater Manual Sofa.\n\nRef: UKSS-WA-260907-2UMCCS",
+          "reference": "UKSS-WA-260907-2UMCCS",
+          "beacon": {
+            "url": "https://www.uksofashop.co.uk/api/attribution/whatsapp-click",
+            "payload": {
+              "reference": "UKSS-WA-260907-2UMCCS",
+              "pageUrl": "https://www.uksofashop.co.uk/shop/recliner/roma-recliner-manual-3-and-2",
+              "pageContext": "whatsapp_fab_product",
+              "productId": "dca5a543-4db8-40a5-95c6-d4acbef2ba51",
+              "variantId": "fdc54adb-777c-4dcd-83e1-64e5938b631a",
+              "productName": "Roma Recliner 3+2 Seater Manual Sofa"
+            }
+          }
+        },
+        "change": {
+          "changed": true,
+          "before": {
+            "productId": "dca5a543-4db8-40a5-95c6-d4acbef2ba51",
+            "variantId": "fdc54adb-777c-4dcd-83e1-64e5938b631a",
+            "productName": "Roma Recliner 3+2 Seater Manual Sofa"
+          },
+          "after": {
+            "productId": "dca5a543-4db8-40a5-95c6-d4acbef2ba51",
+            "variantId": "0070ac5b-28c0-4fab-96ae-5193d1c6ffe2",
+            "productName": "Roma Recliner 3+2 Seater Manual Sofa"
+          },
+          "label": "Fabric"
+        },
+        "click2": {
+          "href": "https://wa.me/447476616022?text=Hi%2C%20I'm%20enquiring%20about%20this%20product%3A%20Roma%20Recliner%203%2B2%20Seater%20Manual%20Sofa.%0A%0ARef%3A%20UKSS-WA-260907-9UC15O",
+          "message": "Hi, I'm enquiring about this product: Roma Recliner 3+2 Seater Manual Sofa.\n\nRef: UKSS-WA-260907-9UC15O",
+          "reference": "UKSS-WA-260907-9UC15O",
+          "beacon": {
+            "url": "https://www.uksofashop.co.uk/api/attribution/whatsapp-click",
+            "payload": {
+              "reference": "UKSS-WA-260907-9UC15O",
+              "pageUrl": "https://www.uksofashop.co.uk/shop/recliner/roma-recliner-manual-3-and-2",
+              "pageContext": "whatsapp_fab_product",
+              "productId": "dca5a543-4db8-40a5-95c6-d4acbef2ba51",
+              "variantId": "0070ac5b-28c0-4fab-96ae-5193d1c6ffe2",
+              "productName": "Roma Recliner 3+2 Seater Manual Sofa"
+            }
+          }
+        },
+        "payload2": {
+          "reference": "UKSS-WA-260907-9UC15O",
+          "pageUrl": "https://www.uksofashop.co.uk/shop/recliner/roma-recliner-manual-3-and-2",
+          "pageContext": "whatsapp_fab_product",
+          "productId": "dca5a543-4db8-40a5-95c6-d4acbef2ba51",
+          "variantId": "0070ac5b-28c0-4fab-96ae-5193d1c6ffe2",
+          "productName": "Roma Recliner 3+2 Seater Manual Sofa"
+        }
+      }
+    },
+    {
+      "name": "Second product variant change mints fresh reference",
+      "pass": true,
+      "details": {
+        "path": "/shop/recliner/roma-recliner-manual-3-and-2",
+        "first": {
+          "productId": "dca5a543-4db8-40a5-95c6-d4acbef2ba51",
+          "variantId": "fdc54adb-777c-4dcd-83e1-64e5938b631a",
+          "productName": "Roma Recliner 3+2 Seater Manual Sofa"
+        },
+        "click1": {
+          "href": "https://wa.me/447476616022?text=Hi%2C%20I'm%20enquiring%20about%20this%20product%3A%20Roma%20Recliner%203%2B2%20Seater%20Manual%20Sofa.%0A%0ARef%3A%20UKSS-WA-260907-2UMCCS",
+          "message": "Hi, I'm enquiring about this product: Roma Recliner 3+2 Seater Manual Sofa.\n\nRef: UKSS-WA-260907-2UMCCS",
+          "reference": "UKSS-WA-260907-2UMCCS",
+          "beacon": {
+            "url": "https://www.uksofashop.co.uk/api/attribution/whatsapp-click",
+            "payload": {
+              "reference": "UKSS-WA-260907-2UMCCS",
+              "pageUrl": "https://www.uksofashop.co.uk/shop/recliner/roma-recliner-manual-3-and-2",
+              "pageContext": "whatsapp_fab_product",
+              "productId": "dca5a543-4db8-40a5-95c6-d4acbef2ba51",
+              "variantId": "fdc54adb-777c-4dcd-83e1-64e5938b631a",
+              "productName": "Roma Recliner 3+2 Seater Manual Sofa"
+            }
+          }
+        },
+        "change": {
+          "changed": true,
+          "before": {
+            "productId": "dca5a543-4db8-40a5-95c6-d4acbef2ba51",
+            "variantId": "fdc54adb-777c-4dcd-83e1-64e5938b631a",
+            "productName": "Roma Recliner 3+2 Seater Manual Sofa"
+          },
+          "after": {
+            "productId": "dca5a543-4db8-40a5-95c6-d4acbef2ba51",
+            "variantId": "0070ac5b-28c0-4fab-96ae-5193d1c6ffe2",
+            "productName": "Roma Recliner 3+2 Seater Manual Sofa"
+          },
+          "label": "Fabric"
+        },
+        "click2": {
+          "href": "https://wa.me/447476616022?text=Hi%2C%20I'm%20enquiring%20about%20this%20product%3A%20Roma%20Recliner%203%2B2%20Seater%20Manual%20Sofa.%0A%0ARef%3A%20UKSS-WA-260907-9UC15O",
+          "message": "Hi, I'm enquiring about this product: Roma Recliner 3+2 Seater Manual Sofa.\n\nRef: UKSS-WA-260907-9UC15O",
+          "reference": "UKSS-WA-260907-9UC15O",
+          "beacon": {
+            "url": "https://www.uksofashop.co.uk/api/attribution/whatsapp-click",
+            "payload": {
+              "reference": "UKSS-WA-260907-9UC15O",
+              "pageUrl": "https://www.uksofashop.co.uk/shop/recliner/roma-recliner-manual-3-and-2",
+              "pageContext": "whatsapp_fab_product",
+              "productId": "dca5a543-4db8-40a5-95c6-d4acbef2ba51",
+              "variantId": "0070ac5b-28c0-4fab-96ae-5193d1c6ffe2",
+              "productName": "Roma Recliner 3+2 Seater Manual Sofa"
+            }
+          }
+        },
+        "payload2": {
+          "reference": "UKSS-WA-260907-9UC15O",
+          "pageUrl": "https://www.uksofashop.co.uk/shop/recliner/roma-recliner-manual-3-and-2",
+          "pageContext": "whatsapp_fab_product",
+          "productId": "dca5a543-4db8-40a5-95c6-d4acbef2ba51",
+          "variantId": "0070ac5b-28c0-4fab-96ae-5193d1c6ffe2",
+          "productName": "Roma Recliner 3+2 Seater Manual Sofa"
+        }
+      }
+    },
+    {
+      "name": "Second product second beacon has current variant",
+      "pass": true,
+      "details": {
+        "payload": {
+          "reference": "UKSS-WA-260907-9UC15O",
+          "pageUrl": "https://www.uksofashop.co.uk/shop/recliner/roma-recliner-manual-3-and-2",
+          "pageContext": "whatsapp_fab_product",
+          "productId": "dca5a543-4db8-40a5-95c6-d4acbef2ba51",
+          "variantId": "0070ac5b-28c0-4fab-96ae-5193d1c6ffe2",
+          "productName": "Roma Recliner 3+2 Seater Manual Sofa"
+        },
+        "change": {
+          "changed": true,
+          "before": {
+            "productId": "dca5a543-4db8-40a5-95c6-d4acbef2ba51",
+            "variantId": "fdc54adb-777c-4dcd-83e1-64e5938b631a",
+            "productName": "Roma Recliner 3+2 Seater Manual Sofa"
+          },
+          "after": {
+            "productId": "dca5a543-4db8-40a5-95c6-d4acbef2ba51",
+            "variantId": "0070ac5b-28c0-4fab-96ae-5193d1c6ffe2",
+            "productName": "Roma Recliner 3+2 Seater Manual Sofa"
+          },
+          "label": "Fabric"
+        }
+      }
+    },
+    {
+      "name": "Safe add-to-cart completes",
+      "pass": true,
+      "details": {
+        "success": true,
+        "addedTextCount": 2
+      }
+    },
+    {
+      "name": "Checkout/cart sticky control clears WhatsApp",
+      "pass": false,
+      "details": {
+        "checkoutBar": {
+          "x": 0,
+          "y": 730,
+          "width": 390,
+          "height": 57
+        },
+        "fab": {
+          "visible": true,
+          "box": {
+            "x": 240.484375,
+            "y": 723,
+            "width": 133.515625,
+            "height": 48
+          },
+          "text": "WhatsApp",
+          "href": "https://wa.me/447476616022?text=Hi%2C%20I%E2%80%99d%20like%20some%20help%20with%20a%20sofa%20enquiry.",
+          "position": "fixed",
+          "bottom": "73px",
+          "zIndex": "30",
+          "svgCount": 1,
+          "overflow": {
+            "width": 390,
+            "scrollWidth": 390,
+            "ok": true
+          },
+          "message": "Hi, I’d like some help with a sofa enquiry.",
+          "reference": null
+        }
+      }
+    }
+  ],
+  "malibu": {
+    "variantA": {
+      "productId": "973aa493-e161-4875-a6a2-9e2438f1c927",
+      "variantId": "9cfdb758-3881-42ed-ab85-1b4a1518908c",
+      "productName": "Malibu 5 Seater Corner 2c2 High Back"
+    },
+    "refA": "UKSS-WA-260907-NIVTA5",
+    "payloadA": {
+      "reference": "UKSS-WA-260907-NIVTA5",
+      "pageUrl": "https://www.uksofashop.co.uk/shop/corner-sofa/malibu-high-back-5-seater-corner-2c2",
+      "pageContext": "whatsapp_fab_product",
+      "productId": "973aa493-e161-4875-a6a2-9e2438f1c927",
+      "variantId": "9cfdb758-3881-42ed-ab85-1b4a1518908c",
+      "productName": "Malibu 5 Seater Corner 2c2 High Back"
+    },
+    "change": {
+      "changed": true,
+      "context": {
+        "productId": "973aa493-e161-4875-a6a2-9e2438f1c927",
+        "variantId": "8818f239-49b4-4bb7-8730-8021cf8f54b6",
+        "productName": "Malibu 5 Seater Corner 2c2 High Back"
+      },
+      "attempts": [
+        {
+          "label": "Marble",
+          "before": "9cfdb758-3881-42ed-ab85-1b4a1518908c",
+          "after": "9cfdb758-3881-42ed-ab85-1b4a1518908c"
+        },
+        {
+          "label": "Plush Velvet",
+          "before": "9cfdb758-3881-42ed-ab85-1b4a1518908c",
+          "after": "8818f239-49b4-4bb7-8730-8021cf8f54b6"
+        }
+      ]
+    },
+    "refB": "UKSS-WA-260907-4IJEJ0",
+    "payloadB": {
+      "reference": "UKSS-WA-260907-4IJEJ0",
+      "pageUrl": "https://www.uksofashop.co.uk/shop/corner-sofa/malibu-high-back-5-seater-corner-2c2",
+      "pageContext": "whatsapp_fab_product",
+      "productId": "973aa493-e161-4875-a6a2-9e2438f1c927",
+      "variantId": "8818f239-49b4-4bb7-8730-8021cf8f54b6",
+      "productName": "Malibu 5 Seater Corner 2c2 High Back"
+    },
+    "messageB": "Hi, I'm enquiring about this product: Malibu 5 Seater Corner 2c2 High Back.\n\nRef: UKSS-WA-260907-4IJEJ0"
+  },
+  "secondProduct": {
+    "path": "/shop/recliner/roma-recliner-manual-3-and-2",
+    "first": {
+      "productId": "dca5a543-4db8-40a5-95c6-d4acbef2ba51",
+      "variantId": "fdc54adb-777c-4dcd-83e1-64e5938b631a",
+      "productName": "Roma Recliner 3+2 Seater Manual Sofa"
+    },
+    "click1": {
+      "href": "https://wa.me/447476616022?text=Hi%2C%20I'm%20enquiring%20about%20this%20product%3A%20Roma%20Recliner%203%2B2%20Seater%20Manual%20Sofa.%0A%0ARef%3A%20UKSS-WA-260907-2UMCCS",
+      "message": "Hi, I'm enquiring about this product: Roma Recliner 3+2 Seater Manual Sofa.\n\nRef: UKSS-WA-260907-2UMCCS",
+      "reference": "UKSS-WA-260907-2UMCCS",
+      "beacon": {
+        "url": "https://www.uksofashop.co.uk/api/attribution/whatsapp-click",
+        "payload": {
+          "reference": "UKSS-WA-260907-2UMCCS",
+          "pageUrl": "https://www.uksofashop.co.uk/shop/recliner/roma-recliner-manual-3-and-2",
+          "pageContext": "whatsapp_fab_product",
+          "productId": "dca5a543-4db8-40a5-95c6-d4acbef2ba51",
+          "variantId": "fdc54adb-777c-4dcd-83e1-64e5938b631a",
+          "productName": "Roma Recliner 3+2 Seater Manual Sofa"
+        }
+      }
+    },
+    "change": {
+      "changed": true,
+      "before": {
+        "productId": "dca5a543-4db8-40a5-95c6-d4acbef2ba51",
+        "variantId": "fdc54adb-777c-4dcd-83e1-64e5938b631a",
+        "productName": "Roma Recliner 3+2 Seater Manual Sofa"
+      },
+      "after": {
+        "productId": "dca5a543-4db8-40a5-95c6-d4acbef2ba51",
+        "variantId": "0070ac5b-28c0-4fab-96ae-5193d1c6ffe2",
+        "productName": "Roma Recliner 3+2 Seater Manual Sofa"
+      },
+      "label": "Fabric"
+    },
+    "click2": {
+      "href": "https://wa.me/447476616022?text=Hi%2C%20I'm%20enquiring%20about%20this%20product%3A%20Roma%20Recliner%203%2B2%20Seater%20Manual%20Sofa.%0A%0ARef%3A%20UKSS-WA-260907-9UC15O",
+      "message": "Hi, I'm enquiring about this product: Roma Recliner 3+2 Seater Manual Sofa.\n\nRef: UKSS-WA-260907-9UC15O",
+      "reference": "UKSS-WA-260907-9UC15O",
+      "beacon": {
+        "url": "https://www.uksofashop.co.uk/api/attribution/whatsapp-click",
+        "payload": {
+          "reference": "UKSS-WA-260907-9UC15O",
+          "pageUrl": "https://www.uksofashop.co.uk/shop/recliner/roma-recliner-manual-3-and-2",
+          "pageContext": "whatsapp_fab_product",
+          "productId": "dca5a543-4db8-40a5-95c6-d4acbef2ba51",
+          "variantId": "0070ac5b-28c0-4fab-96ae-5193d1c6ffe2",
+          "productName": "Roma Recliner 3+2 Seater Manual Sofa"
+        }
+      }
+    },
+    "payload2": {
+      "reference": "UKSS-WA-260907-9UC15O",
+      "pageUrl": "https://www.uksofashop.co.uk/shop/recliner/roma-recliner-manual-3-and-2",
+      "pageContext": "whatsapp_fab_product",
+      "productId": "dca5a543-4db8-40a5-95c6-d4acbef2ba51",
+      "variantId": "0070ac5b-28c0-4fab-96ae-5193d1c6ffe2",
+      "productName": "Roma Recliner 3+2 Seater Manual Sofa"
+    }
+  },
+  "responsive": [],
+  "network": {
+    "whatsapp": [
+      {
+        "page": "https://www.uksofashop.co.uk/?utm_source=r2qa&utm_medium=automation&utm_campaign=tracking_v2_postfix&gclid=r2qa-postfix-1788762167062",
+        "payload": {
+          "reference": "UKSS-WA-260907-28GA97",
+          "pageUrl": "https://www.uksofashop.co.uk/?utm_source=r2qa&utm_medium=automation&utm_campaign=tracking_v2_postfix&gclid=r2qa-postfix-1788762167062",
+          "pageContext": "whatsapp_fab"
+        }
+      },
+      {
+        "page": "https://www.uksofashop.co.uk/shop/corner-sofa/malibu-high-back-5-seater-corner-2c2",
+        "payload": {
+          "reference": "UKSS-WA-260907-NIVTA5",
+          "pageUrl": "https://www.uksofashop.co.uk/shop/corner-sofa/malibu-high-back-5-seater-corner-2c2",
+          "pageContext": "whatsapp_fab_product",
+          "productId": "973aa493-e161-4875-a6a2-9e2438f1c927",
+          "variantId": "9cfdb758-3881-42ed-ab85-1b4a1518908c",
+          "productName": "Malibu 5 Seater Corner 2c2 High Back"
+        }
+      },
+      {
+        "page": "https://www.uksofashop.co.uk/shop/corner-sofa/malibu-high-back-5-seater-corner-2c2",
+        "payload": {
+          "reference": "UKSS-WA-260907-4IJEJ0",
+          "pageUrl": "https://www.uksofashop.co.uk/shop/corner-sofa/malibu-high-back-5-seater-corner-2c2",
+          "pageContext": "whatsapp_fab_product",
+          "productId": "973aa493-e161-4875-a6a2-9e2438f1c927",
+          "variantId": "8818f239-49b4-4bb7-8730-8021cf8f54b6",
+          "productName": "Malibu 5 Seater Corner 2c2 High Back"
+        }
+      },
+      {
+        "page": "https://www.uksofashop.co.uk/shop/3-2-seater/lily-high-back-3and2-seater",
+        "payload": {
+          "reference": "UKSS-WA-260907-UY7DB8",
+          "pageUrl": "https://www.uksofashop.co.uk/shop/3-2-seater/lily-high-back-3and2-seater",
+          "pageContext": "whatsapp_fab_product",
+          "productId": "5a2d01ab-4c6e-48e8-b4b1-3f37c200399a",
+          "variantId": "e3ed0121-2990-4f17-b4f3-103da614f228",
+          "productName": "Lily 3+2 Seater High Back"
+        }
+      },
+      {
+        "page": "https://www.uksofashop.co.uk/shop/3-2-seater/verona-high-back-3and2-seater",
+        "payload": {
+          "reference": "UKSS-WA-260907-9NKOY2",
+          "pageUrl": "https://www.uksofashop.co.uk/shop/3-2-seater/verona-high-back-3and2-seater",
+          "pageContext": "whatsapp_fab_product",
+          "productId": "d73e2267-a0fb-48bc-981d-282af52df7d0",
+          "variantId": "a3c44d91-9756-4913-8895-e39054eba91a",
+          "productName": "Verona 3+2 Seater High Back"
+        }
+      },
+      {
+        "page": "https://www.uksofashop.co.uk/shop/corner-sofa/verona-high-back-5-seater-corner-2c2",
+        "payload": {
+          "reference": "UKSS-WA-260907-QZ3KDO",
+          "pageUrl": "https://www.uksofashop.co.uk/shop/corner-sofa/verona-high-back-5-seater-corner-2c2",
+          "pageContext": "whatsapp_fab_product",
+          "productId": "265c2267-6c24-4cf7-bf1b-4171fd240627",
+          "variantId": "f2cfa09d-6762-4402-a6a6-e95568df39c0",
+          "productName": "Verona 5 Seater Corner 2c2 High Back"
+        }
+      },
+      {
+        "page": "https://www.uksofashop.co.uk/shop/electric-sofa/hannah-electric-corner",
+        "payload": {
+          "reference": "UKSS-WA-260907-U8JXAK",
+          "pageUrl": "https://www.uksofashop.co.uk/shop/electric-sofa/hannah-electric-corner",
+          "pageContext": "whatsapp_fab_product",
+          "productId": "b949d45a-2df6-4f4d-a92a-0e6ade9c67a0",
+          "variantId": "7af910cd-3025-4c08-ad65-e86a39beb768",
+          "productName": "Hannah Electric Corner"
+        }
+      },
+      {
+        "page": "https://www.uksofashop.co.uk/shop/recliner/roma-recliner-manual-3-and-2",
+        "payload": {
+          "reference": "UKSS-WA-260907-2UMCCS",
+          "pageUrl": "https://www.uksofashop.co.uk/shop/recliner/roma-recliner-manual-3-and-2",
+          "pageContext": "whatsapp_fab_product",
+          "productId": "dca5a543-4db8-40a5-95c6-d4acbef2ba51",
+          "variantId": "fdc54adb-777c-4dcd-83e1-64e5938b631a",
+          "productName": "Roma Recliner 3+2 Seater Manual Sofa"
+        }
+      },
+      {
+        "page": "https://www.uksofashop.co.uk/shop/recliner/roma-recliner-manual-3-and-2",
+        "payload": {
+          "reference": "UKSS-WA-260907-9UC15O",
+          "pageUrl": "https://www.uksofashop.co.uk/shop/recliner/roma-recliner-manual-3-and-2",
+          "pageContext": "whatsapp_fab_product",
+          "productId": "dca5a543-4db8-40a5-95c6-d4acbef2ba51",
+          "variantId": "0070ac5b-28c0-4fab-96ae-5193d1c6ffe2",
+          "productName": "Roma Recliner 3+2 Seater Manual Sofa"
+        }
+      }
+    ],
+    "meta": [
+      {
+        "page": "https://www.uksofashop.co.uk/?utm_source=r2qa&utm_medium=automation&utm_campaign=tracking_v2_postfix&gclid=r2qa-postfix-1788762167062",
+        "payload": {
+          "event": "Contact",
+          "eventId": "686ade92-b30d-4e6a-aea0-51879e676f49",
+          "path": "/?utm_source=r2qa&utm_medium=automation&utm_campaign=tracking_v2_postfix&gclid=r2qa-postfix-1788762167062",
+          "value": 0,
+          "currency": "GBP",
+          "contents": []
+        }
+      },
+      {
+        "page": "https://www.uksofashop.co.uk/shop/corner-sofa/malibu-high-back-5-seater-corner-2c2",
+        "payload": {
+          "event": "ViewContent",
+          "eventId": "8863234f-d559-4dd3-99c9-cc4f5cc3d893",
+          "path": "/shop/corner-sofa/malibu-high-back-5-seater-corner-2c2",
+          "value": 749,
+          "currency": "GBP",
+          "contents": [
+            {
+              "id": "9cfdb758-3881-42ed-ab85-1b4a1518908c",
+              "quantity": 1,
+              "item_price": 749
+            }
+          ],
+          "ledgerAction": "product_view"
+        }
+      },
+      {
+        "page": "https://www.uksofashop.co.uk/shop/corner-sofa/malibu-high-back-5-seater-corner-2c2",
+        "payload": {
+          "event": "Contact",
+          "eventId": "14fec5ed-5e90-4bed-8e69-69b096882b4b",
+          "path": "/shop/corner-sofa/malibu-high-back-5-seater-corner-2c2",
+          "value": 0,
+          "currency": "GBP",
+          "contents": []
+        }
+      },
+      {
+        "page": "https://www.uksofashop.co.uk/shop/corner-sofa/malibu-high-back-5-seater-corner-2c2",
+        "payload": {
+          "event": "ViewContent",
+          "eventId": "43c60478-4707-4b7c-a646-be00915e4605",
+          "path": "/shop/corner-sofa/malibu-high-back-5-seater-corner-2c2",
+          "value": 749,
+          "currency": "GBP",
+          "contents": [
+            {
+              "id": "8818f239-49b4-4bb7-8730-8021cf8f54b6",
+              "quantity": 1,
+              "item_price": 749
+            }
+          ],
+          "ledgerAction": "product_view"
+        }
+      },
+      {
+        "page": "https://www.uksofashop.co.uk/shop/corner-sofa/malibu-high-back-5-seater-corner-2c2",
+        "payload": {
+          "event": "Contact",
+          "eventId": "4b85d9bd-1993-435e-abba-01dc54b6eadd",
+          "path": "/shop/corner-sofa/malibu-high-back-5-seater-corner-2c2",
+          "value": 0,
+          "currency": "GBP",
+          "contents": []
+        }
+      },
+      {
+        "page": "https://www.uksofashop.co.uk/shop/3-2-seater/lily-high-back-3and2-seater",
+        "payload": {
+          "event": "ViewContent",
+          "eventId": "130c8c00-651a-4120-8bfa-237f91293e73",
+          "path": "/shop/3-2-seater/lily-high-back-3and2-seater",
+          "value": 749,
+          "currency": "GBP",
+          "contents": [
+            {
+              "id": "e3ed0121-2990-4f17-b4f3-103da614f228",
+              "quantity": 1,
+              "item_price": 749
+            }
+          ],
+          "ledgerAction": "product_view"
+        }
+      },
+      {
+        "page": "https://www.uksofashop.co.uk/shop/3-2-seater/lily-high-back-3and2-seater",
+        "payload": {
+          "event": "Contact",
+          "eventId": "f601dd7e-597b-4a87-af0c-7bfa16accd80",
+          "path": "/shop/3-2-seater/lily-high-back-3and2-seater",
+          "value": 0,
+          "currency": "GBP",
+          "contents": []
+        }
+      },
+      {
+        "page": "https://www.uksofashop.co.uk/shop/3-2-seater/verona-high-back-3and2-seater",
+        "payload": {
+          "event": "ViewContent",
+          "eventId": "7570a5dd-d234-4579-bf0c-ccd5bfa7a369",
+          "path": "/shop/3-2-seater/verona-high-back-3and2-seater",
+          "value": 549,
+          "currency": "GBP",
+          "contents": [
+            {
+              "id": "a3c44d91-9756-4913-8895-e39054eba91a",
+              "quantity": 1,
+              "item_price": 549
+            }
+          ],
+          "ledgerAction": "product_view"
+        }
+      },
+      {
+        "page": "https://www.uksofashop.co.uk/shop/3-2-seater/verona-high-back-3and2-seater",
+        "payload": {
+          "event": "Contact",
+          "eventId": "26f03fe1-05a1-44e0-a192-6eaf5fffc2a2",
+          "path": "/shop/3-2-seater/verona-high-back-3and2-seater",
+          "value": 0,
+          "currency": "GBP",
+          "contents": []
+        }
+      },
+      {
+        "page": "https://www.uksofashop.co.uk/shop/corner-sofa/verona-high-back-5-seater-corner-2c2",
+        "payload": {
+          "event": "ViewContent",
+          "eventId": "944c6aae-cc72-4a8c-9f44-2de20477bd1e",
+          "path": "/shop/corner-sofa/verona-high-back-5-seater-corner-2c2",
+          "value": 549,
+          "currency": "GBP",
+          "contents": [
+            {
+              "id": "f2cfa09d-6762-4402-a6a6-e95568df39c0",
+              "quantity": 1,
+              "item_price": 549
+            }
+          ],
+          "ledgerAction": "product_view"
+        }
+      },
+      {
+        "page": "https://www.uksofashop.co.uk/shop/corner-sofa/verona-high-back-5-seater-corner-2c2",
+        "payload": {
+          "event": "Contact",
+          "eventId": "7420d8c9-9044-4f26-a18f-bd8f7a00a6ff",
+          "path": "/shop/corner-sofa/verona-high-back-5-seater-corner-2c2",
+          "value": 0,
+          "currency": "GBP",
+          "contents": []
+        }
+      },
+      {
+        "page": "https://www.uksofashop.co.uk/shop/electric-sofa/hannah-electric-corner",
+        "payload": {
+          "event": "ViewContent",
+          "eventId": "1cd95fd0-79c8-4de3-b4ec-696486cb782d",
+          "path": "/shop/electric-sofa/hannah-electric-corner",
+          "value": 999,
+          "currency": "GBP",
+          "contents": [
+            {
+              "id": "7af910cd-3025-4c08-ad65-e86a39beb768",
+              "quantity": 1,
+              "item_price": 999
+            }
+          ],
+          "ledgerAction": "product_view"
+        }
+      },
+      {
+        "page": "https://www.uksofashop.co.uk/shop/electric-sofa/hannah-electric-corner",
+        "payload": {
+          "event": "Contact",
+          "eventId": "002e1c29-f8e0-4173-96a3-f49b16f974d0",
+          "path": "/shop/electric-sofa/hannah-electric-corner",
+          "value": 0,
+          "currency": "GBP",
+          "contents": []
+        }
+      },
+      {
+        "page": "https://www.uksofashop.co.uk/shop/recliner/roma-recliner-manual-3-and-2",
+        "payload": {
+          "event": "ViewContent",
+          "eventId": "8b8e550d-4857-4586-a201-f4814fbb27df",
+          "path": "/shop/recliner/roma-recliner-manual-3-and-2",
+          "value": 599,
+          "currency": "GBP",
+          "contents": [
+            {
+              "id": "fdc54adb-777c-4dcd-83e1-64e5938b631a",
+              "quantity": 1,
+              "item_price": 599
+            }
+          ],
+          "ledgerAction": "product_view"
+        }
+      },
+      {
+        "page": "https://www.uksofashop.co.uk/shop/recliner/roma-recliner-manual-3-and-2",
+        "payload": {
+          "event": "Contact",
+          "eventId": "79b73e07-0ef6-41a6-9cb9-b1166ac2c009",
+          "path": "/shop/recliner/roma-recliner-manual-3-and-2",
+          "value": 0,
+          "currency": "GBP",
+          "contents": []
+        }
+      },
+      {
+        "page": "https://www.uksofashop.co.uk/shop/recliner/roma-recliner-manual-3-and-2",
+        "payload": {
+          "event": "ViewContent",
+          "eventId": "528eea94-2b6b-4f43-b1b1-3f36e3e7a25c",
+          "path": "/shop/recliner/roma-recliner-manual-3-and-2",
+          "value": 599,
+          "currency": "GBP",
+          "contents": [
+            {
+              "id": "0070ac5b-28c0-4fab-96ae-5193d1c6ffe2",
+              "quantity": 1,
+              "item_price": 599
+            }
+          ],
+          "ledgerAction": "product_view"
+        }
+      },
+      {
+        "page": "https://www.uksofashop.co.uk/shop/recliner/roma-recliner-manual-3-and-2",
+        "payload": {
+          "event": "Contact",
+          "eventId": "f81c052c-0e61-448e-9900-1ac82534792a",
+          "path": "/shop/recliner/roma-recliner-manual-3-and-2",
+          "value": 0,
+          "currency": "GBP",
+          "contents": []
+        }
+      },
+      {
+        "page": "https://www.uksofashop.co.uk/shop/recliner/roma-recliner-manual-3-and-2",
+        "payload": {
+          "event": "ViewContent",
+          "eventId": "0354ec29-2ea3-4519-b286-2b40f422550c",
+          "path": "/shop/recliner/roma-recliner-manual-3-and-2",
+          "value": 599,
+          "currency": "GBP",
+          "contents": [
+            {
+              "id": "fdc54adb-777c-4dcd-83e1-64e5938b631a",
+              "quantity": 1,
+              "item_price": 599
+            }
+          ],
+          "ledgerAction": "product_view"
+        }
+      },
+      {
+        "page": "https://www.uksofashop.co.uk/shop/recliner/roma-recliner-manual-3-and-2",
+        "payload": {
+          "event": "AddToCart",
+          "eventId": "e5f46146-7102-48cd-aac2-4e0d277419ef",
+          "path": "/shop/recliner/roma-recliner-manual-3-and-2",
+          "value": 599,
+          "currency": "GBP",
+          "contents": [
+            {
+              "id": "fdc54adb-777c-4dcd-83e1-64e5938b631a",
+              "quantity": 1,
+              "item_price": 599
+            }
+          ],
+          "ledgerAction": "add_to_cart"
+        }
+      }
+    ]
+  },
+  "cookies": {
+    "afterAcceptAll": [
+      "uksofashop_vid",
+      "uksofashop_sid",
+      "_gcl_aw",
+      "_gcl_au",
+      "_ga",
+      "_ga_GTBKG6RSNF",
+      "uksofashop_aid",
+      "uksofashop_ft",
+      "uksofashop_lt",
+      "GCL_AW_P",
+      "test_cookie",
+      "GCL_AW_P",
+      "GCL_AW_P"
+    ]
+  },
+  "addToCart": {
+    "success": true,
+    "addedTextCount": 2
+  },
+  "checkout": {
+    "checkoutBar": {
+      "x": 0,
+      "y": 730,
+      "width": 390,
+      "height": 57
+    },
+    "fab": {
+      "visible": true,
+      "box": {
+        "x": 240.484375,
+        "y": 723,
+        "width": 133.515625,
+        "height": 48
+      },
+      "text": "WhatsApp",
+      "href": "https://wa.me/447476616022?text=Hi%2C%20I%E2%80%99d%20like%20some%20help%20with%20a%20sofa%20enquiry.",
+      "position": "fixed",
+      "bottom": "73px",
+      "zIndex": "30",
+      "svgCount": 1,
+      "overflow": {
+        "width": 390,
+        "scrollWidth": 390,
+        "ok": true
+      },
+      "message": "Hi, I’d like some help with a sofa enquiry.",
+      "reference": null
+    }
+  },
+  "phone": {},
+  "errors": [
+    {
+      "fatal": "locator.click: Timeout 30000ms exceeded.\nCall log:\n  - waiting for locator('a[href^=\"tel:\"]').first()\n    - locator resolved to <a href=\"tel:+447476616022\" class=\"glass-dark-panel hover-btn hover-btn-dark flex min-h-11 items-center gap-2 rounded-pill px-3.5 font-data text-caption tabular-nums text-calico-300 no-underline\">…</a>\n  - attempting click action\n    2 × waiting for element to be visible, enabled and stable\n      - element is visible, enabled and stable\n      - scrolling into view if needed\n      - done scrolling\n      - element is outside of the viewport\n    - retrying click action\n    - waiting 20ms\n    2 × waiting for element to be visible, enabled and stable\n      - element is visible, enabled and stable\n      - scrolling into view if needed\n      - done scrolling\n      - element is outside of the viewport\n    - retrying click action\n      - waiting 100ms\n    56 × waiting for element to be visible, enabled and stable\n       - element is visible, enabled and stable\n       - scrolling into view if needed\n       - done scrolling\n       - element is outside of the viewport\n     - retrying click action\n       - waiting 500ms\n\n    at main (/home/runner/work/uksofashop/uksofashop/qa/r2-final-signoff.mjs:354:17)"
+    }
+  ],
+  "finishedAt": "2026-09-07T06:24:18.023Z"
+}
