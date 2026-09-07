@@ -1,0 +1,1131 @@
+{
+  "productionSha": "04e4154a537fb4c5c5a5058f86cd83b4077b4752",
+  "qaTag": "r2qa-final-1788762742405",
+  "startedAt": "2026-09-07T06:32:22.405Z",
+  "checks": [
+    {
+      "name": "Generic same-context repeated click reuses ref",
+      "pass": true,
+      "details": {
+        "ref1": "UKSS-WA-260907-8W1VDI",
+        "ref2": "UKSS-WA-260907-8W1VDI"
+      }
+    },
+    {
+      "name": "Generic repeated click emits one enquiry beacon",
+      "pass": true,
+      "details": {
+        "count": 1
+      }
+    },
+    {
+      "name": "Malibu starts on exact Variant A",
+      "pass": true,
+      "details": {
+        "productId": "973aa493-e161-4875-a6a2-9e2438f1c927",
+        "variantId": "9cfdb758-3881-42ed-ab85-1b4a1518908c",
+        "productName": "Malibu 5 Seater Corner 2c2 High Back"
+      }
+    },
+    {
+      "name": "Malibu A beacon current",
+      "pass": true,
+      "details": {
+        "href": "https://wa.me/447476616022?text=Hi%2C%20I'm%20enquiring%20about%20this%20product%3A%20Malibu%205%20Seater%20Corner%202c2%20High%20Back.%0A%0ARef%3A%20UKSS-WA-260907-WIW5IB",
+        "message": "Hi, I'm enquiring about this product: Malibu 5 Seater Corner 2c2 High Back.\n\nRef: UKSS-WA-260907-WIW5IB",
+        "reference": "UKSS-WA-260907-WIW5IB",
+        "payload": {
+          "reference": "UKSS-WA-260907-WIW5IB",
+          "pageUrl": "https://www.uksofashop.co.uk/shop/corner-sofa/malibu-high-back-5-seater-corner-2c2",
+          "pageContext": "whatsapp_fab_product",
+          "productId": "973aa493-e161-4875-a6a2-9e2438f1c927",
+          "variantId": "9cfdb758-3881-42ed-ab85-1b4a1518908c",
+          "productName": "Malibu 5 Seater Corner 2c2 High Back"
+        }
+      }
+    },
+    {
+      "name": "Malibu changes to exact Variant B",
+      "pass": true,
+      "details": {
+        "changed": true,
+        "before": {
+          "productId": "973aa493-e161-4875-a6a2-9e2438f1c927",
+          "variantId": "9cfdb758-3881-42ed-ab85-1b4a1518908c",
+          "productName": "Malibu 5 Seater Corner 2c2 High Back"
+        },
+        "after": {
+          "productId": "973aa493-e161-4875-a6a2-9e2438f1c927",
+          "variantId": "8818f239-49b4-4bb7-8730-8021cf8f54b6",
+          "productName": "Malibu 5 Seater Corner 2c2 High Back"
+        },
+        "attempts": [
+          {
+            "label": "Marble",
+            "variantId": "9cfdb758-3881-42ed-ab85-1b4a1518908c"
+          },
+          {
+            "label": "Plush Velvet",
+            "variantId": "8818f239-49b4-4bb7-8730-8021cf8f54b6"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Malibu B gets fresh ref",
+      "pass": true,
+      "details": {
+        "refA": "UKSS-WA-260907-WIW5IB",
+        "refB": "UKSS-WA-260907-6THFEP"
+      }
+    },
+    {
+      "name": "Malibu B beacon has no stale A",
+      "pass": true,
+      "details": {
+        "href": "https://wa.me/447476616022?text=Hi%2C%20I'm%20enquiring%20about%20this%20product%3A%20Malibu%205%20Seater%20Corner%202c2%20High%20Back.%0A%0ARef%3A%20UKSS-WA-260907-6THFEP",
+        "message": "Hi, I'm enquiring about this product: Malibu 5 Seater Corner 2c2 High Back.\n\nRef: UKSS-WA-260907-6THFEP",
+        "reference": "UKSS-WA-260907-6THFEP",
+        "payload": {
+          "reference": "UKSS-WA-260907-6THFEP",
+          "pageUrl": "https://www.uksofashop.co.uk/shop/corner-sofa/malibu-high-back-5-seater-corner-2c2",
+          "pageContext": "whatsapp_fab_product",
+          "productId": "973aa493-e161-4875-a6a2-9e2438f1c927",
+          "variantId": "8818f239-49b4-4bb7-8730-8021cf8f54b6",
+          "productName": "Malibu 5 Seater Corner 2c2 High Back"
+        }
+      }
+    },
+    {
+      "name": "Malibu B message retains product name",
+      "pass": true,
+      "details": {
+        "message": "Hi, I'm enquiring about this product: Malibu 5 Seater Corner 2c2 High Back.\n\nRef: UKSS-WA-260907-6THFEP"
+      }
+    },
+    {
+      "name": "Roma second multi-variant switch succeeds",
+      "pass": true,
+      "details": {
+        "changed": true,
+        "before": {
+          "productId": "dca5a543-4db8-40a5-95c6-d4acbef2ba51",
+          "variantId": "fdc54adb-777c-4dcd-83e1-64e5938b631a",
+          "productName": "Roma Recliner 3+2 Seater Manual Sofa"
+        },
+        "after": {
+          "productId": "dca5a543-4db8-40a5-95c6-d4acbef2ba51",
+          "variantId": "0070ac5b-28c0-4fab-96ae-5193d1c6ffe2",
+          "productName": "Roma Recliner 3+2 Seater Manual Sofa"
+        },
+        "attempts": [
+          {
+            "label": "Leather",
+            "variantId": "fdc54adb-777c-4dcd-83e1-64e5938b631a"
+          },
+          {
+            "label": "Fabric",
+            "variantId": "0070ac5b-28c0-4fab-96ae-5193d1c6ffe2"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Roma fresh ref after variant switch",
+      "pass": true,
+      "details": {
+        "refA": "UKSS-WA-260907-5M8S9W",
+        "refB": "UKSS-WA-260907-P1W257"
+      }
+    },
+    {
+      "name": "Roma second beacon current",
+      "pass": true,
+      "details": {
+        "href": "https://wa.me/447476616022?text=Hi%2C%20I'm%20enquiring%20about%20this%20product%3A%20Roma%20Recliner%203%2B2%20Seater%20Manual%20Sofa.%0A%0ARef%3A%20UKSS-WA-260907-P1W257",
+        "message": "Hi, I'm enquiring about this product: Roma Recliner 3+2 Seater Manual Sofa.\n\nRef: UKSS-WA-260907-P1W257",
+        "reference": "UKSS-WA-260907-P1W257",
+        "payload": {
+          "reference": "UKSS-WA-260907-P1W257",
+          "pageUrl": "https://www.uksofashop.co.uk/shop/recliner/roma-recliner-manual-3-and-2",
+          "pageContext": "whatsapp_fab_product",
+          "productId": "dca5a543-4db8-40a5-95c6-d4acbef2ba51",
+          "variantId": "0070ac5b-28c0-4fab-96ae-5193d1c6ffe2",
+          "productName": "Roma Recliner 3+2 Seater Manual Sofa"
+        }
+      }
+    },
+    {
+      "name": "Safe add_to_cart exercised",
+      "pass": true,
+      "details": {
+        "added": true
+      }
+    },
+    {
+      "name": "Checkout sticky bar clears FAB",
+      "pass": true,
+      "details": {
+        "bar": {
+          "box": {
+            "x": 0,
+            "y": 730,
+            "width": 390,
+            "height": 57
+          },
+          "height": 57
+        },
+        "fab": {
+          "visible": true,
+          "box": {
+            "x": 240.484375,
+            "y": 654,
+            "width": 133.515625,
+            "height": 48
+          },
+          "href": "https://wa.me/447476616022?text=Hi%2C%20I%E2%80%99d%20like%20some%20help%20with%20a%20sofa%20enquiry.",
+          "text": "WhatsApp",
+          "position": "fixed",
+          "bottom": "142px",
+          "zIndex": "30",
+          "svg": 1,
+          "message": "Hi, I’d like some help with a sofa enquiry.",
+          "reference": null,
+          "overflow": {
+            "innerWidth": 390,
+            "scrollWidth": 390,
+            "ok": true
+          }
+        }
+      }
+    },
+    {
+      "name": "Checkout start request emitted",
+      "pass": false,
+      "details": {
+        "newMeta": []
+      }
+    },
+    {
+      "name": "Call click request emitted",
+      "pass": true,
+      "details": {
+        "newMeta": [
+          {
+            "event": "Contact",
+            "eventId": "9ab2ea84-9d4d-44d0-b4e8-ed0875bbe6ec",
+            "path": "/contact",
+            "value": 0,
+            "currency": "GBP",
+            "contents": [],
+            "ledgerAction": "call_click"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Track-order support has no acquisition ref/beacon",
+      "pass": true,
+      "details": {
+        "href": "https://wa.me/447476616022?text=Hi%2C%20I%20need%20some%20help%20with%20an%20existing%20order%20or%20account.",
+        "message": "Hi, I need some help with an existing order or account.",
+        "reference": null,
+        "payload": null
+      }
+    },
+    {
+      "name": "Consent outranks FAB 320px",
+      "pass": true,
+      "details": {
+        "consentZ": 60,
+        "fabZ": "30",
+        "overlap": true
+      }
+    },
+    {
+      "name": "Homepage immediate fixed labelled FAB 320px",
+      "pass": true,
+      "details": {
+        "visible": true,
+        "box": {
+          "x": 170.484375,
+          "y": 723,
+          "width": 133.515625,
+          "height": 48
+        },
+        "href": "https://wa.me/447476616022?text=Hi%2C%20I%E2%80%99d%20like%20some%20help%20with%20a%20sofa%20enquiry.",
+        "text": "WhatsApp",
+        "position": "fixed",
+        "bottom": "73px",
+        "zIndex": "30",
+        "svg": 1,
+        "message": "Hi, I’d like some help with a sofa enquiry.",
+        "reference": null,
+        "overflow": {
+          "innerWidth": 320,
+          "scrollWidth": 320,
+          "ok": true
+        }
+      }
+    },
+    {
+      "name": "Homepage no overflow 320px",
+      "pass": true,
+      "details": {
+        "innerWidth": 320,
+        "scrollWidth": 320,
+        "ok": true
+      }
+    },
+    {
+      "name": "Homepage FAB persists at bottom 320px",
+      "pass": true,
+      "details": {
+        "box": {
+          "x": 170.484375,
+          "y": 723,
+          "width": 133.515625,
+          "height": 48
+        }
+      }
+    },
+    {
+      "name": "Product immediate fixed FAB 320px",
+      "pass": true,
+      "details": {
+        "visible": true,
+        "box": {
+          "x": 170.484375,
+          "y": 723,
+          "width": 133.515625,
+          "height": 48
+        },
+        "href": "https://wa.me/447476616022?text=Hi%2C%20I'm%20enquiring%20about%20this%20product%3A%20Malibu%205%20Seater%20Corner%202c2%20High%20Back.",
+        "text": "WhatsApp",
+        "position": "fixed",
+        "bottom": "73px",
+        "zIndex": "30",
+        "svg": 1,
+        "message": "Hi, I'm enquiring about this product: Malibu 5 Seater Corner 2c2 High Back.",
+        "reference": null,
+        "overflow": {
+          "innerWidth": 320,
+          "scrollWidth": 320,
+          "ok": true
+        }
+      }
+    },
+    {
+      "name": "Product no overflow 320px",
+      "pass": true,
+      "details": {
+        "innerWidth": 320,
+        "scrollWidth": 320,
+        "ok": true
+      }
+    },
+    {
+      "name": "Product sticky bar clears FAB 320px",
+      "pass": true,
+      "details": {
+        "bar": {
+          "box": {
+            "x": 0,
+            "y": 844,
+            "width": 320,
+            "height": 65
+          },
+          "height": 65
+        },
+        "fab": {
+          "x": 170.484375,
+          "y": 723,
+          "width": 133.515625,
+          "height": 48
+        }
+      }
+    },
+    {
+      "name": "Mobile bottom nav clears FAB 320px",
+      "pass": true,
+      "details": {
+        "nav": {
+          "x": 0,
+          "y": 787,
+          "width": 320,
+          "height": 57
+        },
+        "fab": {
+          "x": 170.484375,
+          "y": 723,
+          "width": 133.515625,
+          "height": 48
+        }
+      }
+    },
+    {
+      "name": "Consent outranks FAB 390px",
+      "pass": true,
+      "details": {
+        "consentZ": 60,
+        "fabZ": "30",
+        "overlap": true
+      }
+    },
+    {
+      "name": "Homepage immediate fixed labelled FAB 390px",
+      "pass": true,
+      "details": {
+        "visible": true,
+        "box": {
+          "x": 240.484375,
+          "y": 723,
+          "width": 133.515625,
+          "height": 48
+        },
+        "href": "https://wa.me/447476616022?text=Hi%2C%20I%E2%80%99d%20like%20some%20help%20with%20a%20sofa%20enquiry.",
+        "text": "WhatsApp",
+        "position": "fixed",
+        "bottom": "73px",
+        "zIndex": "30",
+        "svg": 1,
+        "message": "Hi, I’d like some help with a sofa enquiry.",
+        "reference": null,
+        "overflow": {
+          "innerWidth": 390,
+          "scrollWidth": 390,
+          "ok": true
+        }
+      }
+    },
+    {
+      "name": "Homepage no overflow 390px",
+      "pass": true,
+      "details": {
+        "innerWidth": 390,
+        "scrollWidth": 390,
+        "ok": true
+      }
+    },
+    {
+      "name": "Homepage FAB persists at bottom 390px",
+      "pass": true,
+      "details": {
+        "box": {
+          "x": 240.484375,
+          "y": 723,
+          "width": 133.515625,
+          "height": 48
+        }
+      }
+    },
+    {
+      "name": "Product immediate fixed FAB 390px",
+      "pass": true,
+      "details": {
+        "visible": true,
+        "box": {
+          "x": 240.484375,
+          "y": 723,
+          "width": 133.515625,
+          "height": 48
+        },
+        "href": "https://wa.me/447476616022?text=Hi%2C%20I'm%20enquiring%20about%20this%20product%3A%20Malibu%205%20Seater%20Corner%202c2%20High%20Back.",
+        "text": "WhatsApp",
+        "position": "fixed",
+        "bottom": "73px",
+        "zIndex": "30",
+        "svg": 1,
+        "message": "Hi, I'm enquiring about this product: Malibu 5 Seater Corner 2c2 High Back.",
+        "reference": null,
+        "overflow": {
+          "innerWidth": 390,
+          "scrollWidth": 390,
+          "ok": true
+        }
+      }
+    },
+    {
+      "name": "Product no overflow 390px",
+      "pass": true,
+      "details": {
+        "innerWidth": 390,
+        "scrollWidth": 390,
+        "ok": true
+      }
+    },
+    {
+      "name": "Product sticky bar clears FAB 390px",
+      "pass": true,
+      "details": {
+        "bar": {
+          "box": {
+            "x": 0,
+            "y": 844,
+            "width": 390,
+            "height": 65
+          },
+          "height": 65
+        },
+        "fab": {
+          "x": 240.484375,
+          "y": 723,
+          "width": 133.515625,
+          "height": 48
+        }
+      }
+    },
+    {
+      "name": "Mobile bottom nav clears FAB 390px",
+      "pass": true,
+      "details": {
+        "nav": {
+          "x": 0,
+          "y": 787,
+          "width": 390,
+          "height": 57
+        },
+        "fab": {
+          "x": 240.484375,
+          "y": 723,
+          "width": 133.515625,
+          "height": 48
+        }
+      }
+    },
+    {
+      "name": "Consent outranks FAB 430px",
+      "pass": true,
+      "details": {
+        "consentZ": 60,
+        "fabZ": "30",
+        "overlap": true
+      }
+    },
+    {
+      "name": "Homepage immediate fixed labelled FAB 430px",
+      "pass": true,
+      "details": {
+        "visible": true,
+        "box": {
+          "x": 280.484375,
+          "y": 723,
+          "width": 133.515625,
+          "height": 48
+        },
+        "href": "https://wa.me/447476616022?text=Hi%2C%20I%E2%80%99d%20like%20some%20help%20with%20a%20sofa%20enquiry.",
+        "text": "WhatsApp",
+        "position": "fixed",
+        "bottom": "73px",
+        "zIndex": "30",
+        "svg": 1,
+        "message": "Hi, I’d like some help with a sofa enquiry.",
+        "reference": null,
+        "overflow": {
+          "innerWidth": 430,
+          "scrollWidth": 430,
+          "ok": true
+        }
+      }
+    },
+    {
+      "name": "Homepage no overflow 430px",
+      "pass": true,
+      "details": {
+        "innerWidth": 430,
+        "scrollWidth": 430,
+        "ok": true
+      }
+    },
+    {
+      "name": "Homepage FAB persists at bottom 430px",
+      "pass": true,
+      "details": {
+        "box": {
+          "x": 280.484375,
+          "y": 723,
+          "width": 133.515625,
+          "height": 48
+        }
+      }
+    },
+    {
+      "name": "Product immediate fixed FAB 430px",
+      "pass": true,
+      "details": {
+        "visible": true,
+        "box": {
+          "x": 280.484375,
+          "y": 723,
+          "width": 133.515625,
+          "height": 48
+        },
+        "href": "https://wa.me/447476616022?text=Hi%2C%20I'm%20enquiring%20about%20this%20product%3A%20Malibu%205%20Seater%20Corner%202c2%20High%20Back.",
+        "text": "WhatsApp",
+        "position": "fixed",
+        "bottom": "73px",
+        "zIndex": "30",
+        "svg": 1,
+        "message": "Hi, I'm enquiring about this product: Malibu 5 Seater Corner 2c2 High Back.",
+        "reference": null,
+        "overflow": {
+          "innerWidth": 430,
+          "scrollWidth": 430,
+          "ok": true
+        }
+      }
+    },
+    {
+      "name": "Product no overflow 430px",
+      "pass": true,
+      "details": {
+        "innerWidth": 430,
+        "scrollWidth": 430,
+        "ok": true
+      }
+    },
+    {
+      "name": "Product sticky bar clears FAB 430px",
+      "pass": true,
+      "details": {
+        "bar": {
+          "box": {
+            "x": 0,
+            "y": 844,
+            "width": 430,
+            "height": 65
+          },
+          "height": 65
+        },
+        "fab": {
+          "x": 280.484375,
+          "y": 723,
+          "width": 133.515625,
+          "height": 48
+        }
+      }
+    },
+    {
+      "name": "Mobile bottom nav clears FAB 430px",
+      "pass": true,
+      "details": {
+        "nav": {
+          "x": 0,
+          "y": 787,
+          "width": 430,
+          "height": 57
+        },
+        "fab": {
+          "x": 280.484375,
+          "y": 723,
+          "width": 133.515625,
+          "height": 48
+        }
+      }
+    },
+    {
+      "name": "Consent outranks FAB 1440px",
+      "pass": true,
+      "details": {
+        "consentZ": 60,
+        "fabZ": "30",
+        "overlap": true
+      }
+    },
+    {
+      "name": "Homepage immediate fixed labelled FAB 1440px",
+      "pass": true,
+      "details": {
+        "visible": true,
+        "box": {
+          "x": 1290.484375,
+          "y": 828,
+          "width": 133.515625,
+          "height": 48
+        },
+        "href": "https://wa.me/447476616022?text=Hi%2C%20I%E2%80%99d%20like%20some%20help%20with%20a%20sofa%20enquiry.",
+        "text": "WhatsApp",
+        "position": "fixed",
+        "bottom": "24px",
+        "zIndex": "30",
+        "svg": 1,
+        "message": "Hi, I’d like some help with a sofa enquiry.",
+        "reference": null,
+        "overflow": {
+          "innerWidth": 1440,
+          "scrollWidth": 1440,
+          "ok": true
+        }
+      }
+    },
+    {
+      "name": "Homepage no overflow 1440px",
+      "pass": true,
+      "details": {
+        "innerWidth": 1440,
+        "scrollWidth": 1440,
+        "ok": true
+      }
+    },
+    {
+      "name": "Homepage FAB persists at bottom 1440px",
+      "pass": true,
+      "details": {
+        "box": {
+          "x": 1290.484375,
+          "y": 828,
+          "width": 133.515625,
+          "height": 48
+        }
+      }
+    },
+    {
+      "name": "Product immediate fixed FAB 1440px",
+      "pass": true,
+      "details": {
+        "visible": true,
+        "box": {
+          "x": 1290.484375,
+          "y": 828,
+          "width": 133.515625,
+          "height": 48
+        },
+        "href": "https://wa.me/447476616022?text=Hi%2C%20I'm%20enquiring%20about%20this%20product%3A%20Malibu%205%20Seater%20Corner%202c2%20High%20Back.",
+        "text": "WhatsApp",
+        "position": "fixed",
+        "bottom": "24px",
+        "zIndex": "30",
+        "svg": 1,
+        "message": "Hi, I'm enquiring about this product: Malibu 5 Seater Corner 2c2 High Back.",
+        "reference": null,
+        "overflow": {
+          "innerWidth": 1440,
+          "scrollWidth": 1440,
+          "ok": true
+        }
+      }
+    },
+    {
+      "name": "Product no overflow 1440px",
+      "pass": true,
+      "details": {
+        "innerWidth": 1440,
+        "scrollWidth": 1440,
+        "ok": true
+      }
+    }
+  ],
+  "refs": {
+    "malibu": {
+      "refA": "UKSS-WA-260907-WIW5IB",
+      "refB": "UKSS-WA-260907-6THFEP"
+    },
+    "roma": {
+      "refA": "UKSS-WA-260907-5M8S9W",
+      "refB": "UKSS-WA-260907-P1W257"
+    }
+  },
+  "contexts": {
+    "malibu": {
+      "a": {
+        "productId": "973aa493-e161-4875-a6a2-9e2438f1c927",
+        "variantId": "9cfdb758-3881-42ed-ab85-1b4a1518908c",
+        "productName": "Malibu 5 Seater Corner 2c2 High Back"
+      },
+      "b": {
+        "productId": "973aa493-e161-4875-a6a2-9e2438f1c927",
+        "variantId": "8818f239-49b4-4bb7-8730-8021cf8f54b6",
+        "productName": "Malibu 5 Seater Corner 2c2 High Back"
+      }
+    },
+    "roma": {
+      "a": {
+        "productId": "dca5a543-4db8-40a5-95c6-d4acbef2ba51",
+        "variantId": "fdc54adb-777c-4dcd-83e1-64e5938b631a",
+        "productName": "Roma Recliner 3+2 Seater Manual Sofa"
+      },
+      "b": {
+        "productId": "dca5a543-4db8-40a5-95c6-d4acbef2ba51",
+        "variantId": "0070ac5b-28c0-4fab-96ae-5193d1c6ffe2",
+        "productName": "Roma Recliner 3+2 Seater Manual Sofa"
+      }
+    }
+  },
+  "whatsappPayloads": [
+    {
+      "reference": "UKSS-WA-260907-8W1VDI",
+      "pageUrl": "https://www.uksofashop.co.uk/?utm_source=r2qa&utm_medium=automation&utm_campaign=tracking_v2_final&gclid=r2qa-final-1788762742405",
+      "pageContext": "whatsapp_fab"
+    },
+    {
+      "reference": "UKSS-WA-260907-WIW5IB",
+      "pageUrl": "https://www.uksofashop.co.uk/shop/corner-sofa/malibu-high-back-5-seater-corner-2c2",
+      "pageContext": "whatsapp_fab_product",
+      "productId": "973aa493-e161-4875-a6a2-9e2438f1c927",
+      "variantId": "9cfdb758-3881-42ed-ab85-1b4a1518908c",
+      "productName": "Malibu 5 Seater Corner 2c2 High Back"
+    },
+    {
+      "reference": "UKSS-WA-260907-6THFEP",
+      "pageUrl": "https://www.uksofashop.co.uk/shop/corner-sofa/malibu-high-back-5-seater-corner-2c2",
+      "pageContext": "whatsapp_fab_product",
+      "productId": "973aa493-e161-4875-a6a2-9e2438f1c927",
+      "variantId": "8818f239-49b4-4bb7-8730-8021cf8f54b6",
+      "productName": "Malibu 5 Seater Corner 2c2 High Back"
+    },
+    {
+      "reference": "UKSS-WA-260907-5M8S9W",
+      "pageUrl": "https://www.uksofashop.co.uk/shop/recliner/roma-recliner-manual-3-and-2",
+      "pageContext": "whatsapp_fab_product",
+      "productId": "dca5a543-4db8-40a5-95c6-d4acbef2ba51",
+      "variantId": "fdc54adb-777c-4dcd-83e1-64e5938b631a",
+      "productName": "Roma Recliner 3+2 Seater Manual Sofa"
+    },
+    {
+      "reference": "UKSS-WA-260907-P1W257",
+      "pageUrl": "https://www.uksofashop.co.uk/shop/recliner/roma-recliner-manual-3-and-2",
+      "pageContext": "whatsapp_fab_product",
+      "productId": "dca5a543-4db8-40a5-95c6-d4acbef2ba51",
+      "variantId": "0070ac5b-28c0-4fab-96ae-5193d1c6ffe2",
+      "productName": "Roma Recliner 3+2 Seater Manual Sofa"
+    }
+  ],
+  "metaPayloads": [
+    {
+      "event": "Contact",
+      "eventId": "bd47ef97-822a-4594-a095-350a8c5bc757",
+      "path": "/?utm_source=r2qa&utm_medium=automation&utm_campaign=tracking_v2_final&gclid=r2qa-final-1788762742405",
+      "value": 0,
+      "currency": "GBP",
+      "contents": []
+    },
+    {
+      "event": "ViewContent",
+      "eventId": "1c5afd2a-c6c4-4400-ba24-385cdd29eb62",
+      "path": "/shop/corner-sofa/malibu-high-back-5-seater-corner-2c2",
+      "value": 749,
+      "currency": "GBP",
+      "contents": [
+        {
+          "id": "9cfdb758-3881-42ed-ab85-1b4a1518908c",
+          "quantity": 1,
+          "item_price": 749
+        }
+      ],
+      "ledgerAction": "product_view"
+    },
+    {
+      "event": "Contact",
+      "eventId": "646a0406-1f10-4cdc-b5b2-52c26438ae1a",
+      "path": "/shop/corner-sofa/malibu-high-back-5-seater-corner-2c2",
+      "value": 0,
+      "currency": "GBP",
+      "contents": []
+    },
+    {
+      "event": "ViewContent",
+      "eventId": "14f69029-9335-4f66-9387-e418ae980775",
+      "path": "/shop/corner-sofa/malibu-high-back-5-seater-corner-2c2",
+      "value": 749,
+      "currency": "GBP",
+      "contents": [
+        {
+          "id": "8818f239-49b4-4bb7-8730-8021cf8f54b6",
+          "quantity": 1,
+          "item_price": 749
+        }
+      ],
+      "ledgerAction": "product_view"
+    },
+    {
+      "event": "Contact",
+      "eventId": "b5fbc937-2fbb-4130-be4e-8ab6cde9a12e",
+      "path": "/shop/corner-sofa/malibu-high-back-5-seater-corner-2c2",
+      "value": 0,
+      "currency": "GBP",
+      "contents": []
+    },
+    {
+      "event": "ViewContent",
+      "eventId": "c7af93a0-b240-4c32-8de0-3dd7a4c121f7",
+      "path": "/shop/recliner/roma-recliner-manual-3-and-2",
+      "value": 599,
+      "currency": "GBP",
+      "contents": [
+        {
+          "id": "fdc54adb-777c-4dcd-83e1-64e5938b631a",
+          "quantity": 1,
+          "item_price": 599
+        }
+      ],
+      "ledgerAction": "product_view"
+    },
+    {
+      "event": "Contact",
+      "eventId": "8d824c9f-8572-44d7-badc-54cd188ac9e9",
+      "path": "/shop/recliner/roma-recliner-manual-3-and-2",
+      "value": 0,
+      "currency": "GBP",
+      "contents": []
+    },
+    {
+      "event": "ViewContent",
+      "eventId": "907e505d-2027-445c-b781-f8e1e43218d9",
+      "path": "/shop/recliner/roma-recliner-manual-3-and-2",
+      "value": 599,
+      "currency": "GBP",
+      "contents": [
+        {
+          "id": "0070ac5b-28c0-4fab-96ae-5193d1c6ffe2",
+          "quantity": 1,
+          "item_price": 599
+        }
+      ],
+      "ledgerAction": "product_view"
+    },
+    {
+      "event": "Contact",
+      "eventId": "1fdf5fc9-bcb5-426b-ab73-e17b52f8deec",
+      "path": "/shop/recliner/roma-recliner-manual-3-and-2",
+      "value": 0,
+      "currency": "GBP",
+      "contents": []
+    },
+    {
+      "event": "ViewContent",
+      "eventId": "58d748a0-3655-4ce9-952e-54757d70984e",
+      "path": "/shop/recliner/roma-recliner-manual-3-and-2",
+      "value": 599,
+      "currency": "GBP",
+      "contents": [
+        {
+          "id": "fdc54adb-777c-4dcd-83e1-64e5938b631a",
+          "quantity": 1,
+          "item_price": 599
+        }
+      ],
+      "ledgerAction": "product_view"
+    },
+    {
+      "event": "AddToCart",
+      "eventId": "966ef9b5-4788-4887-8bfc-c84577e4bd2e",
+      "path": "/shop/recliner/roma-recliner-manual-3-and-2",
+      "value": 599,
+      "currency": "GBP",
+      "contents": [
+        {
+          "id": "fdc54adb-777c-4dcd-83e1-64e5938b631a",
+          "quantity": 1,
+          "item_price": 599
+        }
+      ],
+      "ledgerAction": "add_to_cart"
+    },
+    {
+      "event": "Contact",
+      "eventId": "9ab2ea84-9d4d-44d0-b4e8-ed0875bbe6ec",
+      "path": "/contact",
+      "value": 0,
+      "currency": "GBP",
+      "contents": [],
+      "ledgerAction": "call_click"
+    }
+  ],
+  "responsive": [
+    {
+      "width": 320,
+      "home": {
+        "visible": true,
+        "box": {
+          "x": 170.484375,
+          "y": 723,
+          "width": 133.515625,
+          "height": 48
+        },
+        "href": "https://wa.me/447476616022?text=Hi%2C%20I%E2%80%99d%20like%20some%20help%20with%20a%20sofa%20enquiry.",
+        "text": "WhatsApp",
+        "position": "fixed",
+        "bottom": "73px",
+        "zIndex": "30",
+        "svg": 1,
+        "message": "Hi, I’d like some help with a sofa enquiry.",
+        "reference": null,
+        "overflow": {
+          "innerWidth": 320,
+          "scrollWidth": 320,
+          "ok": true
+        }
+      },
+      "product": {
+        "visible": true,
+        "box": {
+          "x": 170.484375,
+          "y": 723,
+          "width": 133.515625,
+          "height": 48
+        },
+        "href": "https://wa.me/447476616022?text=Hi%2C%20I'm%20enquiring%20about%20this%20product%3A%20Malibu%205%20Seater%20Corner%202c2%20High%20Back.",
+        "text": "WhatsApp",
+        "position": "fixed",
+        "bottom": "73px",
+        "zIndex": "30",
+        "svg": 1,
+        "message": "Hi, I'm enquiring about this product: Malibu 5 Seater Corner 2c2 High Back.",
+        "reference": null,
+        "overflow": {
+          "innerWidth": 320,
+          "scrollWidth": 320,
+          "ok": true
+        }
+      }
+    },
+    {
+      "width": 390,
+      "home": {
+        "visible": true,
+        "box": {
+          "x": 240.484375,
+          "y": 723,
+          "width": 133.515625,
+          "height": 48
+        },
+        "href": "https://wa.me/447476616022?text=Hi%2C%20I%E2%80%99d%20like%20some%20help%20with%20a%20sofa%20enquiry.",
+        "text": "WhatsApp",
+        "position": "fixed",
+        "bottom": "73px",
+        "zIndex": "30",
+        "svg": 1,
+        "message": "Hi, I’d like some help with a sofa enquiry.",
+        "reference": null,
+        "overflow": {
+          "innerWidth": 390,
+          "scrollWidth": 390,
+          "ok": true
+        }
+      },
+      "product": {
+        "visible": true,
+        "box": {
+          "x": 240.484375,
+          "y": 723,
+          "width": 133.515625,
+          "height": 48
+        },
+        "href": "https://wa.me/447476616022?text=Hi%2C%20I'm%20enquiring%20about%20this%20product%3A%20Malibu%205%20Seater%20Corner%202c2%20High%20Back.",
+        "text": "WhatsApp",
+        "position": "fixed",
+        "bottom": "73px",
+        "zIndex": "30",
+        "svg": 1,
+        "message": "Hi, I'm enquiring about this product: Malibu 5 Seater Corner 2c2 High Back.",
+        "reference": null,
+        "overflow": {
+          "innerWidth": 390,
+          "scrollWidth": 390,
+          "ok": true
+        }
+      }
+    },
+    {
+      "width": 430,
+      "home": {
+        "visible": true,
+        "box": {
+          "x": 280.484375,
+          "y": 723,
+          "width": 133.515625,
+          "height": 48
+        },
+        "href": "https://wa.me/447476616022?text=Hi%2C%20I%E2%80%99d%20like%20some%20help%20with%20a%20sofa%20enquiry.",
+        "text": "WhatsApp",
+        "position": "fixed",
+        "bottom": "73px",
+        "zIndex": "30",
+        "svg": 1,
+        "message": "Hi, I’d like some help with a sofa enquiry.",
+        "reference": null,
+        "overflow": {
+          "innerWidth": 430,
+          "scrollWidth": 430,
+          "ok": true
+        }
+      },
+      "product": {
+        "visible": true,
+        "box": {
+          "x": 280.484375,
+          "y": 723,
+          "width": 133.515625,
+          "height": 48
+        },
+        "href": "https://wa.me/447476616022?text=Hi%2C%20I'm%20enquiring%20about%20this%20product%3A%20Malibu%205%20Seater%20Corner%202c2%20High%20Back.",
+        "text": "WhatsApp",
+        "position": "fixed",
+        "bottom": "73px",
+        "zIndex": "30",
+        "svg": 1,
+        "message": "Hi, I'm enquiring about this product: Malibu 5 Seater Corner 2c2 High Back.",
+        "reference": null,
+        "overflow": {
+          "innerWidth": 430,
+          "scrollWidth": 430,
+          "ok": true
+        }
+      }
+    },
+    {
+      "width": 1440,
+      "home": {
+        "visible": true,
+        "box": {
+          "x": 1290.484375,
+          "y": 828,
+          "width": 133.515625,
+          "height": 48
+        },
+        "href": "https://wa.me/447476616022?text=Hi%2C%20I%E2%80%99d%20like%20some%20help%20with%20a%20sofa%20enquiry.",
+        "text": "WhatsApp",
+        "position": "fixed",
+        "bottom": "24px",
+        "zIndex": "30",
+        "svg": 1,
+        "message": "Hi, I’d like some help with a sofa enquiry.",
+        "reference": null,
+        "overflow": {
+          "innerWidth": 1440,
+          "scrollWidth": 1440,
+          "ok": true
+        }
+      },
+      "product": {
+        "visible": true,
+        "box": {
+          "x": 1290.484375,
+          "y": 828,
+          "width": 133.515625,
+          "height": 48
+        },
+        "href": "https://wa.me/447476616022?text=Hi%2C%20I'm%20enquiring%20about%20this%20product%3A%20Malibu%205%20Seater%20Corner%202c2%20High%20Back.",
+        "text": "WhatsApp",
+        "position": "fixed",
+        "bottom": "24px",
+        "zIndex": "30",
+        "svg": 1,
+        "message": "Hi, I'm enquiring about this product: Malibu 5 Seater Corner 2c2 High Back.",
+        "reference": null,
+        "overflow": {
+          "innerWidth": 1440,
+          "scrollWidth": 1440,
+          "ok": true
+        }
+      }
+    }
+  ],
+  "errors": [],
+  "finishedAt": "2026-09-07T06:34:01.515Z",
+  "summary": {
+    "pass": 45,
+    "fail": 1,
+    "total": 46
+  }
+}
