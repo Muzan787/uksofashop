@@ -9,12 +9,15 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
+      BASE_SHA: 8de4c3ff2ef774e5d1311311c5391331587775a7
       NEXT_PUBLIC_SUPABASE_URL: https://nznpeqjnoobhyxwnmsez.supabase.co
       NEXT_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_tMk28Ay_hIljhv8NQcV01Q_cI9ApS9c
       QA_URL: http://127.0.0.1:3000
       NODE_PATH: /tmp/pw/node_modules
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -25,7 +28,8 @@ jobs:
           npx eslint src/components/Home/ProductRail.tsx
           npx tsc --noEmit
           npm run build
-          git diff --check 04e4154a537fb4c5c5a5058f86cd83b4077b4752...HEAD
+          git diff --check "$BASE_SHA"...HEAD
+          test "$(git diff --name-only "$BASE_SHA"...HEAD | grep -v '^\.github/workflows/p2a-validation.yml$')" = "src/components/Home/ProductRail.tsx"
       - name: Install Chromium
         run: |
           mkdir -p /tmp/pw
