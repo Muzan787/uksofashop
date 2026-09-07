@@ -81,14 +81,14 @@ export const ARTICLES: Article[] = [
     heading: 'Made to your size',
     eyebrow: 'How we work',
     description:
-      'What you can actually change on a made-to-order sofa, how the 69-colour fabric library and the free samples work, and the one real trade-off: made-to-measure is exempt from the 14-day right to change your mind.',
+      'What you can actually change on a made-to-order sofa, how the 70-colour fabric library and the free samples work, and the one real trade-off: made-to-measure is exempt from the 14-day right to change your mind.',
     lede: 'Our fabric sofas are built after you order rather than picked off a shelf. That buys you the size and the colour. It costs you something too, and this is the honest version of both.',
     published: '2026-09-03',
     updated: '2026-09-03',
     toc: [
       { id: 'what', label: 'What it actually means' },
       { id: 'size', label: 'Changing the size' },
-      { id: 'fabric', label: 'The 69 colours' },
+      { id: 'fabric', label: 'The 70 colours' },
       { id: 'samples', label: 'Order the samples' },
       { id: 'catch', label: 'The catch, plainly' },
       { id: 'faults', label: 'Faults are different' },

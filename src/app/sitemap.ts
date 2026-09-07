@@ -14,7 +14,7 @@ import { ARTICLES } from './journal/articles'
 // Excluded for that reason: /search, /track-order, /checkout, /account,
 // /wishlist, /login, /signup, /confirm-order/*, and everything under /admin.
 //
-// /fabrics and /swatches are both listed, and both carry the same 69 swatch
+// /fabrics and /swatches are both listed, and both carry the same 70 swatch
 // photographs. They are here as two entries rather than one because they
 // answer two different questions - /fabrics is the guide ("what is chenille"),
 // /swatches is the order form ("send me some") - and each targets the query

@@ -143,7 +143,7 @@ export default async function ProductPage(props: { params: Params, searchParams:
   //
   // The conditions are unchanged: a signed-out visitor still asks nothing of
   // the wishlist table, a product with no variant_group_id still asks nothing
-  // of variant_groups, and a stocked recliner still does not load 69 fabrics.
+  // of variant_groups, and a stocked recliner still does not load 70 fabrics.
   const [
     wishlistItem,
     group,

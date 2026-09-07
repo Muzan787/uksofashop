@@ -46,9 +46,9 @@ export default function MadeToOrderExplained() {
         </p>
       </Note>
 
-      <h2 id="fabric">The 69 colours</h2>
+      <h2 id="fabric">The 70 colours</h2>
       <p>
-        Every made-to-order sofa can be built in any fabric in the library: 69 colours across six
+        Every made-to-order sofa can be built in any fabric in the library: 70 colours across six
         materials — chenille, plush velvet, crushed velvet, naple, marble and PVC leather.
       </p>
       <p>

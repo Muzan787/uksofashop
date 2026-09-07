@@ -57,7 +57,7 @@ import SwatchBrowser from './SwatchBrowser'
 
 const DESCRIPTION =
   `Pick up to ${MAX_SAMPLES} fabric samples and we will post them free, anywhere on the UK mainland. ` +
-  'All 69 made-to-order colours across chenille, plush velvet, crushed velvet, naple, marble and ' +
+  'All 70 made-to-order colours across chenille, plush velvet, crushed velvet, naple, marble and ' +
   'PVC leather. Nothing to pay, nothing to send back.'
 
 /**

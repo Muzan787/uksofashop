@@ -155,7 +155,7 @@ export default function SofaJargonExplained() {
         </li>
       </ul>
       <p>
-        There are 69 colours across those six, all at the same price, and the{' '}
+        There are 70 colours across those six, all at the same price, and the{' '}
         <Link href="/fabrics">fabric guide</Link> shows every one of them properly.
       </p>
 

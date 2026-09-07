@@ -32,14 +32,14 @@ export function GET() {
 > A furniture retailer in Blackburn, Lancashire, selling sofas, corner sofas
 > and recliners across UK Mainland. Free delivery in 2-4 working days, paid for
 > in cash or by bank transfer on the doorstep rather than upfront. Fabric sofas
-> are made to order in the customer's own size and any of 69 colours; leather
+> are made to order in the customer's own size and any of 70 colours; leather
 > sofas are stocked in set sizes.
 
 ## Buying guides
 
 - [Sofa size and measurement guide](${url('/size-guide')}): whether a sofa fits through a door, hallway or stair turn. Includes a doorway calculator.
-- [Sofa fabric guide](${url('/fabrics')}): all 69 made-to-order colours across chenille, plush velvet, crushed velvet, naple, marble and PVC leather, and how each behaves. Three free samples posted.
-- [Free fabric samples](${url('/swatches')}): the same 69 colours as a filterable picker rather than a guide, for ordering three samples posted free to the UK mainland. No account, no payment.
+- [Sofa fabric guide](${url('/fabrics')}): all 70 made-to-order colours across chenille, plush velvet, crushed velvet, naple, marble and PVC leather, and how each behaves. Three free samples posted.
+- [Free fabric samples](${url('/swatches')}): the same 70 colours as a filterable picker rather than a guide, for ordering three samples posted free to the UK mainland. No account, no payment.
 - [Sofa care and cleaning guide](${url('/care-guide')}): weekly upkeep, what to do in the first thirty seconds of a spill, and separate routines for real leather and tech leather.
 ${ARTICLES_BY_DATE.map(a => `- [${a.title}](${url(`/journal/${a.slug}`)}): ${a.description}`).join('\n')}
 
@@ -55,7 +55,7 @@ ${ARTICLES_BY_DATE.map(a => `- [${a.title}](${url(`/journal/${a.slug}`)}): ${a.d
 
 - [All sofas](${url('/shop/all')})
 - [Corner sofas](${url('/shop/corner-sofa')})
-- [Fabric sofas](${url('/shop/fabric-sofa')}): made to order, own size, 69 colours.
+- [Fabric sofas](${url('/shop/fabric-sofa')}): made to order, own size, 70 colours.
 - [Leather sofas](${url('/shop/leather-sofa')}): Roma is real leather with fabric panels; Nova is tech leather, a coated synthetic. Stocked sizes.
 - [Recliner sofas](${url('/shop/recliner')})
 - [Electric recliner sofas](${url('/shop/electric-sofa')})

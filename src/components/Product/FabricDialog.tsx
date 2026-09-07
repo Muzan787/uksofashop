@@ -25,14 +25,14 @@ interface Props {
 /**
  * The whole fabric range, and the two different things a customer does with it.
  *
- * A made-to-order sofa can be built in any of 69 fabrics, and we have
+ * A made-to-order sofa can be built in any of 70 fabrics, and we have
  * photographs of it in three or four. So this dialog cannot pretend to be a
  * gallery: it is the fabric itself, shown as large as the panel allows, with
  * the frame photographs left alone to do the job they are good at.
  *
  * TWO JOBS, KEPT APART. Choosing what the sofa is made in, and choosing what to
  * post through someone's letterbox, are different decisions that happen to use
- * the same 69 tiles. If both were "tap the tile" nobody would know which one
+ * the same 70 tiles. If both were "tap the tile" nobody would know which one
  * they had just done - people would add a sample and believe they had changed
  * their sofa's colour. So a tap opens the fabric, and the two actions are named
  * buttons inside it.

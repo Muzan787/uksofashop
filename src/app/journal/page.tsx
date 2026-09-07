@@ -111,7 +111,7 @@ export default function JournalPage() {
         <ul>
           <li>
             <Link href="/fabrics">Choosing your fabric</Link> — what chenille, plush velvet,
-            crushed velvet, naple, marble and PVC leather each actually do in a room, and all 69
+            crushed velvet, naple, marble and PVC leather each actually do in a room, and all 70
             colours to look at.
           </li>
           <li>

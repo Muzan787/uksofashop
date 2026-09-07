@@ -1,6 +1,6 @@
 // src/app/journal/articles/fabric-or-leather.tsx
 //
-// SCOPE NOTE. /fabrics owns the six fabrics and the 69 colours in depth, and
+// SCOPE NOTE. /fabrics owns the six fabrics and the 70 colours in depth, and
 // the care guide owns cleaning both surfaces. This piece owns the CHOICE, and
 // it is deliberately organised by household - children, pets, allergies,
 // temperature - rather than by material, so it does not become a second and
@@ -23,7 +23,7 @@
 // conclude the opposite, which is what happened the first time this was written.
 //
 // Other facts from elsewhere:
-//   69 colours / 6 fabrics, 3 free samples   /fabrics, actions/swatches.ts
+//   70 colours / 6 fabrics, 3 free samples   /fabrics, actions/swatches.ts
 //   fabric made to order, leather stocked
 //   with the full 14 days                    products.custom_made, via the
 //                                            returnPolicy in utils/schema.ts
@@ -50,7 +50,7 @@ export default function FabricOrLeather() {
         Worth being precise, because the trade often is not.
       </p>
       <p>
-        <strong>Our fabric sofas</strong> are made to order in any of 69 colours across six
+        <strong>Our fabric sofas</strong> are made to order in any of 70 colours across six
         materials — chenille, plush velvet, crushed velvet, naple, marble and PVC leather — all at
         the same price. The <Link href="/fabrics">fabric guide</Link> covers what each one does.
       </p>

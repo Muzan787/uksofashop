@@ -2,7 +2,7 @@
 //
 // The fabric library, read once per made-to-order product page.
 //
-// One query rather than one per collection: 69 rows is nothing, and the page
+// One query rather than one per collection: 70 rows is nothing, and the page
 // needs all of them anyway - the dialog switches between collections without
 // going back to the server, so a customer comparing a Chenille against a Naple
 // is not waiting on a round trip each time they change their mind.

@@ -15,14 +15,14 @@ import { SamplesProvider, CollectionSwatches, SampleBar } from '@/components/Pro
  * page is the sort of drift nobody notices and nothing benefits from.
  */
 const DESCRIPTION =
-  'All 69 fabrics we build made-to-order sofas in, and how to choose between them: what chenille, plush velvet, crushed velvet, naple, marble and PVC leather each do in a real room. Three free samples posted.'
+  'All 70 fabrics we build made-to-order sofas in, and how to choose between them: what chenille, plush velvet, crushed velvet, naple, marble and PVC leather each do in a real room. Three free samples posted.'
 
 export const metadata: Metadata = {
   alternates: { canonical: '/fabrics' },
   // 42 characters, so the brand suffix still fits inside ~57. The old title
   // listed all six fabrics, ran to 80 with the suffix, and was cut off mid-word
   // in results - the six names are in the description and the H2s instead.
-  title: 'Sofa Fabric Guide: 69 Colours, 6 Fabrics',
+  title: 'Sofa Fabric Guide: 70 Colours, 6 Fabrics',
   description: DESCRIPTION,
 }
 
