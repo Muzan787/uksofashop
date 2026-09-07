@@ -1,0 +1,60 @@
+name: R2 final combined production sign-off
+
+on:
+  push:
+    branches:
+      - r2-live-qa
+    paths:
+      - '.github/workflows/r2-final-combined-signoff.yml'
+
+jobs:
+  signoff:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: r2-live-qa
+      - run: npm ci
+      - run: npm install --no-save playwright-core@latest
+      - name: Run full responsive and variant matrix
+        shell: bash
+        run: |
+          set +e
+          rm -rf qa-artifacts-pass
+          node qa/r2-final-pass.mjs
+          echo "matrix_code=$?" >> "$GITHUB_ENV"
+          exit 0
+      - name: Run corrected checkout-start trigger
+        run: node qa/r2-checkout-start.mjs
+      - name: Enforce combined sign-off
+        run: |
+          node - <<'NODE'
+          const fs = require('fs')
+          const matrix = JSON.parse(fs.readFileSync('qa-artifacts-pass/results.json', 'utf8'))
+          const checkout = JSON.parse(fs.readFileSync('qa-checkout-start.json', 'utf8'))
+          const failures = matrix.checks.filter(x => !x.pass)
+          const allowed = failures.length === 1 && failures[0].name === 'Checkout start request emitted'
+          if (failures.length && !allowed) {
+            console.error('Unexpected matrix failures:', failures)
+            process.exit(1)
+          }
+          if (!checkout.passed || checkout.checkoutPayload?.ledgerAction !== 'checkout_start') {
+            console.error('Corrected checkout_start test did not pass:', checkout)
+            process.exit(1)
+          }
+          console.log(JSON.stringify({
+            matrixPass: matrix.summary.pass,
+            matrixSupersededHarnessAssertion: failures.map(x => x.name),
+            correctedCheckoutStart: checkout.passed,
+            productionSha: matrix.productionSha,
+          }))
+          NODE
+      - name: Upload combined evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: r2-final-combined-signoff
+          path: |
+            qa-artifacts-pass
+            qa-checkout-start.json
+            qa-checkout-start.png
