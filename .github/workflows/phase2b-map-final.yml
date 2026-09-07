@@ -98,7 +98,8 @@ jobs:
               assert(texts.length===4,`Expected 4 regional rows, got ${texts.length} @${width}`);
               for (const [label,window] of pairs) {
                 assert(texts.some(t=>t.includes(label) && t.includes(window)),`row pair missing ${label}/${window} @${width}`);
-                assert(html.includes(label) && html.includes(window),`rendered HTML missing ${label}/${window} @${width}`);
+                const serializedLabel=label.replaceAll('&','&amp;');
+                assert(html.includes(serializedLabel) && html.includes(window),`rendered HTML missing ${label}/${window} @${width}`);
               }
               await section.scrollIntoViewIfNeeded();
               await page.waitForTimeout(250);
