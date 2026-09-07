@@ -1,0 +1,91 @@
+name: Phase 2B final protected live smokes
+
+on:
+  push:
+    branches: [qa/cro-phase2b-final-smokes]
+
+permissions:
+  contents: read
+
+jobs:
+  smokes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PROD: https://www.uksofashop.co.uk
+      EXPECTED_MASTER: 8c95f41dab666b3af4dc8aa05a951f1193c8fa75
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.EXPECTED_MASTER }}
+      - name: Protected source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_MASTER"
+          grep -Fq 'data-lenis-prevent-horizontal' src/components/Home/ProductRail.tsx
+          grep -Fq "confirmed_at = coalesce(o.confirmed_at, now())" supabase/migrations/20260907172933_atomic_confirm_order_timestamp.sql
+          echo PROTECTED_SOURCE=PASS
+      - name: Browser harness
+        run: |
+          mkdir -p /tmp/pw
+          npm install --prefix /tmp/pw playwright-core@1.55.0
+      - name: Phase 2A native + Lenis gesture smoke and Tracking V2.1 smoke
+        env:
+          NODE_PATH: /tmp/pw/node_modules
+        shell: bash
+        run: |
+          node <<'NODE'
+          const {chromium}=require('playwright-core');
+          const assert=(c,m)=>{if(!c)throw new Error(m)};
+          const PROD=process.env.PROD;
+          const custom='/shop/fabric-sofa/verona-high-back-4-seater-corner-1c2?variant=a5d2050d-c458-4e0c-b3b3-7b7c727845a0';
+          const bodyText=async p=>(await p.locator('body').textContent())||'';
+          (async()=>{
+            const browser=await chromium.launch({executablePath:'/usr/bin/google-chrome',headless:true,args:['--no-sandbox']});
+
+            // Phase 2A: raw touch for Lenis vertical path, native synthesized touch for horizontal overflow.
+            {
+              const c=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+              await c.route(/google-analytics|googletagmanager|googleadservices|connect\.facebook\.net|facebook\.com\/tr/i,r=>r.abort());
+              await c.route('**/api/attribution/**',r=>r.abort()); await c.route('**/api/meta/**',r=>r.abort());
+              const p=await c.newPage(); await p.goto(PROD+'/?phase2a_final_smoke='+Date.now(),{waitUntil:'networkidle',timeout:60000});
+              const dlg=p.getByRole('dialog',{name:'Cookies on this site'}); if(await dlg.count()){await p.getByRole('button',{name:'Essential only'}).click();await p.waitForTimeout(500)}
+              const rail=p.locator('[data-lenis-prevent-horizontal]').first(); await rail.scrollIntoViewIfNeeded(); await p.waitForTimeout(600); await p.evaluate(()=>window.scrollBy(0,-120)); await p.waitForTimeout(400); await rail.evaluate(e=>e.scrollLeft=0);
+              let box=await rail.boundingBox(); assert(box,'Phase2A rail box missing');
+              const x=Math.max(80,Math.min(300,box.x+Math.min(box.width*.5,180))); const y=Math.max(300,Math.min(650,box.y+Math.min(box.height*.35,160)));
+              const cdp=await c.newCDPSession(p);
+              const beforeV=await p.evaluate(()=>({y:scrollY,l:document.querySelector('[data-lenis-prevent-horizontal]')?.scrollLeft||0}));
+              await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y}]});
+              for(const dy of [35,70,105,140,175,210]){await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x,y:y-dy}]});await new Promise(r=>setTimeout(r,60))}
+              await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]}); await p.waitForTimeout(1400);
+              const afterV=await p.evaluate(()=>({y:scrollY,l:document.querySelector('[data-lenis-prevent-horizontal]')?.scrollLeft||0}));
+              console.log(`PHASE2A_VERTICAL_EVIDENCE beforeY=${beforeV.y} afterY=${afterV.y} pageDelta=${afterV.y-beforeV.y} beforeLeft=${beforeV.l} afterLeft=${afterV.l} railDelta=${afterV.l-beforeV.l}`);
+              assert(afterV.y-beforeV.y>80,`Phase2A vertical page delta ${afterV.y-beforeV.y}`); assert(Math.abs(afterV.l-beforeV.l)<30,`Phase2A vertical rail delta ${afterV.l-beforeV.l}`);
+
+              await rail.scrollIntoViewIfNeeded(); await rail.evaluate(e=>e.scrollLeft=0); await p.waitForTimeout(500); box=await rail.boundingBox(); assert(box,'Phase2A rail box2 missing');
+              const x2=Math.max(90,Math.min(300,box.x+Math.min(box.width*.65,220))); const y2=Math.max(250,Math.min(650,box.y+Math.min(box.height*.35,160)));
+              const beforeH=await p.evaluate(()=>({y:scrollY,l:document.querySelector('[data-lenis-prevent-horizontal]')?.scrollLeft||0}));
+              await cdp.send('Input.synthesizeScrollGesture',{x:x2,y:y2,xDistance:-250,speed:700,preventFling:true,gestureSourceType:'touch'}); await p.waitForTimeout(1400);
+              const afterH=await p.evaluate(()=>({y:scrollY,l:document.querySelector('[data-lenis-prevent-horizontal]')?.scrollLeft||0}));
+              console.log(`PHASE2A_HORIZONTAL_EVIDENCE beforeY=${beforeH.y} afterY=${afterH.y} pageDelta=${afterH.y-beforeH.y} beforeLeft=${beforeH.l} afterLeft=${afterH.l} railDelta=${afterH.l-beforeH.l}`);
+              assert(afterH.l-beforeH.l>80,`Phase2A horizontal rail delta ${afterH.l-beforeH.l}`); assert(Math.abs(afterH.y-beforeH.y)<60,`Phase2A horizontal page delta ${afterH.y-beforeH.y}`);
+              console.log('PHASE2A=UNCHANGED'); await c.close();
+            }
+
+            // Tracking V2.1: one first-party arrival, consent state, product-aware FAB href, checkout load, zero JS page errors. No fake order and no WhatsApp click.
+            {
+              const c=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+              await c.route(/google-analytics|googletagmanager|googleadservices|connect\.facebook\.net|facebook\.com\/tr/i,r=>r.abort());
+              const p=await c.newPage(); const errs=[]; const arrivals=[]; p.on('pageerror',e=>errs.push(e.message)); p.on('response',r=>{if(r.url().includes('/api/attribution/arrival'))arrivals.push(r.status())});
+              await p.goto(PROD+'/?tracking_v21_final_smoke='+Date.now(),{waitUntil:'networkidle',timeout:60000}); await p.waitForTimeout(1200);
+              const names=new Set((await c.cookies(PROD)).map(x=>x.name)); for(const n of ['uksofashop_vid','uksofashop_sid','uksofashop_aid'])assert(names.has(n),`tracking missing ${n}`); assert(arrivals.some(s=>s>=200&&s<300),`arrival statuses ${arrivals.join(',')}`);
+              const dlg=p.getByRole('dialog',{name:'Cookies on this site'}); assert(await dlg.count()===1,'consent UI missing'); await p.getByRole('button',{name:'Essential only'}).click(); await p.waitForTimeout(600); assert(await p.evaluate(()=>localStorage.getItem('cookie_consent'))==='denied','consent state not persisted');
+              await p.goto(PROD+custom,{waitUntil:'networkidle',timeout:60000}); await p.waitForTimeout(800); const fab=p.locator('a[aria-label="Chat with us on WhatsApp"]'); await fab.waitFor({state:'visible',timeout:15000}); await p.waitForFunction(()=>/Verona/i.test(document.querySelector('a[aria-label="Chat with us on WhatsApp"]')?.getAttribute('href')||''),null,{timeout:10000}); const href=await fab.getAttribute('href'); assert(href&&/wa\.me|whatsapp/i.test(href)&&/Verona/i.test(href),'product WhatsApp FAB href not product-aware/valid');
+              await p.goto(PROD+'/checkout',{waitUntil:'domcontentloaded',timeout:60000}); assert((await bodyText(p)).trim().length>0,'checkout route blank'); assert(errs.length===0,`tracking runtime pageerrors ${errs.join(' | ')}`);
+              console.log(`TRACKING_V21=UNCHANGED visitorSessionArrivalIDs=PASS arrivalStatuses=${arrivals.join(',')} consent=PASS productFAB=PASS checkout=PASS runtimeErrors=0`); await c.close();
+            }
+
+            console.log('FINAL_PROTECTED_SMOKES=PASS'); await browser.close();
+          })().catch(e=>{console.error(e.stack||e);process.exit(1)});
+          NODE
