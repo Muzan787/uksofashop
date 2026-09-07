@@ -27,3 +27,5 @@ jobs:
         run: |
           git diff --check d787931d9f9e8556f026d11dd9758fbb3ac95e04..HEAD
           test "$(git diff --name-only d787931d9f9e8556f026d11dd9758fbb3ac95e04..HEAD)" = "src/utils/attribution/useWhatsAppCTA.ts"
+
+# validation rerun: event-time reference preparation
