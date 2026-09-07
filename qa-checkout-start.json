@@ -1,0 +1,69 @@
+{
+  "tag": "r2qa-checkout-1788763000787",
+  "productionSha": "04e4154a537fb4c5c5a5058f86cd83b4077b4752",
+  "passed": true,
+  "meta": [
+    {
+      "event": "ViewContent",
+      "eventId": "92d20400-ba17-45d8-905a-081e9b4a77cb",
+      "path": "/shop/recliner/roma-recliner-manual-3-and-2",
+      "value": 599,
+      "currency": "GBP",
+      "contents": [
+        {
+          "id": "fdc54adb-777c-4dcd-83e1-64e5938b631a",
+          "quantity": 1,
+          "item_price": 599
+        }
+      ],
+      "ledgerAction": "product_view"
+    },
+    {
+      "event": "AddToCart",
+      "eventId": "46c351dc-328f-4a26-8ec2-b94e4d22e764",
+      "path": "/shop/recliner/roma-recliner-manual-3-and-2",
+      "value": 599,
+      "currency": "GBP",
+      "contents": [
+        {
+          "id": "fdc54adb-777c-4dcd-83e1-64e5938b631a",
+          "quantity": 1,
+          "item_price": 599
+        }
+      ],
+      "ledgerAction": "add_to_cart"
+    },
+    {
+      "event": "InitiateCheckout",
+      "eventId": "583c0209-b414-4d18-a880-7c83181dfbad",
+      "path": "/checkout",
+      "value": 599,
+      "currency": "GBP",
+      "contents": [
+        {
+          "id": "fdc54adb-777c-4dcd-83e1-64e5938b631a",
+          "quantity": 1,
+          "item_price": 599
+        }
+      ],
+      "ledgerAction": "checkout_start"
+    }
+  ],
+  "error": null,
+  "checkoutPayload": {
+    "event": "InitiateCheckout",
+    "eventId": "583c0209-b414-4d18-a880-7c83181dfbad",
+    "path": "/checkout",
+    "value": 599,
+    "currency": "GBP",
+    "contents": [
+      {
+        "id": "fdc54adb-777c-4dcd-83e1-64e5938b631a",
+        "quantity": 1,
+        "item_price": 599
+      }
+    ],
+    "ledgerAction": "checkout_start"
+  },
+  "currentUrl": "https://www.uksofashop.co.uk/checkout"
+}
