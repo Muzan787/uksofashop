@@ -30,11 +30,12 @@ jobs:
           npm run build
           git diff --check "$BASE_SHA"...HEAD
           test "$(git diff --name-only "$BASE_SHA"...HEAD | grep -v '^\.github/workflows/p2a-validation.yml$')" = "src/components/Home/ProductRail.tsx"
-      - name: Install Chromium
+      - name: Prepare system Chrome
         run: |
           mkdir -p /tmp/pw
-          npm install --prefix /tmp/pw playwright@1.55.0
-          /tmp/pw/node_modules/.bin/playwright install --with-deps chromium
+          npm install --prefix /tmp/pw playwright-core@1.55.0
+          command -v google-chrome || command -v google-chrome-stable
+          (google-chrome --version || google-chrome-stable --version)
       - name: Start app
         run: |
           nohup npm run start >/tmp/ukss-next.log 2>&1 &
@@ -48,8 +49,10 @@ jobs:
         shell: bash
         run: |
           xvfb-run -a node <<'NODE'
-          const { chromium } = require('playwright');
+          const { chromium } = require('playwright-core');
           const fs = require('fs');
+          const chromePath = ['/usr/bin/google-chrome','/usr/bin/google-chrome-stable'].find(fs.existsSync);
+          if (!chromePath) throw new Error('System Google Chrome not found');
           const widths = [320,390,430,768];
           const results = [];
 
@@ -94,26 +97,25 @@ jobs:
             await targetFor(rail, kind === 'gap' ? 'image' : kind).scrollIntoViewIfNeeded();
             await page.waitForTimeout(300);
           }
-          async function gesture(page, p, xDistance, yDistance) {
+          async function nativeGesture(page, p, xDistance, yDistance) {
             const cdp = await page.context().newCDPSession(page);
+            await cdp.send('Emulation.setTouchEmulationEnabled', { enabled:true, maxTouchPoints:5 });
+            await cdp.send('Input.setIgnoreInputEvents', { ignore:false });
             await cdp.send('Input.synthesizeScrollGesture', {
               x: Math.round(p.x), y: Math.round(p.y),
               xDistance, yDistance,
-              speed: 700,
+              speed: 500,
               preventFling: true,
               gestureSourceType: 'touch'
             });
-            await page.waitForTimeout(700);
+            await page.waitForTimeout(900);
           }
           async function run(page, rail, name, kind, xd, yd) {
             await reset(page,rail,kind);
             const p = await startPoint(rail,kind);
-            const hit = await page.evaluate(({x,y}) => {
-              const e=document.elementFromPoint(x,y); return e ? `${e.tagName}.${e.className}` : null;
-            }, p);
+            const hit = await page.evaluate(({x,y}) => { const e=document.elementFromPoint(x,y); return e ? `${e.tagName}.${e.className}` : null; }, p);
             const before={y:await page.evaluate(()=>window.scrollY),x:await rail.evaluate(el=>el.scrollLeft)};
-            console.log(JSON.stringify({name,start:p,hit,before}));
-            await gesture(page,p,xd,yd);
+            await nativeGesture(page,p,xd,yd);
             const after={y:await page.evaluate(()=>window.scrollY),x:await rail.evaluate(el=>el.scrollLeft)};
             const r={name,kind,start:p,hit,before,after,pageDelta:after.y-before.y,railDelta:after.x-before.x};
             console.log(JSON.stringify(r));
@@ -123,16 +125,16 @@ jobs:
           function horizontal(r){ if(r.railDelta<35||Math.abs(r.pageDelta)>70) throw new Error(`${r.name} horizontal FAIL ${JSON.stringify(r)}`); }
 
           (async()=>{
-            const browser=await chromium.launch({headless:false});
+            const browser=await chromium.launch({headless:false,executablePath:chromePath,args:['--disable-gpu','--no-sandbox']});
             try{
               for(const width of widths){
                 const context=await browser.newContext({viewport:{width,height:width===768?1024:844},isMobile:width<768,hasTouch:true});
                 const page=await context.newPage(); await page.emulateMedia({reducedMotion:'no-preference'}); await protect(page); await page.goto(process.env.QA_URL,{waitUntil:'domcontentloaded'});
                 const {section,rail}=await getParts(page); const cases=[]; let r;
 
-                await page.evaluate(()=>window.scrollTo(0,0)); await page.waitForTimeout(200);
+                await page.evaluate(()=>window.scrollTo(0,0)); await page.waitForTimeout(300);
                 const controlBefore=await page.evaluate(()=>scrollY);
-                await gesture(page,{x:Math.min(50,width-10),y:Math.min(650,(width===768?1024:844)-40)},0,-180);
+                await nativeGesture(page,{x:Math.min(40,width-10),y:Math.min(650,(width===768?1024:844)-40)},0,-180);
                 const controlAfter=await page.evaluate(()=>scrollY);
                 console.log(JSON.stringify({width,controlBefore,controlAfter,controlDelta:controlAfter-controlBefore}));
                 if(controlAfter-controlBefore<40) throw new Error(`${width} native compositor control gesture failed ${controlBefore}->${controlAfter}`);
