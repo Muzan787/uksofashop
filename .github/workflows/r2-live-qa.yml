@@ -1,0 +1,63 @@
+name: R2 production browser QA
+
+on:
+  push:
+    branches:
+      - r2-live-qa
+    paths:
+      - 'qa/r2-live-qa.mjs'
+      - '.github/workflows/r2-live-qa.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  live-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install repo dependencies
+        run: npm ci
+
+      - name: Install Playwright core only
+        run: npm install --no-save --package-lock=false playwright-core@1.55.0
+
+      - name: Run production browser QA
+        id: qa
+        continue-on-error: true
+        run: node qa/r2-live-qa.mjs
+
+      - name: Upload QA artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r2-live-qa-artifacts
+          path: qa-artifacts/
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Commit QA evidence to QA branch
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -f qa-artifacts
+          if ! git diff --cached --quiet; then
+            git commit -m 'Record production R2 live QA evidence [skip ci]'
+            git push origin HEAD:r2-live-qa
+          fi
+
+      - name: Enforce QA result
+        if: always()
+        shell: bash
+        run: |
+          if [ '${{ steps.qa.outcome }}' != 'success' ]; then
+            echo 'Production browser QA reported one or more failures.'
+            exit 1
+          fi
