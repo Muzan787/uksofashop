@@ -4,22 +4,20 @@
 import { useState } from 'react';
 import { AlertTriangle, Check, Loader2, Truck } from 'lucide-react';
 import { PROMISES } from '@/constants/promises';
-import { deliveryWindow, type DeliveryWindow } from '@/utils/delivery';
 import { isMainland, isValidUkPostcode, lookupAddresses, normalisePostcode } from '@/utils/postcode';
 
 type Result =
-  | { kind: 'free'; postcode: string; window: DeliveryWindow }
+  | { kind: 'free'; postcode: string }
   | { kind: 'offMainland'; postcode: string }
   | { kind: 'error'; message: string };
 
 /**
  * "When will it get here, and does it cost anything?"
  *
- * The page already states 2–4 working days and free UK Mainland delivery. That
- * is a policy, not an answer: a customer paying cash on the doorstep is
- * deciding whether they will be in the house on a particular day, and whether
- * the number they have been quoted is the number they will hand over. This
- * turns both into facts about their address.
+ * The postcode can safely answer whether the free UK Mainland service applies.
+ * It cannot safely assign a delivery band inside the mainland, so this component
+ * deliberately keeps the timing qualified instead of fabricating regional
+ * precision from the postcode string.
  *
  * The postcode does most of the work locally: the pattern check and the
  * mainland ranges are the two things the answer actually depends on. The
@@ -51,9 +49,6 @@ export default function DeliveryEstimator() {
     setPending(true);
     setResult(null);
 
-    // The date is computed first and is never contingent on the network.
-    const window = deliveryWindow();
-
     try {
       await lookupAddresses(postcode);
     } catch (err) {
@@ -66,7 +61,7 @@ export default function DeliveryEstimator() {
       // Anything else is our problem, not the customer's. See the doc above.
     }
 
-    setResult({ kind: 'free', postcode, window });
+    setResult({ kind: 'free', postcode });
     setPending(false);
   }
 
@@ -118,11 +113,8 @@ export default function DeliveryEstimator() {
               <Check aria-hidden="true" className="h-4 w-4 shrink-0" />
               Free delivery to {result.postcode}
             </p>
-            <p className="m-0 mt-2 font-data text-body font-semibold tabular-nums text-ink-900">
-              Delivered{' '}
-              <time dateTime={result.window.fromISO}>{result.window.label.split(' – ')[0]}</time>
-              {' – '}
-              <time dateTime={result.window.toISO}>{result.window.label.split(' – ')[1]}</time>
+            <p className="m-0 mt-2 text-body font-semibold text-ink-900">
+              {PROMISES.delivery.timingLong}
             </p>
             <p className="m-0 mt-2 text-caption leading-relaxed text-ink-500">
               {PROMISES.delivery.sub}. {PROMISES.payment.long}

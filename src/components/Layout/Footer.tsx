@@ -65,7 +65,7 @@ const legalLinks = [
 const SOCIAL_ICONS = { facebook: Facebook, instagram: Instagram, tiktok: TikTokIcon } as const;
 const SOCIAL_LABELS = { facebook: 'Facebook', instagram: 'Instagram', tiktok: 'TikTok' } as const;
 
-const socials = SOCIAL_PROFILES.map(({ platform, url }) => ({
+const socials = SOCIAL_PROFILES.filter((profile) => !profile.placeholder).map(({ platform, url }) => ({
   Icon: SOCIAL_ICONS[platform],
   href: url,
   label: SOCIAL_LABELS[platform],
