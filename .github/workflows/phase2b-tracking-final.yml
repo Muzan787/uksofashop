@@ -1,0 +1,93 @@
+name: Phase 2B tracking and Phase 2A fallback smoke
+
+on:
+  push:
+    branches: [qa/cro-phase2b-tracking-final]
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PROD: https://www.uksofashop.co.uk
+      EXPECTED_MASTER: 8c95f41dab666b3af4dc8aa05a951f1193c8fa75
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.EXPECTED_MASTER }}
+      - name: Protected source check
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_MASTER"
+          grep -Fq 'data-lenis-prevent-horizontal' src/components/Home/ProductRail.tsx
+          grep -Fq "confirmed_at = coalesce(o.confirmed_at, now())" supabase/migrations/20260907172933_atomic_confirm_order_timestamp.sql
+          echo PROTECTED_SOURCE=PASS
+      - name: Prepare browser
+        run: |
+          mkdir -p /tmp/pw
+          npm install --prefix /tmp/pw playwright-core@1.55.0
+      - name: Live protected smokes
+        env:
+          NODE_PATH: /tmp/pw/node_modules
+        shell: bash
+        run: |
+          node <<'NODE'
+          const {chromium}=require('playwright-core');
+          const assert=(c,m)=>{if(!c)throw new Error(m)};
+          const PROD=process.env.PROD;
+          const custom='/shop/fabric-sofa/verona-high-back-4-seater-corner-1c2?variant=a5d2050d-c458-4e0c-b3b3-7b7c727845a0';
+          const body=async p=>(await p.locator('body').textContent())||'';
+          (async()=>{
+            const browser=await chromium.launch({executablePath:'/usr/bin/google-chrome',headless:true,args:['--no-sandbox']});
+
+            // Phase 2A fallback horizontal behavior: this does not replace the already-proven touch vertical path;
+            // it verifies the live rail itself still accepts native horizontal scrolling and does not move the page.
+            {
+              const c=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+              await c.route(/google-analytics|googletagmanager|googleadservices|connect\.facebook\.net|facebook\.com\/tr/i,r=>r.abort());
+              await c.route('**/api/attribution/**',r=>r.abort()); await c.route('**/api/meta/**',r=>r.abort());
+              const p=await c.newPage(); await p.goto(PROD+'/?phase2a_horizontal_fallback='+Date.now(),{waitUntil:'networkidle',timeout:60000});
+              const dlg=p.getByRole('dialog',{name:'Cookies on this site'}); if(await dlg.count()){await p.getByRole('button',{name:'Essential only'}).click();await p.waitForTimeout(400)}
+              const rail=p.locator('[data-lenis-prevent-horizontal]').first(); await rail.evaluate(el=>window.scrollTo(0,el.getBoundingClientRect().top+window.scrollY-120)); await p.waitForTimeout(600); await rail.evaluate(e=>e.scrollLeft=0);
+              const box=await rail.boundingBox(); assert(box,'rail box missing');
+              const before=await p.evaluate(()=>({y:scrollY,l:document.querySelector('[data-lenis-prevent-horizontal]')?.scrollLeft||0,sw:document.querySelector('[data-lenis-prevent-horizontal]')?.scrollWidth||0,cw:document.querySelector('[data-lenis-prevent-horizontal]')?.clientWidth||0}));
+              assert(before.sw>before.cw,`rail not horizontally scrollable sw=${before.sw} cw=${before.cw}`);
+              await p.mouse.move(Math.min(box.x+box.width-50,box.x+220),Math.min(box.y+box.height-50,box.y+180));
+              await p.mouse.wheel(260,0); await p.waitForTimeout(1000);
+              const after=await p.evaluate(()=>({y:scrollY,l:document.querySelector('[data-lenis-prevent-horizontal]')?.scrollLeft||0}));
+              console.log(`PHASE2A_HORIZONTAL_FALLBACK beforeY=${before.y} afterY=${after.y} pageDelta=${after.y-before.y} beforeLeft=${before.l} afterLeft=${after.l} railDelta=${after.l-before.l} scrollWidth=${before.sw} clientWidth=${before.cw}`);
+              assert(after.l-before.l>80,`rail horizontal native scroll delta ${after.l-before.l}`); assert(Math.abs(after.y-before.y)<40,`page moved on horizontal rail scroll ${after.y-before.y}`);
+              console.log('PHASE2A_HORIZONTAL_SCROLLABILITY=PASS'); await c.close();
+            }
+
+            // Tracking V2.1 live non-destructive smoke.
+            {
+              const c=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+              await c.route(/google-analytics|googletagmanager|googleadservices|connect\.facebook\.net|facebook\.com\/tr/i,r=>r.abort());
+              const p=await c.newPage(); const pageErrors=[]; const arrivals=[];
+              p.on('pageerror',e=>pageErrors.push(e.message));
+              p.on('response',r=>{if(r.url().includes('/api/attribution/arrival'))arrivals.push(r.status())});
+              await p.goto(PROD+'/?tracking_v21_final='+Date.now(),{waitUntil:'networkidle',timeout:60000}); await p.waitForTimeout(1200);
+              const names=new Set((await c.cookies(PROD)).map(x=>x.name));
+              for(const n of ['uksofashop_vid','uksofashop_sid','uksofashop_aid'])assert(names.has(n),`tracking missing ${n}`);
+              assert(arrivals.some(s=>s>=200&&s<300),`arrival statuses ${arrivals.join(',')}`);
+              const dlg=p.getByRole('dialog',{name:'Cookies on this site'}); assert(await dlg.count()===1,'consent UI missing');
+              await p.getByRole('button',{name:'Essential only'}).click(); await p.waitForTimeout(600);
+              const consent=await p.evaluate(()=>localStorage.getItem('cookie_consent')); assert(consent==='denied',`consent=${consent}`);
+              await p.goto(PROD+custom,{waitUntil:'networkidle',timeout:60000}); await p.waitForTimeout(900);
+              const fab=p.locator('a[aria-label="Chat with us on WhatsApp"]'); await fab.waitFor({state:'visible',timeout:15000});
+              await p.waitForFunction(()=>/Verona/i.test(document.querySelector('a[aria-label="Chat with us on WhatsApp"]')?.getAttribute('href')||''),null,{timeout:10000});
+              const href=await fab.getAttribute('href'); assert(href&&/wa\.me|whatsapp/i.test(href)&&/Verona/i.test(href),'product-aware WhatsApp FAB invalid');
+              await p.goto(PROD+'/checkout',{waitUntil:'domcontentloaded',timeout:60000}); assert((await body(p)).trim().length>0,'checkout route blank');
+              assert(pageErrors.length===0,`runtime pageerrors ${pageErrors.join(' | ')}`);
+              console.log(`TRACKING_V21=UNCHANGED ids=PASS arrivals=${arrivals.join(',')} consent=${consent} productFAB=PASS checkout=PASS runtimeErrors=0`);
+              await c.close();
+            }
+
+            console.log('FINAL_SMOKES=PASS'); await browser.close();
+          })().catch(e=>{console.error(e.stack||e);process.exit(1)});
+          NODE
