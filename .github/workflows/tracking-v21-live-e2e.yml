@@ -1,0 +1,40 @@
+name: Tracking V2.1 live production proof
+
+on:
+  push:
+    branches: [qa/tracking-v21-real-order-linkage]
+
+permissions:
+  contents: read
+
+jobs:
+  live-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      NODE_PATH: /tmp/pw/node_modules
+      EXPECTED_MASTER: b385a2dbcded6fa9e65fe2d30e8af185f82c7088
+      PHASE2B_SHA: 99e8fd026c3f9ff2eb03a117ba57d6cd58edd595
+
+    steps:
+      - name: Checkout QA harness
+        uses: actions/checkout@v4
+        with:
+          ref: qa/tracking-v21-real-order-linkage
+
+      - name: Verify protected production state
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git ls-remote origin refs/heads/master | cut -f1)" = "$EXPECTED_MASTER"
+          test "$(git ls-remote origin refs/heads/fix/cro-phase2b-trust-delivery | cut -f1)" = "$PHASE2B_SHA"
+
+      - name: Prepare Chrome
+        run: |
+          mkdir -p /tmp/pw
+          npm install --prefix /tmp/pw playwright-core@1.55.0
+          command -v google-chrome
+          google-chrome --version
+
+      - name: Run live production checkout attribution matrix
+        run: node .github/scripts/tracking_v21_live_e2e.js
