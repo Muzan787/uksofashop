@@ -37,28 +37,12 @@ text = replace_once(
     path,
 )
 
-# Narrow the enquiry row to evidence used only for deterministic linkage.
-for line in [
-    "    gclid: string | null\n",
-    "    gbraid: string | null\n",
-    "    wbraid: string | null\n",
-    "    fbclid: string | null\n",
-    "    utm_source: string | null\n",
-    "    utm_medium: string | null\n",
-    "    utm_campaign: string | null\n",
-    "    utm_content: string | null\n",
-    "    utm_term: string | null\n",
-    "    ga_client_id: string | null\n",
-    "    meta_fbp: string | null\n",
-    "    meta_fbc: string | null\n",
-]:
-    text = replace_once(text, line, '', path)
-text = replace_once(
-    text,
-    ".select('reference, created_at, visitor_id, product_id, variant_id, converted_order_id, gclid, gbraid, wbraid, fbclid, utm_source, utm_medium, utm_campaign, utm_content, utm_term, ga_client_id, meta_fbp, meta_fbc')\n",
-    ".select('reference, created_at, visitor_id, product_id, variant_id, converted_order_id')\n",
-    path,
-)
+# The original candidate carried a typed linkedEnquiry object only to reuse its
+# older marketing ids as fallbacks. That would blur the current checkout browser
+# context with the earlier enquiry context, so remove the object entirely.
+linked_start = text.index("  let linkedEnquiry: {\n")
+linked_end = text.index("\n\n  const rawWhatsAppReference", linked_start)
+text = text[:linked_start] + text[linked_end:]
 for suffix in [
     " ?? linkedEnquiry?.ga_client_id",
     " ?? linkedEnquiry?.meta_fbp",
@@ -73,7 +57,9 @@ for suffix in [
     " ?? linkedEnquiry?.utm_content",
     " ?? linkedEnquiry?.utm_term",
 ]:
-    text = replace_once(text, suffix, '', path)
+    if suffix not in text:
+        raise SystemExit(f'{path}: missing linked-enquiry fallback {suffix}')
+    text = text.replace(suffix, '', 1)
 
 # Replace the reference-resolution block so stale/claimed/wrong-visitor cookies
 # retire, exact-variant mismatches remain available for a later matching basket,
@@ -142,22 +128,12 @@ new_linkage = """  const retireWhatsAppReferenceCookie = () => {
             console.error(`Could not link WhatsApp enquiry ${candidateReference} to order ${shortCode}`, claimError)
           } else if (claimed?.length === 1) {
             linkedWhatsAppReference = candidateReference
-            linkedEnquiry = enquiry
           }
         }
       }
     }
   }"""
 text = text[:start] + new_linkage + text[end:]
-
-# linkedEnquiry is intentionally retained only as proof the claim succeeded;
-# checkout attribution below uses the current request/arrival context exclusively.
-text = replace_once(
-    text,
-    "  const attribution = {\n",
-    "  void linkedEnquiry\n\n  const attribution = {\n",
-    path,
-)
 
 # Safely ordered claim: if the single order-attribution update fails, release
 # the enquiry claim. Clear the browser cookie only after both sides are linked.
