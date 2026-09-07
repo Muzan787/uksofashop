@@ -23,32 +23,32 @@ jobs:
         run: npm ci
       - name: Install Playwright core
         run: npm install --no-save playwright-core@latest
-      - name: Run final production browser QA
+      - name: Run definitive production browser QA
         id: qa
         shell: bash
         run: |
           set +e
-          rm -rf qa-artifacts-final
-          node qa/r2-final-signoff.mjs
+          rm -rf qa-artifacts-pass
+          node qa/r2-final-pass.mjs
           code=$?
           echo "code=$code" >> "$GITHUB_OUTPUT"
           exit 0
       - name: Upload final QA artifact
         uses: actions/upload-artifact@v4
         with:
-          name: r2-final-production-signoff
-          path: qa-artifacts-final
+          name: r2-final-production-pass
+          path: qa-artifacts-pass
           if-no-files-found: error
       - name: Commit final QA evidence to QA branch
         shell: bash
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -f qa-artifacts-final
+          git add -f qa-artifacts-pass
           if git diff --cached --quiet; then
             echo 'No QA evidence changes to commit'
           else
-            git commit -m 'Record final R2 production sign-off evidence'
+            git commit -m 'Record definitive R2 production pass evidence'
             git push origin HEAD:r2-live-qa
           fi
       - name: Enforce final QA result
