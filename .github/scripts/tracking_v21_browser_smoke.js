@@ -37,6 +37,10 @@ async function waitForCookie(context, name, timeoutMs = 5000) {
   return null;
 }
 
+function parseJsonCookie(raw) {
+  return JSON.parse(decodeURIComponent(raw));
+}
+
 async function operationalIds(context) {
   const c = cookieMap(await context.cookies());
   for (const name of ['uksofashop_vid', 'uksofashop_sid', 'uksofashop_aid']) {
@@ -78,7 +82,7 @@ async function operationalIds(context) {
         throw new Error(`Google-tagged visitor missing last-touch after consent: ${JSON.stringify(diagnostic)}`);
       }
       const c = await operationalIds(context);
-      const lt = JSON.parse(c.uksofashop_lt);
+      const lt = parseJsonCookie(c.uksofashop_lt);
       if (lt.gclid !== 'QA-GCLID' || lt.source !== 'google' || lt.medium !== 'cpc' || lt.campaign !== 'v21qa') {
         throw new Error(`Google last-touch mismatch: ${JSON.stringify(lt)}`);
       }
@@ -93,7 +97,7 @@ async function operationalIds(context) {
       const rawLt = await waitForCookie(context, 'uksofashop_lt');
       if (!rawLt) throw new Error('Meta-tagged visitor missing last-touch after consent');
       const c = await operationalIds(context);
-      const lt = JSON.parse(c.uksofashop_lt || '{}');
+      const lt = parseJsonCookie(c.uksofashop_lt);
       if (lt.fbclid !== 'QA-FBCLID' || lt.source !== 'facebook' || lt.medium !== 'paid_social') {
         throw new Error(`Meta last-touch mismatch: ${JSON.stringify(lt)}`);
       }
