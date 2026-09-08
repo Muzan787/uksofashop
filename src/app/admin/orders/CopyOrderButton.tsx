@@ -69,6 +69,11 @@ export function formatOrderForCopy(order: any): string {
     Number(order.fee_sofa_removal ?? 0) > 0 && `Removal: ${money(order.fee_sofa_removal)}`,
   ].filter(Boolean) as string[]
 
+  const discount = Number(order.discount_amount ?? 0)
+  const offerLine = discount > 0
+    ? `Offer${order.promotion_code ? ` ${order.promotion_code}` : ''}: −${money(discount)}`
+    : null
+
   // One item reads best inline ("Order: 1x Verona ..."); more than one needs a
   // label of its own with the blocks under it.
   const orderSection =
@@ -93,6 +98,8 @@ export function formatOrderForCopy(order: any): string {
     [`Address: ${address}`, postcode && `Postcode: ${postcode}`].filter(Boolean).join('\n'),
 
     orderSection,
+
+    offerLine,
 
     extras.length ? ['Additional:', ...extras].join('\n') : null,
 
