@@ -188,9 +188,9 @@ function OrderSummary({ compact = false, extras = NO_EXTRAS }: { compact?: boole
               </div>
             </div>
             <div className="min-w-0 flex-1">
-              <div className="truncate text-caption font-semibold text-calico-300">{item.title}</div>
-              <div className="mt-0.5 truncate text-caption text-calico-300">
-                {item.color}
+              <div className="text-caption font-semibold leading-snug text-calico-300">{item.title}</div>
+              <div className="mt-0.5 break-words text-caption leading-snug text-calico-300">
+                {item.fabric_label || item.color}
                 {item.fabric_code && (
                   <span className="font-data text-ember-300"> · {item.fabric_code}</span>
                 )}
