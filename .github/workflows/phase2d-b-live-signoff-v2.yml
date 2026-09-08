@@ -1,0 +1,113 @@
+name: Phase 2D-B live sign-off v2
+
+on:
+  push:
+    branches: [qa/phase2d-b-live-signoff]
+
+jobs:
+  live-v2:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      FINAL_SHA: eac4ab38841bf6b60140f9c5984e5274d01f8e50
+      BASE_SHA: af46a8a2524662c9f573ba055e2194cc0f95245b
+      LIVE_URL: https://www.uksofashop.co.uk
+      NODE_PATH: /tmp/pw/node_modules
+    steps:
+      - name: Checkout exact released master with history
+        uses: actions/checkout@v4
+        with:
+          ref: eac4ab38841bf6b60140f9c5984e5274d01f8e50
+          fetch-depth: 0
+
+      - name: Verify exact release SHA and protected diff scope
+        run: |
+          test "$(git rev-parse HEAD)" = "$FINAL_SHA"
+          test "$(git diff --name-only "$BASE_SHA"..HEAD)" = $'src/components/Checkout/CartStep.tsx\nsrc/components/Checkout/CheckoutClient.tsx'
+
+      - name: Prepare browser
+        run: |
+          mkdir -p /tmp/pw qa-evidence
+          npm install --prefix /tmp/pw playwright-core@1.55.0
+
+      - name: Full live Phase 2D-B QA
+        run: |
+          node <<'NODE'
+          const { chromium } = require('playwright-core');
+          const fs = require('fs');
+          const live = process.env.LIVE_URL;
+          const widths = [320,390,430,768,1440];
+          const P = {
+            vf:{variant_id:'a5d2050d-c458-4e0c-b3b3-7b7c727845a0',quantity:1,price:529,title:'Verona 4 Seater Corner 1c2 High Back',color:'Grey',image_url:'https://res.cloudinary.com/dmlna04yk/image/upload/v1787513319/Verona-4-seater-2c1-corner-high-back-sofa-grey2_uw3ny5.jpg',fabric_id:'6ce3d2c2-7f92-4276-b991-70afa07c0cf9',fabric_label:'Chenille Grey',fabric_code:'CH12',fabric_swatch:'https://res.cloudinary.com/dmlna04yk/image/upload/v1788788503/CH12_amoeer.png'},
+            roma:{variant_id:'fdc54adb-777c-4dcd-83e1-64e5938b631a',quantity:1,price:599,title:'Roma Recliner 3+2 Seater Manual Sofa',color:'Black',image_url:'https://res.cloudinary.com/dmlna04yk/image/upload/v1782248467/Black-Roma-Recliner-Manual_fu4i3h.png',fabric_id:null,fabric_label:null,fabric_code:null,fabric_swatch:null},
+            nova:{variant_id:'d81eb236-21ee-4e80-a1b3-4c5f779dbcdd',quantity:1,price:550,title:'Nova Electric Recliner 2 Seater Sofa',color:'Elephant Grey',image_url:'https://res.cloudinary.com/dmlna04yk/image/upload/v1782248436/Nova-Electric-Recliner-2-Seater-Sofa-Elephant-Grey_ddd6au.jpg',fabric_id:null,fabric_label:null,fabric_code:null,fabric_swatch:null},
+            vs:{variant_id:'a3c44d91-9756-4913-8895-e39054eba91a',quantity:1,price:549,title:'Verona 3+2 Seater High Back',color:'Grey',image_url:'https://res.cloudinary.com/dmlna04yk/image/upload/v1787517240/Verona-3_2-seater-high-back-sofa-grey_r35wa4.jpg',fabric_id:null,fabric_label:null,fabric_code:null,fabric_swatch:null}
+          };
+          const matrix=Object.values(P);
+          const result={widths:{},multi:false,quantity:false,undo:false,orderSummary:{desktop:false,mobile:false},phase2da:{},fixedUi:{},horizontalOverflow:'NONE',runtimeErrors:[],softwareKeyboard:'NOT PHYSICALLY PROVEN'};
+          const fail=m=>{throw new Error(m)};
+          async function setup(browser,width,cart,touch=width<=430,label=''){
+            const context=await browser.newContext({viewport:{width,height:width>=768?1000:844},isMobile:touch,hasTouch:touch,serviceWorkers:'block'});
+            const page=await context.newPage();
+            page.on('pageerror',e=>result.runtimeErrors.push({kind:'pageerror',width,label,message:e.message}));
+            page.on('console',m=>{if(m.type()==='error') result.runtimeErrors.push({kind:'console',width,label,message:m.text()})});
+            await page.addInitScript(c=>{localStorage.setItem('uksofashop_cart',JSON.stringify(c));localStorage.setItem('cookie_consent','denied')},cart);
+            const response=await page.goto(`${live}/checkout`,{waitUntil:'domcontentloaded',timeout:45000});
+            if(!response||!response.ok()) fail(`${width}: live checkout HTTP ${response&&response.status()}`);
+            await page.getByRole('button',{name:/Continue to delivery/i}).waitFor({state:'visible',timeout:15000});
+            return {context,page};
+          }
+          async function vis(loc,label){for(let i=0;i<await loc.count();i++)if(await loc.nth(i).isVisible())return loc.nth(i);fail(`${label}: no visible match`)}
+          async function readable(loc,label){const ok=await loc.evaluate(el=>{const s=getComputedStyle(el);return s.textOverflow!=='ellipsis'&&el.scrollHeight<=el.clientHeight+1&&el.scrollWidth<=el.clientWidth+1});if(!ok)fail(`${label}: clipped or ellipsized`)}
+          async function noOverflow(page,width){if(await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth+1)){result.horizontalOverflow='FAIL';fail(`${width}: horizontal page overflow`)}}
+          async function checkLine(page,item,width){
+            const title=await vis(page.getByText(item.title,{exact:true}),`${width} title`);await readable(title,`${width} title`);
+            const specText=item.fabric_code?`${item.fabric_label||item.color} · ${item.fabric_code}`:item.color;
+            const spec=await vis(page.getByText(specText,{exact:true}),`${width} spec`);await readable(spec,`${width} spec`);
+            const plus=page.getByRole('button',{name:`One more ${item.title}`}), remove=page.getByRole('button',{name:`Remove ${item.title} from your cart`});
+            const [pb,rb,sb]=await Promise.all([plus.boundingBox(),remove.boundingBox(),spec.boundingBox()]);
+            if(!pb||pb.width<43||pb.height<43)fail(`${width}: quantity touch target`);if(!rb||rb.width<43||rb.height<43)fail(`${width}: remove touch target`);
+            if(sb&&pb&&sb.y+sb.height>pb.y+2)fail(`${width}: specification/control collision`);
+            await vis(page.getByText(`£${item.price}`,{exact:true}),`${width} price`);
+            const ib=await title.locator('xpath=ancestor::article').locator('img').first().boundingBox();if(!ib||ib.width<60||ib.height<60)fail(`${width}: image too small`);
+            if(!(await page.getByRole('button',{name:/Continue to delivery/i}).isVisible()))fail(`${width}: checkout CTA missing`);
+            await noOverflow(page,width);
+          }
+          async function stateTest(browser,width){
+            const {context,page}=await setup(browser,width,[P.roma],width<=430,`state-${width}`);await page.getByRole('button',{name:/Continue to delivery/i}).click();
+            const f={name:page.locator('input[name="customerName"]'),email:page.locator('input[name="customerEmail"]'),phone:page.locator('input[name="customerPhone"]'),postcode:page.locator('label').filter({hasText:'Postcode'}).locator('..').locator('input[type="text"]').first(),address:page.locator('textarea[name="shippingAddress"]'),instructions:page.locator('textarea[name="specialInstructions"]')};
+            const v={name:`QA 2DB Live ${width}`,email:`qa-2db-${width}@example.com`,phone:'07700900123',postcode:'SW1A 1AA',address:`QA Phase 2DB Live Address ${width}`,instructions:`QA live 2DB marker ${width}`};
+            for(const k in f)await f[k].fill(v[k]);await page.getByRole('button',{name:/Back to Cart/i}).click();await page.getByRole('button',{name:/Continue to delivery/i}).click();
+            for(const k in f){await f[k].waitFor({state:'visible',timeout:5000});if(await f[k].inputValue()!==v[k])fail(`${width}: Phase 2D-A state ${k}`)}
+            result.phase2da[width]=true;await noOverflow(page,width);await context.close();
+          }
+          (async()=>{
+            const browser=await chromium.launch({headless:true,executablePath:'/usr/bin/google-chrome',args:['--no-sandbox']});
+            try{
+              for(const width of widths){result.widths[width]=[];for(const item of matrix){const {context,page}=await setup(browser,width,[item],width<=430,`${width}-${item.variant_id}`);await checkLine(page,item,width);if(!item.fabric_code&&await page.getByText('CH12',{exact:false}).count())fail(`${width}: fake fabric code on stocked item`);if(item===P.vf)await page.screenshot({path:`qa-evidence/cart-${width}-fabric.png`,fullPage:true});result.widths[width].push(item.title);await context.close()}}
+              const multi=await setup(browser,390,matrix,true,'multi');let prev=null;for(const item of matrix){const t=await vis(multi.page.getByText(item.title,{exact:true}),`multi ${item.title}`);const row=t.locator('xpath=ancestor::article');const b=await row.boundingBox();if(!b||(prev&&b.y<prev.y+prev.height))fail('multi-item row overlap');prev=b;await readable(t,`multi ${item.title}`)}
+              if(!(await multi.page.getByRole('button',{name:/Continue to delivery/i}).isVisible()))fail('multi CTA missing');await multi.page.getByRole('button',{name:/4 items · due on delivery/i}).click();await vis(multi.page.getByText('Subtotal',{exact:true}),'multi subtotal');if((await multi.page.getByText('£2227.00',{exact:true}).count())<1)fail('multi subtotal value');await noOverflow(multi.page,390);result.multi=true;await multi.page.screenshot({path:'qa-evidence/multi-390.png',fullPage:true});await multi.context.close();
+              const ctrl=await setup(browser,390,[P.roma],true,'controls');await ctrl.page.getByRole('button',{name:`One more ${P.roma.title}`}).click();await ctrl.page.getByText('2 in your cart',{exact:true}).waitFor({state:'attached'});await vis(ctrl.page.getByText('£1198',{exact:true}),'qty + price');await noOverflow(ctrl.page,390);await ctrl.page.getByRole('button',{name:`One fewer ${P.roma.title}`}).click();await ctrl.page.getByText('1 in your cart',{exact:true}).waitFor({state:'attached'});await vis(ctrl.page.getByText('£599',{exact:true}),'qty - price');result.quantity=true;
+              await ctrl.page.getByRole('button',{name:`Remove ${P.roma.title} from your cart`}).click();const undo=ctrl.page.getByRole('button',{name:'Undo'});await undo.waitFor({state:'visible',timeout:2000});await undo.click();await vis(ctrl.page.getByText(P.roma.title,{exact:true}),'undo title');await vis(ctrl.page.getByText('Black',{exact:true}),'undo spec');await ctrl.page.getByText('1 in your cart',{exact:true}).waitFor({state:'attached'});const totalBar=ctrl.page.getByRole('button',{name:/1 item · due on delivery/i});if(!(await totalBar.isVisible())||!(await totalBar.textContent()).includes('£599'))fail('undo total not restored');result.undo=true;await ctrl.context.close();
+              const desktop=await setup(browser,1440,[P.vf],false,'summary-desktop');const dt=desktop.page.getByText(P.vf.title,{exact:true});if(await dt.count()<2)fail('desktop summary title absent');await readable(dt.last(),'desktop summary title');await readable(desktop.page.getByText('Chenille Grey · CH12',{exact:true}).last(),'desktop summary spec');await vis(desktop.page.getByText('Subtotal',{exact:true}),'desktop subtotal');await vis(desktop.page.getByText('Delivery · UK Mainland',{exact:true}),'desktop delivery');await vis(desktop.page.getByText('FREE',{exact:true}),'desktop free delivery');await vis(desktop.page.getByText('Total due on delivery',{exact:true}),'desktop total label');if((await desktop.page.getByText('£529.00',{exact:true}).count())<2)fail('desktop totals wrong');result.orderSummary.desktop=true;await desktop.page.screenshot({path:'qa-evidence/summary-1440.png',fullPage:true});await desktop.context.close();
+              const mobile=await setup(browser,390,[P.vf],true,'summary-mobile');await mobile.page.getByRole('button',{name:/1 item · due on delivery/i}).click();const mts=mobile.page.getByText(P.vf.title,{exact:true}), tv=[];for(let i=0;i<await mts.count();i++)if(await mts.nth(i).isVisible())tv.push(mts.nth(i));if(tv.length<2)fail('mobile summary title absent');await readable(tv.at(-1),'mobile summary title');const mss=mobile.page.getByText('Chenille Grey · CH12',{exact:true}),sv=[];for(let i=0;i<await mss.count();i++)if(await mss.nth(i).isVisible())sv.push(mss.nth(i));if(sv.length<2)fail('mobile summary spec absent');await readable(sv.at(-1),'mobile summary spec');await vis(mobile.page.getByText('Subtotal',{exact:true}),'mobile subtotal');await vis(mobile.page.getByText('Delivery · UK Mainland',{exact:true}),'mobile delivery');await vis(mobile.page.getByText('Total due on delivery',{exact:true}),'mobile total');result.orderSummary.mobile=true;await noOverflow(mobile.page,390);await mobile.page.screenshot({path:'qa-evidence/summary-390.png',fullPage:true});await mobile.context.close();
+              for(const w of [390,430,1440])await stateTest(browser,w);
+              for(const w of [320,390,430]){const {context,page}=await setup(browser,w,[P.vf],true,`fixed-${w}`);const wa=page.getByRole('link',{name:'Chat with us on WhatsApp'}),bar=page.locator('[data-bottom-bar]').first(),nav=page.getByRole('navigation',{name:'Primary'});if(!(await wa.isVisible())||!(await bar.isVisible())||!(await nav.isVisible()))fail(`${w}: fixed UI missing`);const [wb,bb,nb]=await Promise.all([wa.boundingBox(),bar.boundingBox(),nav.boundingBox()]);if(!wb||!bb||!nb||bb.y+bb.height>nb.y+1||wb.y+wb.height>bb.y+1)fail(`${w}: fixed UI overlap`);const maxScroll=await page.evaluate(()=>Math.max(0,document.documentElement.scrollHeight-innerHeight));if(maxScroll>100){const y=await page.evaluate(()=>{scrollTo(0,Math.min(300,document.documentElement.scrollHeight));return scrollY});if(y<50)fail(`${w}: scroll trap`)}await noOverflow(page,w);result.fixedUi[w]=true;await context.close()}
+              if(result.runtimeErrors.some(e=>e.kind==='pageerror'))fail(`runtime page errors: ${JSON.stringify(result.runtimeErrors.filter(e=>e.kind==='pageerror'))}`);
+            }finally{fs.writeFileSync('phase2d-b-live-results-v2.json',JSON.stringify(result,null,2));await browser.close()}
+          })().catch(e=>{console.error(e);process.exit(1)});
+          NODE
+
+      - name: Show live QA results
+        if: always()
+        run: test -f phase2d-b-live-results-v2.json && cat phase2d-b-live-results-v2.json || true
+
+      - name: Upload live QA evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase2d-b-live-signoff-v2
+          path: |
+            phase2d-b-live-results-v2.json
+            qa-evidence/
+          if-no-files-found: ignore
