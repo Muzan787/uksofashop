@@ -1,0 +1,450 @@
+name: Phase 2D-B implementation and preview QA
+
+on:
+  push:
+    branches: [qa/phase2d-b-implementation]
+
+permissions:
+  contents: write
+
+jobs:
+  implement-validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      BASE_SHA: af46a8a2524662c9f573ba055e2194cc0f95245b
+      TARGET_BRANCH: fix/cro-phase2d-b-cart-readability
+      NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:9999
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: qa-dummy-anon-key
+      NODE_PATH: /tmp/pw/node_modules
+    steps:
+      - name: Checkout isolated Phase 2D-B branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/cro-phase2d-b-cart-readability
+          fetch-depth: 0
+
+      - name: Reconfirm audited defects and clean base
+        run: |
+          test "$(git rev-parse HEAD)" = "$BASE_SHA"
+          git diff --exit-code "$BASE_SHA" --
+          python - <<'PY'
+          from pathlib import Path
+          cart = Path('src/components/Checkout/CartStep.tsx').read_text()
+          checkout = Path('src/components/Checkout/CheckoutClient.tsx').read_text()
+          assert 'flex h-[88px] items-stretch' in cart, 'CartStep hard 88px row no longer present'
+          assert 'flex-1 truncate font-body text-body-sm' in cart, 'CartStep title truncate no longer present'
+          assert 'flex-1 truncate font-data text-caption' in cart, 'CartStep secondary truncate no longer present'
+          assert 'truncate text-caption font-semibold text-calico-300' in checkout, 'OrderSummary title truncate no longer present'
+          print('SOURCE_DEFECT_RECONFIRMED=YES')
+          PY
+
+      - name: Apply minimal two-file presentation change
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          cart_path = Path('src/components/Checkout/CartStep.tsx')
+          cart = cart_path.read_text()
+          old_comment = '''/**
+           * An 88px row: the photograph in a Calico 200 well flush to the left edge, the
+           * title in Geist 600, the variant in mono underneath, and the money right
+           * aligned in mono so the column of prices lines up on the decimal.
+           */'''.replace('           ', '')
+          new_comment = '''/**
+           * A compact adaptive cart line. The product identity gets the full upper row,
+           * while quantity, price and remove controls share a separate full-width row.
+           * This keeps 44px touch targets intact without forcing specification text into
+           * the narrow space beside the image on a 320px phone.
+           */'''.replace('           ', '')
+          if old_comment not in cart:
+              raise SystemExit('Expected CartStep row comment not found')
+          cart = cart.replace(old_comment, new_comment, 1)
+
+          start = cart.index('function Row({ item, onRemove, onQuantity }: {')
+          end = cart.index('// ─── Quantity', start)
+          new_row = '''function Row({ item, onRemove, onQuantity }: {
+            item: DisplayCartItem;
+            onRemove: () => void;
+            onQuantity: (q: number) => void;
+          }) {
+            const specification = item.fabric_label?.trim() || item.color?.trim() || '';
+
+            return (
+              <article className="grid grid-cols-[64px_minmax(0,1fr)] gap-x-3 gap-y-1 rounded-md border border-calico-300 bg-calico-50 p-2 shadow-e1 sm:grid-cols-[72px_minmax(0,1fr)]">
+                <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-sm bg-calico-200 sm:h-[72px] sm:w-[72px]">
+                  <Image
+                    src={item.image_url || '/placeholder.svg'}
+                    alt=""
+                    fill
+                    sizes="72px"
+                    placeholder={item.image_url ? 'blur' : undefined}
+                    blurDataURL={item.image_url ? blurDataURL(item.image_url) : undefined}
+                    className="object-cover"
+                  />
+                </div>
+
+                <div className="min-w-0 self-start py-0.5">
+                  <h3 className="m-0 break-words font-body text-body-sm font-semibold leading-snug text-ink-900">
+                    {item.title}
+                  </h3>
+
+                  {(specification || item.fabric_code) && (
+                    <p className="m-0 mt-1 break-words font-data text-caption leading-snug text-ink-500">
+                      {specification}
+                      {item.fabric_code && (
+                        <span className="text-ember-700">
+                          {specification ? ' · ' : ''}{item.fabric_code}
+                        </span>
+                      )}
+                    </p>
+                  )}
+                </div>
+
+                <div className="col-span-2 flex min-w-0 items-center gap-1 pt-1">
+                  <Stepper quantity={item.quantity} title={item.title} onChange={onQuantity} />
+
+                  <span className="ml-auto shrink-0 font-data text-body font-semibold tabular-nums text-ink-900">
+                    £{(item.price * item.quantity).toFixed(0)}
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={onRemove}
+                    aria-label={`Remove ${item.title} from your cart`}
+                    className="hover-icon flex h-11 w-11 shrink-0 items-center justify-center rounded-sm text-ink-400 hover:text-rust-700"
+                  >
+                    <Trash2 aria-hidden="true" className="h-4 w-4" />
+                  </button>
+                </div>
+              </article>
+            );
+          }
+
+          '''.replace('          ', '')
+          cart = cart[:start] + new_row + cart[end:]
+          cart_path.write_text(cart)
+
+          checkout_path = Path('src/components/Checkout/CheckoutClient.tsx')
+          checkout = checkout_path.read_text()
+          old_title = '<div className="truncate text-caption font-semibold text-calico-300">{item.title}</div>'
+          new_title = '<div className="text-caption font-semibold leading-snug text-calico-300">{item.title}</div>'
+          if checkout.count(old_title) != 1:
+              raise SystemExit(f'Expected one OrderSummary title truncate, found {checkout.count(old_title)}')
+          checkout = checkout.replace(old_title, new_title, 1)
+
+          old_spec = '''<div className="mt-0.5 truncate text-caption text-calico-300">
+                {item.color}
+                {item.fabric_code && (
+                  <span className="font-data text-ember-300"> · {item.fabric_code}</span>
+                )}
+              </div>'''
+          new_spec = '''<div className="mt-0.5 break-words text-caption leading-snug text-calico-300">
+                {item.fabric_label || item.color}
+                {item.fabric_code && (
+                  <span className="font-data text-ember-300"> · {item.fabric_code}</span>
+                )}
+              </div>'''
+          if checkout.count(old_spec) != 1:
+              raise SystemExit(f'Expected one OrderSummary secondary truncate, found {checkout.count(old_spec)}')
+          checkout = checkout.replace(old_spec, new_spec, 1)
+          checkout_path.write_text(checkout)
+          PY
+
+          git diff -- src/components/Checkout/CartStep.tsx src/components/Checkout/CheckoutClient.tsx
+
+      - name: Enforce diff whitelist and protected files
+        run: |
+          files=$(git diff --name-only)
+          printf '%s\n' "$files"
+          test "$files" = $'src/components/Checkout/CartStep.tsx\nsrc/components/Checkout/CheckoutClient.tsx'
+          test -z "$(git diff --name-only -- src/context/CartContext.tsx src/components/Product/ProductPageClient.tsx src/app/actions/checkout.ts src/utils/tracking.ts src/utils/orderConversions.ts src/utils/attribution src/components/Checkout/AdsPurchaseConversion.tsx src/components/Layout/WhatsAppFab.tsx src/components/Layout/MobileNav.tsx supabase/migrations)"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: ESLint changed files
+        run: npx eslint src/components/Checkout/CartStep.tsx src/components/Checkout/CheckoutClient.tsx
+
+      - name: Standalone TypeScript
+        run: npx tsc --noEmit
+
+      - name: Production build
+        run: npm run build
+
+      - name: Diff check
+        run: git diff --check
+
+      - name: Start isolated production preview
+        run: |
+          npm run start > /tmp/phase2db-app.log 2>&1 &
+          echo $! > /tmp/phase2db-app.pid
+          for i in $(seq 1 40); do
+            code=$(curl -s -o /tmp/checkout.html -w '%{http_code}' http://127.0.0.1:3000/checkout || true)
+            if [ "$code" = "200" ]; then
+              echo "Exact working-tree preview ready"
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/phase2db-app.log
+          exit 1
+
+      - name: Prepare browser
+        run: |
+          mkdir -p /tmp/pw
+          npm install --prefix /tmp/pw playwright-core@1.55.0
+
+      - name: Representative cart and regression QA
+        run: |
+          node <<'NODE'
+          const { chromium } = require('playwright-core');
+          const fs = require('fs');
+          const base = 'http://127.0.0.1:3000';
+          const widths = [320, 390, 430, 768, 1440];
+
+          const products = {
+            veronaFabric: {
+              variant_id:'a5d2050d-c458-4e0c-b3b3-7b7c727845a0', quantity:1, price:529,
+              title:'Verona 4 Seater Corner 1c2 High Back', color:'Grey',
+              image_url:'https://res.cloudinary.com/dmlna04yk/image/upload/v1787513319/Verona-4-seater-2c1-corner-high-back-sofa-grey2_uw3ny5.jpg',
+              fabric_id:'6ce3d2c2-7f92-4276-b991-70afa07c0cf9', fabric_label:'Chenille Grey', fabric_code:'CH12',
+              fabric_swatch:'https://res.cloudinary.com/dmlna04yk/image/upload/v1788788503/CH12_amoeer.png',
+            },
+            roma: {
+              variant_id:'fdc54adb-777c-4dcd-83e1-64e5938b631a', quantity:1, price:599,
+              title:'Roma Recliner 3+2 Seater Manual Sofa', color:'Black',
+              image_url:'https://res.cloudinary.com/dmlna04yk/image/upload/v1782248467/Black-Roma-Recliner-Manual_fu4i3h.png',
+              fabric_id:null, fabric_label:null, fabric_code:null, fabric_swatch:null,
+            },
+            nova: {
+              variant_id:'d81eb236-21ee-4e80-a1b3-4c5f779dbcdd', quantity:1, price:550,
+              title:'Nova Electric Recliner 2 Seater Sofa', color:'Elephant Grey',
+              image_url:'https://res.cloudinary.com/dmlna04yk/image/upload/v1782248436/Nova-Electric-Recliner-2-Seater-Sofa-Elephant-Grey_ddd6au.jpg',
+              fabric_id:null, fabric_label:null, fabric_code:null, fabric_swatch:null,
+            },
+            veronaStock: {
+              variant_id:'a3c44d91-9756-4913-8895-e39054eba91a', quantity:1, price:549,
+              title:'Verona 3+2 Seater High Back', color:'Grey',
+              image_url:'https://res.cloudinary.com/dmlna04yk/image/upload/v1787517240/Verona-3_2-seater-high-back-sofa-grey_r35wa4.jpg',
+              fabric_id:null, fabric_label:null, fabric_code:null, fabric_swatch:null,
+            },
+          };
+          const matrix = [products.veronaFabric, products.roma, products.nova, products.veronaStock];
+          const results = { widths:{}, multiItem:null, controls:null, orderSummary:null, phase2da:null, fixedUi:{} };
+          const fail = msg => { throw new Error(msg); };
+
+          async function newPage(browser, width, cart, touch=false) {
+            const context = await browser.newContext({
+              viewport:{width, height: width >= 768 ? 1000 : 844},
+              isMobile: touch,
+              hasTouch: touch,
+              serviceWorkers:'block',
+            });
+            const page = await context.newPage();
+            await page.addInitScript(c => localStorage.setItem('uksofashop_cart', JSON.stringify(c)), cart);
+            await page.route('**/api/attribution/**', r => r.fulfill({status:204, body:''}));
+            await page.route('**/api/meta/**', r => r.fulfill({status:204, body:''}));
+            await page.route(/googletagmanager\.com|google-analytics\.com|connect\.facebook\.net|facebook\.com\/tr/, r => r.fulfill({status:204, body:''}));
+            const response = await page.goto(`${base}/checkout`, {waitUntil:'domcontentloaded', timeout:30000});
+            if (!response || !response.ok()) fail(`${width}: checkout HTTP ${response && response.status()}`);
+            const essential = page.getByRole('button',{name:'Essential only'});
+            if (await essential.count()) { try { await essential.first().click({timeout:1000}); } catch {} }
+            await page.getByRole('button',{name:/Continue to delivery/i}).waitFor({state:'visible', timeout:10000});
+            return {context,page};
+          }
+
+          async function assertReadable(locator, label) {
+            await locator.waitFor({state:'visible', timeout:5000});
+            const ok = await locator.evaluate(el => {
+              const cs = getComputedStyle(el);
+              return cs.textOverflow !== 'ellipsis' && el.scrollHeight <= el.clientHeight + 1 && el.scrollWidth <= el.clientWidth + 1;
+            });
+            if (!ok) fail(`${label}: text is clipped or ellipsized`);
+          }
+
+          async function assertCartLine(page, item, width) {
+            const title = page.getByText(item.title,{exact:true}).first();
+            await assertReadable(title, `${width} ${item.title} title`);
+            const expectedSpec = item.fabric_code ? `${item.fabric_label || item.color} · ${item.fabric_code}` : item.color;
+            const spec = page.getByText(expectedSpec,{exact:true}).first();
+            await assertReadable(spec, `${width} ${item.title} specification`);
+            if (!item.fabric_code && (await page.getByText('CH12',{exact:false}).count()) > 0) {
+              fail(`${width} ${item.title}: stocked line acquired fake fabric metadata`);
+            }
+            const plus = page.getByRole('button',{name:`One more ${item.title}`});
+            const remove = page.getByRole('button',{name:`Remove ${item.title} from your cart`});
+            const [pb,rb] = await Promise.all([plus.boundingBox(),remove.boundingBox()]);
+            if (!pb || pb.width < 43 || pb.height < 43) fail(`${width} ${item.title}: quantity target shrank`);
+            if (!rb || rb.width < 43 || rb.height < 43) fail(`${width} ${item.title}: remove target shrank`);
+            const price = page.getByText(`£${item.price}`,{exact:true}).first();
+            if (!(await price.isVisible())) fail(`${width} ${item.title}: price not visible`);
+            const img = title.locator('xpath=ancestor::article').locator('img').first();
+            const ib = await img.boundingBox();
+            if (!ib || ib.width < 60 || ib.height < 60) fail(`${width} ${item.title}: product image too small`);
+            if (await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1)) {
+              fail(`${width} ${item.title}: horizontal page overflow`);
+            }
+          }
+
+          (async()=>{
+            const browser = await chromium.launch({headless:true, executablePath:'/usr/bin/google-chrome', args:['--no-sandbox']});
+            try {
+              for (const width of widths) {
+                results.widths[width] = [];
+                for (const item of matrix) {
+                  const {context,page} = await newPage(browser,width,[item],width<=430);
+                  await assertCartLine(page,item,width);
+                  results.widths[width].push({title:item.title,pass:true});
+                  await context.close();
+                }
+              }
+
+              // 320px hard gate: longest configuration plus human fabric label/code.
+              {
+                const {context,page} = await newPage(browser,320,[products.veronaFabric],true);
+                await assertCartLine(page,products.veronaFabric,320);
+                const title = page.getByText(products.veronaFabric.title,{exact:true}).first();
+                if ((await title.innerText()) !== products.veronaFabric.title) fail('320 stress: title content changed');
+                const spec = page.getByText('Chenille Grey · CH12',{exact:true}).first();
+                if (!(await spec.isVisible())) fail('320 stress: fabric specification missing');
+                await context.close();
+              }
+
+              // Multi-item cart separation, subtotal and CTA.
+              {
+                const {context,page} = await newPage(browser,390,matrix,true);
+                const articles = page.locator('article');
+                if (await articles.count() < 4) fail('multi-item: expected four cart rows');
+                const boxes = [];
+                for (let i=0;i<4;i++) boxes.push(await articles.nth(i).boundingBox());
+                for (let i=1;i<boxes.length;i++) {
+                  if (!boxes[i-1] || !boxes[i] || boxes[i].y < boxes[i-1].y + boxes[i-1].height) fail('multi-item: rows overlap');
+                }
+                const subtotal = 529+599+550+549;
+                if (!(await page.getByText(`£${subtotal.toFixed(2)}`,{exact:true}).isVisible())) fail('multi-item: subtotal not easy to locate');
+                if (!(await page.getByRole('button',{name:/Continue to delivery/i}).isVisible())) fail('multi-item: CTA not prominent/visible');
+                if (await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1)) fail('multi-item: horizontal overflow');
+                results.multiItem = true;
+                await context.close();
+              }
+
+              // Quantity +1/-1, remove and five-second Undo path.
+              {
+                const item = products.roma;
+                const {context,page} = await newPage(browser,390,[item],true);
+                await page.getByRole('button',{name:`One more ${item.title}`}).click();
+                await page.getByText('2 in your cart',{exact:true}).waitFor({state:'attached',timeout:3000});
+                if (!(await page.getByText('£1198',{exact:true}).first().isVisible())) fail('quantity +1: price did not update');
+                await page.getByRole('button',{name:`One fewer ${item.title}`}).click();
+                await page.getByText('1 in your cart',{exact:true}).waitFor({state:'attached',timeout:3000});
+                if (!(await page.getByText('£599',{exact:true}).first().isVisible())) fail('quantity -1: price did not restore');
+                await page.getByRole('button',{name:`Remove ${item.title} from your cart`}).click();
+                const undo = page.getByRole('button',{name:'Undo'});
+                await undo.waitFor({state:'visible',timeout:2000});
+                await undo.click();
+                await page.getByText(item.title,{exact:true}).first().waitFor({state:'visible',timeout:3000});
+                results.controls = {quantity:true,removeUndo:true};
+                await context.close();
+              }
+
+              // OrderSummary desktop and mobile drawer: long title and fabric code readable.
+              {
+                const item = products.veronaFabric;
+                const desktop = await newPage(browser,1440,[item],false);
+                const desktopTitles = desktop.page.getByText(item.title,{exact:true});
+                if (await desktopTitles.count() < 2) fail('desktop summary: long title missing from sidebar');
+                await assertReadable(desktopTitles.last(),'desktop OrderSummary title');
+                await assertReadable(desktop.page.getByText('Chenille Grey · CH12',{exact:true}).last(),'desktop OrderSummary spec');
+                await desktop.context.close();
+
+                const mobile = await newPage(browser,390,[item],true);
+                await mobile.page.getByRole('button',{name:/1 item · due on delivery/i}).click();
+                const mobileTitles = mobile.page.getByText(item.title,{exact:true});
+                const visibleTitles = [];
+                for (let i=0;i<await mobileTitles.count();i++) if (await mobileTitles.nth(i).isVisible()) visibleTitles.push(mobileTitles.nth(i));
+                if (visibleTitles.length < 2) fail('mobile summary: long title missing from opened drawer');
+                await assertReadable(visibleTitles[visibleTitles.length-1],'mobile OrderSummary title');
+                const summarySpec = mobile.page.getByText('Chenille Grey · CH12',{exact:true});
+                let visibleSpec = null;
+                for (let i=0;i<await summarySpec.count();i++) if (await summarySpec.nth(i).isVisible()) visibleSpec = summarySpec.nth(i);
+                if (!visibleSpec) fail('mobile summary: fabric code/spec missing');
+                await assertReadable(visibleSpec,'mobile OrderSummary spec');
+                results.orderSummary = true;
+                await mobile.context.close();
+              }
+
+              // Phase 2D-A regression at 390: all six values survive internal navigation.
+              {
+                const {context,page} = await newPage(browser,390,[products.roma],true);
+                await page.getByRole('button',{name:/Continue to delivery/i}).click();
+                const fields = {
+                  name:page.locator('input[name="customerName"]'),
+                  email:page.locator('input[name="customerEmail"]'),
+                  phone:page.locator('input[name="customerPhone"]'),
+                  postcode:page.locator('label').filter({hasText:'Postcode'}).locator('..').locator('input[type="text"]').first(),
+                  address:page.locator('textarea[name="shippingAddress"]'),
+                  instructions:page.locator('textarea[name="specialInstructions"]'),
+                };
+                const values = {
+                  name:'QA 2DB State Name', email:'qa-2db@example.com', phone:'07700900123',
+                  postcode:'SW1A 1AA', address:'QA Phase 2DB Address 123', instructions:'QA 2DB persistence marker',
+                };
+                for (const k of Object.keys(fields)) await fields[k].fill(values[k]);
+                await page.getByRole('button',{name:/Back to Cart/i}).click();
+                await page.getByRole('button',{name:/Continue to delivery/i}).click();
+                for (const k of Object.keys(fields)) {
+                  await fields[k].waitFor({state:'visible',timeout:5000});
+                  if ((await fields[k].inputValue()) !== values[k]) fail(`Phase 2D-A regression: ${k} lost`);
+                }
+                results.phase2da = true;
+                await context.close();
+              }
+
+              // Fixed mobile UI remains clear at 320/390/430. Samples bar is not a checkout component.
+              for (const width of [320,390,430]) {
+                const {context,page} = await newPage(browser,width,[products.veronaFabric],true);
+                const wa = page.getByRole('link',{name:'Chat with us on WhatsApp'});
+                const bar = page.locator('[data-bottom-bar]').first();
+                const nav = page.getByRole('navigation',{name:'Primary'});
+                if (!(await wa.isVisible()) || !(await bar.isVisible()) || !(await nav.isVisible())) fail(`${width}: fixed mobile UI missing`);
+                const [wb,bb,nb]=await Promise.all([wa.boundingBox(),bar.boundingBox(),nav.boundingBox()]);
+                if (!wb||!bb||!nb) fail(`${width}: fixed UI geometry unavailable`);
+                if (bb.y+bb.height>nb.y+1) fail(`${width}: MobileTotalBar overlaps nav`);
+                if (wb.y+wb.height>bb.y+1) fail(`${width}: WhatsApp overlaps MobileTotalBar`);
+                results.fixedUi[width]=true;
+                await context.close();
+              }
+            } finally {
+              fs.writeFileSync('phase2d-b-preview-results.json',JSON.stringify(results,null,2));
+              await browser.close();
+            }
+          })().catch(e=>{console.error(e);process.exit(1)});
+          NODE
+
+      - name: Show preview result
+        if: always()
+        run: |
+          test -f phase2d-b-preview-results.json && cat phase2d-b-preview-results.json || true
+          test -f /tmp/phase2db-app.log && tail -80 /tmp/phase2db-app.log || true
+
+      - name: Commit clean release candidate only after all gates pass
+        run: |
+          test "$(git diff --name-only)" = $'src/components/Checkout/CartStep.tsx\nsrc/components/Checkout/CheckoutClient.tsx'
+          git config user.name "Muzan787"
+          git config user.email "109960574+Muzan787@users.noreply.github.com"
+          git add src/components/Checkout/CartStep.tsx src/components/Checkout/CheckoutClient.tsx
+          git commit -m "Phase 2D-B: make cart configuration readable"
+          FEATURE_SHA=$(git rev-parse HEAD)
+          echo "$FEATURE_SHA" | tee phase2d-b-feature-sha.txt
+          git push origin HEAD:fix/cro-phase2d-b-cart-readability
+
+      - name: Upload QA evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase2d-b-preview-validation
+          path: |
+            phase2d-b-preview-results.json
+            phase2d-b-feature-sha.txt
+          if-no-files-found: ignore
