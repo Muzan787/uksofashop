@@ -1,0 +1,197 @@
+name: Phase 2C final affected preview v6
+
+on:
+  push:
+    branches: [qa/phase2c-final-preview-v6]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      FEATURE_SHA: 89aacc6db6e61da05e28b5169182601560cfabd8
+      BASE_SHA: eac4ab38841bf6b60140f9c5984e5274d01f8e50
+      NEXT_PUBLIC_SUPABASE_URL: https://nznpeqjnoobhyxwnmsez.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_tMk28Ay_hIljhv8NQcV01Q_cI9ApS9c
+      NODE_PATH: /tmp/pw/node_modules
+    steps:
+      - name: Checkout exact Phase 2C feature
+        uses: actions/checkout@v4
+        with:
+          ref: 89aacc6db6e61da05e28b5169182601560cfabd8
+          fetch-depth: 0
+
+      - name: Verify unchanged Phase 2C scope
+        run: |
+          test "$(git rev-parse HEAD)" = "$FEATURE_SHA"
+          test "$(git diff --name-only "$BASE_SHA"..HEAD)" = $'src/components/Product/BuyBox.tsx\nsrc/components/Product/Reviews.tsx'
+          test -z "$(git diff --name-only "$BASE_SHA"..HEAD -- src/components/Product/ProductPageClient.tsx src/components/Product/AddToCart.tsx src/components/Product/StickyBar.tsx src/components/Product/SecondaryActions.tsx src/context/CartContext.tsx src/components/Checkout/CartStep.tsx src/components/Checkout/CheckoutClient.tsx src/app/actions/checkout.ts src/utils/tracking.ts src/utils/orderConversions.ts src/utils/attribution src/components/Layout/WhatsAppFab.tsx supabase/migrations)"
+          git diff --check "$BASE_SHA"..HEAD
+
+      - name: Build exact tree
+        run: |
+          npm ci
+          npm run build
+          npm run start > /tmp/phase2c.log 2>&1 &
+          for i in $(seq 1 45); do
+            code=$(curl -s -o /tmp/pdp -w '%{http_code}' http://127.0.0.1:3000/shop/recliner/roma-recliner-manual-3-and-2 || true)
+            if [ "$code" = 200 ]; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/phase2c.log
+          exit 1
+
+      - name: Prepare browser
+        run: npm install --prefix /tmp/pw playwright-core@1.55.0
+
+      - name: Add to cart, Phase 2D-B cart, and mobile fixed UI
+        run: |
+          node <<'NODE'
+          const { chromium } = require('playwright-core');
+          const fs = require('fs');
+          const base = 'http://127.0.0.1:3000';
+          const out = { addToCart:{}, cart:{}, fixedUi:{}, horizontalOverflow:'NONE', runtimeErrors:[] };
+          const fail = m => { throw new Error(m); };
+
+          async function contextFor(browser, width) {
+            const touch = width <= 430;
+            const context = await browser.newContext({ viewport:{width,height:844}, isMobile:touch, hasTouch:touch });
+            const page = await context.newPage();
+            page.on('pageerror', e => out.runtimeErrors.push({width,message:e.message,stack:e.stack||null}));
+            await page.addInitScript(() => localStorage.setItem('cookie_consent','denied'));
+            await page.route('**/api/attribution/**', r => r.fulfill({status:204,body:''}));
+            await page.route('**/api/meta/**', r => r.fulfill({status:204,body:''}));
+            await page.route(/googletagmanager\.com|google-analytics\.com|connect\.facebook\.net|facebook\.com\/tr/, r => r.fulfill({status:204,body:''}));
+            return {context,page};
+          }
+
+          async function goto(page, url) {
+            const r = await page.goto(base+url,{waitUntil:'domcontentloaded',timeout:45000});
+            if(!r||!r.ok()) fail(`${url}: HTTP ${r&&r.status()}`);
+            await page.locator('h1').first().waitFor({state:'visible',timeout:15000});
+          }
+
+          async function waitVisible(locator,label) {
+            const count = await locator.count();
+            if (count) {
+              for (let i=0;i<count;i++) {
+                try { await locator.nth(i).waitFor({state:'visible',timeout:8000}); return locator.nth(i); } catch {}
+              }
+            }
+            try { await locator.first().waitFor({state:'visible',timeout:8000}); return locator.first(); }
+            catch { fail(`${label}: no visible match`); }
+          }
+
+          async function notClipped(locator,label) {
+            const m=await locator.evaluate(el=>{const s=getComputedStyle(el),r=el.getBoundingClientRect();return{overflow:s.overflow,overflowX:s.overflowX,overflowY:s.overflowY,textOverflow:s.textOverflow,lineClamp:s.webkitLineClamp,width:r.width,height:r.height,text:(el.textContent||'').trim()}});
+            if(m.textOverflow==='ellipsis'||(m.lineClamp&&m.lineClamp!=='none')||['hidden','clip'].includes(m.overflow)||['hidden','clip'].includes(m.overflowX)||['hidden','clip'].includes(m.overflowY)||m.width<=0||m.height<=0||!m.text) fail(`${label}: clipped/missing`);
+          }
+
+          async function noOverflow(page,width,label){
+            if(await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth+1)){out.horizontalOverflow='FAIL';fail(`${label} ${width}: horizontal overflow`)}
+          }
+
+          async function chooseCH12(page){
+            await (await waitVisible(page.getByRole('button',{name:/Choose from .* fabrics/i}),'fabric chooser')).click();
+            await (await waitVisible(page.getByRole('button',{name:/Chenille Grey, CH12/i}),'CH12')).click();
+            await waitVisible(page.getByText('CH12',{exact:true}),'CH12 detail');
+            await page.getByRole('button',{name:/Build mine in this|Keep this fabric/i}).click();
+            await waitVisible(page.getByText(/CH12 · every fabric is the same price/i),'chosen CH12');
+          }
+
+          async function checkCheckoutCart(page,title,spec,key){
+            await page.goto(base+'/checkout',{waitUntil:'domcontentloaded',timeout:45000});
+            const titleLoc=page.getByText(title,{exact:true});
+            await titleLoc.first().waitFor({state:'visible',timeout:10000});
+            const specLoc=page.getByText(spec,{exact:true});
+            await specLoc.first().waitFor({state:'visible',timeout:10000});
+            await notClipped(titleLoc.first(),`${key} cart title`);
+            await notClipped(specLoc.first(),`${key} cart spec`);
+            out.cart[key]=true;
+          }
+
+          (async()=>{
+            const browser=await chromium.launch({headless:true,executablePath:'/usr/bin/google-chrome',args:['--no-sandbox']});
+            try{
+              // Roma fixed product.
+              {
+                const {context,page}=await contextFor(browser,390);
+                await page.addInitScript(()=>localStorage.setItem('uksofashop_cart','[]'));
+                await goto(page,'/shop/recliner/roma-recliner-manual-3-and-2?variant=fdc54adb-777c-4dcd-83e1-64e5938b631a');
+                await (await waitVisible(page.getByRole('button',{name:/Add to cart.*£599/i}),'Roma add')).click();
+                await page.getByText('Added to cart',{exact:true}).waitFor({state:'visible',timeout:5000});
+                const cart=await page.evaluate(()=>JSON.parse(localStorage.getItem('uksofashop_cart')||'[]'));
+                if(cart.length!==1||cart[0].variant_id!=='fdc54adb-777c-4dcd-83e1-64e5938b631a'||Number(cart[0].price)!==599||cart[0].color!=='Black Leather'||cart[0].fabric_id!==null||cart[0].fabric_code!==null) fail('Roma cart payload wrong');
+                out.addToCart.roma=true;
+                await checkCheckoutCart(page,'Roma Recliner 3+2 Seater Manual Sofa','Black Leather','roma');
+                await context.close();
+              }
+
+              // Verona custom CH12.
+              {
+                const {context,page}=await contextFor(browser,390);
+                await page.addInitScript(()=>localStorage.setItem('uksofashop_cart','[]'));
+                await goto(page,'/shop/corner-sofa/verona-high-back-4-seater-corner-1c2?variant=a5d2050d-c458-4e0c-b3b3-7b7c727845a0');
+                await chooseCH12(page);
+                await (await waitVisible(page.getByRole('button',{name:/Add to cart.*£529/i}),'Verona add')).click();
+                await page.getByText('Added to cart',{exact:true}).waitFor({state:'visible',timeout:5000});
+                const cart=await page.evaluate(()=>JSON.parse(localStorage.getItem('uksofashop_cart')||'[]'));
+                if(cart.length!==1||cart[0].variant_id!=='a5d2050d-c458-4e0c-b3b3-7b7c727845a0'||Number(cart[0].price)!==529||cart[0].color!=='Chenille Grey'||cart[0].fabric_id!=='6ce3d2c2-7f92-4276-b991-70afa07c0cf9'||cart[0].fabric_code!=='CH12'||cart[0].fabric_label!=='Chenille Grey') fail('Verona cart payload wrong');
+                out.addToCart.verona=true;
+                await checkCheckoutCart(page,'Verona 4 Seater Corner 1c2 High Back','Chenille Grey · CH12','verona');
+                await context.close();
+              }
+
+              // Lily 2c2 configuration-notation product.
+              {
+                const {context,page}=await contextFor(browser,390);
+                await page.addInitScript(()=>localStorage.setItem('uksofashop_cart','[]'));
+                await goto(page,'/shop/corner-sofa/lily-high-back-5-seater-corner-2c2?variant=97e1a331-63d2-4761-bc30-9d28313bd698');
+                await chooseCH12(page);
+                await (await waitVisible(page.getByRole('button',{name:/Add to cart.*£749/i}),'Lily add')).click();
+                await page.getByText('Added to cart',{exact:true}).waitFor({state:'visible',timeout:5000});
+                const cart=await page.evaluate(()=>JSON.parse(localStorage.getItem('uksofashop_cart')||'[]'));
+                if(cart.length!==1||cart[0].variant_id!=='97e1a331-63d2-4761-bc30-9d28313bd698'||Number(cart[0].price)!==749||cart[0].color!=='Chenille Grey'||cart[0].fabric_id!=='6ce3d2c2-7f92-4276-b991-70afa07c0cf9'||cart[0].fabric_code!=='CH12'||cart[0].fabric_label!=='Chenille Grey') fail('Lily 2c2 cart payload wrong');
+                out.addToCart.lily2c2=true;
+                await checkCheckoutCart(page,'Lily 5 Seater Corner 2c2 High Back','Chenille Grey · CH12','lily2c2');
+                await context.close();
+              }
+
+              // Mobile fixed UI: sticky product bar, WhatsApp, mobile nav.
+              for(const width of [320,390,430]){
+                const {context,page}=await contextFor(browser,width);
+                await goto(page,'/shop/recliner/roma-recliner-manual-3-and-2');
+                const flowAdd=await waitVisible(page.getByRole('button',{name:/Add to cart.*£599/i}),`${width} flow add`);
+                await flowAdd.scrollIntoViewIfNeeded();
+                const before=await page.evaluate(()=>scrollY);
+                await page.evaluate(()=>scrollBy(0,650));
+                await page.waitForTimeout(700);
+                const after=await page.evaluate(()=>scrollY);
+                if(after<=before) fail(`${width}: vertical scroll did not advance`);
+                const bar=page.locator('[data-bottom-bar]').first();
+                await bar.waitFor({state:'visible',timeout:6000});
+                if(await bar.getAttribute('inert')!==null) fail(`${width}: sticky product bar remained inert`);
+                const wa=await waitVisible(page.getByRole('link',{name:'Chat with us on WhatsApp'}),`${width} WhatsApp`);
+                const nav=await waitVisible(page.getByRole('navigation',{name:'Primary'}),`${width} nav`);
+                const [bb,wb,nb]=await Promise.all([bar.boundingBox(),wa.boundingBox(),nav.boundingBox()]);
+                if(!bb||!wb||!nb) fail(`${width}: fixed boxes unavailable`);
+                if(bb.y+bb.height>nb.y+1) fail(`${width}: sticky bar overlaps bottom nav`);
+                if(wb.y+wb.height>bb.y+1) fail(`${width}: WhatsApp overlaps sticky bar`);
+                await noOverflow(page,width,'fixed-ui');
+                out.fixedUi[width]=true;
+                await context.close();
+              }
+
+              if(out.runtimeErrors.length) fail('runtime page errors: '+JSON.stringify(out.runtimeErrors));
+            } finally {
+              fs.writeFileSync('phase2c-preview-results-v6.json',JSON.stringify(out,null,2));
+              await browser.close();
+            }
+          })().catch(e=>{console.error(e);process.exit(1)});
+          NODE
+
+      - name: Show results
+        if: always()
+        run: |
+          cat phase2c-preview-results-v6.json 2>/dev/null || true
+          tail -80 /tmp/phase2c.log 2>/dev/null || true
