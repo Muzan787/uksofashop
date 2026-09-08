@@ -195,6 +195,29 @@ export type Database = {
         }
         Relationships: []
       }
+      offer_product_tiers: {
+        Row: {
+          product_id: string
+          tier: string
+        }
+        Insert: {
+          product_id: string
+          tier: string
+        }
+        Update: {
+          product_id?: string
+          tier?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offer_product_tiers_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: true
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_items: {
         Row: {
           fabric_code: string | null
@@ -267,6 +290,10 @@ export type Database = {
           delivery_floor: number
           delivery_has_lift: boolean
           delivery_total: number
+          discount_amount: number
+          discount_tier: string | null
+          promotion_code: string | null
+          offer_source: string | null
           fee_assembly: number
           fee_sofa_removal: number
           fee_upstairs: number
@@ -317,6 +344,10 @@ export type Database = {
           delivery_floor?: number
           delivery_has_lift?: boolean
           delivery_total?: number
+          discount_amount?: number
+          discount_tier?: string | null
+          promotion_code?: string | null
+          offer_source?: string | null
           fee_assembly?: number
           fee_sofa_removal?: number
           fee_upstairs?: number
@@ -367,6 +398,10 @@ export type Database = {
           delivery_floor?: number
           delivery_has_lift?: boolean
           delivery_total?: number
+          discount_amount?: number
+          discount_tier?: string | null
+          promotion_code?: string | null
+          offer_source?: string | null
           fee_assembly?: number
           fee_sofa_removal?: number
           fee_upstairs?: number
@@ -1074,6 +1109,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calculate_order_offer: {
+        Args: {
+          p_items: Json
+          p_offer_entitlement_token?: string | null
+          p_promotion_code?: string | null
+        }
+        Returns: Json
+      }
       confirm_order: {
         Args: { p_order_id: string }
         Returns: {
@@ -1124,6 +1167,8 @@ export type Database = {
           p_delivery_has_lift?: boolean
           p_expected_total: number
           p_items: Json
+          p_offer_entitlement_token?: string | null
+          p_promotion_code?: string | null
           p_shipping_address: string
           p_special_instructions: string
           p_wants_assembly?: boolean
