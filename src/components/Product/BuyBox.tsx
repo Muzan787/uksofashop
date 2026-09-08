@@ -26,8 +26,6 @@ interface Props {
   hrefForSubgroup: (sub: string) => string | undefined;
 
   sizes: SizeVariant[];
-  currentSizeLabel?: string;
-  dimensions?: string;
   onCustomSize: () => void;
 
   materials: string[];
@@ -67,8 +65,18 @@ function configurationExplanation(sizeLabel: string | undefined, title: string):
   return `${corner[0].toLowerCase()} means ${first} ${plural(first)}, corner, ${second} ${plural(second)} — ${total} seats total.`;
 }
 
-function readableDimensions(raw: string | undefined): string {
-  return (raw ?? '').replace(/\s+/g, ' ').replace(/\s*\|\s*/g, ' · ').trim();
+function readableDimensions(specifications: Product['specifications']): string {
+  if (!specifications) return '';
+
+  let specs: Record<string, string> = {};
+  if (typeof specifications === 'string') {
+    try { specs = JSON.parse(specifications); } catch { return ''; }
+  } else {
+    specs = specifications;
+  }
+
+  const raw = specs.dimensions ?? specs.Dimensions ?? '';
+  return String(raw).replace(/\s+/g, ' ').replace(/\s*\|\s*/g, ' · ').trim();
 }
 
 /**
@@ -87,7 +95,7 @@ function readableDimensions(raw: string | undefined): string {
 export default function BuyBox({
   product, price, reviewCount, averageRating, estimate, categorySlug,
   subgroups, subgroupTitle, currentSubgroup, hrefForSubgroup,
-  sizes, currentSizeLabel, dimensions, onCustomSize,
+  sizes, onCustomSize,
   materials, selectedMaterial, onSelectMaterial,
   added, onAdd, inWishlist, wishlistBusy, onWishlist,
   ctaRef,
@@ -106,8 +114,9 @@ export default function BuyBox({
   }));
 
   const materialPills: Pill[] = materials.map(m => ({ key: m, label: m }));
+  const currentSizeLabel = sizes.find(sv => sv.slug === product.slug)?.size_label;
   const configurationHelp = configurationExplanation(currentSizeLabel, product.title);
-  const dimensionText = readableDimensions(dimensions);
+  const dimensionText = readableDimensions(product.specifications);
 
   return (
     <div className="flex flex-col gap-6">
