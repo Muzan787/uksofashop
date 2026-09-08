@@ -1,0 +1,32 @@
+name: Phase 2D-B chunk diagnostic
+
+on:
+  push:
+    branches: [qa/phase2d-b-live-signoff]
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Inspect live chunk around pageerror
+        run: |
+          python - <<'PY'
+          import urllib.request, re
+          url='https://www.uksofashop.co.uk/_next/static/chunks/4398-c4fe9704b4940205.js'
+          data=urllib.request.urlopen(url,timeout=30).read().decode('utf-8')
+          print('LEN',len(data))
+          pos=15248
+          print('AROUND_OFFSET')
+          print(data[max(0,pos-1800):pos+1800])
+          print('\nWAITING_MATCHES')
+          for m in re.finditer(r'waiting',data):
+              print('MATCH',m.start(),data[max(0,m.start()-500):m.start()+700])
+          sm=re.search(r'//# sourceMappingURL=([^\s]+)',data)
+          print('SOURCEMAP',sm.group(1) if sm else None)
+          open('chunk-diagnostic.txt','w').write(data[max(0,pos-4000):pos+4000])
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: phase2d-b-chunk-diagnostic
+          path: chunk-diagnostic.txt
