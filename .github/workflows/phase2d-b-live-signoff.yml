@@ -1,0 +1,201 @@
+name: Phase 2D-B live sign-off
+
+on:
+  push:
+    branches: [qa/phase2d-b-live-signoff]
+
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      FINAL_SHA: eac4ab38841bf6b60140f9c5984e5274d01f8e50
+      LIVE_URL: https://www.uksofashop.co.uk
+      NODE_PATH: /tmp/pw/node_modules
+    steps:
+      - name: Checkout exact released master
+        uses: actions/checkout@v4
+        with:
+          ref: eac4ab38841bf6b60140f9c5984e5274d01f8e50
+          fetch-depth: 1
+
+      - name: Verify exact release SHA and protected diff scope
+        run: |
+          test "$(git rev-parse HEAD)" = "$FINAL_SHA"
+          test "$(git diff --name-only af46a8a2524662c9f573ba055e2194cc0f95245b..HEAD)" = $'src/components/Checkout/CartStep.tsx\nsrc/components/Checkout/CheckoutClient.tsx'
+
+      - name: Prepare browser
+        run: |
+          mkdir -p /tmp/pw
+          npm install --prefix /tmp/pw playwright-core@1.55.0
+
+      - name: Live cart, summary, persistence and fixed-UI QA
+        run: |
+          node <<'NODE'
+          const { chromium } = require('playwright-core');
+          const fs = require('fs');
+          const live = process.env.LIVE_URL;
+          const widths = [320, 390, 430, 768, 1440];
+          const P = {
+            vf: { variant_id:'a5d2050d-c458-4e0c-b3b3-7b7c727845a0', quantity:1, price:529, title:'Verona 4 Seater Corner 1c2 High Back', color:'Grey', image_url:'https://res.cloudinary.com/dmlna04yk/image/upload/v1787513319/Verona-4-seater-2c1-corner-high-back-sofa-grey2_uw3ny5.jpg', fabric_id:'6ce3d2c2-7f92-4276-b991-70afa07c0cf9', fabric_label:'Chenille Grey', fabric_code:'CH12', fabric_swatch:'https://res.cloudinary.com/dmlna04yk/image/upload/v1788788503/CH12_amoeer.png' },
+            roma: { variant_id:'fdc54adb-777c-4dcd-83e1-64e5938b631a', quantity:1, price:599, title:'Roma Recliner 3+2 Seater Manual Sofa', color:'Black', image_url:'https://res.cloudinary.com/dmlna04yk/image/upload/v1782248467/Black-Roma-Recliner-Manual_fu4i3h.png', fabric_id:null, fabric_label:null, fabric_code:null, fabric_swatch:null },
+            nova: { variant_id:'d81eb236-21ee-4e80-a1b3-4c5f779dbcdd', quantity:1, price:550, title:'Nova Electric Recliner 2 Seater Sofa', color:'Elephant Grey', image_url:'https://res.cloudinary.com/dmlna04yk/image/upload/v1782248436/Nova-Electric-Recliner-2-Seater-Sofa-Elephant-Grey_ddd6au.jpg', fabric_id:null, fabric_label:null, fabric_code:null, fabric_swatch:null },
+            vs: { variant_id:'a3c44d91-9756-4913-8895-e39054eba91a', quantity:1, price:549, title:'Verona 3+2 Seater High Back', color:'Grey', image_url:'https://res.cloudinary.com/dmlna04yk/image/upload/v1787517240/Verona-3_2-seater-high-back-sofa-grey_r35wa4.jpg', fabric_id:null, fabric_label:null, fabric_code:null, fabric_swatch:null },
+          };
+          const matrix = Object.values(P);
+          const result = { widths:{}, multi:false, quantity:false, undo:false, orderSummary:false, phase2da:false, fixedUi:{} };
+          const fail = m => { throw new Error(m); };
+
+          async function setup(browser, width, cart, touch = width <= 430) {
+            const context = await browser.newContext({ viewport:{width,height:width >= 768 ? 1000 : 844}, isMobile:touch, hasTouch:touch, serviceWorkers:'block' });
+            const page = await context.newPage();
+            await page.addInitScript(c => {
+              localStorage.setItem('uksofashop_cart', JSON.stringify(c));
+              localStorage.setItem('cookie_consent', 'denied');
+            }, cart);
+            await page.route('**/api/attribution/**', r => r.fulfill({status:204,body:''}));
+            await page.route('**/api/meta/**', r => r.fulfill({status:204,body:''}));
+            await page.route(/googletagmanager\.com|google-analytics\.com|connect\.facebook\.net|facebook\.com\/tr/, r => r.fulfill({status:204,body:''}));
+            const response = await page.goto(`${live}/checkout`, { waitUntil:'domcontentloaded', timeout:45000 });
+            if (!response || !response.ok()) fail(`${width}: live checkout HTTP ${response && response.status()}`);
+            await page.getByRole('button',{name:/Continue to delivery/i}).waitFor({state:'visible',timeout:15000});
+            return {context,page};
+          }
+
+          async function visibleOne(locator,label) {
+            for (let i=0;i<await locator.count();i++) if (await locator.nth(i).isVisible()) return locator.nth(i);
+            fail(`${label}: no visible match`);
+          }
+          async function readable(locator,label) {
+            const ok = await locator.evaluate(el => {
+              const s = getComputedStyle(el);
+              return s.textOverflow !== 'ellipsis' && el.scrollHeight <= el.clientHeight + 1 && el.scrollWidth <= el.clientWidth + 1;
+            });
+            if (!ok) fail(`${label}: clipped or ellipsized`);
+          }
+          async function checkLine(page,item,width) {
+            const title = await visibleOne(page.getByText(item.title,{exact:true}),`${width} ${item.title} title`);
+            await readable(title,`${width} ${item.title} title`);
+            const specText = item.fabric_code ? `${item.fabric_label || item.color} · ${item.fabric_code}` : item.color;
+            const spec = await visibleOne(page.getByText(specText,{exact:true}),`${width} ${item.title} spec`);
+            await readable(spec,`${width} ${item.title} spec`);
+            const plus = page.getByRole('button',{name:`One more ${item.title}`});
+            const remove = page.getByRole('button',{name:`Remove ${item.title} from your cart`});
+            const [pb,rb] = await Promise.all([plus.boundingBox(),remove.boundingBox()]);
+            if (!pb || pb.width < 43 || pb.height < 43) fail(`${width}: quantity target regressed`);
+            if (!rb || rb.width < 43 || rb.height < 43) fail(`${width}: remove target regressed`);
+            await visibleOne(page.getByText(`£${item.price}`,{exact:true}),`${width} ${item.title} price`);
+            const ib = await title.locator('xpath=ancestor::article').locator('img').first().boundingBox();
+            if (!ib || ib.width < 60 || ib.height < 60) fail(`${width}: product image not useful`);
+            if (await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1)) fail(`${width}: horizontal overflow`);
+          }
+
+          (async()=>{
+            const browser = await chromium.launch({headless:true,executablePath:'/usr/bin/google-chrome',args:['--no-sandbox']});
+            try {
+              for (const width of widths) {
+                result.widths[width] = [];
+                for (const item of matrix) {
+                  const {context,page} = await setup(browser,width,[item]);
+                  await checkLine(page,item,width);
+                  if (!item.fabric_code && await page.getByText('CH12',{exact:false}).count()) fail(`${width}: fake fabric metadata on stocked line`);
+                  result.widths[width].push(item.title);
+                  await context.close();
+                }
+              }
+
+              const multi = await setup(browser,390,matrix,true);
+              const rows = multi.page.locator('article');
+              if (await rows.count() < 4) fail('multi-item: rows missing');
+              let prev = null;
+              for (let i=0;i<4;i++) {
+                const box = await rows.nth(i).boundingBox();
+                if (!box || (prev && box.y < prev.y + prev.height)) fail('multi-item: row overlap');
+                prev = box;
+              }
+              if (!(await multi.page.getByRole('button',{name:/Continue to delivery/i}).isVisible())) fail('multi-item: checkout CTA missing');
+              result.multi = true;
+              await multi.context.close();
+
+              const ctrl = await setup(browser,390,[P.roma],true);
+              await ctrl.page.getByRole('button',{name:`One more ${P.roma.title}`}).click();
+              await ctrl.page.getByText('2 in your cart',{exact:true}).waitFor({state:'attached',timeout:3000});
+              await visibleOne(ctrl.page.getByText('£1198',{exact:true}),'quantity +1 price');
+              await ctrl.page.getByRole('button',{name:`One fewer ${P.roma.title}`}).click();
+              await ctrl.page.getByText('1 in your cart',{exact:true}).waitFor({state:'attached',timeout:3000});
+              result.quantity = true;
+              await ctrl.page.getByRole('button',{name:`Remove ${P.roma.title} from your cart`}).click();
+              const undo = ctrl.page.getByRole('button',{name:'Undo'});
+              await undo.waitFor({state:'visible',timeout:2000});
+              await undo.click();
+              await visibleOne(ctrl.page.getByText(P.roma.title,{exact:true}),'Undo-restored product');
+              result.undo = true;
+              await ctrl.context.close();
+
+              const desktop = await setup(browser,1440,[P.vf],false);
+              const dt = desktop.page.getByText(P.vf.title,{exact:true});
+              if (await dt.count() < 2) fail('desktop OrderSummary title absent');
+              await readable(dt.last(),'desktop OrderSummary title');
+              await readable(desktop.page.getByText('Chenille Grey · CH12',{exact:true}).last(),'desktop OrderSummary spec');
+              await desktop.context.close();
+
+              const mobile = await setup(browser,390,[P.vf],true);
+              await mobile.page.getByRole('button',{name:/1 item · due on delivery/i}).click();
+              const mt = mobile.page.getByText(P.vf.title,{exact:true});
+              const visibleTitles = [];
+              for (let i=0;i<await mt.count();i++) if (await mt.nth(i).isVisible()) visibleTitles.push(mt.nth(i));
+              if (visibleTitles.length < 2) fail('mobile OrderSummary title absent');
+              await readable(visibleTitles.at(-1),'mobile OrderSummary title');
+              const ms = mobile.page.getByText('Chenille Grey · CH12',{exact:true});
+              const visibleSpecs = [];
+              for (let i=0;i<await ms.count();i++) if (await ms.nth(i).isVisible()) visibleSpecs.push(ms.nth(i));
+              if (visibleSpecs.length < 2) fail('mobile OrderSummary spec absent');
+              await readable(visibleSpecs.at(-1),'mobile OrderSummary spec');
+              result.orderSummary = true;
+              await mobile.context.close();
+
+              const state = await setup(browser,390,[P.roma],true);
+              await state.page.getByRole('button',{name:/Continue to delivery/i}).click();
+              const fields = {
+                name:state.page.locator('input[name="customerName"]'), email:state.page.locator('input[name="customerEmail"]'), phone:state.page.locator('input[name="customerPhone"]'),
+                postcode:state.page.locator('label').filter({hasText:'Postcode'}).locator('..').locator('input[type="text"]').first(), address:state.page.locator('textarea[name="shippingAddress"]'), instructions:state.page.locator('textarea[name="specialInstructions"]'),
+              };
+              const values = {name:'QA 2DB Live State',email:'qa-2db-live@example.com',phone:'07700900123',postcode:'SW1A 1AA',address:'QA Phase 2DB Live Address 123',instructions:'QA live 2DB marker'};
+              for (const k of Object.keys(fields)) await fields[k].fill(values[k]);
+              await state.page.getByRole('button',{name:/Back to Cart/i}).click();
+              await state.page.getByRole('button',{name:/Continue to delivery/i}).click();
+              for (const k of Object.keys(fields)) { await fields[k].waitFor({state:'visible',timeout:5000}); if (await fields[k].inputValue() !== values[k]) fail(`Phase 2D-A live regression: ${k}`); }
+              result.phase2da = true;
+              await state.context.close();
+
+              for (const width of [320,390,430]) {
+                const {context,page} = await setup(browser,width,[P.vf],true);
+                const wa = page.getByRole('link',{name:'Chat with us on WhatsApp'});
+                const bar = page.locator('[data-bottom-bar]').first();
+                const nav = page.getByRole('navigation',{name:'Primary'});
+                if (!(await wa.isVisible()) || !(await bar.isVisible()) || !(await nav.isVisible())) fail(`${width}: fixed UI missing`);
+                const [wb,bb,nb] = await Promise.all([wa.boundingBox(),bar.boundingBox(),nav.boundingBox()]);
+                if (!wb || !bb || !nb) fail(`${width}: fixed UI boxes unavailable`);
+                if (bb.y + bb.height > nb.y + 1) fail(`${width}: MobileTotalBar overlaps mobile nav`);
+                if (wb.y + wb.height > bb.y + 1) fail(`${width}: WhatsApp overlaps MobileTotalBar`);
+                result.fixedUi[width] = true;
+                await context.close();
+              }
+            } finally {
+              fs.writeFileSync('phase2d-b-live-results.json',JSON.stringify(result,null,2));
+              await browser.close();
+            }
+          })().catch(e=>{console.error(e);process.exit(1)});
+          NODE
+
+      - name: Show live QA results
+        if: always()
+        run: test -f phase2d-b-live-results.json && cat phase2d-b-live-results.json || true
+
+      - name: Upload live QA evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase2d-b-live-signoff
+          path: phase2d-b-live-results.json
+          if-no-files-found: ignore
