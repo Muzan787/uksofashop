@@ -1,7 +1,8 @@
 'use client';
 // src/components/Product/BuyBox.tsx
 
-import { Gem, ShieldCheck, Sparkles, Truck, Wallet } from 'lucide-react';
+import Link from 'next/link';
+import { Gem, MapPin, Ruler, ShieldCheck, Sparkles, Truck, Wallet } from 'lucide-react';
 import { PROMISES } from '@/constants/promises';
 import type { DeliveryWindow } from '@/utils/delivery';
 import AddToCart from './AddToCart';
@@ -42,6 +43,43 @@ interface Props {
 }
 
 /**
+ * Translate only catalogue notation whose meaning is already documented on
+ * /journal/sofa-jargon-explained. Everything else stays as the catalogue wrote
+ * it rather than guessing at product semantics.
+ */
+function configurationExplanation(sizeLabel: string | undefined, title: string): string | null {
+  const source = `${sizeLabel ?? ''} ${title}`;
+
+  if (/\b3\s*\+\s*2\b/i.test(source)) {
+    return '3+2 means one 3-seater and one 2-seater sold as a matching set.';
+  }
+
+  const corner = source.match(/\b([12])c([12])\b/i);
+  if (!corner) return null;
+
+  const first = Number(corner[1]);
+  const second = Number(corner[2]);
+  const total = first + second + 1;
+  const plural = (n: number) => (n === 1 ? 'seat' : 'seats');
+
+  return `${corner[0].toLowerCase()} means ${first} ${plural(first)}, corner, ${second} ${plural(second)} — ${total} seats total.`;
+}
+
+function readableDimensions(specifications: Product['specifications']): string {
+  if (!specifications) return '';
+
+  let specs: Record<string, string> = {};
+  if (typeof specifications === 'string') {
+    try { specs = JSON.parse(specifications); } catch { return ''; }
+  } else {
+    specs = specifications;
+  }
+
+  const raw = specs.dimensions ?? specs.Dimensions ?? '';
+  return String(raw).replace(/\s+/g, ' ').replace(/\s*\|\s*/g, ' · ').trim();
+}
+
+/**
  * Everything between the photograph and the accordion.
  *
  * The order of the blocks below IS the mobile reading order, and it is
@@ -76,6 +114,9 @@ export default function BuyBox({
   }));
 
   const materialPills: Pill[] = materials.map(m => ({ key: m, label: m }));
+  const currentSizeLabel = sizes.find(sv => sv.slug === product.slug)?.size_label;
+  const configurationHelp = configurationExplanation(currentSizeLabel, product.title);
+  const dimensionText = readableDimensions(product.specifications);
 
   return (
     <div className="flex flex-col gap-6">
@@ -90,10 +131,6 @@ export default function BuyBox({
           </span>
         )}
 
-        {/* text-h1, not text-h2. The section headings further down the page
-            are text-h2, and the product's own name was rendering at the same
-            size as "Similar sofas" — the title of the page tying with a row
-            label at the foot of it. */}
         <h1 className="m-0 font-display text-h1 font-semibold text-ink-900">{product.title}</h1>
 
         {reviewCount > 0 && (
@@ -106,22 +143,8 @@ export default function BuyBox({
         )}
       </div>
 
-      {/* ── Price ────────────────────────────────────────────────────────────
-          34px, set in the display face, and deliberately off the type ramp:
-          h1 is fluid and would put the price at 30px on a phone and 52px on a
-          desktop. A price is a fixed piece of information, not a headline that
-          should breathe with the viewport. tabular-nums so it does not change
-          width when the variant does.
-
-          What used to sit beside it read "(base £480 + variant adjustment)".
-          That is the shape of the row in the products table, written for
-          whoever maintains the catalogue, and it was being shown to shoppers.
-          The price is the price. */}
+      {/* ── Price ───────────────────────────────────────────────────────── */}
       <div>
-        {/* The rule above the price. An ember lead into a hairline that fades
-            out — the mark the figures band and every section heading on the
-            site carry. It costs 5px and it turns the price from a number in a
-            column into the thing the block is about. */}
         <span aria-hidden="true" className="mb-4 flex w-full">
           <span className="block h-px w-8 bg-ember-500" />
           <span className="block h-px flex-1 bg-calico-300" />
@@ -165,9 +188,6 @@ export default function BuyBox({
           items={sizePills}
           selectedKey={product.slug}
         >
-          {/* Dashed, because it is not one of the options — it is the way out
-              of them. It opens a dialog rather than firing a bare WhatsApp
-              link, so the customer sees what they are about to send. */}
           <button
             type="button"
             onClick={onCustomSize}
@@ -177,6 +197,12 @@ export default function BuyBox({
             Custom size
           </button>
         </PillGroup>
+
+        {configurationHelp && (
+          <p className="m-0 mt-3 max-w-[56ch] text-body-sm leading-relaxed text-ink-500">
+            {configurationHelp}
+          </p>
+        )}
       </div>
 
       {/* ── Material ────────────────────────────────────────────────────── */}
@@ -195,12 +221,26 @@ export default function BuyBox({
         </div>
       )}
 
-      {/* ── Add to cart ──────────────────────────────────────────────────────
-          At every width now. It used to be desktop-only, with the phone's
-          sticky bar standing in for it — which meant the bar had to be on
-          screen permanently, because hiding it would have left a phone with no
-          way to buy at all. With a real button in the flow, the bar is free to
-          stay out of the way until this one scrolls past. */}
+      {/* The exact catalogue measurement is brought beside the buying choice,
+          but the full doorway process remains the single /size-guide source of
+          truth. No second calculator or measurement system is introduced. */}
+      {dimensionText && (
+        <div className="border-l-2 border-ember-500 pl-3">
+          <p className="m-0 text-body-sm leading-relaxed text-ink-700">
+            <span className="font-semibold text-ink-900">Dimensions for this configuration:</span>{' '}
+            <span className="font-data tabular-nums">{dimensionText}</span>
+          </p>
+          <Link
+            href="/size-guide"
+            className="hover-link mt-1 inline-flex min-h-11 items-center gap-2 text-body-sm font-semibold text-ink-900 no-underline"
+          >
+            <Ruler aria-hidden="true" className="h-4 w-4 text-[var(--pdp-accent-text)]" />
+            Will it fit? Check the doorway guide
+          </Link>
+        </div>
+      )}
+
+      {/* ── Add to cart ────────────────────────────────────────────────── */}
       <div ref={ctaRef}>
         <AddToCart
           price={price}
@@ -211,14 +251,6 @@ export default function BuyBox({
           onWishlist={onWishlist}
         />
 
-        {/* Trust row — one of the three places the variant accent is allowed.
-
-            Three columns, each under its own ember-led rule, rather than three
-            tinted cells inside one border. It is the construction the figures
-            band on the homepage uses, and it works here for the same reason:
-            the labels wrap to one line or two depending on the promise, and a
-            boxed grid makes that unevenness look like a mistake where a row of
-            rules reads as a spec sheet. */}
         <ul className="m-0 mt-5 grid list-none grid-cols-3 gap-x-3 p-0">
           {[
             { Icon: Truck, label: PROMISES.delivery.label },
@@ -240,6 +272,19 @@ export default function BuyBox({
             </li>
           ))}
         </ul>
+
+        {/* Real-business proof, intentionally one restrained line rather than
+            another trust card or badge. /showroom owns the address and booking
+            detail; the buy box only puts that genuine proof where intent is high. */}
+        <Link
+          href="/showroom"
+          className="hover-link mt-4 inline-flex min-h-11 items-center gap-2 text-body-sm text-ink-600 no-underline"
+        >
+          <MapPin aria-hidden="true" className="h-4 w-4 shrink-0 text-[var(--pdp-accent-text)]" />
+          <span>
+            See sofas in person at our <strong className="font-semibold text-ink-900">Blackburn showroom</strong> · visits by appointment
+          </span>
+        </Link>
       </div>
     </div>
   );
