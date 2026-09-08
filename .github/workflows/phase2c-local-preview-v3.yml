@@ -1,0 +1,122 @@
+name: Phase 2C exact-tree local preview v3
+
+on:
+  push:
+    branches: [qa/phase2c-pdp-confidence]
+
+jobs:
+  validate-v3:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      FEATURE_SHA: 89aacc6db6e61da05e28b5169182601560cfabd8
+      BASE_SHA: eac4ab38841bf6b60140f9c5984e5274d01f8e50
+      NEXT_PUBLIC_SUPABASE_URL: https://nznpeqjnoobhyxwnmsez.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_tMk28Ay_hIljhv8NQcV01Q_cI9ApS9c
+      NODE_PATH: /tmp/pw/node_modules
+    steps:
+      - name: Checkout exact Phase 2C feature
+        uses: actions/checkout@v4
+        with:
+          ref: 89aacc6db6e61da05e28b5169182601560cfabd8
+          fetch-depth: 0
+
+      - name: Protected scope and static gates
+        run: |
+          test "$(git rev-parse HEAD)" = "$FEATURE_SHA"
+          test "$(git diff --name-only "$BASE_SHA"..HEAD)" = $'src/components/Product/BuyBox.tsx\nsrc/components/Product/Reviews.tsx'
+          test -z "$(git diff --name-only "$BASE_SHA"..HEAD -- src/context/CartContext.tsx src/components/Checkout/CartStep.tsx src/components/Checkout/CheckoutClient.tsx src/app/actions/checkout.ts src/utils/tracking.ts src/utils/orderConversions.ts src/utils/attribution src/components/Layout/WhatsAppFab.tsx supabase/migrations)"
+          git diff --check "$BASE_SHA"..HEAD
+          npm ci
+          npx eslint src/components/Product/BuyBox.tsx src/components/Product/Reviews.tsx
+          npx tsc --noEmit
+          npm run build
+
+      - name: Start exact feature build
+        run: |
+          npm run start > /tmp/phase2c.log 2>&1 &
+          for i in $(seq 1 40); do
+            code=$(curl -s -o /tmp/pdp -w '%{http_code}' http://127.0.0.1:3000/shop/corner-sofa/verona-high-back-4-seater-corner-1c2 || true)
+            if [ "$code" = 200 ]; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/phase2c.log
+          exit 1
+
+      - name: Prepare browser
+        run: |
+          mkdir -p /tmp/pw qa-evidence-v3
+          npm install --prefix /tmp/pw playwright-core@1.55.0
+
+      - name: Full exact-tree PDP preview matrix
+        run: |
+          node <<'NODE'
+          const {chromium}=require('playwright-core'),fs=require('fs');
+          const base='http://127.0.0.1:3000', widths=[320,390,430,768,1440];
+          const products=[
+            {key:'verona1c2',url:'/shop/corner-sofa/verona-high-back-4-seater-corner-1c2',title:'Verona 4 Seater Corner 1c2 High Back',price:529,size:'4 Seater Corner 1c2',dim:'190cm x 240cm',config:'1c2 means 1 seat, corner, 2 seats — 4 seats total.',custom:true},
+            {key:'roma32',url:'/shop/recliner/roma-recliner-manual-3-and-2',title:'Roma Recliner 3+2 Seater Manual Sofa',price:599,size:'3+2 Seater',dim:'3-Seater',config:'3+2 means one 3-seater and one 2-seater sold as a matching set.',custom:false},
+            {key:'lily32',url:'/shop/3-2-seater/lily-high-back-3and2-seater',title:'Lily 3+2 Seater High Back',price:749,size:'3+2 Seater',dim:'3 Seater:',config:'3+2 means one 3-seater and one 2-seater sold as a matching set.',custom:true},
+            {key:'lilyu',url:'/shop/corner-sofa/lily-high-back-armed-u-shape',title:'Lily Armed U-Shape High Back',price:949,size:'Armed U-Shape',dim:'L:240cm x 300cm x 180cm',config:null,custom:true},
+            {key:'lily2c2',url:'/shop/corner-sofa/lily-high-back-5-seater-corner-2c2',title:'Lily 5 Seater Corner 2c2 High Back',price:749,size:'5 Seater Corner 2c2',dim:'240cm x 240cm',config:'2c2 means 2 seats, corner, 2 seats — 5 seats total.',custom:true},
+            {key:'orlando',url:'/shop/electric-sofa/orlando-electric-recliner',title:'Orlando Electric Recliner 3+2 Seater',price:999,size:null,dim:'3-Seater',config:'3+2 means one 3-seater and one 2-seater sold as a matching set.',custom:false}
+          ];
+          const out={widths:{},fitLink:false,zeroReview:false,reviewed:false,addToCart:{},fixedUi:{},runtimeErrors:[],horizontalOverflow:'NONE',titleMetrics:{}};
+          const fail=m=>{throw Error(m)};
+          async function setup(browser,w,url,label){
+            const touch=w<=430,c=await browser.newContext({viewport:{width:w,height:w>=768?1000:844},isMobile:touch,hasTouch:touch}),p=await c.newPage();
+            p.on('pageerror',e=>out.runtimeErrors.push({w,label,message:e.message,stack:e.stack||null}));
+            await p.addInitScript(()=>{localStorage.setItem('cookie_consent','denied');localStorage.setItem('uksofashop_cart','[]')});
+            await p.route('**/api/attribution/**',r=>r.fulfill({status:204,body:''}));
+            await p.route('**/api/meta/**',r=>r.fulfill({status:204,body:''}));
+            await p.route(/googletagmanager\.com|google-analytics\.com|connect\.facebook\.net|facebook\.com\/tr/,r=>r.fulfill({status:204,body:''}));
+            const r=await p.goto(base+url,{waitUntil:'domcontentloaded',timeout:45000});if(!r||!r.ok())fail(`${label} ${w}: HTTP ${r&&r.status()}`);
+            await p.locator('h1').first().waitFor({state:'visible',timeout:15000});await p.waitForTimeout(200);return{c,p};
+          }
+          async function vis(l,n){for(let i=0;i<await l.count();i++)if(await l.nth(i).isVisible())return l.nth(i);fail(n+' no visible match')}
+          async function titleVisible(l,n){
+            const m=await l.evaluate(e=>{const s=getComputedStyle(e),r=e.getBoundingClientRect();return{overflow:s.overflow,overflowX:s.overflowX,overflowY:s.overflowY,textOverflow:s.textOverflow,webkitLineClamp:s.webkitLineClamp,whiteSpace:s.whiteSpace,width:r.width,height:r.height,scrollWidth:e.scrollWidth,clientWidth:e.clientWidth,scrollHeight:e.scrollHeight,clientHeight:e.clientHeight}});
+            if(m.textOverflow==='ellipsis'||m.webkitLineClamp&&m.webkitLineClamp!=='none'||['hidden','clip'].includes(m.overflow)||['hidden','clip'].includes(m.overflowX)||['hidden','clip'].includes(m.overflowY))fail(n+' title is CSS-clipped');
+            if(m.width<=0||m.height<=0)fail(n+' title has no rendered box');
+            return m;
+          }
+          async function ordinaryReadable(l,n){const ok=await l.evaluate(e=>{const s=getComputedStyle(e);return s.textOverflow!=='ellipsis'&&e.scrollHeight<=e.clientHeight+2&&e.scrollWidth<=e.clientWidth+2});if(!ok)fail(n+' clipped')}
+          async function overflow(p,w,n){if(await p.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth+1)){out.horizontalOverflow='FAIL';fail(`${n} ${w} overflow`)}}
+          async function check(browser,w,x){
+            const{c,p}=await setup(browser,w,x.url,x.key);const h=await vis(p.locator('h1').filter({hasText:x.title}),x.key+' h1');out.titleMetrics[`${w}-${x.key}`]=await titleVisible(h,x.key+' h1');
+            await vis(p.getByText(`£${x.price}`,{exact:true}),x.key+' price');await vis(p.getByText('Free delivery',{exact:true}),x.key+' delivery');
+            await vis(p.getByRole('button',{name:new RegExp(`Add to cart.*£${x.price}`,'i')}),x.key+' add');
+            const fit=await vis(p.getByRole('link',{name:/Will it fit\? Check the doorway guide/i}),x.key+' fit');if(await fit.getAttribute('href')!=='/size-guide')fail(x.key+' fit href');
+            await vis(p.getByText(new RegExp(x.dim.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'i')),x.key+' dimensions');
+            const showroom=await vis(p.getByRole('link',{name:/Blackburn showroom/i}),x.key+' showroom');if(await showroom.getAttribute('href')!=='/showroom')fail(x.key+' showroom href');
+            if(x.config)await vis(p.getByText(x.config,{exact:true}),x.key+' config');else if(await p.getByText(/means .* corner, .* seats total\./i).count())fail(x.key+' invented corner meaning');
+            if(x.size){const cur=p.locator('[aria-current="page"]').filter({hasText:x.size});if(await cur.count()<1)fail(x.key+' selected size unclear')}
+            if(x.custom)await vis(p.getByText('Made to Order',{exact:true}),x.key+' custom truth');else if(await p.getByText('Made to Order',{exact:true}).count())fail(x.key+' false custom claim');
+            await vis(p.getByRole('link',{name:'Chat with us on WhatsApp'}),x.key+' WhatsApp');await overflow(p,w,x.key);out.widths[w].push(x.key);
+            if(w===390&&['verona1c2','roma32','lilyu','orlando'].includes(x.key))await p.screenshot({path:`qa-evidence-v3/${x.key}-390.png`,fullPage:true});await c.close();
+          }
+          (async()=>{const b=await chromium.launch({headless:true,executablePath:'/usr/bin/google-chrome',args:['--no-sandbox']});try{
+            for(const w of widths){out.widths[w]=[];for(const x of products)await check(b,w,x)}
+            {const{c,p}=await setup(b,390,products[0].url,'fit-destination');const l=await vis(p.getByRole('link',{name:/Will it fit\? Check the doorway guide/i}),'fit link');await l.click();await p.waitForURL(/\/size-guide(?:$|\?)/,{timeout:15000});await vis(p.getByText(/doorway/i),'doorway guide');out.fitLink=true;await c.close()}
+            {const{c,p}=await setup(b,390,products[0].url,'zero-review');const e=await vis(p.getByText('No reviews yet.',{exact:true}),'zero state');await e.scrollIntoViewIfNeeded();const first=await vis(p.getByRole('button',{name:'Write the first review'}),'first review');if(await p.getByRole('button',{name:'Submit review'}).isVisible().catch(()=>false))fail('zero form open by default');await first.click();await vis(p.getByRole('button',{name:'Submit review'}),'review form path');out.zeroReview=true;await c.close()}
+            {const{c,p}=await setup(b,390,products[5].url,'reviewed');await vis(p.getByText(/5\.0\s*·\s*1 review/),'rating summary');if(await p.getByText('No reviews yet.',{exact:true}).count())fail('reviewed got empty state');await vis(p.getByText('Saad Abbasi',{exact:true}),'review customer');await vis(p.getByText(/Good quality sofas/),'review content');const j=await p.locator('script[type="application/ld+json"]').allTextContents();if(!j.some(s=>s.includes('Saad Abbasi')&&s.includes('Good quality sofas')&&s.includes('5')))fail('review schema missing');out.reviewed=true;await c.close()}
+            {const{c,p}=await setup(b,390,products[1].url+'?variant=fdc54adb-777c-4dcd-83e1-64e5938b631a','add-roma');await vis(p.getByText('Black',{exact:true}),'Roma selected Black');const add=await vis(p.getByRole('button',{name:/Add to cart.*£599/i}),'Roma add');await add.click();await p.getByText('Added to cart',{exact:true}).waitFor({state:'visible',timeout:5000});const cart=await p.evaluate(()=>JSON.parse(localStorage.getItem('uksofashop_cart')||'[]'));if(cart.length!==1||cart[0].variant_id!=='fdc54adb-777c-4dcd-83e1-64e5938b631a'||Number(cart[0].price)!==599||cart[0].fabric_id!==null||cart[0].fabric_code!==null)fail('Roma payload');await p.goto(base+'/checkout',{waitUntil:'domcontentloaded'});await ordinaryReadable(await vis(p.getByText(products[1].title,{exact:true}),'Roma cart title'),'Roma cart title');await ordinaryReadable(await vis(p.getByText('Black',{exact:true}),'Roma cart spec'),'Roma cart spec');out.addToCart.stocked=true;await c.close()}
+            {const{c,p}=await setup(b,390,products[0].url,'add-verona');await (await vis(p.getByRole('button',{name:/Choose from .* fabrics/i}),'fabric chooser')).click();await (await vis(p.getByRole('button',{name:/Chenille Grey, CH12/i}),'CH12')).click();await vis(p.getByText('CH12',{exact:true}),'CH12 detail');await p.getByRole('button',{name:/Build mine in this|Keep this fabric/i}).click();await vis(p.getByText(/CH12 · every fabric is the same price/i),'chosen CH12');await (await vis(p.getByRole('button',{name:/Add to cart.*£529/i}),'Verona add')).click();await p.getByText('Added to cart',{exact:true}).waitFor({state:'visible',timeout:5000});const cart=await p.evaluate(()=>JSON.parse(localStorage.getItem('uksofashop_cart')||'[]'));if(cart.length!==1||cart[0].variant_id!=='a5d2050d-c458-4e0c-b3b3-7b7c727845a0'||Number(cart[0].price)!==529||cart[0].fabric_id!=='6ce3d2c2-7f92-4276-b991-70afa07c0cf9'||cart[0].fabric_code!=='CH12'||cart[0].fabric_label!=='Chenille Grey')fail('Verona fabric payload');await p.goto(base+'/checkout',{waitUntil:'domcontentloaded'});await ordinaryReadable(await vis(p.getByText(products[0].title,{exact:true}),'Verona cart title'),'Verona cart title');await ordinaryReadable(await vis(p.getByText('Chenille Grey · CH12',{exact:true}),'Verona cart spec'),'Verona cart spec');out.addToCart.custom=true;await c.close()}
+            for(const w of [320,390,430]){const{c,p}=await setup(b,w,products[1].url,'fixed');const add=await vis(p.getByRole('button',{name:/Add to cart.*£599/i}),w+' flow add');await add.scrollIntoViewIfNeeded();await p.evaluate(()=>scrollBy(0,500));await p.waitForTimeout(400);const bar=p.locator('[data-bottom-bar]').first();await bar.waitFor({state:'visible',timeout:5000});const wa=await vis(p.getByRole('link',{name:'Chat with us on WhatsApp'}),w+' WhatsApp'),nav=await vis(p.getByRole('navigation',{name:'Primary'}),w+' nav');const[bb,wb,nb]=await Promise.all([bar.boundingBox(),wa.boundingBox(),nav.boundingBox()]);if(!bb||!wb||!nb||bb.y+bb.height>nb.y+1||wb.y+wb.height>bb.y+1)fail(w+' fixed overlap');await overflow(p,w,'fixed');out.fixedUi[w]=true;await c.close()}
+            if(out.runtimeErrors.length)fail('runtime page errors '+JSON.stringify(out.runtimeErrors));
+          }finally{fs.writeFileSync('phase2c-preview-results-v3.json',JSON.stringify(out,null,2));await b.close()}})().catch(e=>{console.error(e);process.exit(1)});
+          NODE
+
+      - name: Show results
+        if: always()
+        run: cat phase2c-preview-results-v3.json 2>/dev/null || true
+
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase2c-local-preview-v3
+          path: |
+            phase2c-preview-results-v3.json
+            qa-evidence-v3/
+          if-no-files-found: ignore
