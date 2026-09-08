@@ -1,0 +1,113 @@
+name: Phase 2C mobile fixed UI v8
+
+on:
+  push:
+    branches: [qa/phase2c-final-preview-v8]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      FEATURE_SHA: 89aacc6db6e61da05e28b5169182601560cfabd8
+      BASE_SHA: eac4ab38841bf6b60140f9c5984e5274d01f8e50
+      NEXT_PUBLIC_SUPABASE_URL: https://nznpeqjnoobhyxwnmsez.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_tMk28Ay_hIljhv8NQcV01Q_cI9ApS9c
+      NODE_PATH: /tmp/pw/node_modules
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 89aacc6db6e61da05e28b5169182601560cfabd8
+          fetch-depth: 0
+      - name: Verify exact unchanged feature
+        run: |
+          test "$(git rev-parse HEAD)" = "$FEATURE_SHA"
+          test "$(git diff --name-only "$BASE_SHA"..HEAD)" = $'src/components/Product/BuyBox.tsx\nsrc/components/Product/Reviews.tsx'
+          git diff --check "$BASE_SHA"..HEAD
+      - name: Build and start
+        run: |
+          npm ci
+          npm run build
+          npm run start > /tmp/phase2c.log 2>&1 &
+          for i in $(seq 1 45); do
+            code=$(curl -s -o /tmp/pdp -w '%{http_code}' http://127.0.0.1:3000/shop/recliner/roma-recliner-manual-3-and-2 || true)
+            if [ "$code" = 200 ]; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/phase2c.log
+          exit 1
+      - name: Prepare browser
+        run: npm install --prefix /tmp/pw playwright-core@1.55.0
+      - name: Validate mobile fixed UI at its real activation point
+        run: |
+          node <<'NODE'
+          const { chromium } = require('playwright-core');
+          const fs = require('fs');
+          const base='http://127.0.0.1:3000';
+          const out={widths:{},horizontalOverflow:'NONE',runtimeErrors:[]};
+          const fail=m=>{throw Error(m)};
+          (async()=>{
+            const browser=await chromium.launch({headless:true,executablePath:'/usr/bin/google-chrome',args:['--no-sandbox']});
+            try{
+              for(const width of [320,390,430]){
+                const context=await browser.newContext({viewport:{width,height:844},isMobile:true,hasTouch:true});
+                const page=await context.newPage();
+                page.on('pageerror',e=>out.runtimeErrors.push({width,message:e.message,stack:e.stack||null}));
+                await page.addInitScript(()=>localStorage.setItem('cookie_consent','denied'));
+                await page.route('**/api/attribution/**',r=>r.fulfill({status:204,body:''}));
+                await page.route('**/api/meta/**',r=>r.fulfill({status:204,body:''}));
+                await page.route(/googletagmanager\.com|google-analytics\.com|connect\.facebook\.net|facebook\.com\/tr/,r=>r.fulfill({status:204,body:''}));
+                const r=await page.goto(base+'/shop/recliner/roma-recliner-manual-3-and-2',{waitUntil:'domcontentloaded',timeout:45000});
+                if(!r||!r.ok())fail(`${width}: HTTP ${r&&r.status()}`);
+                const flowAdd=page.getByRole('button',{name:/Add to cart.*£599/i}).first();
+                await flowAdd.waitFor({state:'visible',timeout:15000});
+                const bar=page.locator('[data-bottom-bar]').first();
+                const showroom=page.getByRole('link',{name:/Blackburn showroom/i}).first();
+                await showroom.waitFor({state:'visible',timeout:10000});
+                const observed=await page.evaluate(()=>{
+                  const add=[...document.querySelectorAll('button')].find(b=>/add to cart/i.test(b.getAttribute('aria-label')||b.textContent||''));
+                  const showroom=document.querySelector('a[href="/showroom"]');
+                  if(!add||!showroom)return null;
+                  let e=add.parentElement;
+                  while(e && !e.contains(showroom)) e=e.parentElement;
+                  return !!e;
+                });
+                if(!observed)fail(`${width}: could not resolve purchase-area wrapper`);
+
+                // Scroll in normal viewport increments until the current source's
+                // IntersectionObserver legitimately activates the sticky bar.
+                let activated=false;
+                for(let i=0;i<20;i++){
+                  await page.evaluate(()=>scrollBy(0,240));
+                  await page.waitForTimeout(120);
+                  if(await bar.getAttribute('inert')===null){activated=true;break;}
+                }
+                if(!activated)fail(`${width}: sticky bar never activated after purchase area passed`);
+                await page.waitForTimeout(450);
+
+                const [addBox,bb,wb,nb]=await Promise.all([
+                  flowAdd.boundingBox(),bar.boundingBox(),
+                  page.getByRole('link',{name:'Chat with us on WhatsApp'}).first().boundingBox(),
+                  page.getByRole('navigation',{name:'Primary'}).first().boundingBox(),
+                ]);
+                if(!bb||!wb||!nb)fail(`${width}: fixed UI box missing`);
+                // When the reminder bar is active, the original buying button must
+                // already be above the viewport, not hidden underneath new content.
+                if(addBox && addBox.y+addBox.height>0)fail(`${width}: sticky activated before in-flow Add to Cart passed`);
+                if(bb.y+bb.height>nb.y+1)fail(`${width}: sticky overlaps mobile nav`);
+                if(wb.y+wb.height>bb.y+1)fail(`${width}: WhatsApp overlaps sticky bar`);
+                const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth+1);
+                if(overflow){out.horizontalOverflow='FAIL';fail(`${width}: horizontal overflow`)}
+                out.widths[width]={activated:true,scrollY:await page.evaluate(()=>scrollY),sticky:bb,whatsapp:wb,nav:nb};
+                await context.close();
+              }
+              if(out.runtimeErrors.length)fail('runtime errors '+JSON.stringify(out.runtimeErrors));
+            } finally {
+              fs.writeFileSync('phase2c-mobile-v8.json',JSON.stringify(out,null,2));
+              await browser.close();
+            }
+          })().catch(e=>{console.error(e);process.exit(1)});
+          NODE
+      - name: Show results
+        if: always()
+        run: cat phase2c-mobile-v8.json 2>/dev/null || true
