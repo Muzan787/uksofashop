@@ -1,0 +1,342 @@
+name: Phase 2C final exact-tree preview v5
+
+on:
+  push:
+    branches: [qa/phase2c-final-preview-v5]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      FEATURE_SHA: 89aacc6db6e61da05e28b5169182601560cfabd8
+      BASE_SHA: eac4ab38841bf6b60140f9c5984e5274d01f8e50
+      NEXT_PUBLIC_SUPABASE_URL: https://nznpeqjnoobhyxwnmsez.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_tMk28Ay_hIljhv8NQcV01Q_cI9ApS9c
+      NODE_PATH: /tmp/pw/node_modules
+    steps:
+      - name: Checkout exact Phase 2C feature
+        uses: actions/checkout@v4
+        with:
+          ref: 89aacc6db6e61da05e28b5169182601560cfabd8
+          fetch-depth: 0
+
+      - name: Protected scope and static gates
+        run: |
+          test "$(git rev-parse HEAD)" = "$FEATURE_SHA"
+          test "$(git diff --name-only "$BASE_SHA"..HEAD)" = $'src/components/Product/BuyBox.tsx\nsrc/components/Product/Reviews.tsx'
+          test -z "$(git diff --name-only "$BASE_SHA"..HEAD -- src/components/Product/ProductPageClient.tsx src/components/Product/AddToCart.tsx src/components/Product/StickyBar.tsx src/components/Product/SecondaryActions.tsx src/context/CartContext.tsx src/components/Checkout/CartStep.tsx src/components/Checkout/CheckoutClient.tsx src/app/actions/checkout.ts src/utils/tracking.ts src/utils/orderConversions.ts src/utils/attribution src/components/Layout/WhatsAppFab.tsx supabase/migrations)"
+          git diff --check "$BASE_SHA"..HEAD
+          npm ci
+          npx eslint src/components/Product/BuyBox.tsx src/components/Product/Reviews.tsx
+          npx tsc --noEmit
+          npm run build
+
+      - name: Start exact feature build
+        run: |
+          npm run start > /tmp/phase2c.log 2>&1 &
+          for i in $(seq 1 45); do
+            code=$(curl -s -o /tmp/pdp -w '%{http_code}' http://127.0.0.1:3000/shop/corner-sofa/verona-high-back-4-seater-corner-1c2 || true)
+            if [ "$code" = 200 ]; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/phase2c.log
+          exit 1
+
+      - name: Prepare browser
+        run: |
+          mkdir -p /tmp/pw qa-evidence-v5
+          npm install --prefix /tmp/pw playwright-core@1.55.0
+
+      - name: Full exact-tree PDP preview matrix
+        run: |
+          node <<'NODE'
+          const { chromium } = require('playwright-core');
+          const fs = require('fs');
+          const base = 'http://127.0.0.1:3000';
+          const widths = [320, 390, 430, 768, 1440];
+          const products = [
+            { key:'verona1c2', url:'/shop/corner-sofa/verona-high-back-4-seater-corner-1c2', title:'Verona 4 Seater Corner 1c2 High Back', price:529, size:'4 Seater Corner 1c2', dim:'190cm x 240cm', config:'1c2 means 1 seat, corner, 2 seats — 4 seats total.', custom:true },
+            { key:'roma32', url:'/shop/recliner/roma-recliner-manual-3-and-2', title:'Roma Recliner 3+2 Seater Manual Sofa', price:599, size:'3+2 Seater', dim:'3-Seater', config:'3+2 means one 3-seater and one 2-seater sold as a matching set.', custom:false },
+            { key:'lily32', url:'/shop/3-2-seater/lily-high-back-3and2-seater', title:'Lily 3+2 Seater High Back', price:749, size:'3+2 Seater', dim:'3 Seater:', config:'3+2 means one 3-seater and one 2-seater sold as a matching set.', custom:true },
+            { key:'lilyu', url:'/shop/corner-sofa/lily-high-back-armed-u-shape', title:'Lily Armed U-Shape High Back', price:949, size:'Armed U-Shape', dim:'L:240cm x 300cm x 180cm', config:null, custom:true },
+            { key:'lily2c2', url:'/shop/corner-sofa/lily-high-back-5-seater-corner-2c2', title:'Lily 5 Seater Corner 2c2 High Back', price:749, size:'5 Seater Corner 2c2', dim:'240cm x 240cm', config:'2c2 means 2 seats, corner, 2 seats — 5 seats total.', custom:true },
+            { key:'orlando', url:'/shop/electric-sofa/orlando-electric-recliner', title:'Orlando Electric Recliner 3+2 Seater', price:999, size:null, dim:'3-Seater', config:'3+2 means one 3-seater and one 2-seater sold as a matching set.', custom:false },
+          ];
+          const out = {
+            widths:{}, fitLink:false, config2c1:false, zeroReview:false, reviewed:false,
+            zeroSchema:false, reviewedSchema:false, addToCart:{}, fixedUi:{},
+            runtimeErrors:[], horizontalOverflow:'NONE', titleMetrics:{}, selectionRegression:false
+          };
+          const fail = m => { throw new Error(m); };
+
+          async function setup(browser, width, url, label) {
+            const touch = width <= 430;
+            const context = await browser.newContext({ viewport:{ width, height: width >= 768 ? 1000 : 844 }, isMobile:touch, hasTouch:touch });
+            const page = await context.newPage();
+            page.on('pageerror', e => out.runtimeErrors.push({ width, label, message:e.message, stack:e.stack || null }));
+            await page.addInitScript(() => {
+              localStorage.setItem('cookie_consent', 'denied');
+              if (!sessionStorage.getItem('__phase2c_qa_cart_init')) {
+                localStorage.setItem('uksofashop_cart', '[]');
+                sessionStorage.setItem('__phase2c_qa_cart_init', '1');
+              }
+            });
+            await page.route('**/api/attribution/**', r => r.fulfill({ status:204, body:'' }));
+            await page.route('**/api/meta/**', r => r.fulfill({ status:204, body:'' }));
+            await page.route(/googletagmanager\.com|google-analytics\.com|connect\.facebook\.net|facebook\.com\/tr/, r => r.fulfill({ status:204, body:'' }));
+            const response = await page.goto(base + url, { waitUntil:'domcontentloaded', timeout:45000 });
+            if (!response || !response.ok()) fail(`${label} ${width}: HTTP ${response && response.status()}`);
+            await page.locator('h1').first().waitFor({ state:'visible', timeout:15000 });
+            await page.waitForTimeout(250);
+            return { context, page };
+          }
+
+          async function visible(locator, label) {
+            for (let i = 0; i < await locator.count(); i++) if (await locator.nth(i).isVisible()) return locator.nth(i);
+            fail(`${label}: no visible match`);
+          }
+
+          async function notCssClipped(locator, label) {
+            const m = await locator.evaluate(el => {
+              const s = getComputedStyle(el), r = el.getBoundingClientRect();
+              return { overflow:s.overflow, overflowX:s.overflowX, overflowY:s.overflowY, textOverflow:s.textOverflow,
+                webkitLineClamp:s.webkitLineClamp, whiteSpace:s.whiteSpace, width:r.width, height:r.height,
+                text:(el.textContent || '').trim() };
+            });
+            if (m.textOverflow === 'ellipsis' || (m.webkitLineClamp && m.webkitLineClamp !== 'none') ||
+                ['hidden','clip'].includes(m.overflow) || ['hidden','clip'].includes(m.overflowX) || ['hidden','clip'].includes(m.overflowY)) {
+              fail(`${label}: CSS clipped`);
+            }
+            if (m.width <= 0 || m.height <= 0 || !m.text) fail(`${label}: missing rendered content`);
+            return m;
+          }
+
+          async function noOverflow(page, width, label) {
+            if (await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1)) {
+              out.horizontalOverflow = 'FAIL';
+              fail(`${label} ${width}: horizontal overflow`);
+            }
+          }
+
+          function flatten(value, acc=[]) {
+            if (!value || typeof value !== 'object') return acc;
+            acc.push(value);
+            if (Array.isArray(value)) value.forEach(v => flatten(v, acc));
+            else Object.values(value).forEach(v => flatten(v, acc));
+            return acc;
+          }
+
+          async function productSchema(page, title) {
+            const scripts = await page.locator('script[type="application/ld+json"]').allTextContents();
+            for (const raw of scripts) {
+              try {
+                const parsed = JSON.parse(raw);
+                const found = flatten(parsed).find(x => x && x['@type'] === 'Product' && x.name === title);
+                if (found) return found;
+              } catch {}
+            }
+            fail(`Product schema not found for ${title}`);
+          }
+
+          async function matrixCheck(browser, width, p) {
+            const { context, page } = await setup(browser, width, p.url, `${p.key}-${width}`);
+            const h1 = await visible(page.locator('h1').filter({ hasText:p.title }), `${p.key} h1`);
+            const tm = await notCssClipped(h1, `${p.key} h1`);
+            if (tm.text !== p.title) fail(`${p.key}: title DOM mismatch`);
+            out.titleMetrics[`${width}-${p.key}`] = tm;
+            await visible(page.getByText(`£${p.price}`, { exact:true }), `${p.key} price`);
+            await visible(page.getByText('Free delivery', { exact:true }), `${p.key} delivery`);
+            await visible(page.getByRole('button', { name:new RegExp(`Add to cart.*£${p.price}`, 'i') }), `${p.key} add`);
+            const fit = await visible(page.getByRole('link', { name:/Will it fit\? Check the doorway guide/i }), `${p.key} fit`);
+            if (await fit.getAttribute('href') !== '/size-guide') fail(`${p.key}: fit href wrong`);
+            await visible(page.getByText(new RegExp(p.dim.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i')), `${p.key} dimensions`);
+            const showroom = await visible(page.getByRole('link', { name:/Blackburn showroom/i }), `${p.key} showroom`);
+            if (await showroom.getAttribute('href') !== '/showroom') fail(`${p.key}: showroom href wrong`);
+            const showroomText = (await showroom.textContent() || '').replace(/\s+/g, ' ').trim();
+            if (!/visits by appointment/i.test(showroomText)) fail(`${p.key}: showroom appointment wording missing`);
+            if (p.config) {
+              const helper = await visible(page.getByText(p.config, { exact:true }), `${p.key} config`);
+              const helperText = (await helper.textContent() || '').trim();
+              if (/left-hand|right-hand|left hand|right hand/i.test(helperText)) fail(`${p.key}: unsupported handedness in Phase 2C helper`);
+            }
+            if (p.size) {
+              const current = page.locator('[aria-current="page"]').filter({ hasText:p.size });
+              if (await current.count() < 1) fail(`${p.key}: selected size/configuration unclear`);
+            }
+            if (p.custom) await visible(page.getByText('Made to Order', { exact:true }), `${p.key} custom truth`);
+            else if (await page.getByText('Made to Order', { exact:true }).count()) fail(`${p.key}: false Made to Order claim`);
+            await visible(page.getByRole('link', { name:'Chat with us on WhatsApp' }), `${p.key} WhatsApp`);
+            await noOverflow(page, width, p.key);
+            out.widths[width].push(p.key);
+            if (width === 390 && ['verona1c2','roma32','lilyu','orlando'].includes(p.key)) {
+              await page.screenshot({ path:`qa-evidence-v5/${p.key}-390.png`, fullPage:true });
+            }
+            await context.close();
+          }
+
+          async function chooseCH12(page) {
+            await (await visible(page.getByRole('button', { name:/Choose from .* fabrics/i }), 'fabric chooser')).click();
+            await (await visible(page.getByRole('button', { name:/Chenille Grey, CH12/i }), 'CH12 swatch')).click();
+            await visible(page.getByText('CH12', { exact:true }), 'CH12 detail');
+            await page.getByRole('button', { name:/Build mine in this|Keep this fabric/i }).click();
+            await visible(page.getByText(/CH12 · every fabric is the same price/i), 'chosen CH12');
+          }
+
+          (async () => {
+            const browser = await chromium.launch({ headless:true, executablePath:'/usr/bin/google-chrome', args:['--no-sandbox'] });
+            try {
+              for (const width of widths) {
+                out.widths[width] = [];
+                for (const p of products) await matrixCheck(browser, width, p);
+              }
+
+              {
+                const { context, page } = await setup(browser, 390, products[0].url, 'fit-destination');
+                const link = await visible(page.getByRole('link', { name:/Will it fit\? Check the doorway guide/i }), 'fit link');
+                await link.click();
+                await page.waitForURL(/\/size-guide(?:$|\?)/, { timeout:15000 });
+                await visible(page.getByText(/doorway/i), 'doorway guide content');
+                out.fitLink = true;
+                await context.close();
+              }
+
+              {
+                const { context, page } = await setup(browser, 390, '/shop/corner-sofa/verona-high-back-4-seater-corner-2c1', 'verona2c1');
+                const helper = await visible(page.getByText('2c1 means 2 seats, corner, 1 seat — 4 seats total.', { exact:true }), '2c1 explanation');
+                const helperText = (await helper.textContent() || '').trim();
+                if (/left-hand|right-hand|left hand|right hand/i.test(helperText)) fail('2c1: unsupported handedness in Phase 2C helper');
+                await noOverflow(page, 390, '2c1');
+                out.config2c1 = true;
+                await context.close();
+              }
+
+              {
+                const { context, page } = await setup(browser, 390, products[0].url, 'zero-review');
+                const section = page.locator('#reviews');
+                await visible(section.getByText('No reviews yet.', { exact:true }), 'zero review state');
+                if (await section.getByText(/0 reviews?/i).count()) fail('zero-review fake zero count rendered');
+                if (await section.getByRole('button', { name:'Submit review' }).isVisible().catch(() => false)) fail('zero-review form open by default');
+                const zeroSchema = await productSchema(page, products[0].title);
+                if ('aggregateRating' in zeroSchema || 'review' in zeroSchema) fail('zero-review schema contains rating/review');
+                out.zeroSchema = true;
+                await (await visible(section.getByRole('button', { name:'Write the first review' }), 'write first review')).click();
+                await visible(section.getByRole('button', { name:'Submit review' }), 'zero review form path');
+                out.zeroReview = true;
+                await context.close();
+              }
+
+              {
+                const { context, page } = await setup(browser, 390, products[5].url, 'reviewed-orlando');
+                await visible(page.getByText(/5\.0\s*·\s*1 review/), 'Orlando rating summary');
+                if (await page.getByText('No reviews yet.', { exact:true }).count()) fail('Orlando inherited zero-review state');
+                await visible(page.getByText('Saad Abbasi', { exact:true }), 'Orlando review customer');
+                await visible(page.getByText(/Good quality sofas/), 'Orlando review body');
+                await visible(page.getByText('Write a review', { exact:true }), 'Orlando review form heading');
+                await visible(page.getByRole('button', { name:'Submit review' }), 'Orlando review form submit');
+                const schema = await productSchema(page, products[5].title);
+                if (!schema.aggregateRating || Number(schema.aggregateRating.ratingValue) !== 5 || Number(schema.aggregateRating.reviewCount) !== 1) fail('Orlando aggregateRating incorrect');
+                if (!Array.isArray(schema.review) || schema.review.length !== 1) fail('Orlando review schema count incorrect');
+                const reviewJson = JSON.stringify(schema.review[0]);
+                if (!reviewJson.includes('Saad Abbasi') || !reviewJson.includes('Good quality sofas') || !reviewJson.includes('5')) fail('Orlando review schema data changed');
+                out.reviewedSchema = true;
+                out.reviewed = true;
+                await context.close();
+              }
+
+              {
+                const url = products[1].url + '?variant=fdc54adb-777c-4dcd-83e1-64e5938b631a';
+                const { context, page } = await setup(browser, 390, url, 'selection-roma');
+                await visible(page.getByText(/Material\s*—\s*Leather/i), 'Roma selected material');
+                await visible(page.getByText('Black', { exact:true }), 'Roma selected colour');
+                await visible(page.getByText('£599', { exact:true }), 'Roma selected price');
+                await visible(page.getByRole('button', { name:/Add to cart.*£599/i }), 'Roma priced Add to Cart');
+                out.selectionRegression = true;
+                await context.close();
+              }
+
+              {
+                const url = products[1].url + '?variant=fdc54adb-777c-4dcd-83e1-64e5938b631a';
+                const { context, page } = await setup(browser, 390, url, 'add-roma');
+                await (await visible(page.getByRole('button', { name:/Add to cart.*£599/i }), 'Roma add')).click();
+                await page.getByText('Added to cart', { exact:true }).waitFor({ state:'visible', timeout:5000 });
+                const cart = await page.evaluate(() => JSON.parse(localStorage.getItem('uksofashop_cart') || '[]'));
+                if (cart.length !== 1 || cart[0].variant_id !== 'fdc54adb-777c-4dcd-83e1-64e5938b631a' || Number(cart[0].price) !== 599 || cart[0].fabric_id !== null || cart[0].fabric_code !== null) fail('Roma cart payload wrong');
+                await page.goto(base + '/checkout', { waitUntil:'domcontentloaded' });
+                await notCssClipped(await visible(page.getByText(products[1].title, { exact:true }), 'Roma cart title'), 'Roma cart title');
+                await notCssClipped(await visible(page.getByText('Black Leather', { exact:true }), 'Roma cart spec'), 'Roma cart spec');
+                out.addToCart.roma = true;
+                await context.close();
+              }
+
+              {
+                const { context, page } = await setup(browser, 390, products[0].url + '?variant=a5d2050d-c458-4e0c-b3b3-7b7c727845a0', 'add-verona');
+                await chooseCH12(page);
+                await (await visible(page.getByRole('button', { name:/Add to cart.*£529/i }), 'Verona add')).click();
+                await page.getByText('Added to cart', { exact:true }).waitFor({ state:'visible', timeout:5000 });
+                const cart = await page.evaluate(() => JSON.parse(localStorage.getItem('uksofashop_cart') || '[]'));
+                if (cart.length !== 1 || cart[0].variant_id !== 'a5d2050d-c458-4e0c-b3b3-7b7c727845a0' || Number(cart[0].price) !== 529 || cart[0].fabric_id !== '6ce3d2c2-7f92-4276-b991-70afa07c0cf9' || cart[0].fabric_code !== 'CH12' || cart[0].fabric_label !== 'Chenille Grey') fail('Verona fabric cart payload wrong');
+                await page.goto(base + '/checkout', { waitUntil:'domcontentloaded' });
+                await notCssClipped(await visible(page.getByText(products[0].title, { exact:true }), 'Verona cart title'), 'Verona cart title');
+                await notCssClipped(await visible(page.getByText('Chenille Grey · CH12', { exact:true }), 'Verona cart spec'), 'Verona cart spec');
+                out.addToCart.verona = true;
+                await context.close();
+              }
+
+              {
+                const url = products[4].url + '?variant=97e1a331-63d2-4761-bc30-9d28313bd698';
+                const { context, page } = await setup(browser, 390, url, 'add-lily2c2');
+                await chooseCH12(page);
+                await (await visible(page.getByRole('button', { name:/Add to cart.*£749/i }), 'Lily 2c2 add')).click();
+                await page.getByText('Added to cart', { exact:true }).waitFor({ state:'visible', timeout:5000 });
+                const cart = await page.evaluate(() => JSON.parse(localStorage.getItem('uksofashop_cart') || '[]'));
+                if (cart.length !== 1 || cart[0].variant_id !== '97e1a331-63d2-4761-bc30-9d28313bd698' || Number(cart[0].price) !== 749 || cart[0].fabric_id !== '6ce3d2c2-7f92-4276-b991-70afa07c0cf9' || cart[0].fabric_code !== 'CH12' || cart[0].fabric_label !== 'Chenille Grey') fail('Lily 2c2 cart payload wrong');
+                await page.goto(base + '/checkout', { waitUntil:'domcontentloaded' });
+                await notCssClipped(await visible(page.getByText(products[4].title, { exact:true }), 'Lily 2c2 cart title'), 'Lily 2c2 cart title');
+                await notCssClipped(await visible(page.getByText('Chenille Grey · CH12', { exact:true }), 'Lily 2c2 cart spec'), 'Lily 2c2 cart spec');
+                out.addToCart.lily2c2 = true;
+                await context.close();
+              }
+
+              for (const width of [320,390,430]) {
+                const { context, page } = await setup(browser, width, products[1].url, `fixed-${width}`);
+                const flowAdd = await visible(page.getByRole('button', { name:/Add to cart.*£599/i }), `${width} flow add`);
+                await flowAdd.scrollIntoViewIfNeeded();
+                await page.evaluate(() => scrollBy(0, 550));
+                await page.waitForTimeout(600);
+                const bar = page.locator('[data-bottom-bar]').first();
+                await bar.waitFor({ state:'visible', timeout:5000 });
+                const wa = await visible(page.getByRole('link', { name:'Chat with us on WhatsApp' }), `${width} WhatsApp`);
+                const nav = await visible(page.getByRole('navigation', { name:'Primary' }), `${width} nav`);
+                const [bb, wb, nb] = await Promise.all([bar.boundingBox(), wa.boundingBox(), nav.boundingBox()]);
+                if (!bb || !wb || !nb) fail(`${width}: fixed boxes unavailable`);
+                if (bb.y + bb.height > nb.y + 1) fail(`${width}: sticky product bar overlaps mobile nav`);
+                if (wb.y + wb.height > bb.y + 1) fail(`${width}: WhatsApp overlaps sticky product bar`);
+                await noOverflow(page, width, 'fixed-ui');
+                out.fixedUi[width] = true;
+                await context.close();
+              }
+
+              if (out.runtimeErrors.length) fail('runtime page errors: ' + JSON.stringify(out.runtimeErrors));
+            } finally {
+              fs.writeFileSync('phase2c-preview-results-v5.json', JSON.stringify(out, null, 2));
+              await browser.close();
+            }
+          })().catch(e => { console.error(e); process.exit(1); });
+          NODE
+
+      - name: Show results
+        if: always()
+        run: |
+          cat phase2c-preview-results-v5.json 2>/dev/null || true
+          tail -80 /tmp/phase2c.log 2>/dev/null || true
+
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase2c-final-preview-v5
+          path: |
+            phase2c-preview-results-v5.json
+            qa-evidence-v5/
+          if-no-files-found: ignore
