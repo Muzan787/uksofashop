@@ -1,0 +1,114 @@
+name: Phase 2D-B consent-safe preview validation
+
+on:
+  push:
+    branches: [qa/phase2d-b-implementation-v5]
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      BASE_SHA: af46a8a2524662c9f573ba055e2194cc0f95245b
+      NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:9999
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: qa-dummy-anon-key
+      NODE_PATH: /tmp/pw/node_modules
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/cro-phase2d-b-cart-readability
+          fetch-depth: 0
+      - name: Verify base and apply exact tested patch
+        run: |
+          test "$(git rev-parse HEAD)" = "$BASE_SHA"
+          git diff --exit-code "$BASE_SHA" --
+          python - <<'PY'
+          from pathlib import Path
+          import textwrap
+          cp=Path('src/components/Checkout/CartStep.tsx'); c=cp.read_text(); start=c.index('/**\n * An 88px row:'); fs=c.index('function Row({ item, onRemove, onQuantity }: {',start); end=c.index('// ─── Quantity',fs)
+          section=textwrap.dedent('''\
+          /**
+           * A compact adaptive cart line. Product identity gets the upper grid row,
+           * while quantity, price and remove controls use the full width below it.
+           * That preserves 44px touch targets without squeezing the chosen specification
+           * into the narrow strip beside the image on a 320px phone.
+           */
+          function Row({ item, onRemove, onQuantity }: {
+            item: DisplayCartItem;
+            onRemove: () => void;
+            onQuantity: (q: number) => void;
+          }) {
+            const specification = item.fabric_label?.trim() || item.color?.trim() || '';
+            return (
+              <article className="grid grid-cols-[64px_minmax(0,1fr)] gap-x-3 gap-y-1 rounded-md border border-calico-300 bg-calico-50 p-2 shadow-e1 sm:grid-cols-[72px_minmax(0,1fr)]">
+                <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-sm bg-calico-200 sm:h-[72px] sm:w-[72px]">
+                  <Image src={item.image_url || '/placeholder.svg'} alt="" fill sizes="72px" placeholder={item.image_url ? 'blur' : undefined} blurDataURL={item.image_url ? blurDataURL(item.image_url) : undefined} className="object-cover" />
+                </div>
+                <div className="min-w-0 self-start py-0.5">
+                  <h3 className="m-0 break-words font-body text-body-sm font-semibold leading-snug text-ink-900">{item.title}</h3>
+                  {(specification || item.fabric_code) && <p className="m-0 mt-1 break-words font-data text-caption leading-snug text-ink-500">{specification}{item.fabric_code && <span className="text-ember-700">{specification ? ' · ' : ''}{item.fabric_code}</span>}</p>}
+                </div>
+                <div className="col-span-2 flex min-w-0 items-center gap-1 pt-1">
+                  <Stepper quantity={item.quantity} title={item.title} onChange={onQuantity} />
+                  <span className="ml-auto shrink-0 font-data text-body font-semibold tabular-nums text-ink-900">£{(item.price * item.quantity).toFixed(0)}</span>
+                  <button type="button" onClick={onRemove} aria-label={`Remove ${item.title} from your cart`} className="hover-icon flex h-11 w-11 shrink-0 items-center justify-center rounded-sm text-ink-400 hover:text-rust-700"><Trash2 aria-hidden="true" className="h-4 w-4" /></button>
+                </div>
+              </article>
+            );
+          }
+
+          ''')
+          cp.write_text(c[:start]+section+c[end:])
+          xp=Path('src/components/Checkout/CheckoutClient.tsx'); x=xp.read_text(); ot='<div className="truncate text-caption font-semibold text-calico-300">{item.title}</div>'; assert x.count(ot)==1; nt='<div className="text-caption font-semibold leading-snug text-calico-300">{item.title}</div>'; x=x.replace(ot,nt,1); oc='className="mt-0.5 truncate text-caption text-calico-300"'; assert x.count(oc)==1; x=x.replace(oc,'className="mt-0.5 break-words text-caption leading-snug text-calico-300"',1); a=x.index(nt); p=x.index('{item.color}',a); x=x[:p]+'{item.fabric_label || item.color}'+x[p+len('{item.color}'):]; xp.write_text(x)
+          PY
+          test "$(git diff --name-only)" = $'src/components/Checkout/CartStep.tsx\nsrc/components/Checkout/CheckoutClient.tsx'
+          git diff --check
+      - name: Build exact working tree
+        run: |
+          npm ci
+          npm run build
+          npm run start > /tmp/phase2db.log 2>&1 &
+          for i in $(seq 1 40); do code=$(curl -s -o /tmp/c -w '%{http_code}' http://127.0.0.1:3000/checkout || true); [ "$code" = 200 ] && exit 0; sleep 1; done
+          cat /tmp/phase2db.log; exit 1
+      - name: Browser dependency
+        run: |
+          mkdir -p /tmp/pw
+          npm install --prefix /tmp/pw playwright-core@1.55.0
+      - name: Full preview QA with consent pre-set
+        run: |
+          node <<'NODE'
+          const {chromium}=require('playwright-core'),fs=require('fs'); const base='http://127.0.0.1:3000', widths=[320,390,430,768,1440];
+          const P={vf:{variant_id:'a5d2050d-c458-4e0c-b3b3-7b7c727845a0',quantity:1,price:529,title:'Verona 4 Seater Corner 1c2 High Back',color:'Grey',image_url:'https://res.cloudinary.com/dmlna04yk/image/upload/v1787513319/Verona-4-seater-2c1-corner-high-back-sofa-grey2_uw3ny5.jpg',fabric_id:'6ce3d2c2-7f92-4276-b991-70afa07c0cf9',fabric_label:'Chenille Grey',fabric_code:'CH12',fabric_swatch:'https://res.cloudinary.com/dmlna04yk/image/upload/v1788788503/CH12_amoeer.png'},roma:{variant_id:'fdc54adb-777c-4dcd-83e1-64e5938b631a',quantity:1,price:599,title:'Roma Recliner 3+2 Seater Manual Sofa',color:'Black',image_url:'https://res.cloudinary.com/dmlna04yk/image/upload/v1782248467/Black-Roma-Recliner-Manual_fu4i3h.png',fabric_id:null,fabric_label:null,fabric_code:null,fabric_swatch:null},nova:{variant_id:'d81eb236-21ee-4e80-a1b3-4c5f779dbcdd',quantity:1,price:550,title:'Nova Electric Recliner 2 Seater Sofa',color:'Elephant Grey',image_url:'https://res.cloudinary.com/dmlna04yk/image/upload/v1782248436/Nova-Electric-Recliner-2-Seater-Sofa-Elephant-Grey_ddd6au.jpg',fabric_id:null,fabric_label:null,fabric_code:null,fabric_swatch:null},vs:{variant_id:'a3c44d91-9756-4913-8895-e39054eba91a',quantity:1,price:549,title:'Verona 3+2 Seater High Back',color:'Grey',image_url:'https://res.cloudinary.com/dmlna04yk/image/upload/v1787517240/Verona-3_2-seater-high-back-sofa-grey_r35wa4.jpg',fabric_id:null,fabric_label:null,fabric_code:null,fabric_swatch:null}}; const matrix=Object.values(P),out={widths:{},multi:false,quantity:false,undo:false,summary:false,state:false,fixed:{}};const fail=m=>{throw Error(m)};
+          async function setup(b,w,cart,t=w<=430){let c=await b.newContext({viewport:{width:w,height:w>=768?1000:844},isMobile:t,hasTouch:t,serviceWorkers:'block'}),p=await c.newPage();await p.addInitScript(x=>{localStorage.setItem('uksofashop_cart',JSON.stringify(x));localStorage.setItem('cookie_consent','denied')},cart);await p.route('**/api/attribution/**',r=>r.fulfill({status:204,body:''}));await p.route('**/api/meta/**',r=>r.fulfill({status:204,body:''}));let r=await p.goto(base+'/checkout',{waitUntil:'domcontentloaded',timeout:30000});if(!r||!r.ok())fail(`${w} HTTP`);await p.getByRole('button',{name:/Continue to delivery/i}).waitFor({state:'visible',timeout:10000});return{c,p}}
+          async function vis(loc,label){for(let i=0;i<await loc.count();i++)if(await loc.nth(i).isVisible())return loc.nth(i);fail(label+' no visible')};async function read(l,label){let ok=await l.evaluate(e=>{let s=getComputedStyle(e);return s.textOverflow!=='ellipsis'&&e.scrollHeight<=e.clientHeight+1&&e.scrollWidth<=e.clientWidth+1});if(!ok)fail(label+' clipped')}
+          async function line(p,it,w){let t=await vis(p.getByText(it.title,{exact:true}),`${w} title`);await read(t,`${w} title`);let st=it.fabric_code?`${it.fabric_label||it.color} · ${it.fabric_code}`:it.color;await read(await vis(p.getByText(st,{exact:true}),`${w} spec`),`${w} spec`);let[a,b]=await Promise.all([p.getByRole('button',{name:`One more ${it.title}`}).boundingBox(),p.getByRole('button',{name:`Remove ${it.title} from your cart`}).boundingBox()]);if(!a||a.width<43||a.height<43||!b||b.width<43||b.height<43)fail(`${w} touch`);await vis(p.getByText(`£${it.price}`,{exact:true}),`${w} price`);let ib=await t.locator('xpath=ancestor::article').locator('img').first().boundingBox();if(!ib||ib.width<60||ib.height<60)fail(`${w} image`);if(await p.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth+1))fail(`${w} overflow`)}
+          (async()=>{let b=await chromium.launch({headless:true,executablePath:'/usr/bin/google-chrome',args:['--no-sandbox']});try{for(const w of widths){out.widths[w]=[];for(const it of matrix){let{c,p}=await setup(b,w,[it]);await line(p,it,w);if(!it.fabric_code&&await p.getByText('CH12',{exact:false}).count())fail(`${w} fake code`);out.widths[w].push(it.title);await c.close()}}
+          let m=await setup(b,390,matrix),rows=m.p.locator('article'),prev=null;if(await rows.count()<4)fail('multi');for(let i=0;i<4;i++){let x=await rows.nth(i).boundingBox();if(!x||prev&&x.y<prev.y+prev.height)fail('multi overlap');prev=x}out.multi=true;await m.c.close();
+          let q=await setup(b,390,[P.roma]);await q.p.getByRole('button',{name:`One more ${P.roma.title}`}).click();await q.p.getByText('2 in your cart',{exact:true}).waitFor({state:'attached'});await vis(q.p.getByText('£1198',{exact:true}),'qty price');await q.p.getByRole('button',{name:`One fewer ${P.roma.title}`}).click();await q.p.getByText('1 in your cart',{exact:true}).waitFor({state:'attached'});out.quantity=true;await q.p.getByRole('button',{name:`Remove ${P.roma.title} from your cart`}).click();let u=q.p.getByRole('button',{name:'Undo'});await u.waitFor({state:'visible'});await u.click();await vis(q.p.getByText(P.roma.title,{exact:true}),'undo');out.undo=true;await q.c.close();
+          let d=await setup(b,1440,[P.vf],false);await read(await vis(d.p.getByText(P.vf.title,{exact:true}),'desktop title'),'desktop title');await read(await vis(d.p.getByText('Chenille Grey · CH12',{exact:true}),'desktop spec'),'desktop spec');await d.c.close();let mo=await setup(b,390,[P.vf],true);await mo.p.getByRole('button',{name:/1 item · due on delivery/i}).click();let ts=mo.p.getByText(P.vf.title,{exact:true}),vv=[];for(let i=0;i<await ts.count();i++)if(await ts.nth(i).isVisible())vv.push(ts.nth(i));if(vv.length<2)fail('mobile summary title');await read(vv.at(-1),'mobile title');let ss=mo.p.getByText('Chenille Grey · CH12',{exact:true}),sv=[];for(let i=0;i<await ss.count();i++)if(await ss.nth(i).isVisible())sv.push(ss.nth(i));if(sv.length<2)fail('mobile summary spec');await read(sv.at(-1),'mobile spec');out.summary=true;await mo.c.close();
+          let s=await setup(b,390,[P.roma],true);await s.p.getByRole('button',{name:/Continue to delivery/i}).click();const f={name:s.p.locator('input[name="customerName"]'),email:s.p.locator('input[name="customerEmail"]'),phone:s.p.locator('input[name="customerPhone"]'),postcode:s.p.locator('label').filter({hasText:'Postcode'}).locator('..').locator('input[type="text"]').first(),address:s.p.locator('textarea[name="shippingAddress"]'),instructions:s.p.locator('textarea[name="specialInstructions"]')},v={name:'QA 2DB State Name',email:'qa-2db@example.com',phone:'07700900123',postcode:'SW1A 1AA',address:'QA Phase 2DB Address 123',instructions:'QA 2DB persistence marker'};for(const k in f)await f[k].fill(v[k]);await s.p.getByRole('button',{name:/Back to Cart/i}).click();await s.p.getByRole('button',{name:/Continue to delivery/i}).click();for(const k in f){await f[k].waitFor({state:'visible'});if(await f[k].inputValue()!==v[k])fail('state '+k)}out.state=true;await s.c.close();
+          for(const w of [320,390,430]){let{c,p}=await setup(b,w,[P.vf],true),wa=p.getByRole('link',{name:'Chat with us on WhatsApp'}),bar=p.locator('[data-bottom-bar]').first(),nav=p.getByRole('navigation',{name:'Primary'});if(!await wa.isVisible()||!await bar.isVisible()||!await nav.isVisible())fail(`${w} fixed missing`);let[wb,bb,nb]=await Promise.all([wa.boundingBox(),bar.boundingBox(),nav.boundingBox()]);if(!wb||!bb||!nb||bb.y+bb.height>nb.y+1||wb.y+wb.height>bb.y+1)fail(`${w} fixed overlap`);out.fixed[w]=true;await c.close()}}finally{fs.writeFileSync('phase2d-b-preview-results.json',JSON.stringify(out,null,2));await b.close()}})().catch(e=>{console.error(e);process.exit(1)});
+          NODE
+      - name: Show QA
+        if: always()
+        run: test -f phase2d-b-preview-results.json && cat phase2d-b-preview-results.json || true
+      - name: Commit clean release candidate
+        run: |
+          test "$(git diff --name-only)" = $'src/components/Checkout/CartStep.tsx\nsrc/components/Checkout/CheckoutClient.tsx'
+          git config user.name Muzan787
+          git config user.email 109960574+Muzan787@users.noreply.github.com
+          git add src/components/Checkout/CartStep.tsx src/components/Checkout/CheckoutClient.tsx
+          git commit -m "Phase 2D-B: make cart configuration readable"
+          git rev-parse HEAD | tee phase2d-b-feature-sha.txt
+          git push origin HEAD:fix/cro-phase2d-b-cart-readability
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase2d-b-v5
+          path: |
+            phase2d-b-preview-results.json
+            phase2d-b-feature-sha.txt
+          if-no-files-found: ignore
