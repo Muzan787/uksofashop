@@ -1,0 +1,307 @@
+name: Phase 2C live production sign-off
+
+on:
+  push:
+    branches: [qa/phase2c-live-signoff-final]
+
+permissions:
+  contents: read
+  statuses: read
+
+jobs:
+  live-signoff:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      MASTER_SHA: 1c38fb8e8cca20038ce390656b87a631982fcfe1
+      BASE_SHA: eac4ab38841bf6b60140f9c5984e5274d01f8e50
+      SITE: https://www.uksofashop.co.uk
+      NODE_PATH: /tmp/pw/node_modules
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout exact production master
+        uses: actions/checkout@v4
+        with:
+          ref: 1c38fb8e8cca20038ce390656b87a631982fcfe1
+          fetch-depth: 0
+
+      - name: Confirm Phase 2C production cleanliness
+        run: |
+          test "$(git rev-parse HEAD)" = "$MASTER_SHA"
+          test "$(git diff --name-only "$BASE_SHA"..HEAD)" = $'src/components/Product/BuyBox.tsx\nsrc/components/Product/Reviews.tsx'
+          test -z "$(git diff --name-only "$BASE_SHA"..HEAD -- src/components/Product/ProductPageClient.tsx src/components/Product/AddToCart.tsx src/components/Product/StickyBar.tsx src/components/Product/SecondaryActions.tsx src/context/CartContext.tsx src/components/Checkout/CartStep.tsx src/components/Checkout/CheckoutClient.tsx src/app/actions/checkout.ts src/utils/tracking.ts src/utils/orderConversions.ts src/utils/attribution src/components/Layout/WhatsAppFab.tsx supabase/migrations)"
+          git diff --check "$BASE_SHA"..HEAD
+
+      - name: Wait for exact-SHA Vercel success
+        run: |
+          for i in $(seq 1 90); do
+            payload=$(curl -fsSL \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/${MASTER_SHA}/status")
+            state=$(printf '%s' "$payload" | jq -r '[.statuses[] | select(.context == "Vercel")][0].state // "missing"')
+            target=$(printf '%s' "$payload" | jq -r '[.statuses[] | select(.context == "Vercel")][0].target_url // ""')
+            echo "Vercel state=$state target=$target"
+            if [ "$state" = "success" ]; then
+              printf '{"sha":"%s","state":"success","target":"%s"}\n' "$MASTER_SHA" "$target" > vercel-exact-sha.json
+              exit 0
+            fi
+            if [ "$state" = "failure" ] || [ "$state" = "error" ]; then
+              printf '{"sha":"%s","state":"%s","target":"%s"}\n' "$MASTER_SHA" "$state" "$target" > vercel-exact-sha.json
+              exit 1
+            fi
+            sleep 10
+          done
+          echo "Timed out waiting for Vercel success for $MASTER_SHA"
+          exit 1
+
+      - name: Prepare browser
+        run: |
+          mkdir -p /tmp/pw
+          npm install --prefix /tmp/pw playwright-core@1.55.0
+
+      - name: Live Phase 2C matrix
+        run: |
+          node <<'NODE'
+          const { chromium } = require('playwright-core');
+          const fs = require('fs');
+          const base = process.env.SITE;
+          const widths = [320,390,430,768,1440];
+          const products = [
+            {key:'verona1c2',url:'/shop/corner-sofa/verona-high-back-4-seater-corner-1c2',title:'Verona 4 Seater Corner 1c2 High Back',price:529,size:'4 Seater Corner 1c2',dim:'190cm x 240cm',config:'1c2 means 1 seat, corner, 2 seats — 4 seats total.',custom:true},
+            {key:'roma32',url:'/shop/recliner/roma-recliner-manual-3-and-2',title:'Roma Recliner 3+2 Seater Manual Sofa',price:599,size:'3+2 Seater',dim:'3-Seater',config:'3+2 means one 3-seater and one 2-seater sold as a matching set.',custom:false},
+            {key:'lily32',url:'/shop/3-2-seater/lily-high-back-3and2-seater',title:'Lily 3+2 Seater High Back',price:749,size:'3+2 Seater',dim:'3 Seater:',config:'3+2 means one 3-seater and one 2-seater sold as a matching set.',custom:true},
+            {key:'lilyu',url:'/shop/corner-sofa/lily-high-back-armed-u-shape',title:'Lily Armed U-Shape High Back',price:949,size:'Armed U-Shape',dim:'L:240cm x 300cm x 180cm',config:null,custom:true},
+            {key:'lily2c2',url:'/shop/corner-sofa/lily-high-back-5-seater-corner-2c2',title:'Lily 5 Seater Corner 2c2 High Back',price:749,size:'5 Seater Corner 2c2',dim:'240cm x 240cm',config:'2c2 means 2 seats, corner, 2 seats — 5 seats total.',custom:true},
+            {key:'orlando',url:'/shop/electric-sofa/orlando-electric-recliner',title:'Orlando Electric Recliner 3+2 Seater',price:999,size:null,dim:'3-Seater',config:'3+2 means one 3-seater and one 2-seater sold as a matching set.',custom:false},
+          ];
+          const out={masterSha:process.env.MASTER_SHA,widths:{},fitGuidance:true,dimensions:true,config32:true,corners:true,unsupportedSemantics:'NONE',selectedConfiguration:true,showroom:true,zeroReview:false,reviewedOrlando:false,structuredData:false,addToCart:{},cart:{},fixedUi:{},horizontalOverflow:'NONE',runtimeErrors:[],serviceWorkers:'ALLOW',live:true};
+          const fail=m=>{throw new Error(m)};
+
+          function esc(s){return s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}
+          function flatten(value,acc=[]){if(!value||typeof value!=='object')return acc;acc.push(value);if(Array.isArray(value))value.forEach(v=>flatten(v,acc));else Object.values(value).forEach(v=>flatten(v,acc));return acc}
+          function overlaps(a,b){return !!a&&!!b&&a.x < b.x+b.width && a.x+a.width > b.x && a.y < b.y+b.height && a.y+a.height > b.y}
+
+          async function contextFor(browser,width){
+            const touch=width<=430;
+            const context=await browser.newContext({viewport:{width,height:width>=768?1000:844},isMobile:touch,hasTouch:touch,serviceWorkers:'allow'});
+            const page=await context.newPage();
+            page.on('pageerror',e=>out.runtimeErrors.push({width,message:e.message,stack:e.stack||null}));
+            await page.addInitScript(()=>localStorage.setItem('cookie_consent','denied'));
+            return {context,page};
+          }
+
+          async function goto(page,url,label){
+            const r=await page.goto(base+url,{waitUntil:'domcontentloaded',timeout:60000});
+            if(!r||!r.ok())fail(`${label}: HTTP ${r&&r.status()}`);
+            await page.locator('h1').first().waitFor({state:'visible',timeout:20000});
+            await page.waitForTimeout(350);
+          }
+
+          async function visible(locator,label,timeout=12000){
+            const n=await locator.count();
+            for(let i=0;i<n;i++){if(await locator.nth(i).isVisible())return locator.nth(i)}
+            try{await locator.first().waitFor({state:'visible',timeout});return locator.first()}catch{fail(`${label}: no visible match`)}
+          }
+
+          async function noOverflow(page,width,label){
+            const yes=await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth+1);
+            if(yes){out.horizontalOverflow='FAIL';fail(`${label} ${width}: horizontal overflow`)}
+          }
+
+          async function noTitleClip(locator,label){
+            const m=await locator.evaluate(el=>{const s=getComputedStyle(el),r=el.getBoundingClientRect();return{text:(el.textContent||'').trim(),width:r.width,height:r.height,textOverflow:s.textOverflow,lineClamp:s.webkitLineClamp,overflow:s.overflow,overflowX:s.overflowX,overflowY:s.overflowY}});
+            if(!m.text||m.width<=0||m.height<=0||m.textOverflow==='ellipsis'||(m.lineClamp&&m.lineClamp!=='none')||['hidden','clip'].includes(m.overflow)||['hidden','clip'].includes(m.overflowX)||['hidden','clip'].includes(m.overflowY))fail(`${label}: clipped/missing`);
+          }
+
+          async function schemaFor(page,title){
+            const raws=await page.locator('script[type="application/ld+json"]').allTextContents();
+            for(const raw of raws){try{const p=JSON.parse(raw);const found=flatten(p).find(x=>x&&x['@type']==='Product'&&x.name===title);if(found)return found}catch{}}
+            fail(`Product schema missing for ${title}`)
+          }
+
+          async function matrixCheck(browser,width,p){
+            const {context,page}=await contextFor(browser,width);
+            await goto(page,p.url,`${p.key}-${width}`);
+            const h1=await visible(page.locator('h1').filter({hasText:p.title}),`${p.key} title`);
+            await noTitleClip(h1,`${p.key} title`);
+            if((await h1.textContent()||'').trim()!==p.title)fail(`${p.key}: title mismatch`);
+            await visible(page.getByText(`£${p.price}`,{exact:true}),`${p.key} price`);
+            await visible(page.getByRole('button',{name:new RegExp(`Add to cart.*£${p.price}`,'i')}),`${p.key} Add to Cart`);
+            const fit=await visible(page.getByRole('link',{name:/Will it fit\? Check the doorway guide/i}),`${p.key} fit guidance`);
+            if(await fit.getAttribute('href')!=='/size-guide')fail(`${p.key}: wrong size-guide href`);
+            await visible(page.getByText(new RegExp(esc(p.dim),'i')),`${p.key} dimensions`);
+            if(p.config){
+              const helper=await visible(page.getByText(p.config,{exact:true}),`${p.key} config explanation`);
+              const txt=(await helper.textContent()||'').trim();
+              if(/left(?:-| )?hand|right(?:-| )?hand|orientation/i.test(txt)){out.unsupportedSemantics='FAIL';fail(`${p.key}: unsupported semantics`)}
+            }
+            if(p.size){
+              const selected=page.locator('[aria-current="page"]').filter({hasText:p.size});
+              if(await selected.count()<1)fail(`${p.key}: selected config not clear`);
+            }
+            if(p.custom)await visible(page.getByText('Made to Order',{exact:true}),`${p.key} Made to Order`);
+            else if(await page.getByText('Made to Order',{exact:true}).count())fail(`${p.key}: false Made to Order`);
+            const showroom=await visible(page.getByRole('link',{name:/Blackburn showroom/i}),`${p.key} showroom`);
+            if(await showroom.getAttribute('href')!=='/showroom')fail(`${p.key}: showroom href wrong`);
+            if(!/visits by appointment/i.test((await showroom.textContent()||'').replace(/\s+/g,' ')))fail(`${p.key}: appointment wording missing`);
+            await visible(page.getByRole('link',{name:'Chat with us on WhatsApp'}),`${p.key} WhatsApp`);
+            await noOverflow(page,width,p.key);
+            out.widths[width].push(p.key);
+            await context.close();
+          }
+
+          async function chooseCH12(page){
+            await (await visible(page.getByRole('button',{name:/Choose from .* fabrics/i}),'fabric chooser')).click();
+            await (await visible(page.getByRole('button',{name:/Chenille Grey, CH12/i}),'CH12')).click();
+            await visible(page.getByText('CH12',{exact:true}),'CH12 detail');
+            await (await visible(page.getByRole('button',{name:/Build mine in this|Keep this fabric/i}),'confirm CH12')).click();
+            await visible(page.getByText(/CH12 · every fabric is the same price/i),'chosen CH12');
+          }
+
+          async function checkCart(browser,spec){
+            const {context,page}=await contextFor(browser,390);
+            await goto(page,spec.url,spec.key);
+            await page.evaluate(()=>localStorage.setItem('uksofashop_cart','[]'));
+            await page.reload({waitUntil:'domcontentloaded',timeout:60000});
+            await page.locator('h1').first().waitFor({state:'visible',timeout:20000});
+            if(spec.fabric)await chooseCH12(page);
+            await (await visible(page.getByRole('button',{name:new RegExp(`Add to cart.*£${spec.price}`,'i')}),`${spec.key} add`)).click();
+            await visible(page.getByText('Added to cart',{exact:true}),`${spec.key} added toast`,8000);
+            await page.waitForTimeout(350);
+            const cart=await page.evaluate(()=>JSON.parse(localStorage.getItem('uksofashop_cart')||'[]'));
+            if(cart.length!==1)fail(`${spec.key}: cart line count wrong`);
+            const line=cart[0];
+            if(line.variant_id!==spec.variant||Number(line.price)!==spec.price||line.color!==spec.color)fail(`${spec.key}: variant/price/colour payload wrong`);
+            if(spec.fabric){if(line.fabric_id!==spec.fabricId||line.fabric_code!=='CH12'||line.fabric_label!=='Chenille Grey')fail(`${spec.key}: fabric payload wrong`)}
+            else if(line.fabric_id||line.fabric_code)fail(`${spec.key}: unexpected fabric payload`);
+            out.addToCart[spec.key]=true;
+            await page.goto(base+'/checkout',{waitUntil:'domcontentloaded',timeout:60000});
+            const titleLoc=await visible(page.getByText(spec.title,{exact:true}),`${spec.key} cart title`,15000);
+            const specLoc=await visible(page.getByText(spec.cartSpec,{exact:true}),`${spec.key} cart spec`,15000);
+            await noTitleClip(titleLoc,`${spec.key} cart title`);
+            await noTitleClip(specLoc,`${spec.key} cart spec`);
+            await visible(page.getByText(`£${spec.price}`,{exact:true}),`${spec.key} cart price`);
+            await visible(page.getByRole('button',{name:new RegExp(`One more ${esc(spec.title)}`)}),`${spec.key} quantity plus`);
+            await noOverflow(page,390,`${spec.key} cart`);
+            out.cart[spec.key]=true;
+            await context.close();
+          }
+
+          async function fixedUi(browser,width){
+            const {context,page}=await contextFor(browser,width);
+            await goto(page,products[1].url,`fixed-${width}`);
+            const fit=await visible(page.getByRole('link',{name:/Will it fit\? Check the doorway guide/i}),`${width} fit`);
+            await fit.evaluate(el=>el.scrollIntoView({block:'center'}));
+            await page.waitForTimeout(250);
+            const bar=page.locator('[data-bottom-bar]').first();
+            if(await bar.getAttribute('inert')===null)fail(`${width}: sticky active before in-flow CTA passed`);
+            await noOverflow(page,width,'fit area');
+
+            const showroom=await visible(page.getByRole('link',{name:/Blackburn showroom/i}),`${width} showroom`);
+            await showroom.evaluate(el=>el.scrollIntoView({block:'center'}));
+            await page.waitForTimeout(300);
+            const showBox=await showroom.boundingBox();
+            const nav=await visible(page.getByRole('navigation',{name:'Primary'}),`${width} nav`);
+            const wa=await visible(page.getByRole('link',{name:'Chat with us on WhatsApp'}),`${width} WhatsApp`);
+            const [navBox,waBox,barAtShow]=await Promise.all([nav.boundingBox(),wa.boundingBox(),bar.boundingBox()]);
+            if(overlaps(showBox,navBox)||overlaps(showBox,waBox)||(await bar.getAttribute('inert')===null&&overlaps(showBox,barAtShow)))fail(`${width}: showroom covered by fixed UI`);
+
+            let activated=false;
+            let last=await page.evaluate(()=>scrollY);
+            for(let i=0;i<24;i++){
+              await page.evaluate(()=>scrollBy(0,220));
+              await page.waitForTimeout(140);
+              const now=await page.evaluate(()=>scrollY);
+              if(now===last&&i<20)fail(`${width}: scroll trap before document end`);
+              last=now;
+              if(await bar.getAttribute('inert')===null){activated=true;break}
+            }
+            if(!activated)fail(`${width}: sticky bar never activated naturally`);
+            await page.waitForTimeout(450);
+            const [bb,wb,nb]=await Promise.all([bar.boundingBox(),wa.boundingBox(),nav.boundingBox()]);
+            if(!bb||!wb||!nb)fail(`${width}: fixed UI box missing`);
+            if(bb.y+bb.height>nb.y+1)fail(`${width}: sticky overlaps bottom nav`);
+            if(wb.y+wb.height>bb.y+1)fail(`${width}: WhatsApp overlaps sticky bar`);
+            await noOverflow(page,width,'fixed UI');
+            out.fixedUi[width]={sticky:bb,whatsapp:wb,nav:nb};
+            await context.close();
+          }
+
+          (async()=>{
+            const browser=await chromium.launch({headless:true,executablePath:'/usr/bin/google-chrome',args:['--no-sandbox']});
+            try{
+              for(const width of widths){out.widths[width]=[];for(const p of products)await matrixCheck(browser,width,p)}
+
+              {
+                const {context,page}=await contextFor(browser,390);
+                await goto(page,products[0].url,'size-guide destination');
+                const link=await visible(page.getByRole('link',{name:/Will it fit\? Check the doorway guide/i}),'fit link');
+                await link.click();
+                await page.waitForURL(/\/size-guide(?:$|\?)/,{timeout:20000});
+                await visible(page.getByText(/doorway/i),'doorway guide content');
+                await context.close();
+              }
+
+              {
+                const {context,page}=await contextFor(browser,390);
+                await goto(page,'/shop/corner-sofa/verona-high-back-4-seater-corner-2c1','2c1');
+                const helper=await visible(page.getByText('2c1 means 2 seats, corner, 1 seat — 4 seats total.',{exact:true}),'2c1 helper');
+                const txt=(await helper.textContent()||'').trim();
+                if(/left(?:-| )?hand|right(?:-| )?hand|orientation/i.test(txt)){out.unsupportedSemantics='FAIL';fail('2c1 unsupported semantics')}
+                await noOverflow(page,390,'2c1');
+                await context.close();
+              }
+
+              {
+                const {context,page}=await contextFor(browser,390);
+                await goto(page,products[0].url,'zero review');
+                const section=page.locator('#reviews');
+                await visible(section.getByText('No reviews yet.',{exact:true}),'zero-review text');
+                if(await section.getByText(/0 reviews?/i).count())fail('zero-review fake count');
+                if(await section.getByRole('button',{name:'Submit review'}).isVisible().catch(()=>false))fail('zero-review form open by default');
+                const z=await schemaFor(page,products[0].title);
+                if('aggregateRating' in z||'review' in z)fail('zero-review fake schema');
+                await (await visible(section.getByRole('button',{name:'Write the first review'}),'write first')).click();
+                const submit=await visible(section.getByRole('button',{name:'Submit review'}),'review form submit');
+                await visible(section.getByRole('radio',{name:/4 stars/i}),'review rating control');
+                if(!await submit.isEnabled())fail('zero-review form not operational');
+                out.zeroReview=true;
+                await context.close();
+              }
+
+              {
+                const {context,page}=await contextFor(browser,390);
+                await goto(page,products[5].url,'Orlando reviewed');
+                await visible(page.getByText(/5\.0\s*·\s*1 review/),'Orlando 5-star one-review summary');
+                if(await page.getByText('No reviews yet.',{exact:true}).count())fail('Orlando inherited zero-review UI');
+                await visible(page.getByText('Saad Abbasi',{exact:true}),'Orlando reviewer');
+                await visible(page.getByText(/Good quality sofas/),'Orlando review body');
+                await visible(page.getByRole('button',{name:'Submit review'}),'Orlando review submission');
+                const s=await schemaFor(page,products[5].title);
+                if(!s.aggregateRating||Number(s.aggregateRating.ratingValue)!==5||Number(s.aggregateRating.reviewCount)!==1)fail('Orlando aggregate rating schema wrong');
+                const reviews=Array.isArray(s.review)?s.review:(s.review?[s.review]:[]);
+                if(reviews.length!==1||Number(reviews[0].reviewRating?.ratingValue)!==5)fail('Orlando review schema wrong');
+                out.reviewedOrlando=true;out.structuredData=true;
+                await context.close();
+              }
+
+              await checkCart(browser,{key:'roma',url:'/shop/recliner/roma-recliner-manual-3-and-2?variant=fdc54adb-777c-4dcd-83e1-64e5938b631a',title:'Roma Recliner 3+2 Seater Manual Sofa',price:599,variant:'fdc54adb-777c-4dcd-83e1-64e5938b631a',color:'Black Leather',fabric:false,cartSpec:'Black Leather'});
+              await checkCart(browser,{key:'verona',url:'/shop/corner-sofa/verona-high-back-4-seater-corner-1c2?variant=a5d2050d-c458-4e0c-b3b3-7b7c727845a0',title:'Verona 4 Seater Corner 1c2 High Back',price:529,variant:'a5d2050d-c458-4e0c-b3b3-7b7c727845a0',color:'Chenille Grey',fabric:true,fabricId:'6ce3d2c2-7f92-4276-b991-70afa07c0cf9',cartSpec:'Chenille Grey · CH12'});
+              await checkCart(browser,{key:'lily2c2',url:'/shop/corner-sofa/lily-high-back-5-seater-corner-2c2?variant=97e1a331-63d2-4761-bc30-9d28313bd698',title:'Lily 5 Seater Corner 2c2 High Back',price:749,variant:'97e1a331-63d2-4761-bc30-9d28313bd698',color:'Chenille Grey',fabric:true,fabricId:'6ce3d2c2-7f92-4276-b991-70afa07c0cf9',cartSpec:'Chenille Grey · CH12'});
+
+              for(const width of [320,390,430])await fixedUi(browser,width);
+              if(out.runtimeErrors.length)fail('runtime page errors: '+JSON.stringify(out.runtimeErrors));
+            } finally {
+              fs.writeFileSync('phase2c-live-results.json',JSON.stringify(out,null,2));
+              await browser.close();
+            }
+          })().catch(e=>{console.error(e);process.exit(1)});
+          NODE
+
+      - name: Show live results
+        if: always()
+        run: |
+          cat vercel-exact-sha.json 2>/dev/null || true
+          cat phase2c-live-results.json 2>/dev/null || true
