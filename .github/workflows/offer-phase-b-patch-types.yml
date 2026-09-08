@@ -1,0 +1,67 @@
+name: Offer Phase B patch types
+
+on:
+  push:
+    branches: [fix/offer-phase-b-discount-engine]
+    paths: [.github/workflows/offer-phase-b-patch-types.yml]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/offer-phase-b-discount-engine
+          fetch-depth: 0
+      - name: Apply narrow generated-type additions
+        run: |
+          python <<'PY'
+          from pathlib import Path
+          p=Path('src/types/supabase.ts')
+          s=p.read_text()
+
+          def one(old,new):
+              global s
+              n=s.count(old)
+              if n != 1:
+                  raise SystemExit(f'expected one match, got {n}: {old[:80]!r}')
+              s=s.replace(old,new,1)
+
+          one(
+          '''      order_items: {\n''',
+          '''      offer_product_tiers: {\n        Row: {\n          product_id: string\n          tier: string\n        }\n        Insert: {\n          product_id: string\n          tier: string\n        }\n        Update: {\n          product_id?: string\n          tier?: string\n        }\n        Relationships: [\n          {\n            foreignKeyName: "offer_product_tiers_product_id_fkey"\n            columns: ["product_id"]\n            isOneToOne: true\n            referencedRelation: "products"\n            referencedColumns: ["id"]\n          },\n        ]\n      }\n      order_items: {\n''')
+
+          one(
+          '''          delivery_total: number\n          fee_assembly: number\n''',
+          '''          delivery_total: number\n          discount_amount: number\n          discount_tier: string | null\n          promotion_code: string | null\n          offer_source: string | null\n          fee_assembly: number\n''')
+
+          old='''          delivery_total?: number\n          fee_assembly?: number\n'''
+          new='''          delivery_total?: number\n          discount_amount?: number\n          discount_tier?: string | null\n          promotion_code?: string | null\n          offer_source?: string | null\n          fee_assembly?: number\n'''
+          n=s.count(old)
+          if n != 2:
+              raise SystemExit(f'expected two Insert/Update order matches, got {n}')
+          s=s.replace(old,new)
+
+          one(
+          '''    Functions: {\n      confirm_order: {\n''',
+          '''    Functions: {\n      calculate_order_offer: {\n        Args: {\n          p_items: Json\n          p_offer_entitlement_token?: string | null\n          p_promotion_code?: string | null\n        }\n        Returns: Json\n      }\n      confirm_order: {\n''')
+
+          one(
+          '''      place_order: {\n        Args: {\n          p_customer_email: string\n          p_customer_name: string\n          p_customer_phone: string\n          p_delivery_floor?: number\n          p_delivery_has_lift?: boolean\n          p_expected_total: number\n          p_items: Json\n          p_shipping_address: string\n          p_special_instructions: string\n          p_wants_assembly?: boolean\n          p_wants_sofa_removal?: boolean\n        }\n        Returns: Json\n      }\n''',
+          '''      place_order: {\n        Args: {\n          p_customer_email: string\n          p_customer_name: string\n          p_customer_phone: string\n          p_delivery_floor?: number\n          p_delivery_has_lift?: boolean\n          p_expected_total: number\n          p_items: Json\n          p_offer_entitlement_token?: string | null\n          p_promotion_code?: string | null\n          p_shipping_address: string\n          p_special_instructions: string\n          p_wants_assembly?: boolean\n          p_wants_sofa_removal?: boolean\n        }\n        Returns: Json\n      }\n''')
+
+          p.write_text(s)
+          PY
+      - name: Commit narrow type update
+        run: |
+          git diff --check
+          git diff -- src/types/supabase.ts
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add src/types/supabase.ts
+          git commit -m "Offer Phase B: update Supabase types"
+          git push origin HEAD:fix/offer-phase-b-discount-engine
