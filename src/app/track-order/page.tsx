@@ -169,6 +169,7 @@ function Result({ order }: { order: TrackedOrder }) {
   const Icon = cfg.icon
   const reference = order.id.split('-')[0].toUpperCase()
   const deliveryTotal = Number(order.delivery_total ?? 0)
+  const discountAmount = Number(order.discount_amount ?? 0)
 
   return (
     <div className="mt-8 overflow-hidden rounded-md border border-calico-300 bg-calico-50 shadow-e1 motion-safe:animate-[fadeUp_var(--dur-settle)_var(--ease-out-expo)]">
@@ -231,9 +232,15 @@ function Result({ order }: { order: TrackedOrder }) {
         </ul>
 
         <div className="mt-5 flex flex-col gap-2 rounded-sm bg-ink-900 px-4 py-4">
-          {deliveryTotal > 0 && (
+          {(deliveryTotal > 0 || discountAmount > 0) && (
             <>
               <Line label="Your order" value={Number(order.items_subtotal ?? order.total_amount)} />
+              {discountAmount > 0 && (
+                <div className="flex items-baseline justify-between gap-4 text-caption text-calico-300">
+                  <span>Offer{order.promotion_code ? ` · ${order.promotion_code}` : ''}</span>
+                  <span className="font-data tabular-nums text-sage-300">−£{discountAmount.toFixed(2)}</span>
+                </div>
+              )}
               {Number(order.fee_upstairs ?? 0) > 0 && (
                 <Line
                   label={`Upstairs delivery${order.delivery_has_lift ? ' (lift)' : order.delivery_floor ? ` (${order.delivery_floor} up)` : ''}`}
