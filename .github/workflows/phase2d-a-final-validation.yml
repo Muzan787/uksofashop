@@ -1,197 +1,140 @@
-name: Phase 2D-A final validation
+name: Phase 2D-A live sign-off
 
 on:
   push:
     branches: [qa/phase2d-a-final-validation]
 
 jobs:
-  preview:
+  live:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
     env:
-      FEATURE_SHA: 9bd56d6835c5c5387367af9539e59bf2f8c1a28a
-      BASE_SHA: 86e77c4897a7431bf03bbe5d09d44e8174ebc9d7
-      PREVIEW_URL: http://127.0.0.1:3000
+      FINAL_SHA: af46a8a2524662c9f573ba055e2194cc0f95245b
+      LIVE_URL: https://www.uksofashop.co.uk
       NODE_PATH: /tmp/pw/node_modules
-      NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:9999
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: qa-dummy-anon-key
     steps:
-      - name: Checkout exact Phase 2D-A candidate
+      - name: Checkout exact released master
         uses: actions/checkout@v4
         with:
-          ref: 9bd56d6835c5c5387367af9539e59bf2f8c1a28a
-          fetch-depth: 0
+          ref: af46a8a2524662c9f573ba055e2194cc0f95245b
+          fetch-depth: 1
 
-      - name: Verify exact candidate and one-file production diff
-        run: |
-          test "$(git rev-parse HEAD)" = "$FEATURE_SHA"
-          test "$(git diff --name-only "$BASE_SHA"...HEAD)" = "src/components/Checkout/CheckoutClient.tsx"
-
-      - name: Install and build exact candidate
-        run: |
-          npm ci
-          npm run build
-
-      - name: Start isolated preview server
-        run: |
-          npm run start > /tmp/phase2da-app.log 2>&1 &
-          echo $! > /tmp/phase2da-app.pid
-          for i in $(seq 1 40); do
-            code=$(curl -s -o /tmp/checkout.html -w '%{http_code}' http://127.0.0.1:3000/checkout || true)
-            if [ "$code" = "200" ]; then
-              echo "Local exact-SHA preview ready"
-              exit 0
-            fi
-            sleep 1
-          done
-          cat /tmp/phase2da-app.log
-          exit 1
+      - name: Verify exact released SHA
+        run: test "$(git rev-parse HEAD)" = "$FINAL_SHA"
 
       - name: Prepare browser
         run: |
           mkdir -p /tmp/pw
           npm install --prefix /tmp/pw playwright-core@1.55.0
 
-      - name: Exact-SHA preview browser QA
+      - name: Live production state and privacy QA
         run: |
           node <<'NODE'
           const { chromium } = require('playwright-core');
           const fs = require('fs');
-          const preview = process.env.PREVIEW_URL;
-          const widths = [320, 390, 430, 768, 1440];
+          const widths = [390, 430, 1440];
+          const live = process.env.LIVE_URL;
           const cart = [{
-            variant_id: 'a5d2050d-c458-4e0c-b3b3-7b7c727845a0', quantity: 1, price: 549,
-            title: 'Verona 4 Seater Corner 1c2 High Back', color: 'Grey Fabric',
-            image_url: '/placeholder.svg', fabric_id: null, fabric_label: null,
-            fabric_code: null, fabric_swatch: null,
+            variant_id:'a5d2050d-c458-4e0c-b3b3-7b7c727845a0', quantity:1, price:549,
+            title:'Verona 4 Seater Corner 1c2 High Back', color:'Grey Fabric',
+            image_url:'/placeholder.svg', fabric_id:null, fabric_label:null, fabric_code:null, fabric_swatch:null,
           }];
           const values = {
-            name: 'QA State Test Name', email: 'qa-state@example.com', phone: '07700900123',
-            postcode: 'SW1A 1AA', address: 'QA Test Address 123', instructions: 'QA persistence marker 2DA',
+            name:'QA State Test Name', email:'qa-state@example.com', phone:'07700900123',
+            postcode:'SW1A 1AA', address:'QA Test Address 123', instructions:'QA persistence marker 2DA',
           };
-          const updatedName = 'QA State Test Name Updated';
-          const pii = Object.values(values).concat(updatedName);
-          const results = [];
-          const fail = m => { throw new Error(m); };
+          const results=[];
+          const fail=m=>{throw new Error(m)};
 
-          (async () => {
-            const browser = await chromium.launch({headless:true, executablePath:'/usr/bin/google-chrome', args:['--no-sandbox']});
+          (async()=>{
+            const browser=await chromium.launch({headless:true,executablePath:'/usr/bin/google-chrome',args:['--no-sandbox']});
             try {
               for (const width of widths) {
-                const height = width === 1440 ? 1000 : width === 768 ? 1024 : 844;
-                const context = await browser.newContext({viewport:{width,height}});
-                const page = await context.newPage();
-                await page.addInitScript(c => localStorage.setItem('uksofashop_cart', JSON.stringify(c)), cart);
-                await page.route('**/api/attribution/**', r => r.fulfill({status:204, body:''}));
-                await page.route('**/api/meta/**', r => r.fulfill({status:204, body:''}));
-                await page.route(/googletagmanager\.com|google-analytics\.com|connect\.facebook\.net|facebook\.com\/tr/, r => r.fulfill({status:204, body:''}));
+                const mobile = width < 768;
+                const context=await browser.newContext({
+                  viewport:{width,height:mobile?844:1000},
+                  isMobile: mobile,
+                  hasTouch: mobile,
+                  serviceWorkers:'block',
+                });
+                const page=await context.newPage();
+                await page.addInitScript(c=>localStorage.setItem('uksofashop_cart',JSON.stringify(c)),cart);
+                // No QA attribution/action writes and no ad-platform calls.
+                await page.route('**/api/attribution/**',r=>r.fulfill({status:204,body:''}));
+                await page.route('**/api/meta/**',r=>r.fulfill({status:204,body:''}));
+                await page.route(/googletagmanager\.com|google-analytics\.com|connect\.facebook\.net|facebook\.com\/tr/,r=>r.fulfill({status:204,body:''}));
 
-                const response = await page.goto(`${preview}/checkout`, {waitUntil:'domcontentloaded', timeout:30000});
-                if (!response || !response.ok()) fail(`${width}: preview HTTP ${response && response.status()}`);
-                const essential = page.getByRole('button',{name:'Essential only'});
-                if (await essential.count()) { try { await essential.first().click({timeout:1000}); } catch {} }
+                const response=await page.goto(`${live}/checkout`,{waitUntil:'domcontentloaded',timeout:45000});
+                if(!response||!response.ok()) fail(`${width}: live HTTP ${response&&response.status()}`);
+                const essential=page.getByRole('button',{name:'Essential only'});
+                if(await essential.count()){try{await essential.first().click({timeout:1200})}catch{}}
 
-                const continueBtn = page.getByRole('button',{name:/Continue to delivery/i});
-                await continueBtn.waitFor({state:'visible', timeout:10000});
-                await continueBtn.click();
-
-                const name = page.locator('input[name="customerName"]');
-                const email = page.locator('input[name="customerEmail"]');
-                const phone = page.locator('input[name="customerPhone"]');
-                const postcode = page.locator('label').filter({hasText:'Postcode'}).locator('..').locator('input[type="text"]').first();
-                const address = page.locator('textarea[name="shippingAddress"]');
-                const instructions = page.locator('textarea[name="specialInstructions"]');
-                await name.waitFor({state:'visible', timeout:10000});
+                const next=page.getByRole('button',{name:/Continue to delivery/i});
+                await next.waitFor({state:'visible',timeout:15000});
+                await next.click();
+                const name=page.locator('input[name="customerName"]');
+                const email=page.locator('input[name="customerEmail"]');
+                const phone=page.locator('input[name="customerPhone"]');
+                const postcode=page.locator('label').filter({hasText:'Postcode'}).locator('..').locator('input[type="text"]').first();
+                const address=page.locator('textarea[name="shippingAddress"]');
+                const instructions=page.locator('textarea[name="specialInstructions"]');
+                await name.waitFor({state:'visible',timeout:10000});
                 await name.fill(values.name); await email.fill(values.email); await phone.fill(values.phone);
                 await postcode.fill(values.postcode); await address.fill(values.address); await instructions.fill(values.instructions);
 
-                const upstairs = page.locator('label').filter({hasText:'Upstairs delivery'}).locator('input[type="checkbox"]');
-                const lift = page.locator('label').filter({hasText:"There's a lift"}).locator('input[type="checkbox"]');
-                const assembly = page.locator('label').filter({hasText:'Assembly'}).locator('input[type="checkbox"]');
-                const removal = page.locator('label').filter({hasText:'Old sofa removal'}).locator('input[type="checkbox"]');
-                await upstairs.check(); await lift.check(); await assembly.check(); await removal.check();
-                const totalBefore = await page.getByText(/Your total due on delivery is/).first().innerText();
+                await page.getByRole('button',{name:/Back to Cart/i}).click();
+                await next.waitFor({state:'visible',timeout:10000});
+                await next.click();
+                await name.waitFor({state:'visible',timeout:10000});
 
-                async function assertValues(expectedName = values.name) {
-                  const got = {
-                    name:await name.inputValue(), email:await email.inputValue(), phone:await phone.inputValue(),
-                    postcode:await postcode.inputValue(), address:await address.inputValue(), instructions:await instructions.inputValue(),
-                  };
-                  const expected = {...values, name:expectedName};
-                  for (const k of Object.keys(expected)) if (got[k] !== expected[k]) fail(`${width}: ${k} lost: ${JSON.stringify(got[k])}`);
-                }
-                async function cycle() {
-                  await page.getByRole('button',{name:/Back to Cart/i}).click();
-                  await continueBtn.waitFor({state:'visible', timeout:10000});
-                  await continueBtn.click();
-                  await name.waitFor({state:'visible', timeout:10000});
-                }
+                const got={
+                  name:await name.inputValue(), email:await email.inputValue(), phone:await phone.inputValue(),
+                  postcode:await postcode.inputValue(), address:await address.inputValue(), instructions:await instructions.inputValue(),
+                };
+                for(const k of Object.keys(values)) if(got[k]!==values[k]) fail(`${width}: ${k} not preserved: ${JSON.stringify(got[k])}`);
 
-                await cycle(); await assertValues();
-                if (!(await upstairs.isChecked()) || !(await lift.isChecked()) || !(await assembly.isChecked()) || !(await removal.isChecked())) fail(`${width}: extras lost`);
-                const totalAfter = await page.getByText(/Your total due on delivery is/).first().innerText();
-                if (totalAfter !== totalBefore) fail(`${width}: total changed`);
-                await cycle(); await assertValues();
-                await cycle(); await assertValues();
-                await name.fill(updatedName); await cycle(); await assertValues(updatedName);
-
-                const storage = await page.evaluate(() => ({
+                const storage=await page.evaluate(()=>({
                   local:Object.fromEntries(Object.keys(localStorage).map(k=>[k,localStorage.getItem(k)])),
                   session:Object.fromEntries(Object.keys(sessionStorage).map(k=>[k,sessionStorage.getItem(k)])),
                   cookie:document.cookie,
                 }));
-                const storageText = JSON.stringify(storage);
-                for (const v of pii) if (storageText.includes(v)) fail(`${width}: PII found in browser storage: ${v}`);
-                if (await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1)) fail(`${width}: horizontal overflow`);
+                const text=JSON.stringify(storage);
+                for(const v of Object.values(values)) if(text.includes(v)) fail(`${width}: PII found in browser storage: ${v}`);
 
-                const back = page.getByRole('button',{name:/Back to Cart/i});
-                const place = page.getByRole('button',{name:/Place Order/i});
-                await place.scrollIntoViewIfNeeded();
-                if (!(await back.isVisible()) || !(await place.isVisible())) fail(`${width}: checkout control unavailable`);
+                const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth+1);
+                if(overflow) fail(`${width}: horizontal overflow`);
 
-                let fixedUi = 'desktop';
-                if (width <= 430) {
-                  const wa = page.getByRole('link',{name:'Chat with us on WhatsApp'});
-                  const bar = page.locator('[data-bottom-bar]').first();
-                  const nav = page.getByRole('navigation',{name:'Primary'});
-                  if (!(await wa.isVisible()) || !(await bar.isVisible()) || !(await nav.isVisible())) fail(`${width}: fixed UI missing`);
-                  const [wb,bb,nb] = await Promise.all([wa.boundingBox(),bar.boundingBox(),nav.boundingBox()]);
-                  if (!wb || !bb || !nb) fail(`${width}: fixed UI box unavailable`);
-                  if (bb.y + bb.height > nb.y + 1) fail(`${width}: total bar overlaps nav`);
-                  if (wb.y + wb.height > bb.y + 1) fail(`${width}: WhatsApp overlaps total bar`);
-                  fixedUi = 'pass';
+                let touchUi='desktop';
+                if(mobile){
+                  const wa=page.getByRole('link',{name:'Chat with us on WhatsApp'});
+                  const bar=page.locator('[data-bottom-bar]').first();
+                  const nav=page.getByRole('navigation',{name:'Primary'});
+                  if(!(await wa.isVisible())||!(await bar.isVisible())||!(await nav.isVisible())) fail(`${width}: mobile fixed UI missing`);
+                  const [wb,bb,nb]=await Promise.all([wa.boundingBox(),bar.boundingBox(),nav.boundingBox()]);
+                  if(!wb||!bb||!nb) fail(`${width}: mobile fixed UI boxes unavailable`);
+                  if(bb.y+bb.height>nb.y+1) fail(`${width}: total bar overlaps nav`);
+                  if(wb.y+wb.height>bb.y+1) fail(`${width}: WhatsApp overlaps total bar`);
+                  touchUi='touch-emulation-pass';
                 }
 
-                let refreshFormReset = null;
-                if (width === 390) {
-                  await page.reload({waitUntil:'domcontentloaded', timeout:30000});
-                  await continueBtn.waitFor({state:'visible', timeout:10000});
-                  await continueBtn.click();
-                  await name.waitFor({state:'visible', timeout:10000});
-                  refreshFormReset = (await name.inputValue()) === '';
-                  if (!refreshFormReset) fail('390: full refresh persisted customer PII unexpectedly');
-                }
-
-                results.push({width,statePersistence:true,repeatedNavigation:true,extras:true,totalStable:true,privacy:true,horizontalOverflow:false,fixedUi,refreshFormReset});
+                results.push({width,sixFieldPersistence:true,privacy:true,horizontalOverflow:false,touchUi});
                 await context.close();
               }
             } finally {
-              fs.writeFileSync('phase2d-a-preview-results.json', JSON.stringify(results,null,2));
+              fs.writeFileSync('phase2d-a-live-results.json',JSON.stringify(results,null,2));
               await browser.close();
             }
           })().catch(e=>{console.error(e);process.exit(1)});
           NODE
 
-      - name: Show exact-SHA preview results
+      - name: Show live results
         if: always()
-        run: |
-          test -f phase2d-a-preview-results.json && cat phase2d-a-preview-results.json || true
-          test -f /tmp/phase2da-app.log && tail -100 /tmp/phase2da-app.log || true
+        run: test -f phase2d-a-live-results.json && cat phase2d-a-live-results.json || true
 
-      - name: Upload QA result
+      - name: Upload live QA result
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: phase2d-a-local-preview-validation
-          path: phase2d-a-preview-results.json
+          name: phase2d-a-live-signoff
+          path: phase2d-a-live-results.json
           if-no-files-found: ignore
