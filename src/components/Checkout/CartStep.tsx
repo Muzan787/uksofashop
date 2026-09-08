@@ -110,60 +110,30 @@ export default function CartStep({ onNext }: { onNext: () => void }) {
 
 // ─── One line ────────────────────────────────────────────────────────────────
 /**
- * An 88px row: the photograph in a Calico 200 well flush to the left edge, the
- * title in Geist 600, the variant in mono underneath, and the money right
- * aligned in mono so the column of prices lines up on the decimal.
+ * A compact adaptive cart line. Product identity gets the upper grid row,
+ * while quantity, price and remove controls use the full width below it.
+ * That preserves 44px touch targets without squeezing the chosen specification
+ * into the narrow strip beside the image on a 320px phone.
  */
 function Row({ item, onRemove, onQuantity }: {
   item: DisplayCartItem;
   onRemove: () => void;
   onQuantity: (q: number) => void;
 }) {
+  const specification = item.fabric_label?.trim() || item.color?.trim() || '';
   return (
-    <article className="flex h-[88px] items-stretch overflow-hidden rounded-md border border-calico-300 bg-calico-50 shadow-e1">
-      <div className="relative h-full w-[88px] shrink-0 bg-calico-200">
-        <Image
-          src={item.image_url || '/placeholder.svg'}
-          alt=""
-          fill
-          sizes="88px"
-          placeholder={item.image_url ? 'blur' : undefined}
-          blurDataURL={item.image_url ? blurDataURL(item.image_url) : undefined}
-          className="object-cover"
-        />
+    <article className="grid grid-cols-[64px_minmax(0,1fr)] gap-x-3 gap-y-1 rounded-md border border-calico-300 bg-calico-50 p-2 shadow-e1 sm:grid-cols-[72px_minmax(0,1fr)]">
+      <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-sm bg-calico-200 sm:h-[72px] sm:w-[72px]">
+        <Image src={item.image_url || '/placeholder.svg'} alt="" fill sizes="72px" placeholder={item.image_url ? 'blur' : undefined} blurDataURL={item.image_url ? blurDataURL(item.image_url) : undefined} className="object-cover" />
       </div>
-
-      {/* Two 44px rows fill the 88 exactly: the stepper sets the height of the
-          lower one and the remove button sets the upper one, so both touch
-          targets are full size without the row growing past its 88. */}
-      <div className="flex min-w-0 flex-1 flex-col px-3">
-        <div className="flex h-11 items-center gap-2">
-          <h3 className="m-0 flex-1 truncate font-body text-body-sm font-semibold text-ink-900">
-            {item.title}
-          </h3>
-          <button
-            type="button"
-            onClick={onRemove}
-            aria-label={`Remove ${item.title} from your cart`}
-            className="hover-icon -mr-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-sm text-ink-400 hover:text-rust-700"
-          >
-            <Trash2 aria-hidden="true" className="h-4 w-4" />
-          </button>
-        </div>
-
-        <div className="flex h-11 items-center gap-3">
-          <Stepper quantity={item.quantity} title={item.title} onChange={onQuantity} />
-
-          {item.color && (
-            <span className="min-w-0 flex-1 truncate font-data text-caption text-ink-500">
-              {item.color}
-            </span>
-          )}
-
-          <span className="ml-auto shrink-0 font-data text-body font-semibold tabular-nums text-ink-900">
-            £{(item.price * item.quantity).toFixed(0)}
-          </span>
-        </div>
+      <div className="min-w-0 self-start py-0.5">
+        <h3 className="m-0 break-words font-body text-body-sm font-semibold leading-snug text-ink-900">{item.title}</h3>
+        {(specification || item.fabric_code) && <p className="m-0 mt-1 break-words font-data text-caption leading-snug text-ink-500">{specification}{item.fabric_code && <span className="text-ember-700">{specification ? ' · ' : ''}{item.fabric_code}</span>}</p>}
+      </div>
+      <div className="col-span-2 flex min-w-0 items-center gap-1 pt-1">
+        <Stepper quantity={item.quantity} title={item.title} onChange={onQuantity} />
+        <span className="ml-auto shrink-0 font-data text-body font-semibold tabular-nums text-ink-900">£{(item.price * item.quantity).toFixed(0)}</span>
+        <button type="button" onClick={onRemove} aria-label={`Remove ${item.title} from your cart`} className="hover-icon flex h-11 w-11 shrink-0 items-center justify-center rounded-sm text-ink-400 hover:text-rust-700"><Trash2 aria-hidden="true" className="h-4 w-4" /></button>
       </div>
     </article>
   );
