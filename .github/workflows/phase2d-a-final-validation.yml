@@ -7,27 +7,52 @@ on:
 jobs:
   preview:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     env:
       FEATURE_SHA: 9bd56d6835c5c5387367af9539e59bf2f8c1a28a
-      PREVIEW_URL: https://uksofashop-git-fix-cro-phase2d-a-chec-23353d-muzan787s-projects.vercel.app
+      BASE_SHA: 86e77c4897a7431bf03bbe5d09d44e8174ebc9d7
+      PREVIEW_URL: http://127.0.0.1:3000
       NODE_PATH: /tmp/pw/node_modules
+      NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:9999
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: qa-dummy-anon-key
     steps:
       - name: Checkout exact Phase 2D-A candidate
         uses: actions/checkout@v4
         with:
           ref: 9bd56d6835c5c5387367af9539e59bf2f8c1a28a
-          fetch-depth: 1
+          fetch-depth: 0
 
-      - name: Verify exact candidate
-        run: test "$(git rev-parse HEAD)" = "$FEATURE_SHA"
+      - name: Verify exact candidate and one-file production diff
+        run: |
+          test "$(git rev-parse HEAD)" = "$FEATURE_SHA"
+          test "$(git diff --name-only "$BASE_SHA"...HEAD)" = "src/components/Checkout/CheckoutClient.tsx"
+
+      - name: Install and build exact candidate
+        run: |
+          npm ci
+          npm run build
+
+      - name: Start isolated preview server
+        run: |
+          npm run start > /tmp/phase2da-app.log 2>&1 &
+          echo $! > /tmp/phase2da-app.pid
+          for i in $(seq 1 40); do
+            code=$(curl -s -o /tmp/checkout.html -w '%{http_code}' http://127.0.0.1:3000/checkout || true)
+            if [ "$code" = "200" ]; then
+              echo "Local exact-SHA preview ready"
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/phase2da-app.log
+          exit 1
 
       - name: Prepare browser
         run: |
           mkdir -p /tmp/pw
           npm install --prefix /tmp/pw playwright-core@1.55.0
 
-      - name: Preview browser QA
+      - name: Exact-SHA preview browser QA
         run: |
           node <<'NODE'
           const { chromium } = require('playwright-core');
@@ -41,12 +66,8 @@ jobs:
             fabric_code: null, fabric_swatch: null,
           }];
           const values = {
-            name: 'QA State Test Name',
-            email: 'qa-state@example.com',
-            phone: '07700900123',
-            postcode: 'SW1A 1AA',
-            address: 'QA Test Address 123',
-            instructions: 'QA persistence marker 2DA',
+            name: 'QA State Test Name', email: 'qa-state@example.com', phone: '07700900123',
+            postcode: 'SW1A 1AA', address: 'QA Test Address 123', instructions: 'QA persistence marker 2DA',
           };
           const updatedName = 'QA State Test Name Updated';
           const pii = Object.values(values).concat(updatedName);
@@ -60,31 +81,18 @@ jobs:
                 const height = width === 1440 ? 1000 : width === 768 ? 1024 : 844;
                 const context = await browser.newContext({viewport:{width,height}});
                 const page = await context.newPage();
-
-                // Seed before the application runs. Setting it after first paint races
-                // CartProvider's legitimate initial empty-cart save effect.
-                await page.addInitScript(c => {
-                  localStorage.setItem('uksofashop_cart', JSON.stringify(c));
-                }, cart);
-
+                await page.addInitScript(c => localStorage.setItem('uksofashop_cart', JSON.stringify(c)), cart);
                 await page.route('**/api/attribution/**', r => r.fulfill({status:204, body:''}));
                 await page.route('**/api/meta/**', r => r.fulfill({status:204, body:''}));
                 await page.route(/googletagmanager\.com|google-analytics\.com|connect\.facebook\.net|facebook\.com\/tr/, r => r.fulfill({status:204, body:''}));
 
-                const response = await page.goto(`${preview}/checkout`, {waitUntil:'domcontentloaded', timeout:45000});
+                const response = await page.goto(`${preview}/checkout`, {waitUntil:'domcontentloaded', timeout:30000});
                 if (!response || !response.ok()) fail(`${width}: preview HTTP ${response && response.status()}`);
                 const essential = page.getByRole('button',{name:'Essential only'});
-                if (await essential.count()) { try { await essential.first().click({timeout:1500}); } catch {} }
+                if (await essential.count()) { try { await essential.first().click({timeout:1000}); } catch {} }
 
                 const continueBtn = page.getByRole('button',{name:/Continue to delivery/i});
-                try {
-                  await continueBtn.waitFor({state:'visible', timeout:20000});
-                } catch (e) {
-                  console.error(`${width}: URL=${page.url()} TITLE=${await page.title()}`);
-                  console.error((await page.locator('body').innerText()).slice(0,2000));
-                  console.error('CART=', await page.evaluate(() => localStorage.getItem('uksofashop_cart')));
-                  throw e;
-                }
+                await continueBtn.waitFor({state:'visible', timeout:10000});
                 await continueBtn.click();
 
                 const name = page.locator('input[name="customerName"]');
@@ -94,7 +102,6 @@ jobs:
                 const address = page.locator('textarea[name="shippingAddress"]');
                 const instructions = page.locator('textarea[name="specialInstructions"]');
                 await name.waitFor({state:'visible', timeout:10000});
-
                 await name.fill(values.name); await email.fill(values.email); await phone.fill(values.phone);
                 await postcode.fill(values.postcode); await address.fill(values.address); await instructions.fill(values.instructions);
 
@@ -107,11 +114,11 @@ jobs:
 
                 async function assertValues(expectedName = values.name) {
                   const got = {
-                    name: await name.inputValue(), email: await email.inputValue(), phone: await phone.inputValue(),
-                    postcode: await postcode.inputValue(), address: await address.inputValue(), instructions: await instructions.inputValue(),
+                    name:await name.inputValue(), email:await email.inputValue(), phone:await phone.inputValue(),
+                    postcode:await postcode.inputValue(), address:await address.inputValue(), instructions:await instructions.inputValue(),
                   };
                   const expected = {...values, name:expectedName};
-                  for (const k of Object.keys(expected)) if (got[k] !== expected[k]) fail(`${width}: ${k} lost ${JSON.stringify(got[k])}`);
+                  for (const k of Object.keys(expected)) if (got[k] !== expected[k]) fail(`${width}: ${k} lost: ${JSON.stringify(got[k])}`);
                 }
                 async function cycle() {
                   await page.getByRole('button',{name:/Back to Cart/i}).click();
@@ -135,10 +142,12 @@ jobs:
                 }));
                 const storageText = JSON.stringify(storage);
                 for (const v of pii) if (storageText.includes(v)) fail(`${width}: PII found in browser storage: ${v}`);
-
                 if (await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1)) fail(`${width}: horizontal overflow`);
-                if (!(await page.getByRole('button',{name:/Back to Cart/i}).isVisible())) fail(`${width}: Back to Cart not visible`);
-                if (!(await page.getByRole('button',{name:/Place Order/i}).isVisible())) fail(`${width}: Place Order not visible`);
+
+                const back = page.getByRole('button',{name:/Back to Cart/i});
+                const place = page.getByRole('button',{name:/Place Order/i});
+                await place.scrollIntoViewIfNeeded();
+                if (!(await back.isVisible()) || !(await place.isVisible())) fail(`${width}: checkout control unavailable`);
 
                 let fixedUi = 'desktop';
                 if (width <= 430) {
@@ -146,23 +155,21 @@ jobs:
                   const bar = page.locator('[data-bottom-bar]').first();
                   const nav = page.getByRole('navigation',{name:'Primary'});
                   if (!(await wa.isVisible()) || !(await bar.isVisible()) || !(await nav.isVisible())) fail(`${width}: fixed UI missing`);
-                  const [wb, bb, nb] = await Promise.all([wa.boundingBox(),bar.boundingBox(),nav.boundingBox()]);
-                  if (!wb || !bb || !nb) fail(`${width}: fixed UI boxes unavailable`);
+                  const [wb,bb,nb] = await Promise.all([wa.boundingBox(),bar.boundingBox(),nav.boundingBox()]);
+                  if (!wb || !bb || !nb) fail(`${width}: fixed UI box unavailable`);
                   if (bb.y + bb.height > nb.y + 1) fail(`${width}: total bar overlaps nav`);
                   if (wb.y + wb.height > bb.y + 1) fail(`${width}: WhatsApp overlaps total bar`);
                   fixedUi = 'pass';
                 }
 
-                // Refresh semantics: cart remains, customer PII may reset and should
-                // not become persistent because of this phase.
                 let refreshFormReset = null;
                 if (width === 390) {
-                  await page.reload({waitUntil:'domcontentloaded', timeout:45000});
+                  await page.reload({waitUntil:'domcontentloaded', timeout:30000});
                   await continueBtn.waitFor({state:'visible', timeout:10000});
                   await continueBtn.click();
                   await name.waitFor({state:'visible', timeout:10000});
                   refreshFormReset = (await name.inputValue()) === '';
-                  if (!refreshFormReset) fail('390: customer form survived full refresh unexpectedly');
+                  if (!refreshFormReset) fail('390: full refresh persisted customer PII unexpectedly');
                 }
 
                 results.push({width,statePersistence:true,repeatedNavigation:true,extras:true,totalStable:true,privacy:true,horizontalOverflow:false,fixedUi,refreshFormReset});
@@ -175,14 +182,16 @@ jobs:
           })().catch(e=>{console.error(e);process.exit(1)});
           NODE
 
-      - name: Show browser QA result
+      - name: Show exact-SHA preview results
         if: always()
-        run: test -f phase2d-a-preview-results.json && cat phase2d-a-preview-results.json || true
+        run: |
+          test -f phase2d-a-preview-results.json && cat phase2d-a-preview-results.json || true
+          test -f /tmp/phase2da-app.log && tail -100 /tmp/phase2da-app.log || true
 
       - name: Upload QA result
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: phase2d-a-preview-validation
+          name: phase2d-a-local-preview-validation
           path: phase2d-a-preview-results.json
           if-no-files-found: ignore
