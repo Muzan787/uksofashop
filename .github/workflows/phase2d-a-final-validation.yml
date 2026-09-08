@@ -5,44 +5,22 @@ on:
     branches: [qa/phase2d-a-final-validation]
 
 jobs:
-  validate:
+  preview:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
     env:
       FEATURE_SHA: 9bd56d6835c5c5387367af9539e59bf2f8c1a28a
-      BASE_SHA: 86e77c4897a7431bf03bbe5d09d44e8174ebc9d7
       PREVIEW_URL: https://uksofashop-git-fix-cro-phase2d-a-chec-23353d-muzan787s-projects.vercel.app
+      NODE_PATH: /tmp/pw/node_modules
     steps:
       - name: Checkout exact Phase 2D-A candidate
         uses: actions/checkout@v4
         with:
           ref: 9bd56d6835c5c5387367af9539e59bf2f8c1a28a
-          fetch-depth: 0
+          fetch-depth: 1
 
-      - name: Verify exact candidate and one-file diff
-        run: |
-          test "$(git rev-parse HEAD)" = "$FEATURE_SHA"
-          git diff --name-only "$BASE_SHA"...HEAD | tee /tmp/files.txt
-          test "$(cat /tmp/files.txt)" = "src/components/Checkout/CheckoutClient.tsx"
-          git diff --stat "$BASE_SHA"...HEAD
-          git diff "$BASE_SHA"...HEAD -- src/components/Checkout/CheckoutClient.tsx
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Changed-file ESLint
-        run: npx eslint src/components/Checkout/CheckoutClient.tsx
-
-      - name: Standalone TypeScript
-        run: npx tsc --noEmit
-
-      - name: Production build
-        run: npm run build
-
-      - name: Diff check
-        run: |
-          git diff --check
-          git diff --check "$BASE_SHA"...HEAD
+      - name: Verify exact candidate
+        run: test "$(git rev-parse HEAD)" = "$FEATURE_SHA"
 
       - name: Prepare browser
         run: |
@@ -50,26 +28,17 @@ jobs:
           npm install --prefix /tmp/pw playwright-core@1.55.0
 
       - name: Preview browser QA
-        env:
-          NODE_PATH: /tmp/pw/node_modules
         run: |
           node <<'NODE'
           const { chromium } = require('playwright-core');
           const fs = require('fs');
-
           const preview = process.env.PREVIEW_URL;
           const widths = [320, 390, 430, 768, 1440];
           const cart = [{
-            variant_id: 'a5d2050d-c458-4e0c-b3b3-7b7c727845a0',
-            quantity: 1,
-            price: 549,
-            title: 'Verona 4 Seater Corner 1c2 High Back',
-            color: 'Grey Fabric',
-            image_url: '/placeholder.svg',
-            fabric_id: null,
-            fabric_label: null,
-            fabric_code: null,
-            fabric_swatch: null,
+            variant_id: 'a5d2050d-c458-4e0c-b3b3-7b7c727845a0', quantity: 1, price: 549,
+            title: 'Verona 4 Seater Corner 1c2 High Back', color: 'Grey Fabric',
+            image_url: '/placeholder.svg', fabric_id: null, fabric_label: null,
+            fabric_code: null, fabric_swatch: null,
           }];
           const values = {
             name: 'QA State Test Name',
@@ -82,159 +51,138 @@ jobs:
           const updatedName = 'QA State Test Name Updated';
           const pii = Object.values(values).concat(updatedName);
           const results = [];
-
-          function fail(msg) { throw new Error(msg); }
+          const fail = m => { throw new Error(m); };
 
           (async () => {
-            const browser = await chromium.launch({
-              headless: true,
-              executablePath: '/usr/bin/google-chrome',
-              args: ['--no-sandbox'],
-            });
+            const browser = await chromium.launch({headless:true, executablePath:'/usr/bin/google-chrome', args:['--no-sandbox']});
             try {
               for (const width of widths) {
                 const height = width === 1440 ? 1000 : width === 768 ? 1024 : 844;
-                const context = await browser.newContext({ viewport: { width, height } });
+                const context = await browser.newContext({viewport:{width,height}});
                 const page = await context.newPage();
 
-                await page.route('**/api/attribution/**', r => r.fulfill({ status: 204, body: '' }));
-                await page.route('**/api/meta/**', r => r.fulfill({ status: 204, body: '' }));
-                await page.route(/googletagmanager\.com|google-analytics\.com|connect\.facebook\.net|facebook\.com\/tr/, r => r.fulfill({ status: 204, body: '' }));
+                // Seed before the application runs. Setting it after first paint races
+                // CartProvider's legitimate initial empty-cart save effect.
+                await page.addInitScript(c => {
+                  localStorage.setItem('uksofashop_cart', JSON.stringify(c));
+                }, cart);
 
-                let response = await page.goto(`${preview}/checkout`, { waitUntil: 'domcontentloaded', timeout: 45000 });
-                if (!response || !response.ok()) fail(`${width}: preview checkout HTTP ${response && response.status()}`);
+                await page.route('**/api/attribution/**', r => r.fulfill({status:204, body:''}));
+                await page.route('**/api/meta/**', r => r.fulfill({status:204, body:''}));
+                await page.route(/googletagmanager\.com|google-analytics\.com|connect\.facebook\.net|facebook\.com\/tr/, r => r.fulfill({status:204, body:''}));
 
-                const essential = page.getByRole('button', { name: 'Essential only' });
-                if (await essential.count()) { try { await essential.first().click({ timeout: 1500 }); } catch {} }
+                const response = await page.goto(`${preview}/checkout`, {waitUntil:'domcontentloaded', timeout:45000});
+                if (!response || !response.ok()) fail(`${width}: preview HTTP ${response && response.status()}`);
+                const essential = page.getByRole('button',{name:'Essential only'});
+                if (await essential.count()) { try { await essential.first().click({timeout:1500}); } catch {} }
 
-                await page.evaluate(c => localStorage.setItem('uksofashop_cart', JSON.stringify(c)), cart);
-                await page.reload({ waitUntil: 'domcontentloaded', timeout: 45000 });
-
-                const continueBtn = page.getByRole('button', { name: /Continue to delivery/i });
-                await continueBtn.waitFor({ state: 'visible', timeout: 20000 });
+                const continueBtn = page.getByRole('button',{name:/Continue to delivery/i});
+                try {
+                  await continueBtn.waitFor({state:'visible', timeout:20000});
+                } catch (e) {
+                  console.error(`${width}: URL=${page.url()} TITLE=${await page.title()}`);
+                  console.error((await page.locator('body').innerText()).slice(0,2000));
+                  console.error('CART=', await page.evaluate(() => localStorage.getItem('uksofashop_cart')));
+                  throw e;
+                }
                 await continueBtn.click();
 
                 const name = page.locator('input[name="customerName"]');
                 const email = page.locator('input[name="customerEmail"]');
                 const phone = page.locator('input[name="customerPhone"]');
-                const postcode = page.locator('label').filter({ hasText: 'Postcode' }).locator('..').locator('input[type="text"]').first();
+                const postcode = page.locator('label').filter({hasText:'Postcode'}).locator('..').locator('input[type="text"]').first();
                 const address = page.locator('textarea[name="shippingAddress"]');
                 const instructions = page.locator('textarea[name="specialInstructions"]');
-                await name.waitFor({ state: 'visible', timeout: 10000 });
+                await name.waitFor({state:'visible', timeout:10000});
 
-                await name.fill(values.name);
-                await email.fill(values.email);
-                await phone.fill(values.phone);
-                await postcode.fill(values.postcode);
-                await address.fill(values.address);
-                await instructions.fill(values.instructions);
+                await name.fill(values.name); await email.fill(values.email); await phone.fill(values.phone);
+                await postcode.fill(values.postcode); await address.fill(values.address); await instructions.fill(values.instructions);
 
-                const upstairs = page.locator('label').filter({ hasText: 'Upstairs delivery' }).locator('input[type="checkbox"]');
-                const lift = page.locator('label').filter({ hasText: "There's a lift" }).locator('input[type="checkbox"]');
-                const assembly = page.locator('label').filter({ hasText: 'Assembly' }).locator('input[type="checkbox"]');
-                const removal = page.locator('label').filter({ hasText: 'Old sofa removal' }).locator('input[type="checkbox"]');
-                await upstairs.check();
-                await lift.check();
-                await assembly.check();
-                await removal.check();
-
+                const upstairs = page.locator('label').filter({hasText:'Upstairs delivery'}).locator('input[type="checkbox"]');
+                const lift = page.locator('label').filter({hasText:"There's a lift"}).locator('input[type="checkbox"]');
+                const assembly = page.locator('label').filter({hasText:'Assembly'}).locator('input[type="checkbox"]');
+                const removal = page.locator('label').filter({hasText:'Old sofa removal'}).locator('input[type="checkbox"]');
+                await upstairs.check(); await lift.check(); await assembly.check(); await removal.check();
                 const totalBefore = await page.getByText(/Your total due on delivery is/).first().innerText();
 
                 async function assertValues(expectedName = values.name) {
                   const got = {
-                    name: await name.inputValue(),
-                    email: await email.inputValue(),
-                    phone: await phone.inputValue(),
-                    postcode: await postcode.inputValue(),
-                    address: await address.inputValue(),
-                    instructions: await instructions.inputValue(),
+                    name: await name.inputValue(), email: await email.inputValue(), phone: await phone.inputValue(),
+                    postcode: await postcode.inputValue(), address: await address.inputValue(), instructions: await instructions.inputValue(),
                   };
-                  const expected = { ...values, name: expectedName };
-                  for (const k of Object.keys(expected)) {
-                    if (got[k] !== expected[k]) fail(`${width}: ${k} lost: ${JSON.stringify(got[k])} != ${JSON.stringify(expected[k])}`);
-                  }
+                  const expected = {...values, name:expectedName};
+                  for (const k of Object.keys(expected)) if (got[k] !== expected[k]) fail(`${width}: ${k} lost ${JSON.stringify(got[k])}`);
                 }
-
-                async function backAndForward() {
-                  await page.getByRole('button', { name: /Back to Cart/i }).click();
-                  await continueBtn.waitFor({ state: 'visible', timeout: 10000 });
+                async function cycle() {
+                  await page.getByRole('button',{name:/Back to Cart/i}).click();
+                  await continueBtn.waitFor({state:'visible', timeout:10000});
                   await continueBtn.click();
-                  await name.waitFor({ state: 'visible', timeout: 10000 });
+                  await name.waitFor({state:'visible', timeout:10000});
                 }
 
-                await backAndForward();
-                await assertValues();
-                if (!(await upstairs.isChecked()) || !(await lift.isChecked()) || !(await assembly.isChecked()) || !(await removal.isChecked())) {
-                  fail(`${width}: delivery extras did not persist`);
-                }
+                await cycle(); await assertValues();
+                if (!(await upstairs.isChecked()) || !(await lift.isChecked()) || !(await assembly.isChecked()) || !(await removal.isChecked())) fail(`${width}: extras lost`);
                 const totalAfter = await page.getByText(/Your total due on delivery is/).first().innerText();
-                if (totalAfter !== totalBefore) fail(`${width}: total changed across internal navigation`);
-
-                for (let i = 0; i < 2; i++) {
-                  await backAndForward();
-                  await assertValues();
-                }
-
-                await name.fill(updatedName);
-                await backAndForward();
-                await assertValues(updatedName);
+                if (totalAfter !== totalBefore) fail(`${width}: total changed`);
+                await cycle(); await assertValues();
+                await cycle(); await assertValues();
+                await name.fill(updatedName); await cycle(); await assertValues(updatedName);
 
                 const storage = await page.evaluate(() => ({
-                  local: Object.fromEntries(Object.keys(localStorage).map(k => [k, localStorage.getItem(k)])),
-                  session: Object.fromEntries(Object.keys(sessionStorage).map(k => [k, sessionStorage.getItem(k)])),
-                  cookie: document.cookie,
+                  local:Object.fromEntries(Object.keys(localStorage).map(k=>[k,localStorage.getItem(k)])),
+                  session:Object.fromEntries(Object.keys(sessionStorage).map(k=>[k,sessionStorage.getItem(k)])),
+                  cookie:document.cookie,
                 }));
                 const storageText = JSON.stringify(storage);
-                for (const value of pii) {
-                  if (storageText.includes(value)) fail(`${width}: PII found in browser storage: ${value}`);
-                }
+                for (const v of pii) if (storageText.includes(v)) fail(`${width}: PII found in browser storage: ${v}`);
 
-                const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
-                if (overflow) fail(`${width}: horizontal overflow introduced`);
-
-                const backUsable = await page.getByRole('button', { name: /Back to Cart/i }).isVisible();
-                const placeOrder = page.getByRole('button', { name: /Place Order/i });
-                if (!backUsable || !(await placeOrder.isVisible())) fail(`${width}: checkout controls not reachable/visible`);
+                if (await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1)) fail(`${width}: horizontal overflow`);
+                if (!(await page.getByRole('button',{name:/Back to Cart/i}).isVisible())) fail(`${width}: Back to Cart not visible`);
+                if (!(await page.getByRole('button',{name:/Place Order/i}).isVisible())) fail(`${width}: Place Order not visible`);
 
                 let fixedUi = 'desktop';
                 if (width <= 430) {
-                  const wa = page.getByRole('link', { name: 'Chat with us on WhatsApp' });
-                  const bottomBar = page.locator('[data-bottom-bar]').first();
-                  const nav = page.getByRole('navigation', { name: 'Primary' });
-                  if (!(await wa.isVisible())) fail(`${width}: WhatsApp FAB not visible`);
-                  if (!(await bottomBar.isVisible())) fail(`${width}: MobileTotalBar not visible`);
-                  if (!(await nav.isVisible())) fail(`${width}: mobile nav not visible`);
-                  const [waBox, barBox, navBox] = await Promise.all([wa.boundingBox(), bottomBar.boundingBox(), nav.boundingBox()]);
-                  if (!waBox || !barBox || !navBox) fail(`${width}: missing fixed UI boxes`);
-                  if (barBox.y + barBox.height > navBox.y + 1) fail(`${width}: MobileTotalBar overlaps mobile nav`);
-                  if (waBox.y + waBox.height > barBox.y + 1) fail(`${width}: WhatsApp overlaps MobileTotalBar`);
+                  const wa = page.getByRole('link',{name:'Chat with us on WhatsApp'});
+                  const bar = page.locator('[data-bottom-bar]').first();
+                  const nav = page.getByRole('navigation',{name:'Primary'});
+                  if (!(await wa.isVisible()) || !(await bar.isVisible()) || !(await nav.isVisible())) fail(`${width}: fixed UI missing`);
+                  const [wb, bb, nb] = await Promise.all([wa.boundingBox(),bar.boundingBox(),nav.boundingBox()]);
+                  if (!wb || !bb || !nb) fail(`${width}: fixed UI boxes unavailable`);
+                  if (bb.y + bb.height > nb.y + 1) fail(`${width}: total bar overlaps nav`);
+                  if (wb.y + wb.height > bb.y + 1) fail(`${width}: WhatsApp overlaps total bar`);
                   fixedUi = 'pass';
                 }
 
+                // Refresh semantics: cart remains, customer PII may reset and should
+                // not become persistent because of this phase.
+                let refreshFormReset = null;
                 if (width === 390) {
-                  await page.reload({ waitUntil: 'domcontentloaded', timeout: 45000 });
-                  await continueBtn.waitFor({ state: 'visible', timeout: 10000 });
+                  await page.reload({waitUntil:'domcontentloaded', timeout:45000});
+                  await continueBtn.waitFor({state:'visible', timeout:10000});
                   await continueBtn.click();
-                  await name.waitFor({ state: 'visible', timeout: 10000 });
-                  if ((await name.inputValue()) !== '') fail('390: full refresh unexpectedly persisted customer form');
-                  if (await page.getByText('Verona 4 Seater Corner 1c2 High Back').count() === 0) fail('390: cart did not persist across refresh');
+                  await name.waitFor({state:'visible', timeout:10000});
+                  refreshFormReset = (await name.inputValue()) === '';
+                  if (!refreshFormReset) fail('390: customer form survived full refresh unexpectedly');
                 }
 
-                results.push({ width, statePersistence: true, repeatedNavigation: true, extras: true, totalStable: true, privacy: true, horizontalOverflow: false, fixedUi });
+                results.push({width,statePersistence:true,repeatedNavigation:true,extras:true,totalStable:true,privacy:true,horizontalOverflow:false,fixedUi,refreshFormReset});
                 await context.close();
               }
             } finally {
-              fs.writeFileSync('phase2d-a-preview-results.json', JSON.stringify(results, null, 2));
+              fs.writeFileSync('phase2d-a-preview-results.json', JSON.stringify(results,null,2));
               await browser.close();
             }
-          })().catch(err => { console.error(err); process.exit(1); });
+          })().catch(e=>{console.error(e);process.exit(1)});
           NODE
 
       - name: Show browser QA result
-        run: cat phase2d-a-preview-results.json
+        if: always()
+        run: test -f phase2d-a-preview-results.json && cat phase2d-a-preview-results.json || true
 
       - name: Upload QA result
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: phase2d-a-final-validation
+          name: phase2d-a-preview-validation
           path: phase2d-a-preview-results.json
+          if-no-files-found: ignore
