@@ -279,12 +279,14 @@ function OrderSummary({ compact = false, extras = NO_EXTRAS }: { compact?: boole
 
 // ─── STEP 2: Delivery details ─────────────────────────────────────────────────
 function DetailsStep({
-  onBack, onSuccess, extras, setExtras,
+  onBack, onSuccess, extras, setExtras, form, setForm,
 }: {
   onBack: () => void
   onSuccess: (id: string, postcode: string, amount: number) => void
   extras: DeliveryOptions
   setExtras: (next: DeliveryOptions) => void
+  form: FormState
+  setForm: React.Dispatch<React.SetStateAction<FormState>>
 }) {
   const { cartItems, totalAmount, clearCart } = useCart()
   // A line with a fabric is a line that has to be built. Nothing else in the
@@ -293,10 +295,6 @@ function DetailsStep({
   const madeToOrder = cartItems.some(i => i.fabric_id)
   const extrasTotal = deliveryTotal(extras)
   const grandTotal = totalAmount + extrasTotal
-  const [form, setForm] = useState<FormState>({
-    customerName: '', customerEmail: '', customerPhone: '',
-    postcode: '', shippingAddress: '', specialInstructions: '', // NEW POSTCODE FIELD
-  })
 
   const [errors, setErrors] = useState<FieldError>({})
   const [pending, setPending] = useState(false)
@@ -743,6 +741,14 @@ export default function CheckoutClient() {
   // Held here rather than in DetailsStep so the order summary - which renders in
   // the sidebar and again in the mobile drawer - reflects every tick live.
   const [extras, setExtras] = useState<DeliveryOptions>(NO_EXTRAS)
+  // Customer-entered values belong to the checkout flow, not the details step.
+  // Keeping them here means Back to Cart can unmount DetailsStep without
+  // discarding what the customer already typed. This is intentionally memory
+  // only: a full page refresh still starts with an empty form.
+  const [form, setForm] = useState<FormState>({
+    customerName: '', customerEmail: '', customerPhone: '',
+    postcode: '', shippingAddress: '', specialInstructions: '',
+  })
   const { cartItems, totalAmount } = useCart()
 
   const transition = useCallback((nextStep: Step, dir: 'forward' | 'back') => {
@@ -848,7 +854,7 @@ export default function CheckoutClient() {
             }`}
           >
             {step === 'cart'    && <CartStep onNext={goNext} />}
-            {step === 'details' && <DetailsStep onBack={goBack} onSuccess={goSuccess} extras={extras} setExtras={setExtras} />}
+            {step === 'details' && <DetailsStep onBack={goBack} onSuccess={goSuccess} extras={extras} setExtras={setExtras} form={form} setForm={setForm} />}
             {step === 'success' && (
               <>
                 {/* The PRIMARY Google Ads firing site. Renders nothing.
