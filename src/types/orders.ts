@@ -16,8 +16,12 @@ export interface TrackedOrder {
   created_at: string
   total_amount: number
   order_items: TrackedOrderItem[]
-  /** Delivery breakdown. Optional: orders placed before delivery extras existed. */
+  /** Financial breakdown. Optional: orders placed before these fields existed. */
   items_subtotal?: number
+  discount_amount?: number
+  discount_tier?: string | null
+  promotion_code?: string | null
+  offer_source?: string | null
   delivery_total?: number
   delivery_floor?: number
   delivery_has_lift?: boolean
