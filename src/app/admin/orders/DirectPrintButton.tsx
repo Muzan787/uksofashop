@@ -307,6 +307,11 @@ export default function DirectPrintButton({ order }: { order: any }) {
                   <span>Subtotal</span>
                   <span style="font-weight: 600; color: #1c1917;">£${Number(activeOrder.items_subtotal ?? activeOrder.total_amount).toFixed(2)}</span>
                 </div>
+                ${Number(activeOrder.discount_amount ?? 0) > 0 ? `
+                <div class="summary-row">
+                  <span>Offer${activeOrder.promotion_code ? ` · ${activeOrder.promotion_code}` : ''}</span>
+                  <span style="font-weight: 600; color: #166534;">−£${Number(activeOrder.discount_amount).toFixed(2)}</span>
+                </div>` : ''}
                 <div class="summary-row">
                   <span>Delivery (UK Mainland, ground floor)</span>
                   <span style="font-weight: 600; color: #1c1917;">FREE</span>
@@ -336,7 +341,7 @@ export default function DirectPrintButton({ order }: { order: any }) {
             <div class="footer">
                <div class="thank-you">Thank you for your business.</div>
                <div class="company-details">
-                 {ORGANISATION_NAME} &nbsp;&bull;&nbsp; {ADDRESS_LINE} &nbsp;&bull;&nbsp; {PHONE_DISPLAY}
+                 ${ORGANISATION_NAME} &nbsp;&bull;&nbsp; ${ADDRESS_LINE} &nbsp;&bull;&nbsp; ${PHONE_DISPLAY}
                </div>
                <div class="guarantee-badge">1-year Frame Guarantee</div>
             </div>

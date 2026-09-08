@@ -176,9 +176,20 @@ export default async function AdminOrdersPage(props: { searchParams: SearchParam
               <div>
                 <p className="text-xs font-mono text-stone-400">#{order.id.split('-')[0]}</p>
                 <p className="text-lg font-bold text-stone-900 mt-1">£{order.total_amount.toFixed(2)}</p>
-                {Number(order.delivery_total ?? 0) > 0 && (
+                {(Number(order.discount_amount ?? 0) > 0 || Number(order.delivery_total ?? 0) > 0) && (
                   <p className="text-[11px] text-stone-500 mt-0.5">
-                    £{Number(order.items_subtotal ?? 0).toFixed(2)} order + £{Number(order.delivery_total).toFixed(2)} extras
+                    £{Number(order.items_subtotal ?? 0).toFixed(2)} subtotal
+                    {Number(order.discount_amount ?? 0) > 0 && (
+                      <> − £{Number(order.discount_amount).toFixed(2)} offer</>
+                    )}
+                    {Number(order.delivery_total ?? 0) > 0 && (
+                      <> + £{Number(order.delivery_total).toFixed(2)} extras</>
+                    )}
+                  </p>
+                )}
+                {order.promotion_code && (
+                  <p className="mt-1 text-[11px] font-semibold text-amber-700">
+                    {order.promotion_code} · {order.offer_source?.replace('_', ' ') ?? 'offer'} · {order.discount_tier ?? 'EXCLUDED'}
                   </p>
                 )}
               </div>

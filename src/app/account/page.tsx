@@ -28,7 +28,8 @@ export default async function AccountPage() {
   const { data: orders } = await supabase
     .from('orders')
     .select(`
-      id, status, created_at, total_amount, items_subtotal, delivery_total,
+      id, status, created_at, total_amount, items_subtotal, discount_amount,
+      discount_tier, promotion_code, offer_source, delivery_total,
       fee_upstairs, fee_assembly, fee_sofa_removal,
       order_items (
         quantity,
@@ -80,6 +81,9 @@ export default async function AccountPage() {
     createdAt: o.created_at ?? new Date().toISOString(),
     total: Number(o.total_amount ?? 0),
     itemsSubtotal: o.items_subtotal === null ? null : Number(o.items_subtotal),
+    discountAmount: Number(o.discount_amount ?? 0),
+    promotionCode: o.promotion_code ?? null,
+    offerSource: o.offer_source ?? null,
     deliveryTotal: o.delivery_total === null ? null : Number(o.delivery_total),
     feeUpstairs: Number(o.fee_upstairs ?? 0),
     feeAssembly: Number(o.fee_assembly ?? 0),

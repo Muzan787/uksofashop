@@ -48,9 +48,15 @@ const itemsSchema = z.array(z.object({
   fabric_id: z.string().uuid().nullish(),
 })).min(1, 'Your cart is empty.')
 
+const entitlementSchema = z.string().uuid().nullish()
+
 interface PlacedOrder {
   id: string
   items_subtotal: number
+  discount_amount: number
+  discount_tier: string | null
+  promotion_code: string | null
+  offer_source: string | null
   delivery_total: number
   total_amount: number
 }
@@ -78,6 +84,8 @@ export async function placeOrder(
   cartItems: CartItem[],
   expectedTotal: number,
   extras: DeliveryOptions = NO_EXTRAS,
+  promotionCode: string | null = null,
+  offerEntitlementToken: string | null = null,
 ): Promise<PlaceOrderResult> {
   // place_order is anon-callable and sends two emails per successful call,
   // through the same mailbox that has a daily cap. Ten orders per hour from
@@ -110,6 +118,11 @@ export async function placeOrder(
     return { error: 'Those delivery options are not valid. Please review them and try again.' }
   }
 
+  const validatedEntitlement = entitlementSchema.safeParse(offerEntitlementToken)
+  if (!validatedEntitlement.success) {
+    return { error: 'That offer entitlement is not valid.' }
+  }
+
   const { customerName, customerEmail, customerPhone, shippingAddress, specialInstructions } = validatedData.data
   const opts = validatedExtras.data
 
@@ -132,6 +145,10 @@ export async function placeOrder(
     p_delivery_has_lift: opts.hasLift,
     p_wants_assembly: opts.assembly,
     p_wants_sofa_removal: opts.sofaRemoval,
+    // The code/token are authorisation inputs only. The database decides the
+    // tier, discount and final total; the browser never supplies those values.
+    p_promotion_code: promotionCode,
+    p_offer_entitlement_token: validatedEntitlement.data ?? null,
   })
 
   if (orderError || !data) {
@@ -139,7 +156,7 @@ export async function placeOrder(
     const message = orderError?.message ?? ''
 
     if (message.includes('PRICE_MISMATCH')) {
-      return { error: 'Prices have changed since you added these items. Please refresh the page and check your total before ordering.' }
+      return { error: 'Prices or your offer have changed since they were checked. Please review your total and try again.' }
     }
     if (message.includes('UNAVAILABLE_ITEMS')) {
       return { error: 'One of the items in your basket is no longer available. Please remove it and try again.' }
@@ -169,10 +186,12 @@ export async function placeOrder(
         sendOrderConfirmation(
           customerEmail, customerName, shortCode, order.id,
           Number(order.total_amount), Number(order.items_subtotal), breakdown,
+          Number(order.discount_amount), order.promotion_code,
         ),
         sendAdminOrderNotification(
           customerName, customerEmail, customerPhone, shortCode, order.id,
           Number(order.total_amount), Number(order.items_subtotal), breakdown,
+          Number(order.discount_amount), order.promotion_code,
         ),
       ])
     } catch (err) {

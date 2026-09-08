@@ -29,6 +29,9 @@ export interface AccountOrder {
   createdAt: string
   total: number
   itemsSubtotal: number | null
+  discountAmount: number
+  promotionCode: string | null
+  offerSource: string | null
   deliveryTotal: number | null
   feeUpstairs: number
   feeAssembly: number
@@ -347,9 +350,15 @@ function OrderCard({ order }: { order: AccountOrder }) {
               ))}
             </ul>
 
-            {(order.deliveryTotal ?? 0) > 0 && (
+            {((order.deliveryTotal ?? 0) > 0 || order.discountAmount > 0) && (
               <dl className="m-0 mt-4 flex flex-col gap-1.5 border-t border-calico-300 pt-4 text-caption">
                 <Line label="Your order" value={order.itemsSubtotal ?? order.total} />
+                {order.discountAmount > 0 && (
+                  <div className="flex items-baseline justify-between gap-4">
+                    <dt className="text-ink-500">Offer{order.promotionCode ? ` · ${order.promotionCode}` : ''}</dt>
+                    <dd className="m-0 font-data tabular-nums text-sage-700">−£{order.discountAmount.toFixed(2)}</dd>
+                  </div>
+                )}
                 {order.feeUpstairs > 0 && <Line label="Upstairs delivery" value={order.feeUpstairs} />}
                 {order.feeAssembly > 0 && <Line label="Assembly" value={order.feeAssembly} />}
                 {order.feeSofaRemoval > 0 && <Line label="Old sofa removal" value={order.feeSofaRemoval} />}

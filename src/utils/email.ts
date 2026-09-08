@@ -27,14 +27,16 @@ function esc(value: string | number | null | undefined): string {
 
 
 /**
- * Renders the order total as rows: items, free delivery, then each chosen
- * extra, then the grand total. Used by both the customer and admin emails so
- * the figures in an inbox always match the checkout screen.
+ * Renders the order total as rows: items, optional offer, free delivery, each
+ * chosen extra, then the grand total. Used by both customer and admin emails so
+ * the figures in an inbox always match the authoritative order record.
  */
 const totalsTable = (
   itemsSubtotal: number,
   breakdown: DeliveryBreakdown | undefined,
   grandTotal: number,
+  discountAmount = 0,
+  promotionCode: string | null = null,
   accent = '#d4871a',
 ) => {
   const row = (label: string, value: string, muted = false) => `
@@ -47,9 +49,14 @@ const totalsTable = (
     .map(l => row(`${l.label}${l.detail ? ` <span style="color:#a8a29e;">(${l.detail})</span>` : ''}`, `£${l.amount.toFixed(2)}`))
     .join('');
 
+  const offer = discountAmount > 0
+    ? row(`Offer${promotionCode ? ` · ${esc(promotionCode)}` : ''}`, `−£${discountAmount.toFixed(2)}`)
+    : '';
+
   return `
     <table role="presentation" style="width: 100%; border-collapse: collapse; margin: 0;">
       ${row('Your order', `£${itemsSubtotal.toFixed(2)}`)}
+      ${offer}
       ${row('Delivery (UK Mainland, ground floor)', 'FREE')}
       ${extras}
       <tr>
@@ -154,7 +161,9 @@ export async function sendOrderConfirmation(
   fullOrderId: string,
   total: number,
   itemsSubtotal: number = total,
-  breakdown?: DeliveryBreakdown
+  breakdown?: DeliveryBreakdown,
+  discountAmount = 0,
+  promotionCode: string | null = null,
 ) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
   const confirmLink = `${siteUrl}/confirm-order/${fullOrderId}`;
@@ -175,7 +184,7 @@ export async function sendOrderConfirmation(
         <p style="margin: 0 0 24px 0; font-size: 24px; font-weight: bold; font-family: monospace; letter-spacing: 2px; color: #1c1917;">${shortCode}</p>
         
         <div style="text-align: left; padding-top: 4px;">
-          ${totalsTable(itemsSubtotal, breakdown, total)}
+          ${totalsTable(itemsSubtotal, breakdown, total, discountAmount, promotionCode)}
         </div>
       </div>
 
@@ -202,7 +211,9 @@ export async function sendAdminOrderNotification(
   fullOrderId: string,
   totalAmount: number,
   itemsSubtotal: number = totalAmount,
-  breakdown?: DeliveryBreakdown
+  breakdown?: DeliveryBreakdown,
+  discountAmount = 0,
+  promotionCode: string | null = null,
 ) {
   const adminEmail = process.env.ADMIN_EMAIL;
   if (!adminEmail) return;
@@ -233,7 +244,7 @@ export async function sendAdminOrderNotification(
         <p style="margin: 0 0 16px 0; font-size: 16px; font-weight: bold;">${esc(customerPhone)}</p>
         
         <p style="margin: 0 0 6px 0; color: #78716c; font-size: 11px; text-transform: uppercase; font-weight: bold;">Amount to Collect</p>
-        ${totalsTable(itemsSubtotal, breakdown, totalAmount)}
+        ${totalsTable(itemsSubtotal, breakdown, totalAmount, discountAmount, promotionCode)}
         ${(breakdown?.lines.some(l => l.key === 'sofaRemoval'))
           ? `<p style="margin: 14px 0 0 0; padding: 10px 12px; background: #fef9f0; border-left: 3px solid #d4871a; color: #57534e; font-size: 12px;">
                <strong>Action:</strong> this customer wants their old sofa removed. Confirm the charge with them before delivery if the item is unusually large.
