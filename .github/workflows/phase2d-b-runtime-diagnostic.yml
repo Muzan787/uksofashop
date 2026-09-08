@@ -1,0 +1,36 @@
+name: Phase 2D-B runtime diagnostic
+
+on:
+  push:
+    branches: [qa/phase2d-b-live-signoff]
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      LIVE_URL: https://www.uksofashop.co.uk
+      NODE_PATH: /tmp/pw/node_modules
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: eac4ab38841bf6b60140f9c5984e5274d01f8e50
+          fetch-depth: 1
+      - name: Prepare browser
+        run: |
+          mkdir -p /tmp/pw
+          npm install --prefix /tmp/pw playwright-core@1.55.0
+      - name: Capture pageerror stack and script origins
+        run: |
+          node <<'NODE'
+          const {chromium}=require('playwright-core');
+          const fs=require('fs');
+          const cart=[{variant_id:'a5d2050d-c458-4e0c-b3b3-7b7c727845a0',quantity:1,price:529,title:'Verona 4 Seater Corner 1c2 High Back',color:'Grey',image_url:'https://res.cloudinary.com/dmlna04yk/image/upload/v1787513319/Verona-4-seater-2c1-corner-high-back-sofa-grey2_uw3ny5.jpg',fabric_id:'6ce3d2c2-7f92-4276-b991-70afa07c0cf9',fabric_label:'Chenille Grey',fabric_code:'CH12',fabric_swatch:'https://res.cloudinary.com/dmlna04yk/image/upload/v1788788503/CH12_amoeer.png'}];
+          (async()=>{const b=await chromium.launch({headless:true,executablePath:'/usr/bin/google-chrome',args:['--no-sandbox']});const c=await b.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,serviceWorkers:'block'});const p=await c.newPage();const out={pageErrors:[],consoleErrors:[],scripts:[],url:null};p.on('pageerror',e=>out.pageErrors.push({name:e.name,message:e.message,stack:e.stack||null}));p.on('console',m=>{if(m.type()==='error')out.consoleErrors.push({text:m.text(),location:m.location()})});await p.addInitScript(x=>{localStorage.setItem('uksofashop_cart',JSON.stringify(x));localStorage.setItem('cookie_consent','denied')},cart);const r=await p.goto(process.env.LIVE_URL+'/checkout',{waitUntil:'networkidle',timeout:60000});out.url=p.url();out.http=r&&r.status();await p.waitForTimeout(3000);out.scripts=await p.evaluate(()=>[...document.scripts].map(s=>({src:s.src||null,type:s.type||null,id:s.id||null})));fs.writeFileSync('runtime-diagnostic.json',JSON.stringify(out,null,2));console.log(JSON.stringify(out,null,2));await b.close()})().catch(e=>{console.error(e);process.exit(1)});
+          NODE
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: phase2d-b-runtime-diagnostic
+          path: runtime-diagnostic.json
+          if-no-files-found: ignore
