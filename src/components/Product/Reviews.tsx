@@ -24,19 +24,15 @@ const DATE = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', 
 /**
  * What customers said.
  *
- * The whole section used to be rendered at opacity:0 and revealed by an
- * IntersectionObserver — so a visitor whose JavaScript failed, or whose
- * browser never fired the observer, was left with a blank space where the only
- * social proof on the page should be. That is the same bug the homepage fixed
- * by moving its reveals out of JavaScript, and this is the same fix: every
- * card is painted on the first frame, and the two animations here (the section
- * lift and the distribution bars) are CSS scroll-driven, applied only inside
- * an @supports block. Where the browser cannot drive them the content is
- * simply there, finished. Nothing waits on a capability to become visible.
+ * Reviewed products keep the full summary, review list and submission form.
+ * Zero-review products use a compact honest state first; the same form remains
+ * one tap away, so no review data or submission path is removed simply because
+ * the product has not collected social proof yet.
  */
 export default function Reviews({ productId, reviews, isLoggedIn }: Props) {
   const count = reviews.length;
   const average = count ? reviews.reduce((s, r) => s + r.rating, 0) / count : 0;
+  const [writeFirstOpen, setWriteFirstOpen] = useState(false);
 
   // Highest rating first, so the chart reads 5 down to 1 the way people expect.
   const distribution = [5, 4, 3, 2, 1].map(stars => {
@@ -44,13 +40,49 @@ export default function Reviews({ productId, reviews, isLoggedIn }: Props) {
     return { stars, n, percent: count ? (n / count) * 100 : 0 };
   });
 
+  if (count === 0) {
+    return (
+      <section id="reviews" aria-labelledby="reviews-heading" className="reveal pt-10 lg:pt-14">
+        <SectionHeading
+          eyebrow="Customer reviews"
+          heading="What customers say."
+          emphasise="customers"
+          level="section"
+          className="mb-6 lg:mb-8"
+        />
+        <h2 id="reviews-heading" className="sr-only">Customer reviews</h2>
+
+        <div className="border-y border-calico-300 py-5 sm:flex sm:items-center sm:justify-between sm:gap-8">
+          <div className="max-w-[60ch]">
+            <p className="m-0 text-body font-semibold text-ink-900">No reviews yet.</p>
+            <p className="m-0 mt-1 text-body-sm leading-relaxed text-ink-500">
+              No customer review has been published for this sofa yet. If you have bought one,
+              you can be the first to share how it worked out.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            aria-expanded={writeFirstOpen}
+            aria-controls="first-review-form"
+            onClick={() => setWriteFirstOpen(open => !open)}
+            className="hover-btn mt-4 inline-flex min-h-11 shrink-0 items-center justify-center rounded-pill border border-ink-900 px-5 py-2.5 text-body-sm font-semibold text-ink-900 sm:mt-0"
+          >
+            {writeFirstOpen ? 'Close review form' : 'Write the first review'}
+          </button>
+        </div>
+
+        {writeFirstOpen && (
+          <div id="first-review-form" className="mt-5 max-w-md">
+            <ReviewForm productId={productId} isLoggedIn={isLoggedIn} />
+          </div>
+        )}
+      </section>
+    );
+  }
+
   return (
     <section id="reviews" aria-labelledby="reviews-heading" className="reveal pt-10 lg:pt-14">
-      {/* The site's one section heading. The border-top this used to carry is
-          gone with it: the heading now opens with its own ember rule and
-          closes with a hairline that fades toward the right margin, so a
-          second full-width line above the whole thing was drawing the same
-          boundary twice. */}
       <SectionHeading
         eyebrow="Customer reviews"
         heading="What customers say."
@@ -66,19 +98,9 @@ export default function Reviews({ productId, reviews, isLoggedIn }: Props) {
           <ReviewForm productId={productId} isLoggedIn={isLoggedIn} />
         </div>
 
-        {count > 0 ? (
-          // CSS columns, not a grid: a masonry of cards whose heights differ by
-          // whether they carry a photograph, without measuring anything.
-          <div className="columns-1 gap-4 md:columns-2">
-            {reviews.map(r => <Card key={r.id} review={r} />)}
-          </div>
-        ) : (
-          <div className="rounded-md border border-dashed border-[var(--pdp-accent-line)] bg-[var(--pdp-accent-tint)] px-4 py-10 text-center">
-            <p className="m-0 text-body-sm text-ink-500">
-              No reviews for this sofa yet. If you have bought one, yours would be the first.
-            </p>
-          </div>
-        )}
+        <div className="columns-1 gap-4 md:columns-2">
+          {reviews.map(r => <Card key={r.id} review={r} />)}
+        </div>
       </div>
     </section>
   );
@@ -116,8 +138,6 @@ function Summary({ count, average, distribution }: {
               </th>
               <td className="w-full py-1">
                 <span className="block h-2 overflow-hidden rounded-pill bg-calico-300">
-                  {/* scaleX rather than width: a transform is what the
-                      scroll-driven keyframe animates, and it composites. */}
                   <span
                     className="bar-fill block h-full origin-left rounded-pill bg-[var(--pdp-accent)]"
                     style={{ transform: `scaleX(${percent / 100})` }}
@@ -139,10 +159,6 @@ function Card({ review }: { review: Review }) {
 
   return (
     <article className="mb-4 break-inside-avoid rounded-md border border-calico-300 bg-calico-50 shadow-e1">
-      {/* A review with a photograph leads with it, at a size worth looking at.
-          These used to be an 80px thumbnail below the text — the most
-          persuasive thing a customer can give us, shown at the size of an
-          icon. */}
       {review.image_url && (
         <div className="relative aspect-[4/3] w-full overflow-hidden rounded-t-md bg-calico-200">
           <Image
@@ -238,9 +254,6 @@ function ReviewForm({ productId, isLoggedIn }: { productId: string; isLoggedIn: 
     <form action={submit} className="flex flex-col gap-5 rounded-md border border-calico-300 bg-calico-50 p-5">
       <p className="m-0 text-body font-semibold text-ink-900">Write a review</p>
 
-      {/* No account needed. The form used to be a login wall, which for a shop
-          with a handful of reviews turned away exactly the people most likely
-          to write one — everybody who bought as a guest. */}
       {!isLoggedIn && (
         <Field
           label="Your name"
@@ -289,8 +302,6 @@ function ReviewForm({ productId, isLoggedIn }: { productId: string; isLoggedIn: 
             </button>
           ))}
         </div>
-        {/* The word, not just the count — it is what tells someone hovering
-            the third star what "3" is going to mean. */}
         <p aria-live="polite" className="m-0 mt-2 text-caption text-ink-500">
           {STAR_LABELS[shown - 1]}
         </p>
