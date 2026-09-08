@@ -1,0 +1,76 @@
+name: Phase 2D-B live sign-off v3
+
+on:
+  push:
+    branches: [qa/phase2d-b-live-signoff]
+
+jobs:
+  live-v3:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      FINAL_SHA: eac4ab38841bf6b60140f9c5984e5274d01f8e50
+      BASE_SHA: af46a8a2524662c9f573ba055e2194cc0f95245b
+      LIVE_URL: https://www.uksofashop.co.uk
+      NODE_PATH: /tmp/pw/node_modules
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: eac4ab38841bf6b60140f9c5984e5274d01f8e50
+          fetch-depth: 0
+      - name: Verify release and production diff
+        run: |
+          test "$(git rev-parse HEAD)" = "$FINAL_SHA"
+          test "$(git diff --name-only "$BASE_SHA"..HEAD)" = $'src/components/Checkout/CartStep.tsx\nsrc/components/Checkout/CheckoutClient.tsx'
+      - name: Prepare browser
+        run: |
+          mkdir -p /tmp/pw
+          npm install --prefix /tmp/pw playwright-core@1.55.0
+      - name: Live browser matrix with normal service workers
+        run: |
+          node <<'NODE'
+          const {chromium}=require('playwright-core'),fs=require('fs');
+          const live=process.env.LIVE_URL,widths=[320,390,430,768,1440];
+          const P={
+            vf:{variant_id:'a5d2050d-c458-4e0c-b3b3-7b7c727845a0',quantity:1,price:529,title:'Verona 4 Seater Corner 1c2 High Back',color:'Grey',image_url:'https://res.cloudinary.com/dmlna04yk/image/upload/v1787513319/Verona-4-seater-2c1-corner-high-back-sofa-grey2_uw3ny5.jpg',fabric_id:'6ce3d2c2-7f92-4276-b991-70afa07c0cf9',fabric_label:'Chenille Grey',fabric_code:'CH12',fabric_swatch:'https://res.cloudinary.com/dmlna04yk/image/upload/v1788788503/CH12_amoeer.png'},
+            roma:{variant_id:'fdc54adb-777c-4dcd-83e1-64e5938b631a',quantity:1,price:599,title:'Roma Recliner 3+2 Seater Manual Sofa',color:'Black',image_url:'https://res.cloudinary.com/dmlna04yk/image/upload/v1782248467/Black-Roma-Recliner-Manual_fu4i3h.png',fabric_id:null,fabric_label:null,fabric_code:null,fabric_swatch:null},
+            nova:{variant_id:'d81eb236-21ee-4e80-a1b3-4c5f779dbcdd',quantity:1,price:550,title:'Nova Electric Recliner 2 Seater Sofa',color:'Elephant Grey',image_url:'https://res.cloudinary.com/dmlna04yk/image/upload/v1782248436/Nova-Electric-Recliner-2-Seater-Sofa-Elephant-Grey_ddd6au.jpg',fabric_id:null,fabric_label:null,fabric_code:null,fabric_swatch:null},
+            vs:{variant_id:'a3c44d91-9756-4913-8895-e39054eba91a',quantity:1,price:549,title:'Verona 3+2 Seater High Back',color:'Grey',image_url:'https://res.cloudinary.com/dmlna04yk/image/upload/v1787517240/Verona-3_2-seater-high-back-sofa-grey_r35wa4.jpg',fabric_id:null,fabric_label:null,fabric_code:null,fabric_swatch:null}
+          };
+          const matrix=Object.values(P),out={widths:{},multi:false,quantity:false,undo:false,summary:{desktop:false,mobile:false},phase2da:{},fixedUi:{},horizontalOverflow:'NONE',runtimeErrors:[],softwareKeyboard:'NOT PHYSICALLY PROVEN'};
+          const fail=m=>{throw Error(m)};
+          async function setup(b,w,cart,touch=w<=430,label=''){
+            const c=await b.newContext({viewport:{width:w,height:w>=768?1000:844},isMobile:touch,hasTouch:touch});
+            const p=await c.newPage();
+            p.on('pageerror',e=>out.runtimeErrors.push({kind:'pageerror',w,label,message:e.message,stack:e.stack||null}));
+            p.on('console',m=>{if(m.type()==='error')out.runtimeErrors.push({kind:'console',w,label,message:m.text(),location:m.location()})});
+            await p.addInitScript(x=>{localStorage.setItem('uksofashop_cart',JSON.stringify(x));localStorage.setItem('cookie_consent','denied')},cart);
+            const r=await p.goto(live+'/checkout',{waitUntil:'domcontentloaded',timeout:45000});if(!r||!r.ok())fail(`${w}: HTTP ${r&&r.status()}`);
+            await p.getByRole('button',{name:/Continue to delivery/i}).waitFor({state:'visible',timeout:15000});await p.waitForTimeout(250);
+            return{c,p};
+          }
+          async function vis(l,n){for(let i=0;i<await l.count();i++)if(await l.nth(i).isVisible())return l.nth(i);fail(n+' no visible match')}
+          async function read(l,n){const ok=await l.evaluate(e=>{const s=getComputedStyle(e);return s.textOverflow!=='ellipsis'&&e.scrollHeight<=e.clientHeight+1&&e.scrollWidth<=e.clientWidth+1});if(!ok)fail(n+' clipped')}
+          async function overflow(p,w){if(await p.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth+1)){out.horizontalOverflow='FAIL';fail(`${w} overflow`)}}
+          async function line(p,it,w){const t=await vis(p.getByText(it.title,{exact:true}),`${w} title`);await read(t,`${w} title`);const st=it.fabric_code?`${it.fabric_label||it.color} · ${it.fabric_code}`:it.color;const s=await vis(p.getByText(st,{exact:true}),`${w} spec`);await read(s,`${w} spec`);const plus=p.getByRole('button',{name:`One more ${it.title}`}),rm=p.getByRole('button',{name:`Remove ${it.title} from your cart`});const[a,b,sb]=await Promise.all([plus.boundingBox(),rm.boundingBox(),s.boundingBox()]);if(!a||a.width<43||a.height<43||!b||b.width<43||b.height<43)fail(`${w} touch target`);if(sb&&a&&sb.y+sb.height>a.y+2)fail(`${w} spec/control collision`);await vis(p.getByText(`£${it.price}`,{exact:true}),`${w} price`);const ib=await t.locator('xpath=ancestor::article').locator('img').first().boundingBox();if(!ib||ib.width<60||ib.height<60)fail(`${w} image`);if(!(await p.getByRole('button',{name:/Continue to delivery/i}).isVisible()))fail(`${w} CTA`);await overflow(p,w)}
+          async function state(b,w){const{c,p}=await setup(b,w,[P.roma],w<=430,'state');await p.getByRole('button',{name:/Continue to delivery/i}).click();const f={name:p.locator('input[name="customerName"]'),email:p.locator('input[name="customerEmail"]'),phone:p.locator('input[name="customerPhone"]'),postcode:p.locator('label').filter({hasText:'Postcode'}).locator('..').locator('input[type="text"]').first(),address:p.locator('textarea[name="shippingAddress"]'),instructions:p.locator('textarea[name="specialInstructions"]')},v={name:`QA ${w}`,email:`qa-${w}@example.com`,phone:'07700900123',postcode:'SW1A 1AA',address:`QA Address ${w}`,instructions:`QA Instructions ${w}`};for(const k in f)await f[k].fill(v[k]);await p.getByRole('button',{name:/Back to Cart/i}).click();await p.getByRole('button',{name:/Continue to delivery/i}).click();for(const k in f){await f[k].waitFor({state:'visible'});if(await f[k].inputValue()!==v[k])fail(`${w} state ${k}`)}out.phase2da[w]=true;await overflow(p,w);await c.close()}
+          (async()=>{const b=await chromium.launch({headless:true,executablePath:'/usr/bin/google-chrome',args:['--no-sandbox']});try{
+            for(const w of widths){out.widths[w]=[];for(const it of matrix){const{c,p}=await setup(b,w,[it],w<=430,`${w}-${it.variant_id}`);await line(p,it,w);if(!it.fabric_code&&await p.getByText('CH12',{exact:false}).count())fail(`${w} fake fabric code`);out.widths[w].push(it.title);await c.close()}}
+            const m=await setup(b,390,matrix,true,'multi');let prev=null;for(const it of matrix){const t=await vis(m.p.getByText(it.title,{exact:true}),'multi title');await read(t,'multi title');const rb=await t.locator('xpath=ancestor::article').boundingBox();if(!rb||(prev&&rb.y<prev.y+prev.height))fail('multi overlap');prev=rb}if(!(await m.p.getByRole('button',{name:/Continue to delivery/i}).isVisible()))fail('multi CTA');await m.p.getByRole('button',{name:/4 items · due on delivery/i}).click();await vis(m.p.getByText('Subtotal',{exact:true}),'multi subtotal');await vis(m.p.getByText('£2227.00',{exact:true}),'multi subtotal value');out.multi=true;await overflow(m.p,390);await m.c.close();
+            const q=await setup(b,390,[P.roma],true,'controls');await q.p.getByRole('button',{name:`One more ${P.roma.title}`}).click();await q.p.getByText('2 in your cart',{exact:true}).waitFor({state:'attached'});await vis(q.p.getByText('£1198',{exact:true}),'plus price');await q.p.getByRole('button',{name:`One fewer ${P.roma.title}`}).click();await q.p.getByText('1 in your cart',{exact:true}).waitFor({state:'attached'});await vis(q.p.getByText('£599',{exact:true}),'minus price');out.quantity=true;await q.p.getByRole('button',{name:`Remove ${P.roma.title} from your cart`}).click();const u=q.p.getByRole('button',{name:'Undo'});await u.waitFor({state:'visible',timeout:2000});await u.click();await vis(q.p.getByText(P.roma.title,{exact:true}),'undo title');await vis(q.p.getByText('Black',{exact:true}),'undo spec');await q.p.getByText('1 in your cart',{exact:true}).waitFor({state:'attached'});const tb=q.p.getByRole('button',{name:/1 item · due on delivery/i});if(!(await tb.textContent()).includes('£599'))fail('undo total');out.undo=true;await overflow(q.p,390);await q.c.close();
+            const d=await setup(b,1440,[P.vf],false,'summary-desktop');const dt=d.p.getByText(P.vf.title,{exact:true});if(await dt.count()<2)fail('desktop summary title');await read(dt.last(),'desktop summary title');await read(d.p.getByText('Chenille Grey · CH12',{exact:true}).last(),'desktop summary spec');await vis(d.p.getByText('Subtotal',{exact:true}),'desktop subtotal');await vis(d.p.getByText('Delivery · UK Mainland',{exact:true}),'desktop delivery');await vis(d.p.getByText('FREE',{exact:true}),'desktop free');await vis(d.p.getByText('Total due on delivery',{exact:true}),'desktop total');out.summary.desktop=true;await d.c.close();
+            const mo=await setup(b,390,[P.vf],true,'summary-mobile');await mo.p.getByRole('button',{name:/1 item · due on delivery/i}).click();const mts=mo.p.getByText(P.vf.title,{exact:true}),tv=[];for(let i=0;i<await mts.count();i++)if(await mts.nth(i).isVisible())tv.push(mts.nth(i));if(tv.length<2)fail('mobile summary title');await read(tv.at(-1),'mobile summary title');const mss=mo.p.getByText('Chenille Grey · CH12',{exact:true}),sv=[];for(let i=0;i<await mss.count();i++)if(await mss.nth(i).isVisible())sv.push(mss.nth(i));if(sv.length<2)fail('mobile summary spec');await read(sv.at(-1),'mobile summary spec');await vis(mo.p.getByText('Subtotal',{exact:true}),'mobile subtotal');await vis(mo.p.getByText('Delivery · UK Mainland',{exact:true}),'mobile delivery');await vis(mo.p.getByText('Total due on delivery',{exact:true}),'mobile total');out.summary.mobile=true;await overflow(mo.p,390);await mo.c.close();
+            for(const w of [390,430,1440])await state(b,w);
+            for(const w of [320,390,430]){const{c,p}=await setup(b,w,[P.vf],true,'fixed');const wa=p.getByRole('link',{name:'Chat with us on WhatsApp'}),bar=p.locator('[data-bottom-bar]').first(),nav=p.getByRole('navigation',{name:'Primary'});if(!(await wa.isVisible())||!(await bar.isVisible())||!(await nav.isVisible()))fail(`${w} fixed missing`);const[wb,bb,nb]=await Promise.all([wa.boundingBox(),bar.boundingBox(),nav.boundingBox()]);if(!wb||!bb||!nb||bb.y+bb.height>nb.y+1||wb.y+wb.height>bb.y+1)fail(`${w} fixed overlap`);const max=await p.evaluate(()=>Math.max(0,document.documentElement.scrollHeight-innerHeight));if(max>100){const y=await p.evaluate(()=>{scrollTo(0,300);return scrollY});if(y<50)fail(`${w} scroll trap`)}out.fixedUi[w]=true;await overflow(p,w);await c.close()}
+            if(out.runtimeErrors.some(e=>e.kind==='pageerror'))fail('page errors '+JSON.stringify(out.runtimeErrors.filter(e=>e.kind==='pageerror')));
+          }finally{fs.writeFileSync('phase2d-b-live-results-v3.json',JSON.stringify(out,null,2));await b.close()}})().catch(e=>{console.error(e);process.exit(1)});
+          NODE
+      - name: Show results
+        if: always()
+        run: cat phase2d-b-live-results-v3.json || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: phase2d-b-live-signoff-v3
+          path: phase2d-b-live-results-v3.json
+          if-no-files-found: ignore
