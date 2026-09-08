@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import {
@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import { useCart, type DisplayCartItem } from '@/context/CartContext'
 import { placeOrder } from '@/app/actions/checkout'
+import { quoteOffer } from '@/app/actions/offer'
 import {
   trackOrderPlaced,
   trackInitiateCheckout,
@@ -33,9 +34,11 @@ import Field from '@/components/UI/Field'
 import MobileTotalBar from './MobileTotalBar'
 import SuccessStep from './SuccessStep'
 import AdsPurchaseConversion from './AdsPurchaseConversion'
+import OfferCode from './OfferCode'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 import type { Step } from './Steps'
+import type { OfferQuote } from '@/types/offers'
 
 /**
  * Cart lines in the shape the pixel and GA4 want. variant_id is the same id
@@ -49,6 +52,23 @@ function toTrackedItems(items: DisplayCartItem[]): TrackedItem[] {
     price: i.price,
     quantity: i.quantity,
   }))
+}
+
+/** Only identities/quantities go to the offer/order authority, never prices. */
+function toOfferItems(items: DisplayCartItem[]) {
+  return items.map(i => ({
+    variant_id: i.variant_id,
+    quantity: i.quantity,
+    fabric_id: i.fabric_id ?? null,
+  }))
+}
+
+/** A quote is valid only for the exact basket identities and quantities it saw. */
+function basketOfferKey(items: DisplayCartItem[]): string {
+  return items
+    .map(i => `${i.variant_id}:${i.fabric_id ?? ''}:${i.quantity}`)
+    .sort()
+    .join('|')
 }
 
 interface FormState {
@@ -153,12 +173,21 @@ function ExtraOption({
 }
 
 // ─── Order summary sidebar ────────────────────────────────────────────────────
-function OrderSummary({ compact = false, extras = NO_EXTRAS }: { compact?: boolean; extras?: DeliveryOptions }) {
+function OrderSummary({
+  compact = false,
+  extras = NO_EXTRAS,
+  offer = null,
+}: {
+  compact?: boolean
+  extras?: DeliveryOptions
+  offer?: OfferQuote | null
+}) {
   const { cartItems, totalAmount } = useCart()
   // Base delivery to a UK Mainland ground floor is free, with no threshold.
   // Anything chargeable comes from the extras the customer ticked.
   const { lines: extraLines, total: delivery } = deliveryBreakdown(extras)
-  const grandTotal = totalAmount + delivery
+  const discount = offer?.valid ? offer.discountAmount : 0
+  const grandTotal = Math.max(0, totalAmount - discount) + delivery
 
   return (
     <div
@@ -234,6 +263,14 @@ function OrderSummary({ compact = false, extras = NO_EXTRAS }: { compact?: boole
           <span>Subtotal</span>
           <span className="font-data tnum">£{totalAmount.toFixed(2)}</span>
         </div>
+        {offer?.valid && (
+          <div className="flex justify-between gap-3 text-caption text-calico-300">
+            <span className="min-w-0">Offer{offer.normalizedCode ? ` · ${offer.normalizedCode}` : ''}</span>
+            <span className="font-data tnum shrink-0 font-bold text-sage-300">
+              {discount > 0 ? `−£${discount.toFixed(2)}` : '£0.00'}
+            </span>
+          </div>
+        )}
         <div className="flex justify-between text-caption text-calico-300">
           <span>Delivery · UK Mainland</span>
           <span className="font-bold text-sage-300">FREE</span>
@@ -264,9 +301,6 @@ function OrderSummary({ compact = false, extras = NO_EXTRAS }: { compact?: boole
             [Truck, PROMISES.delivery.long],
           ] as const).map(([Icon, text]) => (
             <div key={text} className="flex items-center gap-2">
-              {/* `as const` above keeps Icon a callable component type. Without it the
-                  tuple widens to a union TS cannot call, which is why this line
-                  used to carry a suppression comment. */}
               <Icon aria-hidden="true" className="h-3 w-3 shrink-0 text-ember-300" />
               <span className="text-caption text-calico-300">{text}</span>
             </div>
@@ -280,6 +314,8 @@ function OrderSummary({ compact = false, extras = NO_EXTRAS }: { compact?: boole
 // ─── STEP 2: Delivery details ─────────────────────────────────────────────────
 function DetailsStep({
   onBack, onSuccess, extras, setExtras, form, setForm,
+  offer, offerCodeInput, setOfferCodeInput, appliedPromotionCode,
+  offerPending, offerError, onApplyOffer,
 }: {
   onBack: () => void
   onSuccess: (id: string, postcode: string, amount: number) => void
@@ -287,6 +323,13 @@ function DetailsStep({
   setExtras: (next: DeliveryOptions) => void
   form: FormState
   setForm: React.Dispatch<React.SetStateAction<FormState>>
+  offer: OfferQuote | null
+  offerCodeInput: string
+  setOfferCodeInput: (next: string) => void
+  appliedPromotionCode: string | null
+  offerPending: boolean
+  offerError: string
+  onApplyOffer: () => void
 }) {
   const { cartItems, totalAmount, clearCart } = useCart()
   // A line with a fabric is a line that has to be built. Nothing else in the
@@ -294,7 +337,8 @@ function DetailsStep({
   // need to - the fabric is the thing that makes it one.
   const madeToOrder = cartItems.some(i => i.fabric_id)
   const extrasTotal = deliveryTotal(extras)
-  const grandTotal = totalAmount + extrasTotal
+  const offerDiscount = offer?.valid ? offer.discountAmount : 0
+  const grandTotal = Math.max(0, totalAmount - offerDiscount) + extrasTotal
 
   const [errors, setErrors] = useState<FieldError>({})
   const [pending, setPending] = useState(false)
@@ -341,8 +385,6 @@ function DetailsStep({
       setAddresses(await lookupAddresses(form.postcode))
       setConfirmed(normalisePostcode(form.postcode));
     } catch (err) {
-      // The customer can always type the address by hand below, so a failure
-      // here is a prompt rather than a dead end.
       const message = err instanceof Error ? err.message : '';
       setConfirmed(null)
       setErrors(e => ({ ...e, postcode: message || 'Lookup failed. Please type your address below.' }));
@@ -356,17 +398,6 @@ function DetailsStep({
     if (!validate()) return
     setPending(true); setServerError('')
 
-    // Advanced matching, from here to the end of the tab.
-    //
-    // This is the only point on the site where a visitor tells us who they
-    // are without signing in, and it is worth a great deal to Meta: a hashed
-    // email matches a person across their devices, where _fbp is one browser
-    // and Safari deletes it after seven days either way. Set BEFORE
-    // placeOrder, so the OrderPlaced that follows carries it.
-    //
-    // Nothing readable leaves the page - fbevents hashes these itself, and
-    // utils/metaCapi.ts hashes the server copy. See setMetaIdentity for why
-    // it is held in memory and never written to storage.
     setMetaIdentity({
       email: form.customerEmail,
       phone: form.customerPhone,
@@ -376,7 +407,6 @@ function DetailsStep({
 
     const fd = new FormData()
     Object.entries(form).forEach(([k, v]) => {
-      // We append the postcode to the shipping address so your backend schema doesn't need to change
       if (k === 'shippingAddress') {
          fd.append('shippingAddress', `${v}, ${form.postcode.toUpperCase()}`);
       } else {
@@ -384,25 +414,17 @@ function DetailsStep({
       }
     })
 
-    // Ids and quantities only - the database looks up every price itself, so a
-    // tampered request can't change what an order costs.
-    const items = cartItems.map(i => ({
-      variant_id: i.variant_id,
-      quantity: i.quantity,
-      fabric_id: i.fabric_id ?? null,
-    }))
+    // Ids and quantities only - the database looks up every price and the offer
+    // itself, so a tampered request cannot choose either one.
+    const items = toOfferItems(cartItems)
 
-    const res = await placeOrder(fd, items, grandTotal, extras)
+    const res = await placeOrder(fd, items, grandTotal, extras, appliedPromotionCode)
 
     if (res?.error) { setServerError(res.error); setPending(false) }
     else if (res?.success) {
-      // res.total is the database's figure and is always present on success
-      // (see PlaceOrderResult), so there is no `?? grandTotal` here any more.
-      // That fallback silently substituted cart state - the one number a
-      // conversion value must never come from - for a value the server had
-      // already computed. total_amount is delivery inclusive, so paid extras
-      // are credited to the campaign too. Items are read before clearCart(),
-      // which empties the array this maps over.
+      // res.total is the database's figure and is always present on success.
+      // Discounted orders therefore flow into the existing conversion pipeline
+      // at the actual amount due, not the pre-offer basket total.
       trackOrderPlaced(res.orderId, res.total, toTrackedItems(cartItems));
       clearCart();
       onSuccess(res.orderId, form.postcode.toUpperCase(), res.total)
@@ -433,13 +455,10 @@ function DetailsStep({
       )}
 
       <div className="mb-4 flex flex-col gap-4">
-
-        {/* Basic Info Fields */}
         <Field label="Full Name" name="customerName" value={form.customerName} onChange={set('customerName')} error={errors.customerName} />
         <Field label="Email Address" type="email" name="customerEmail" hint="Your order confirmation will be sent here" value={form.customerEmail} onChange={set('customerEmail')} error={errors.customerEmail} />
         <Field label="Mobile Number" type="tel" name="customerPhone" hint="A UK mobile — our driver calls before delivery, and we message you on WhatsApp" value={form.customerPhone} onChange={set('customerPhone')} error={errors.customerPhone} />
 
-        {/* NEW: Postcode Lookup Section */}
         <div>
           <label className="mb-2 flex items-center gap-1 font-data text-eyebrow font-bold uppercase tracking-[0.15em] text-ink-500">
              Postcode <span className="text-ember-700">*</span>
@@ -465,10 +484,6 @@ function DetailsStep({
             </button>
           </div>
           {errors.postcode && <p className="mt-1 text-caption text-rust-700">{errors.postcode}</p>}
-          {/* Confirmation, not decoration: "free" is the fact a customer is
-              actually checking for, and it was never stated against their own
-              address. Grows in rather than appearing, so it reads as an answer
-              arriving. */}
           {confirmed && !errors.postcode && (
             <div
               className="mt-2 grid grid-rows-[1fr] transition-[grid-template-rows] duration-base ease-out-expo"
@@ -482,10 +497,8 @@ function DetailsStep({
           )}
         </div>
 
-        {/* Custom Address Dropdown */}
         {addresses.length > 0 && (
           <div className="relative animate-[fadeIn_var(--dur-base)_var(--ease-out-expo)]">
-            {/* The Trigger Button */}
             <button
               type="button"
               onClick={() => setDropdownOpen(!dropdownOpen)}
@@ -504,7 +517,6 @@ function DetailsStep({
               />
             </button>
 
-            {/* The Floating Menu. max-h-60 keeps it off the whole screen. */}
             {dropdownOpen && (
               <div className="absolute inset-x-0 top-full z-50 mt-2 flex max-h-60 flex-col overflow-y-auto rounded-sm border border-calico-300 bg-calico-50 shadow-e1">
                 {addresses.map((addr, i) => (
@@ -513,10 +525,8 @@ function DetailsStep({
                     type="button"
                     onClick={() => {
                       set('shippingAddress')(addr);
-                      setDropdownOpen(false); // Close after selection
+                      setDropdownOpen(false);
                     }}
-                    // last:border-b-0 rather than comparing i to the array
-                    // length, and leading-snug so a long address wraps.
                     className={`cursor-pointer border-0 border-b border-calico-100 px-4 py-3 text-left text-caption leading-snug transition-colors duration-press ease-out-expo last:border-b-0 ${
                       form.shippingAddress === addr
                         ? 'bg-ember-500/10 font-bold text-ink-900'
@@ -531,11 +541,18 @@ function DetailsStep({
           </div>
         )}
 
-        {/* Manual Address Field (Always visible for manual edits) */}
         <Field label="Full Address" name="shippingAddress" type="textarea" value={form.shippingAddress} onChange={set('shippingAddress')} error={errors.shippingAddress} />
-
         <Field label="Special Instructions" name="specialInstructions" required={false} type="textarea" value={form.specialInstructions} onChange={set('specialInstructions')} />
       </div>
+
+      <OfferCode
+        value={offerCodeInput}
+        onChange={setOfferCodeInput}
+        quote={offer}
+        pending={offerPending}
+        error={offerError}
+        onApply={onApplyOffer}
+      />
 
       {/* ── Optional delivery extras ── */}
       <div className="mb-4">
@@ -548,7 +565,6 @@ function DetailsStep({
         </p>
 
         <div className="flex flex-col gap-2">
-
           <ExtraOption
             checked={extras.floor > 0}
             onToggle={on => setExtras({ ...extras, floor: on ? 1 : 0, hasLift: on ? extras.hasLift : false })}
@@ -643,17 +659,17 @@ function DetailsStep({
           </div>
         </div>
 
-        {/* The panel stating what is owed. Its background and its border were
-            both written as `${ACCENT}10` / `${ACCENT}22` — hex digits
-            concatenated onto a var(), which parses as nothing, so this box had
-            neither of them. */}
         <div className="mt-3 flex items-start gap-3 rounded-sm border border-ember-500/20 bg-ember-500/[0.07] px-4 py-3">
           <ShieldCheck aria-hidden="true" className="mt-px h-4 w-4 shrink-0 text-ember-700" />
           <div className="text-caption leading-relaxed text-ink-500">
             Your total due on delivery is <strong className="font-data tnum text-ink-900">£{grandTotal.toFixed(2)}</strong>
-            {extrasTotal > 0 && (
+            {offerDiscount > 0 ? (
+              <span>
+                {' '} (£{totalAmount.toFixed(2)} subtotal − £{offerDiscount.toFixed(2)} offer{extrasTotal > 0 ? ` + £${extrasTotal.toFixed(2)} delivery extras` : ''})
+              </span>
+            ) : extrasTotal > 0 ? (
               <span> (£{totalAmount.toFixed(2)} for your order plus £{extrasTotal.toFixed(2)} of delivery extras)</span>
-            )}.
+            ) : null}.
             <span className="mt-1 block">
               We don&apos;t accept card payments of any kind.
             </span>
@@ -661,13 +677,6 @@ function DetailsStep({
         </div>
       </div>
 
-      {/* ── Made to order ────────────────────────────────────────────────
-          Only when a basket line carries a fabric, which is the same thing as
-          saying the sofa has to be built. Two facts belong here rather than
-          only on the product page: that a person will ring to confirm the
-          specification, and that a made-to-measure item carries no 14-day
-          right to change your mind. The second one is a term of the sale, and
-          a term of the sale belongs at the point of sale. */}
       {madeToOrder && (
         <div className="mb-4 rounded-sm border border-indigo-300 bg-indigo-50 px-4 py-3">
           <p className="m-0 flex items-center gap-2 text-body-sm font-semibold text-indigo-700">
@@ -691,19 +700,6 @@ function DetailsStep({
         </div>
       )}
 
-      {/* THE MOST IMPORTANT BUTTON ON THE SITE, and it was breaking the one
-          rule the palette calls load-bearing.
-
-          It read `background: ACCENT` with `color: var(--color-calico-50)` —
-          near-white letterforms on Ember 500, which measures 2.9:1 and fails
-          AA at any size. tokens.css states it outright: "an ember-500 button
-          always carries ink-900 text (6.6:1), never white (2.9:1)", and the
-          quantity badge in the summary already does exactly that. Only the
-          submit button had it backwards.
-
-          The glow was not rendering either — `0 6px 24px ${ACCENT}44`, the same
-          concatenation bug as above. It carries the real --shadow-ember token
-          now. */}
       <button
         type="submit"
         disabled={pending}
@@ -749,7 +745,81 @@ export default function CheckoutClient() {
     customerName: '', customerEmail: '', customerPhone: '',
     postcode: '', shippingAddress: '', specialInstructions: '',
   })
+
+  // Manual offer state is also flow-owned and memory-only. That preserves an
+  // applied code through Delivery -> Cart -> Delivery without creating another
+  // long-lived browser store beside the cart.
+  const [offerCodeInput, setOfferCodeInput] = useState('')
+  const [appliedPromotionCode, setAppliedPromotionCode] = useState<string | null>(null)
+  const [offerQuote, setOfferQuote] = useState<OfferQuote | null>(null)
+  const [quotedBasketKey, setQuotedBasketKey] = useState('')
+  const [offerPending, setOfferPending] = useState(false)
+  const [offerError, setOfferError] = useState('')
+
   const { cartItems, totalAmount } = useCart()
+  const currentBasketKey = basketOfferKey(cartItems)
+
+  // A quote from the previous basket becomes unusable immediately when the
+  // basket changes. We do not keep showing £50 while a recalculation is in
+  // flight; the old quote simply stops participating in the total until the
+  // server has priced the new basket.
+  const effectiveOffer = quotedBasketKey === currentBasketKey ? offerQuote : null
+  const effectiveDiscount = effectiveOffer?.valid ? effectiveOffer.discountAmount : 0
+
+  const applyOffer = async () => {
+    const code = offerCodeInput
+    if (!code.trim() || cartItems.length === 0) {
+      setOfferError('Offer code not recognised.')
+      return
+    }
+
+    const snapshotKey = currentBasketKey
+    setOfferPending(true)
+    setOfferError('')
+    const res = await quoteOffer(toOfferItems(cartItems), code)
+    setOfferPending(false)
+
+    if (res?.error) {
+      setOfferError(res.error)
+      return
+    }
+    if (!res.success || !res.quote.valid) {
+      setOfferError(res.success ? (res.quote.message || 'Offer code not recognised.') : 'Offer code not recognised.')
+      return
+    }
+
+    // Only a valid server response changes the applied authority. Typing an
+    // invalid code later therefore cannot remove a valid offer already held by
+    // this checkout flow (and the same rule will protect Phase C entitlement).
+    setAppliedPromotionCode(res.quote.normalizedCode)
+    setOfferCodeInput(res.quote.normalizedCode ?? code.trim().toUpperCase())
+    setOfferQuote(res.quote)
+    setQuotedBasketKey(snapshotKey)
+  }
+
+  // Re-quote an already applied code whenever identities/quantities change.
+  // All setState calls are in the async completion, not synchronously in the
+  // effect; the stale quote is already excluded by currentBasketKey above.
+  useEffect(() => {
+    if (!appliedPromotionCode || cartItems.length === 0) return
+
+    let cancelled = false
+    const snapshotKey = currentBasketKey
+    const items = toOfferItems(cartItems)
+
+    void quoteOffer(items, appliedPromotionCode).then(res => {
+      if (cancelled) return
+      if (res?.success) {
+        setOfferQuote(res.quote)
+        setQuotedBasketKey(snapshotKey)
+        setOfferError('')
+      } else if (res?.error) {
+        setOfferError(res.error)
+      }
+    })
+
+    return () => { cancelled = true }
+  }, [appliedPromotionCode, cartItems, currentBasketKey])
 
   const transition = useCallback((nextStep: Step, dir: 'forward' | 'back') => {
     setDirection(dir)
@@ -782,16 +852,7 @@ export default function CheckoutClient() {
   }
 
   return (
-    // This page used to open with a <style> block declaring @keyframes spin and
-    // @keyframes pulseRing. globals.css already defines spin, so that was a
-    // duplicate shipped on every checkout, and nothing anywhere on the site has
-    // ever referenced pulseRing. Both are gone.
     <div className="grad-calico grain-light relative min-h-screen bg-calico-50 pb-16">
-
-      {/* Header strip */}
-      {/* The ink gradient, and a fading ember rule along the bottom rather
-          than a flat 2px bar — the same edge the announcement bar, the mega
-          menu and both collection headers carry. */}
       <div data-ground="dark" className="grad-ink relative bg-ink-900">
         <span
           aria-hidden="true"
@@ -800,17 +861,11 @@ export default function CheckoutClient() {
         />
         <div className="mx-auto flex max-w-[60rem] items-center justify-between p-4">
           <Link href="/" className="no-underline">
-            {/* Ember 300, not Ember 700. Ember 700 is the amber a LIGHT ground
-                takes; on Ink 900 it is dark on dark. Same correction on the
-                shield to the right. */}
             <span className="font-body text-lead font-bold text-calico-50">
               UK Sofa <span className="text-ember-300">Shop</span>
             </span>
           </Link>
           {step !== 'success' && (
-            // Ink 500 on Ink 900 measures about 2.5:1 — this line was very
-            // nearly invisible. Calico 300 is the ramp's colour for secondary
-            // type on a dark ground.
             <div className="flex items-center gap-2 text-caption text-calico-300">
               <ShieldCheck aria-hidden="true" className="h-3.5 w-3.5 text-ember-300" />
               Secure Checkout
@@ -820,31 +875,16 @@ export default function CheckoutClient() {
       </div>
 
       <div className="mx-auto max-w-[60rem] px-4 py-6">
-
-        {/* The whole flow had no level-1 heading — three steps, a stepper
-            and a form, and nothing naming the page. It is visually hidden
-            because the stepper already says where you are on screen, and a
-            second visible title above it would be repeating itself. */}
         <h1 className="sr-only">
           {step === 'cart' ? 'Your cart'
             : step === 'details' ? 'Delivery details'
             : 'Order confirmed'}
         </h1>
 
-        {/* Steps indicator */}
         {step !== 'success' && <Steps current={step} />}
 
-        {/* All classes. This grid carried `gridTemplateColumns: 'auto'` inline
-            beside `lg:grid-cols-[1fr_340px]`, and an inline declaration beats
-            every class — so the two-column layout never applied and the order
-            summary sat below the form at every width instead of beside it. */}
         <div className={`grid gap-4 ${step === 'success' ? 'grid-cols-1' : 'lg:grid-cols-[1fr_340px]'}`}>
-
-          {/* Main panel */}
           <div
-            // 380ms, and the outgoing step is already fading as the incoming
-            // one starts — see goNext/goBack, where the swap happens a beat
-            // into the fade rather than after it.
             className={`rounded-md border border-calico-300 bg-calico-50 p-4 shadow-e1 transition-[opacity,transform] duration-base ease-out-expo sm:p-6 ${
               step === 'success' ? 'mx-auto max-w-[520px]' : ''
             } ${
@@ -854,54 +894,46 @@ export default function CheckoutClient() {
             }`}
           >
             {step === 'cart'    && <CartStep onNext={goNext} />}
-            {step === 'details' && <DetailsStep onBack={goBack} onSuccess={goSuccess} extras={extras} setExtras={setExtras} form={form} setForm={setForm} />}
+            {step === 'details' && (
+              <DetailsStep
+                onBack={goBack}
+                onSuccess={goSuccess}
+                extras={extras}
+                setExtras={setExtras}
+                form={form}
+                setForm={setForm}
+                offer={effectiveOffer}
+                offerCodeInput={offerCodeInput}
+                setOfferCodeInput={setOfferCodeInput}
+                appliedPromotionCode={appliedPromotionCode}
+                offerPending={offerPending}
+                offerError={offerError}
+                onApplyOffer={applyOffer}
+              />
+            )}
             {step === 'success' && (
               <>
-                {/* The PRIMARY Google Ads firing site. Renders nothing.
-
-                    This runs in the session that clicked the ad, so the _gcl
-                    cookie is present and the conversion can be attributed.
-                    /confirm-order/[id] reports the same order again as a
-                    backstop, from an email link that may be opened on a
-                    different device entirely - where there is no _gcl cookie
-                    and attribution is lost.
-
-                    Both sites pass the short reference as the transaction id,
-                    so the pair is deduplicated by Google into one conversion.
-                    Change it in one place only and every order that reaches
-                    both is counted twice.
-
-                    orderAmount is the database's total_amount, handed back by
-                    placeOrder. The cart has been emptied by this point and was
-                    never the source of this number in any case. */}
                 <AdsPurchaseConversion reference={orderId} total={orderAmount} />
                 <SuccessStep orderId={orderId} postcode={orderPostcode} amount={orderAmount} />
               </>
             )}
           </div>
 
-          {/* Sidebar — hidden on success */}
           {step !== 'success' && cartItems.length > 0 && (
             <div className="hidden lg:block">
               <div className="sticky top-20">
-                <OrderSummary extras={extras} />
+                <OrderSummary extras={extras} offer={effectiveOffer} />
               </div>
             </div>
           )}
         </div>
 
-        {/* ── The total, pinned ─────────────────────────────────────────
-            This was a <details> between the form and the foot of the page,
-            so on a phone the delivery form was pushed down by a block most
-            people never opened — and the number they wanted was below it
-            either way. It is a bar now: the total always on screen, the
-            breakdown rising over the page when asked for. */}
         {step !== 'success' && cartItems.length > 0 && (
           <MobileTotalBar
-            total={totalAmount + deliveryTotal(extras)}
+            total={Math.max(0, totalAmount - effectiveDiscount) + deliveryTotal(extras)}
             itemCount={cartItems.reduce((n, i) => n + i.quantity, 0)}
           >
-            <OrderSummary extras={extras} />
+            <OrderSummary extras={extras} offer={effectiveOffer} />
           </MobileTotalBar>
         )}
       </div>
