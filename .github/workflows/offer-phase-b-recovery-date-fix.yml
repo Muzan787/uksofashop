@@ -1,0 +1,39 @@
+name: Offer Phase B nullable date patch
+
+on:
+  push:
+    branches: [fix/offer-phase-b-discount-engine-release]
+    paths: [.github/workflows/offer-phase-b-recovery-date-fix.yml]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/offer-phase-b-discount-engine-release
+          fetch-depth: 0
+      - name: Make nullable database timestamp explicit
+        run: |
+          python <<'PY'
+          from pathlib import Path
+          p=Path('src/app/admin/orders/DirectPrintButton.tsx')
+          s=p.read_text()
+          old="new Date(activeOrder.created_at).toLocaleDateString"
+          new="new Date(activeOrder.created_at ?? '').toLocaleDateString"
+          if s.count(old) != 1:
+              raise SystemExit(f'expected one date anchor, found {s.count(old)}')
+          p.write_text(s.replace(old,new,1))
+          PY
+          git diff --check
+      - name: Commit date typing fix
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add src/app/admin/orders/DirectPrintButton.tsx
+          git commit -m "Offer Phase B recovery: handle nullable admin order date"
+          git push origin HEAD:fix/offer-phase-b-discount-engine-release
