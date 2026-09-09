@@ -17,23 +17,37 @@ jobs:
         with:
           ref: fix/offer-phase-b-discount-engine-release
           fetch-depth: 0
-      - name: Make nullable database timestamp explicit
+      - name: Finalize nullable-date display and preserve literal footer
         run: |
           python <<'PY'
           from pathlib import Path
           p=Path('src/app/admin/orders/DirectPrintButton.tsx')
           s=p.read_text()
-          old="new Date(activeOrder.created_at).toLocaleDateString"
-          new="new Date(activeOrder.created_at ?? '').toLocaleDateString"
+
+          old_imports="""import { Printer } from 'lucide-react'\nimport { ADDRESS_LINE, PHONE_DISPLAY } from '@/constants/contact'\nimport { ORGANISATION_NAME } from '@/utils/schema'\nimport type { AdminOrderDisplay, AdminOrderItemDisplay } from '@/types/adminOrders'\n"""
+          new_imports="""import { Printer } from 'lucide-react'\nimport type { AdminOrderDisplay, AdminOrderItemDisplay } from '@/types/adminOrders'\n"""
+          if s.count(old_imports) != 1:
+              raise SystemExit('expected exact footer-import block once')
+          s=s.replace(old_imports,new_imports,1)
+
+          old="${new Date(activeOrder.created_at ?? '').toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}"
+          new="${activeOrder.created_at ? new Date(activeOrder.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : 'Date unavailable'}"
           if s.count(old) != 1:
-              raise SystemExit(f'expected one date anchor, found {s.count(old)}')
-          p.write_text(s.replace(old,new,1))
+              raise SystemExit(f'expected current nullable-date anchor once, found {s.count(old)}')
+          s=s.replace(old,new,1)
+
+          literal='{ORGANISATION_NAME} &nbsp;&bull;&nbsp; {ADDRESS_LINE} &nbsp;&bull;&nbsp; {PHONE_DISPLAY}'
+          if s.count(literal) != 1:
+              raise SystemExit('pre-Phase-B literal footer is not present exactly once')
+
+          p.write_text(s)
           PY
           git diff --check
-      - name: Commit date typing fix
+          git diff -- src/app/admin/orders/DirectPrintButton.tsx
+      - name: Commit final date/footer-lint recovery
         run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
           git add src/app/admin/orders/DirectPrintButton.tsx
-          git commit -m "Offer Phase B recovery: handle nullable admin order date"
+          git commit -m "Offer Phase B recovery: finalize safe invoice date display"
           git push origin HEAD:fix/offer-phase-b-discount-engine-release
