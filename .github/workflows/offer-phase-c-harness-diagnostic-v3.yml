@@ -1,0 +1,587 @@
+name: Offer Phase C harness diagnostic v3
+
+on:
+  push:
+    branches:
+      - qa/offer-phase-c-harness-diagnostic-v3
+
+permissions:
+  contents: read
+
+jobs:
+  diagnostic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CANDIDATE_SHA: 8eb47786fc772bfdb3835b1a4da6d956cc86d5f9
+      MASTER_SHA: c0a1ce2a2621aba5b3ea635452e720ea095d2ebd
+      NEXT_PUBLIC_SUPABASE_URL: https://localhost:5443
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_tMk28Ay_hIljhv8NQcV01Q_cI9ApS9c
+      SUPABASE_SERVICE_ROLE_KEY: qa_service_role_fixture_only
+      NEXT_PUBLIC_SITE_URL: https://localhost:3443
+      NODE_TLS_REJECT_UNAUTHORIZED: '0'
+
+    steps:
+      - name: Checkout exact Phase C candidate
+        uses: actions/checkout@v4
+        with:
+          ref: 8eb47786fc772bfdb3835b1a4da6d956cc86d5f9
+          fetch-depth: 0
+
+      - name: Reverify exact candidate and production master
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$CANDIDATE_SHA"
+          git fetch origin master fix/offer-phase-c-paid-entitlement
+          test "$(git rev-parse origin/master)" = "$MASTER_SHA"
+          test "$(git rev-parse origin/fix/offer-phase-c-paid-entitlement)" = "$CANDIDATE_SHA"
+          test -z "$(git status --porcelain)"
+          echo "EXACT_CANDIDATE_SHA=$(git rev-parse HEAD)"
+          echo "MASTER_SHA=$(git rev-parse origin/master)"
+
+      - name: Install exact-tree dependencies and Playwright outside repository
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci
+          npm install -g playwright@1.55.0
+          playwright install --with-deps chromium
+          test -z "$(git status --porcelain)"
+
+      - name: Prepare QA-only certificate, request instrumentation and isolated backend fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          openssl req -x509 -newkey rsa:2048 -nodes \
+            -keyout /tmp/phasec-key.pem -out /tmp/phasec-cert.pem -days 1 \
+            -subj '/CN=localhost' -addext 'subjectAltName=DNS:localhost,IP:127.0.0.1'
+
+          cat >/tmp/phasec-request-url-log.cjs <<'JS'
+          function patch(proto, label) {
+            if (!proto) return
+            const d = Object.getOwnPropertyDescriptor(proto, 'url')
+            if (!d || typeof d.get !== 'function' || d.configurable === false) {
+              console.error(`[QA_URL_PATCH] ${label}=unavailable`)
+              return
+            }
+            Object.defineProperty(proto, 'url', {
+              ...d,
+              get() {
+                const value = d.get.call(this)
+                if (typeof value === 'string' && value.includes('/api/offer/')) {
+                  console.error(`[QA_ROUTE_REQUEST_URL:${label}] ${value}`)
+                }
+                return value
+              },
+            })
+            console.error(`[QA_URL_PATCH] ${label}=installed`)
+          }
+          try { patch(globalThis.Request && globalThis.Request.prototype, 'Request') } catch (e) { console.error('[QA_URL_PATCH] Request error='+String(e)) }
+          try {
+            const mod = require('next/dist/server/web/spec-extension/request')
+            patch(mod.NextRequest && mod.NextRequest.prototype, 'NextRequest')
+          } catch (e) { console.error('[QA_URL_PATCH] NextRequest error='+String(e)) }
+          JS
+
+          cat >/tmp/phasec-backend.mjs <<'JS'
+          import https from 'node:https'
+          import fs from 'node:fs'
+          import crypto from 'node:crypto'
+
+          const key = fs.readFileSync('/tmp/phasec-key.pem')
+          const cert = fs.readFileSync('/tmp/phasec-cert.pem')
+          const PROD = 'https://nznpeqjnoobhyxwnmsez.supabase.co'
+          const PUB = 'sb_publishable_tMk28Ay_hIljhv8NQcV01Q_cI9ApS9c'
+          const byVisitor = new Map()
+          const byToken = new Map()
+          const prices = {
+            '1ba97d1f-f890-48f8-8ab9-57cbb147f388': [999, 'ELECTRIC'],
+          }
+          const priority = { ELECTRIC: 4, ROMA: 3, STANDARD: 2, EXCLUDED: 1 }
+
+          function cors(req) {
+            const origin = req.headers.origin === 'https://localhost:3443' ? req.headers.origin : 'https://localhost:3443'
+            return {
+              'access-control-allow-origin': origin,
+              'access-control-allow-credentials': 'true',
+              'access-control-allow-headers': 'authorization,apikey,content-type,prefer,range,x-client-info,x-supabase-api-version',
+              'access-control-allow-methods': 'GET,POST,PATCH,DELETE,OPTIONS',
+              'vary': 'Origin',
+            }
+          }
+          function send(req, res, status, data, extra = {}) {
+            res.writeHead(status, { 'content-type': 'application/json', ...cors(req), ...extra })
+            res.end(JSON.stringify(data))
+          }
+          async function readBody(req) {
+            let s = ''
+            for await (const c of req) s += c
+            if (!s) return {}
+            try { return JSON.parse(s) } catch { return {} }
+          }
+          function active(e) {
+            return !!e && !e.revoked_at && Date.parse(e.expires_at) > Date.now()
+          }
+          function log(req, note) {
+            const u = new URL(req.url, 'https://localhost:5443')
+            if (u.pathname.includes('offer') || u.pathname.includes('__qa')) {
+              console.log('[QA_BACKEND] '+JSON.stringify({ note, method:req.method, pathname:u.pathname, query:u.search }))
+            }
+          }
+
+          const server = https.createServer({ key, cert }, async (req, res) => {
+            const u = new URL(req.url, 'https://localhost:5443')
+            if (req.method === 'OPTIONS') return send(req, res, 204, {})
+            if (u.pathname === '/__qa/state') return send(req, res, 200, { visitors: byVisitor.size, tokens: byToken.size })
+            if (u.pathname === '/__qa/reset' && req.method === 'POST') {
+              byVisitor.clear(); byToken.clear(); log(req, 'reset'); return send(req, res, 200, { ok: true })
+            }
+            if (u.pathname === '/rest/v1/rpc/issue_paid_offer_entitlement' && req.method === 'POST') {
+              const b = await readBody(req)
+              const now = new Date()
+              const old = byVisitor.get(b.p_visitor_id)
+              let e
+              if (active(old)) {
+                e = old
+                e.source = b.p_source
+                e.expires_at = new Date(now.getTime() + 7 * 864e5).toISOString()
+              } else {
+                e = {
+                  token: crypto.randomUUID(),
+                  visitor_id: b.p_visitor_id,
+                  source: b.p_source,
+                  started_at: now.toISOString(),
+                  expires_at: new Date(now.getTime() + 7 * 864e5).toISOString(),
+                  revoked_at: null,
+                }
+                byVisitor.set(b.p_visitor_id, e)
+                byToken.set(e.token, e)
+              }
+              log(req, 'issue_entitlement')
+              return send(req, res, 200, { token:e.token, source:e.source, started_at:e.started_at, expires_at:e.expires_at })
+            }
+            if (u.pathname === '/rest/v1/offer_entitlements' && req.method === 'GET') {
+              const raw = u.searchParams.get('token') || ''
+              const token = raw.startsWith('eq.') ? raw.slice(3) : raw
+              const e = byToken.get(token)
+              log(req, 'status_lookup')
+              return send(req, res, 200, e ? [{ source:e.source, started_at:e.started_at, expires_at:e.expires_at, revoked_at:e.revoked_at }] : [])
+            }
+            if (u.pathname === '/rest/v1/rpc/calculate_order_offer' && req.method === 'POST') {
+              const b = await readBody(req)
+              const items = Array.isArray(b.p_items) ? b.p_items : []
+              const code = String(b.p_promotion_code || '').trim().toUpperCase()
+              const codeValid = code === 'SOFAEXTRA'
+              const ent = byToken.get(b.p_offer_entitlement_token)
+              const entValid = active(ent)
+              let subtotal = 0
+              let tier = null
+              for (const item of items) {
+                const x = prices[item.variant_id]
+                if (!x) continue
+                subtotal += x[0] * Math.min(Math.max(Number(item.quantity) || 1, 1), 99)
+                if (!tier || priority[x[1]] > priority[tier]) tier = x[1]
+              }
+              const amount = (codeValid || entValid) && tier === 'ELECTRIC' ? Math.min(subtotal, 50) : 0
+              log(req, 'calculate_offer')
+              return send(req, res, 200, {
+                items_subtotal: subtotal,
+                code_valid: codeValid,
+                entitlement_valid: !!entValid,
+                normalized_code: codeValid ? 'SOFAEXTRA' : null,
+                discount_amount: amount,
+                discount_tier: (codeValid || entValid) ? tier : null,
+                promotion_code: codeValid ? 'SOFAEXTRA' : null,
+                offer_source: codeValid ? 'manual_code' : entValid ? 'paid_entitlement' : null,
+              })
+            }
+
+            // Read-only pass-through for the catalogue/page data needed to render the exact candidate.
+            if (req.method === 'GET' || req.method === 'HEAD') {
+              try {
+                const target = PROD + u.pathname + u.search
+                const h = {}
+                for (const [k, v] of Object.entries(req.headers)) {
+                  if (!['host','authorization','apikey','cookie','origin','referer'].includes(k) && v) h[k] = v
+                }
+                h.apikey = PUB
+                h.authorization = 'Bearer ' + PUB
+                const r = await fetch(target, { method:req.method, headers:h })
+                const buf = Buffer.from(await r.arrayBuffer())
+                const out = {}
+                for (const [k,v] of r.headers) if (!['content-encoding','transfer-encoding','content-length','access-control-allow-origin'].includes(k)) out[k] = v
+                Object.assign(out, cors(req))
+                res.writeHead(r.status, out)
+                return res.end(buf)
+              } catch (e) {
+                return send(req, res, 502, { error:'read-only fixture upstream failed' })
+              }
+            }
+
+            // Never pass writes through to production. Non-offer writes are absorbed locally.
+            return send(req, res, 201, [])
+          })
+          server.listen(5443, '127.0.0.1', () => console.log('[QA_BACKEND] listening=https://127.0.0.1:5443'))
+          JS
+
+          node /tmp/phasec-backend.mjs >/tmp/phasec-backend.log 2>&1 &
+          echo $! >/tmp/phasec-backend.pid
+          for i in {1..30}; do curl -ksf https://localhost:5443/__qa/state >/dev/null && break || sleep 1; done
+          curl -ksf https://localhost:5443/__qa/state
+
+      - name: Build exact candidate production tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$CANDIDATE_SHA"
+          npm run build
+          test "$(git rev-parse HEAD)" = "$CANDIDATE_SHA"
+          test -z "$(git diff --name-only -- src supabase package.json package-lock.json next.config.ts next.config.js)"
+          echo 'EXACT_TREE_BUILD=PASS'
+
+      - name: Run proxy diagnosis, forwarded-header fix, direct HTTPS Next proof
+        shell: bash
+        env:
+          NODE_PATH: /usr/local/lib/node_modules
+        run: |
+          set -euo pipefail
+
+          cat >/tmp/phasec-log.cjs <<'JS'
+          const { URL } = require('url')
+          function cookieNames(raw) {
+            return String(raw || '').split(';').map(x => x.trim().split('=')[0]).filter(Boolean)
+          }
+          function relevant(url) {
+            try {
+              const u = new URL(url, 'https://localhost')
+              return u.pathname === '/' || u.pathname === '/api/offer/qualify' || u.pathname === '/api/offer/status'
+            } catch { return false }
+          }
+          function record(prefix, req, upstream) {
+            if (!relevant(req.url)) return
+            const u = new URL(req.url, 'https://localhost')
+            const h = req.headers
+            console.log(prefix+' '+JSON.stringify({
+              method:req.method,
+              pathname:u.pathname,
+              query:u.search,
+              host:h.host || null,
+              xForwardedHost:h['x-forwarded-host'] || null,
+              xForwardedProto:h['x-forwarded-proto'] || null,
+              xForwardedPort:h['x-forwarded-port'] || null,
+              forwarded:h.forwarded || null,
+              origin:h.origin || null,
+              referer:h.referer || null,
+              secFetchSite:h['sec-fetch-site'] || null,
+              secFetchMode:h['sec-fetch-mode'] || null,
+              cookieNames:cookieNames(h.cookie),
+              socketEncrypted:!!(req.socket && req.socket.encrypted),
+              upstream:upstream || null,
+            }))
+          }
+          module.exports = { record }
+          JS
+
+          cat >/tmp/phasec-next-http.cjs <<'JS'
+          const next = require('next')
+          const http = require('http')
+          const { record } = require('/tmp/phasec-log.cjs')
+          const app = next({ dev:false, hostname:'127.0.0.1', port:3000 })
+          app.prepare().then(() => {
+            const handle = app.getRequestHandler()
+            http.createServer((req,res) => {
+              record('[QA_NEXT_HTTP_INGRESS]', req, null)
+              handle(req,res)
+            }).listen(3000,'127.0.0.1',() => console.log('[QA_NEXT_HTTP] listening=http://127.0.0.1:3000'))
+          }).catch(e => { console.error(e); process.exit(1) })
+          JS
+
+          cat >/tmp/phasec-proxy.cjs <<'JS'
+          const https = require('https')
+          const http = require('http')
+          const fs = require('fs')
+          const { record } = require('/tmp/phasec-log.cjs')
+          const mode = process.env.PROXY_MODE || 'before'
+          const server = https.createServer({ key:fs.readFileSync('/tmp/phasec-key.pem'), cert:fs.readFileSync('/tmp/phasec-cert.pem') }, (req,res) => {
+            record(mode === 'fixed' ? '[QA_PROXY_FIXED_IN]' : '[QA_PROXY_BEFORE_IN]', req, 'http://127.0.0.1:3000'+req.url)
+            const headers = { ...req.headers }
+            headers.host = 'localhost:3443'
+            headers['x-forwarded-host'] = 'localhost:3443'
+            headers['x-forwarded-proto'] = 'https'
+            if (mode === 'fixed') {
+              headers['x-forwarded-port'] = '3443'
+              headers.forwarded = 'proto=https;host="localhost:3443"'
+            } else {
+              delete headers['x-forwarded-port']
+              delete headers.forwarded
+            }
+            const upstream = http.request({ host:'127.0.0.1', port:3000, path:req.url, method:req.method, headers }, r => {
+              res.writeHead(r.statusCode || 500, r.headers)
+              r.pipe(res)
+            })
+            upstream.on('error', e => { res.writeHead(502); res.end('proxy upstream error') })
+            req.pipe(upstream)
+          })
+          server.listen(3443,'127.0.0.1',() => console.log(`[QA_PROXY] mode=${mode} listening=https://127.0.0.1:3443 upstream=http://127.0.0.1:3000`))
+          JS
+
+          cat >/tmp/phasec-next-https.cjs <<'JS'
+          const next = require('next')
+          const https = require('https')
+          const fs = require('fs')
+          const { record } = require('/tmp/phasec-log.cjs')
+          const app = next({ dev:false, hostname:'localhost', port:3443 })
+          app.prepare().then(() => {
+            const handle = app.getRequestHandler()
+            https.createServer({ key:fs.readFileSync('/tmp/phasec-key.pem'), cert:fs.readFileSync('/tmp/phasec-cert.pem') }, (req,res) => {
+              record('[QA_NEXT_HTTPS_DIRECT]', req, null)
+              handle(req,res)
+            }).listen(3443,'127.0.0.1',() => console.log('[QA_NEXT_HTTPS] listening=https://127.0.0.1:3443 direct'))
+          }).catch(e => { console.error(e); process.exit(1) })
+          JS
+
+          cat >/tmp/phasec-browser.cjs <<'JS'
+          const { chromium } = require('playwright')
+          const assert = require('assert')
+          const crypto = require('crypto')
+          const fs = require('fs')
+          const BASE = 'https://localhost:3443'
+          const HEADER = 'Your online offer is active · SOFAEXTRA · FREE UK Mainland Delivery'
+          const PROMPT = 'Extra savings on selected sofas'
+
+          const hashPrefix = value => crypto.createHash('sha256').update(value).digest('hex').slice(0,12)
+          function cookieNames(raw) {
+            return String(raw || '').split(';').map(x => x.trim().split('=')[0]).filter(Boolean)
+          }
+          function safeSetCookie(raw) {
+            const first = raw.indexOf(';')
+            const nv = first >= 0 ? raw.slice(0, first) : raw
+            const attrs = first >= 0 ? raw.slice(first+1).split(';').map(x=>x.trim()).filter(Boolean) : []
+            const eq = nv.indexOf('=')
+            const name = eq >= 0 ? nv.slice(0,eq) : nv
+            const value = eq >= 0 ? nv.slice(eq+1) : ''
+            return { name, valueLength:value.length, sha256Prefix:value ? hashPrefix(value) : null, attrs }
+          }
+          function relevant(url) {
+            try { const u=new URL(url); return u.origin===BASE && (u.pathname==='/' || u.pathname==='/api/offer/qualify' || u.pathname==='/api/offer/status' || u.pathname==='/checkout') } catch { return false }
+          }
+          function instrument(page,label) {
+            const log = { requests:[], responses:[], pageErrors:[], consoleErrors:[], failed:[], qualify:0, status:0 }
+            page.on('request', async req => {
+              if (!relevant(req.url())) return
+              const h = await req.allHeaders().catch(()=>({}))
+              const u = new URL(req.url())
+              if (u.pathname==='/api/offer/qualify') log.qualify++
+              if (u.pathname==='/api/offer/status') log.status++
+              const row = {
+                label, url:req.url(), method:req.method(), resourceType:req.resourceType(), redirectedFrom:req.redirectedFrom()?.url() || null,
+                origin:h.origin || null, referer:h.referer || null, secFetchSite:h['sec-fetch-site'] || null, secFetchMode:h['sec-fetch-mode'] || null,
+                cookieNames:cookieNames(h.cookie),
+              }
+              log.requests.push(row); console.log('[QA_BROWSER_REQUEST] '+JSON.stringify(row))
+            })
+            page.on('response', async r => {
+              if (!relevant(r.url())) return
+              const headers = await r.headersArray().catch(()=>[])
+              const setCookies = headers.filter(x=>x.name.toLowerCase()==='set-cookie').map(x=>safeSetCookie(x.value))
+              const row = { label, url:r.url(), status:r.status(), setCookies }
+              log.responses.push(row); console.log('[QA_BROWSER_RESPONSE] '+JSON.stringify(row))
+            })
+            page.on('pageerror', e => { const s=String(e.stack||e); log.pageErrors.push(s); console.log('[QA_PAGE_ERROR] '+s) })
+            page.on('console', m => { if(m.type()==='error'){const s=m.text();log.consoleErrors.push(s);console.log('[QA_CONSOLE_ERROR] '+s)} })
+            page.on('requestfailed', req => { const row={url:req.url(),error:req.failure()?.errorText||'unknown'};log.failed.push(row);console.log('[QA_REQUEST_FAILED] '+JSON.stringify(row)) })
+            return log
+          }
+          async function publicState(page) {
+            return await page.evaluate(async()=>{
+              const r = await fetch('/api/offer/status',{cache:'no-store'})
+              let body = null
+              try { body = await r.json() } catch {}
+              return { status:r.status, contentType:r.headers.get('content-type'), body }
+            })
+          }
+          async function pageIdentity(page) {
+            return await page.evaluate(()=>({ href:window.location.href, origin:window.location.origin, referrer:document.referrer, title:document.title, body:(document.body.innerText||'').slice(0,1200) }))
+          }
+          async function launch(dir) {
+            return await chromium.launchPersistentContext(dir,{headless:true,viewport:{width:390,height:900},ignoreHTTPSErrors:true,serviceWorkers:'allow'})
+          }
+          async function baseline(label,dir) {
+            const c=await launch(dir); const p=c.pages()[0]||await c.newPage(); const net=instrument(p,label)
+            const r=await p.goto(BASE+'/',{waitUntil:'domcontentloaded',timeout:30000}); assert(r&&r.status()<500,label+' root HTTP')
+            await p.waitForTimeout(1800)
+            const id=await pageIdentity(p); console.log('[QA_PAGE_IDENTITY] '+JSON.stringify({label,...id}))
+            assert(id.origin===BASE,label+' browser origin')
+            assert(/UK Sofa/i.test(id.body),label+' not UK Sofa Shop')
+            const st=await publicState(p); console.log('[QA_STATUS_PUBLIC] '+JSON.stringify({label,...st}))
+            assert.strictEqual(st.status,200,label+' status HTTP'); assert(st.contentType&&st.contentType.includes('application/json'),label+' status content-type'); assert(st.body&&st.body.active===false,label+' baseline unexpectedly active')
+            assert.strictEqual(net.qualify,0,label+' qualification loop')
+            const cookies=await c.cookies(BASE); assert(!cookies.some(x=>x.name==='uksofashop_offer'),label+' baseline offer cookie')
+            await c.close(); return { identity:id, status:st, net }
+          }
+          async function paidProbe(label,dir,requireActive) {
+            const c=await launch(dir); const p=c.pages()[0]||await c.newPage(); const net=instrument(p,label)
+            const r=await p.goto(BASE+'/?utm_source=google&utm_medium=cpc',{waitUntil:'domcontentloaded',timeout:30000}); assert(r&&r.status()<500,label+' paid root HTTP')
+            await p.waitForTimeout(requireActive?600:2600)
+            if (requireActive) await p.getByText(HEADER,{exact:true}).waitFor({state:'visible',timeout:15000})
+            const id=await pageIdentity(p); console.log('[QA_PAGE_IDENTITY] '+JSON.stringify({label,...id}))
+            const cookies=await c.cookies(BASE)
+            const visitor=cookies.find(x=>x.name==='uksofashop_vid')
+            const offer=cookies.find(x=>x.name==='uksofashop_offer')
+            const safeOffer=offer?{name:offer.name,domain:offer.domain,path:offer.path,httpOnly:offer.httpOnly,secure:offer.secure,sameSite:offer.sameSite,expires:offer.expires,valueLength:offer.value.length,sha256Prefix:hashPrefix(offer.value)}:null
+            console.log('[QA_COOKIE_METADATA] '+JSON.stringify({label,visitorPresent:!!visitor,offer:safeOffer}))
+            const jsCookie=await p.evaluate(()=>document.cookie)
+            const jsVisible=jsCookie.includes('uksofashop_offer=')
+            console.log('[QA_TOKEN_JS_VISIBLE] '+JSON.stringify({label,visible:jsVisible,jsCookieNames:cookieNames(jsCookie)}))
+            const st=await publicState(p); console.log('[QA_STATUS_PUBLIC] '+JSON.stringify({label,...st}))
+            const promptVisible=await p.getByText(PROMPT,{exact:true}).isVisible().catch(()=>false)
+            const headerVisible=await p.getByText(HEADER,{exact:true}).isVisible().catch(()=>false)
+            const result={ identity:id, visitorPresent:!!visitor, offer:safeOffer, jsVisible, status:st, promptVisible, headerVisible, net }
+            console.log('[QA_PAID_RESULT] '+JSON.stringify({label,visitorPresent:result.visitorPresent,offerPresent:!!offer,jsVisible,status:st,promptVisible,headerVisible,qualify:net.qualify,statusCalls:net.status}))
+            if (requireActive) {
+              assert(visitor,label+' visitor missing'); assert(offer,label+' offer cookie missing')
+              assert.strictEqual(offer.httpOnly,true,label+' HttpOnly'); assert.strictEqual(offer.secure,true,label+' Secure'); assert.strictEqual(offer.sameSite,'Lax',label+' SameSite'); assert.strictEqual(offer.path,'/',label+' Path')
+              const remaining=offer.expires-(Date.now()/1000); assert(remaining>6.8*86400&&remaining<=7.05*86400,label+' expiry not ~7d: '+remaining)
+              assert.strictEqual(jsVisible,false,label+' token JS-visible')
+              assert.strictEqual(st.status,200,label+' status HTTP'); assert(st.body&&st.body.active===true,label+' status inactive')
+              const serialized=JSON.stringify(st.body); assert(!serialized.includes(offer.value),label+' token leaked in status body')
+              assert(headerVisible,label+' entitled header missing'); assert(promptVisible,label+' prompt missing')
+              assert.strictEqual(net.qualify,1,label+' qualify count')
+            }
+            await c.close(); return result
+          }
+          async function checkoutMinimum(dir) {
+            const c=await launch(dir); const p=c.pages()[0]||await c.newPage(); const net=instrument(p,'DIRECT_CHECKOUT')
+            await p.goto(BASE+'/',{waitUntil:'domcontentloaded',timeout:30000})
+            await p.evaluate(cart=>localStorage.setItem('uksofashop_cart',JSON.stringify(cart)),[{variant_id:'1ba97d1f-f890-48f8-8ab9-57cbb147f388',quantity:1,price:999,title:'Hannah Electric Corner',color:'Beige',image_url:''}])
+            await p.goto(BASE+'/checkout',{waitUntil:'domcontentloaded',timeout:30000})
+            await p.getByRole('button',{name:/Continue to delivery/i}).click()
+            await p.getByText('Delivery Information',{exact:true}).waitFor({timeout:12000})
+            await p.waitForFunction(()=> (document.body.innerText||'').includes('Online offer applied · £50 off'),null,{timeout:15000})
+            const body=(await p.locator('body').innerText())
+            const ok=body.includes('Online offer applied · £50 off') && body.includes('£949.00')
+            console.log('[QA_CHECKOUT_MINIMUM] '+JSON.stringify({automaticElectric50:ok}))
+            assert(ok,'minimum checkout entitlement missing')
+            await c.close(); return {automaticElectric50:ok,net}
+          }
+          async function directReturn(dir) {
+            const c=await launch(dir); const p=c.pages()[0]||await c.newPage(); const net=instrument(p,'DIRECT_RETURN')
+            const r=await p.goto(BASE+'/',{waitUntil:'domcontentloaded',timeout:30000}); assert(r&&r.status()<500,'direct return HTTP')
+            await p.getByText(HEADER,{exact:true}).waitFor({state:'visible',timeout:15000})
+            const st=await publicState(p); assert(st.body&&st.body.active===true,'direct return inactive')
+            const headerVisible=await p.getByText(HEADER,{exact:true}).isVisible()
+            console.log('[QA_DIRECT_RETURN] '+JSON.stringify({active:st.body.active,headerVisible,qualify:net.qualify,statusCalls:net.status}))
+            assert.strictEqual(net.qualify,0,'direct return re-qualified')
+            await c.close(); return {active:true,headerVisible,net}
+          }
+
+          ;(async()=>{
+            const mode=process.argv[2]
+            if(mode==='proxy-before'){
+              const base=await baseline('PROXY_BEFORE_BASELINE','/tmp/pw-proxy-before-base')
+              const paid=await paidProbe('PROXY_BEFORE_PAID','/tmp/pw-proxy-before-paid',false)
+              fs.writeFileSync('/tmp/proxy-before.json',JSON.stringify({base,paid},null,2)); return
+            }
+            if(mode==='proxy-fixed'){
+              const paid=await paidProbe('PROXY_FIXED_PAID','/tmp/pw-proxy-fixed-paid',false)
+              fs.writeFileSync('/tmp/proxy-fixed.json',JSON.stringify({paid},null,2)); return
+            }
+            if(mode==='direct'){
+              const base=await baseline('DIRECT_BASELINE','/tmp/pw-direct-base')
+              const paid=await paidProbe('DIRECT_PAID','/tmp/pw-direct-paid',true)
+              const checkout=await checkoutMinimum('/tmp/pw-direct-paid')
+              const returned=await directReturn('/tmp/pw-direct-paid')
+              fs.writeFileSync('/tmp/direct.json',JSON.stringify({base,paid,checkout,returned},null,2)); return
+            }
+            throw new Error('unknown mode '+mode)
+          })().catch(e=>{console.error(e.stack||e);process.exit(1)})
+          JS
+
+          # -------- Initial topology: Browser HTTPS -> proxy HTTPS -> Next HTTP -> isolated backend fixture HTTPS
+          NODE_OPTIONS="--require=/tmp/phasec-request-url-log.cjs" node /tmp/phasec-next-http.cjs >/tmp/next-http.log 2>&1 & echo $! >/tmp/next-http.pid
+          for i in {1..40}; do curl -sf http://127.0.0.1:3000/ >/dev/null && break || sleep 1; done
+          PROXY_MODE=before node /tmp/phasec-proxy.cjs >/tmp/proxy-before.log 2>&1 & echo $! >/tmp/proxy.pid
+          for i in {1..30}; do curl -ksf https://localhost:3443/ >/dev/null && break || sleep 1; done
+          node /tmp/phasec-browser.cjs proxy-before
+          kill "$(cat /tmp/proxy.pid)" || true
+          sleep 1
+
+          # -------- First harness fix: complete Forwarded/X-Forwarded-Port headers, same HTTP upstream
+          PROXY_MODE=fixed node /tmp/phasec-proxy.cjs >/tmp/proxy-fixed.log 2>&1 & echo $! >/tmp/proxy.pid
+          for i in {1..30}; do curl -ksf https://localhost:3443/ >/dev/null && break || sleep 1; done
+          node /tmp/phasec-browser.cjs proxy-fixed
+          kill "$(cat /tmp/proxy.pid)" || true
+          kill "$(cat /tmp/next-http.pid)" || true
+          sleep 2
+
+          # -------- Preferred fallback: exact built app handled directly by HTTPS Next custom server
+          NODE_OPTIONS="--require=/tmp/phasec-request-url-log.cjs" node /tmp/phasec-next-https.cjs >/tmp/next-https.log 2>&1 & echo $! >/tmp/next-https.pid
+          for i in {1..40}; do curl -ksf https://localhost:3443/ >/dev/null && break || sleep 1; done
+          node /tmp/phasec-browser.cjs direct
+
+          echo '===== INITIAL PROXY LOG ====='
+          cat /tmp/proxy-before.log
+          echo '===== FIXED PROXY LOG ====='
+          cat /tmp/proxy-fixed.log
+          echo '===== NEXT HTTP / ROUTE URL LOG ====='
+          grep -E 'QA_NEXT_HTTP|QA_ROUTE_REQUEST_URL|QA_URL_PATCH' /tmp/next-http.log || true
+          echo '===== NEXT DIRECT HTTPS / ROUTE URL LOG ====='
+          grep -E 'QA_NEXT_HTTPS|QA_ROUTE_REQUEST_URL|QA_URL_PATCH' /tmp/next-https.log || true
+          echo '===== BACKEND OFFER LOG ====='
+          grep -E 'QA_BACKEND' /tmp/phasec-backend.log || true
+
+          node <<'JS'
+          const fs=require('fs')
+          const before=JSON.parse(fs.readFileSync('/tmp/proxy-before.json','utf8'))
+          const fixed=JSON.parse(fs.readFileSync('/tmp/proxy-fixed.json','utf8'))
+          const direct=JSON.parse(fs.readFileSync('/tmp/direct.json','utf8'))
+          const beforeQual=before.paid.net.responses.find(x=>new URL(x.url).pathname==='/api/offer/qualify')
+          const fixedQual=fixed.paid.net.responses.find(x=>new URL(x.url).pathname==='/api/offer/qualify')
+          const result={
+            exactCandidate:process.env.CANDIDATE_SHA,
+            topologyBefore:'Browser https://localhost:3443 -> HTTPS reverse proxy :3443 -> Next production custom HTTP server http://127.0.0.1:3000 -> isolated HTTPS backend fixture https://127.0.0.1:5443',
+            browserOriginBefore:before.paid.identity.origin,
+            qualifyRefererBefore:before.paid.net.requests.find(x=>new URL(x.url).pathname==='/api/offer/qualify')?.referer||null,
+            xForwardedProtoBefore:'https',
+            proxyBeforeQualifyStatus:beforeQual?.status||null,
+            proxyFixedQualifyStatus:fixedQual?.status||null,
+            directHttpsUsed:true,
+            googleCpcQualification:direct.paid.status.body?.active===true,
+            visitorIdPresent:direct.paid.visitorPresent,
+            entitlementCookieCreated:!!direct.paid.offer,
+            httpOnly:direct.paid.offer?.httpOnly===true,
+            secure:direct.paid.offer?.secure===true,
+            sameSite:direct.paid.offer?.sameSite==='Lax',
+            tokenJsInvisible:direct.paid.jsVisible===false,
+            statusActive:direct.paid.status.body?.active===true,
+            headerEntitled:direct.paid.headerVisible,
+            promptAppeared:direct.paid.promptVisible,
+            sameProfileDirectReturn:direct.returned.active===true&&direct.returned.headerVisible===true,
+            checkoutMinimumElectric50:direct.checkout.automaticElectric50===true,
+            productionMutations:'NONE',
+          }
+          fs.writeFileSync('/tmp/phasec-harness-result.json',JSON.stringify(result,null,2))
+          console.log('===== FINAL SAFE RESULT =====')
+          console.log(JSON.stringify(result,null,2))
+          JS
+
+          test "$(git rev-parse HEAD)" = "$CANDIDATE_SHA"
+          test -z "$(git diff --name-only -- src supabase package.json package-lock.json next.config.ts next.config.js)"
+
+      - name: Upload QA-only diagnostic artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: offer-phase-c-harness-diagnostic-v3
+          path: |
+            /tmp/phasec-harness-result.json
+            /tmp/proxy-before.json
+            /tmp/proxy-fixed.json
+            /tmp/direct.json
+            /tmp/proxy-before.log
+            /tmp/proxy-fixed.log
+            /tmp/next-http.log
+            /tmp/next-https.log
+            /tmp/phasec-backend.log
+          if-no-files-found: warn
