@@ -9,6 +9,7 @@ import { useState } from 'react'
 import { Check, Copy } from 'lucide-react'
 import { formatUkMobileIntl } from '@/utils/phone'
 import { isValidUkPostcode, normalisePostcode } from '@/utils/postcode'
+import type { AdminOrderDisplay, AdminOrderItemDisplay } from '@/types/adminOrders'
 
 /** Every UK Mainland order, whatever it is. There is no per-order estimate. */
 const DELIVERY_WINDOW = '2-4 days'
@@ -44,7 +45,7 @@ function splitAddress(raw: string): { address: string; postcode: string | null }
   return { address: flat, postcode: null }
 }
 
-function itemBlock(item: any): string {
+function itemBlock(item: AdminOrderItemDisplay): string {
   const lines = [
     `${item.quantity}x ${item.product_variants?.products?.title ?? 'Item'}`,
     [item.product_variants?.color, item.product_variants?.sku && `SKU: ${item.product_variants.sku}`]
@@ -59,9 +60,12 @@ function itemBlock(item: any): string {
   return lines.filter(Boolean).join('\n')
 }
 
-export function formatOrderForCopy(order: any): string {
+export function formatOrderForCopy(order: AdminOrderDisplay): string {
   const { address, postcode } = splitAddress(order.shipping_address)
-  const items = (order.order_items ?? []) as any[]
+  const items = order.order_items ?? []
+  const orderDate = order.created_at
+    ? new Date(order.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    : 'Date unavailable'
 
   const extras = [
     Number(order.fee_upstairs ?? 0) > 0 && `Upstairs: ${money(order.fee_upstairs)}`,
@@ -83,7 +87,7 @@ export function formatOrderForCopy(order: any): string {
 
   const blocks = [
     [
-      `Order on ${new Date(order.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`,
+      `Order on ${orderDate}`,
       `Delivery: ${DELIVERY_WINDOW}`,
     ].join('\n'),
 
@@ -109,7 +113,7 @@ export function formatOrderForCopy(order: any): string {
   return blocks.join('\n\n')
 }
 
-export default function CopyOrderButton({ order }: { order: any }) {
+export default function CopyOrderButton({ order }: { order: AdminOrderDisplay }) {
   const [copied, setCopied] = useState(false)
 
   const handleCopy = async () => {
