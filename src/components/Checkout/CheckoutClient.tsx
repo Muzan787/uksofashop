@@ -9,10 +9,14 @@ import {
   Loader2,
   MapPin, Check, Search,
   ChevronDown, Landmark,
-  Phone, AlertTriangle,
+  Phone, AlertTriangle, MessageCircle,
 } from 'lucide-react'
 import { useCart, type DisplayCartItem } from '@/context/CartContext'
-import { placeOrder } from '@/app/actions/checkout'
+import {
+  placeOrder,
+  checkDeliveryPostcode,
+  type DeliveryCheckResult,
+} from '@/app/actions/checkout'
 import { quoteOffer } from '@/app/actions/offer'
 import {
   trackOrderPlaced,
@@ -27,7 +31,8 @@ import {
   DELIVERY_AREA_NOTE, NO_EXTRAS, deliveryBreakdown, deliveryTotal, floorName,
   type DeliveryOptions,
 } from '@/constants/delivery'
-import { lookupAddresses, normalisePostcode } from '@/utils/postcode'
+import { isValidUkPostcode, lookupAddresses, normalisePostcode } from '@/utils/postcode'
+import { useWhatsAppCTA } from '@/utils/attribution/useWhatsAppCTA'
 import CartStep from './CartStep'
 import Steps from './Steps'
 import Field from '@/components/UI/Field'
@@ -76,7 +81,7 @@ interface FormState {
   customerName: string
   customerEmail: string
   customerPhone: string
-  postcode: string           // NEW: Separate Postcode field
+  postcode: string
   shippingAddress: string
   specialInstructions: string
 }
@@ -116,10 +121,6 @@ interface FieldError { [key: string]: string }
  */
 
 // ─── The one bespoke input on the page ────────────────────────────────────────
-// Postcode keeps its own control rather than using <Field>, because it is the
-// only field on the site with a leading icon and a button sharing its row. The
-// shell matches Field's: same radius, same hairline, and Ember 700 on focus
-// (Ember 500 is 2.9:1 on a light ground, under the 3:1 a focus ring must meet).
 const FIELD_SHELL =
   'w-full rounded-sm border-[1.5px] bg-calico-50 py-3 pl-8 pr-4 text-body-sm text-ink-900 ' +
   'outline-none transition-[border-color] duration-swift ease-out-expo'
@@ -178,17 +179,18 @@ function OrderSummary({
   compact = false,
   extras = NO_EXTRAS,
   offer = null,
+  deliveryStatus = null,
 }: {
   compact?: boolean
   extras?: DeliveryOptions
   offer?: OfferQuote | null
+  deliveryStatus?: DeliveryCheckResult['status'] | null
 }) {
   const { cartItems, totalAmount } = useCart()
-  // Base delivery to a UK Mainland ground floor is free, with no threshold.
-  // Anything chargeable comes from the extras the customer ticked.
   const { lines: extraLines, total: delivery } = deliveryBreakdown(extras)
   const discount = offer?.valid ? offer.discountAmount : 0
   const grandTotal = Math.max(0, totalAmount - discount) + delivery
+  const quoteRequired = deliveryStatus === 'custom_quote'
 
   return (
     <div
@@ -201,7 +203,6 @@ function OrderSummary({
         </div>
       )}
 
-      {/* Items */}
       <div className="mb-4 flex flex-col gap-3">
         {cartItems.map((item, i) => (
           <div key={`${item.variant_id}-${i}`} className="flex items-center gap-3">
@@ -233,12 +234,6 @@ function OrderSummary({
         ))}
       </div>
 
-      {/* ── What you owe right now ─────────────────────────────────────
-          Which is nothing, and it is the single most reassuring fact about
-          buying a sofa here. It was one 12px line of Ink 500 inside the
-          trust strip at the foot of this box — a colour that measures about
-          2.5:1 against Ink 900, so it was close to unreadable as well as
-          buried. It is a panel now, above the numbers it qualifies. */}
       <div className="mb-4 rounded-sm bg-sage-700 p-4">
         <p className="m-0 flex items-center gap-2 text-body-sm font-semibold text-calico-50">
           <ShieldCheck aria-hidden="true" className="h-4 w-4 shrink-0 text-sage-300" />
@@ -248,7 +243,9 @@ function OrderSummary({
           {[
             'No card details needed',
             'Nothing leaves your account now',
-            'Pay cash or by bank transfer when it arrives',
+            quoteRequired
+              ? 'We confirm the delivery charge before taking a non-mainland order'
+              : 'Pay cash or by bank transfer when it arrives',
           ].map(line => (
             <li key={line} className="flex items-start gap-2 text-caption leading-relaxed text-sage-50">
               <Check aria-hidden="true" className="mt-0.5 h-3 w-3 shrink-0 text-sage-300" />
@@ -258,7 +255,6 @@ function OrderSummary({
         </ul>
       </div>
 
-      {/* Totals */}
       <div className="flex flex-col gap-2 border-t border-calico-50/[0.07] pt-3">
         <div className="flex justify-between text-caption text-calico-300">
           <span>Subtotal</span>
@@ -276,12 +272,13 @@ function OrderSummary({
             </span>
           </div>
         )}
-        <div className="flex justify-between text-caption text-calico-300">
-          <span>Delivery · UK Mainland</span>
-          <span className="font-bold text-sage-300">FREE</span>
+        <div className="flex justify-between gap-3 text-caption text-calico-300">
+          <span>{quoteRequired ? 'Delivery · Custom quote' : 'Delivery · UK Mainland'}</span>
+          <span className={`shrink-0 font-bold ${quoteRequired ? 'text-ember-300' : 'text-sage-300'}`}>
+            {quoteRequired ? 'TO CONFIRM' : 'FREE'}
+          </span>
         </div>
 
-        {/* Each chosen extra as its own line, so the total is never a mystery. */}
         {extraLines.map(line => (
           <div key={line.key} className="flex justify-between gap-3 text-caption text-calico-300">
             <span className="min-w-0">
@@ -292,18 +289,22 @@ function OrderSummary({
           </div>
         ))}
 
-        <div className="mt-1 flex justify-between border-t border-calico-50/[0.07] pt-2 text-body font-extrabold text-calico-50">
-          <span>Total due on delivery</span>
-          <span className="font-data tnum text-ember-300">£{grandTotal.toFixed(2)}</span>
+        <div className="mt-1 flex justify-between gap-3 border-t border-calico-50/[0.07] pt-2 text-body font-extrabold text-calico-50">
+          <span>{quoteRequired ? 'Current online subtotal' : 'Total due on delivery'}</span>
+          <span className="font-data tnum shrink-0 text-ember-300">£{grandTotal.toFixed(2)}</span>
         </div>
+        {quoteRequired && (
+          <p className="m-0 text-caption leading-relaxed text-calico-300">
+            Your product offer stays applied. A delivery charge is agreed separately before an order is taken.
+          </p>
+        )}
       </div>
 
-      {/* Trust strip */}
       {!compact && (
         <div className="mt-4 flex flex-col gap-2 border-t border-calico-50/[0.06] pt-4">
           {([
             [ShieldCheck, PROMISES.guarantee.short],
-            [Truck, PROMISES.delivery.long],
+            [Truck, quoteRequired ? 'Non-mainland delivery is confirmed by quote first' : PROMISES.delivery.long],
           ] as const).map(([Icon, text]) => (
             <div key={text} className="flex items-center gap-2">
               <Icon aria-hidden="true" className="h-3 w-3 shrink-0 text-ember-300" />
@@ -321,6 +322,7 @@ function DetailsStep({
   onBack, onSuccess, extras, setExtras, form, setForm,
   offer, offerCodeInput, setOfferCodeInput, appliedPromotionCode,
   offerPending, offerError, onApplyOffer,
+  deliveryCheck, setDeliveryCheck,
 }: {
   onBack: () => void
   onSuccess: (id: string, postcode: string, amount: number) => void
@@ -335,11 +337,10 @@ function DetailsStep({
   offerPending: boolean
   offerError: string
   onApplyOffer: () => void
+  deliveryCheck: DeliveryCheckResult | null
+  setDeliveryCheck: React.Dispatch<React.SetStateAction<DeliveryCheckResult | null>>
 }) {
   const { cartItems, totalAmount, clearCart } = useCart()
-  // A line with a fabric is a line that has to be built. Nothing else in the
-  // basket knows whether a product was flagged made-to-order, and it does not
-  // need to - the fabric is the thing that makes it one.
   const madeToOrder = cartItems.some(i => i.fabric_id)
   const extrasTotal = deliveryTotal(extras)
   const offerDiscount = offer?.valid ? offer.discountAmount : 0
@@ -348,11 +349,10 @@ function DetailsStep({
   const [errors, setErrors] = useState<FieldError>({})
   const [pending, setPending] = useState(false)
   const [serverError, setServerError] = useState('')
+  const [checkingDelivery, setCheckingDelivery] = useState(false)
 
-  // Postcode Lookup State
   const [addresses, setAddresses] = useState<string[]>([])
   const [searchingPostcode, setSearchingPostcode] = useState(false)
-  /** Set once a postcode has been confirmed as one we deliver to, free. */
   const [confirmed, setConfirmed] = useState<string | null>(null)
   const [dropdownOpen, setDropdownOpen] = useState(false)
 
@@ -361,47 +361,160 @@ function DetailsStep({
     if (errors[k]) setErrors(e => { const n = { ...e }; delete n[k]; return n })
   }
 
+  const setPostcode = (value: string) => {
+    set('postcode')(value.toUpperCase())
+    // Removing the old decision synchronously is what prevents a stale
+    // mainland=true state surviving while a new custom-quote postcode is being
+    // checked. The six form fields themselves are deliberately untouched.
+    setDeliveryCheck(null)
+    setConfirmed(null)
+    setAddresses([])
+    setDropdownOpen(false)
+    setServerError('')
+  }
+
+  // Resolve every complete postcode as the customer types. This response is
+  // only UX state; placeOrder independently resolves the actual postcode again.
+  useEffect(() => {
+    const raw = form.postcode.trim()
+    if (!isValidUkPostcode(raw)) {
+      setCheckingDelivery(false)
+      return
+    }
+
+    let cancelled = false
+    const timer = window.setTimeout(() => {
+      setCheckingDelivery(true)
+      void checkDeliveryPostcode(raw)
+        .then(result => {
+          if (cancelled) return
+          setDeliveryCheck(result)
+          if (result.status === 'mainland') setConfirmed(result.postcode)
+          else setConfirmed(null)
+        })
+        .catch(() => {
+          if (!cancelled) setDeliveryCheck(null)
+        })
+        .finally(() => {
+          if (!cancelled) setCheckingDelivery(false)
+        })
+    }, 250)
+
+    return () => {
+      cancelled = true
+      window.clearTimeout(timer)
+    }
+  }, [form.postcode, setDeliveryCheck])
+
   const validate = (): boolean => {
     const errs: FieldError = {}
     if (form.customerName.trim().length < 2) errs.customerName = 'Please enter your full name'
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.customerEmail)) errs.customerEmail = 'Please enter a valid email address'
     if (!isValidUkMobile(form.customerPhone)) errs.customerPhone = UK_MOBILE_ERROR
-    if (form.postcode.trim().length < 5) errs.postcode = 'Please enter a valid UK postcode'
+    if (!isValidUkPostcode(form.postcode)) errs.postcode = 'Please enter a valid UK postcode'
     if (form.shippingAddress.trim().length < 5) errs.shippingAddress = 'Please enter your full delivery address'
     setErrors(errs)
     return Object.keys(errs).length === 0
   }
 
-  // The request itself now lives in src/utils/postcode.ts, so the product
-  // page's delivery estimator and this form ask Homedata the same question in
-  // the same way. Only the error handling is local, because only this form has
-  // a manual-entry field to fall back to.
   const handleFindAddress = async () => {
-    if (!form.postcode || form.postcode.trim().length < 5) {
-      setErrors(e => ({ ...e, postcode: 'Please enter a valid postcode first.' }));
-      return;
+    if (!isValidUkPostcode(form.postcode)) {
+      setErrors(e => ({ ...e, postcode: 'Please enter a valid UK postcode first.' }))
+      return
     }
 
-    setSearchingPostcode(true);
-    setErrors(e => { const n = { ...e }; delete n.postcode; return n; });
-    setAddresses([]);
+    setSearchingPostcode(true)
+    setErrors(e => { const n = { ...e }; delete n.postcode; return n })
+    setAddresses([])
 
     try {
-      setAddresses(await lookupAddresses(form.postcode))
-      setConfirmed(normalisePostcode(form.postcode));
+      const decision = await checkDeliveryPostcode(form.postcode)
+      setDeliveryCheck(decision)
+
+      if (decision.status === 'invalid') {
+        setConfirmed(null)
+        setErrors(e => ({ ...e, postcode: decision.message }))
+        return
+      }
+      if (decision.status === 'custom_quote') {
+        setConfirmed(null)
+        return
+      }
+
+      setConfirmed(decision.postcode)
+      setAddresses(await lookupAddresses(decision.postcode))
     } catch (err) {
-      const message = err instanceof Error ? err.message : '';
-      setConfirmed(null)
-      setErrors(e => ({ ...e, postcode: message || 'Lookup failed. Please type your address below.' }));
+      const message = err instanceof Error ? err.message : ''
+      setErrors(e => ({ ...e, postcode: message || 'Lookup failed. Please type your address below.' }))
     } finally {
-      setSearchingPostcode(false);
+      setSearchingPostcode(false)
     }
   }
+
+  const quoteItemLines = cartItems.map(item => {
+    const configuration = [
+      item.fabric_label || item.color,
+      item.fabric_code ? `code ${item.fabric_code}` : '',
+    ].filter(Boolean).join(', ')
+    return `- ${item.title}${configuration ? ` (${configuration})` : ''} x ${item.quantity}`
+  }).join('\n')
+  const quoteOfferContext = offer?.valid
+    ? offerDiscount > 0
+      ? `£${offerDiscount.toFixed(0)} product/order offer currently applied`
+      : 'Offer checked; no product discount applies to this basket'
+    : 'No online product offer currently applied'
+  const quoteExtras = deliveryBreakdown(extras).lines
+    .map(line => `${line.label}${line.detail ? ` (${line.detail})` : ''}`)
+    .join(', ') || 'None selected'
+  const quoteMessage = [
+    "Hi, I'd like a delivery quote for my order.",
+    '',
+    `Postcode: ${normalisePostcode(form.postcode)}`,
+    '',
+    'Items:',
+    quoteItemLines || '- Basket details available in checkout',
+    '',
+    `Current online offer: ${quoteOfferContext}`,
+    `Selected delivery extras: ${quoteExtras}`,
+    '',
+    'Please let me know the delivery charge and whether delivery is available.',
+  ].join('\n')
+  const deliveryQuoteCta = useWhatsAppCTA({
+    message: quoteMessage,
+    pageContext: 'checkout_delivery_quote',
+    acquisition: false,
+  })
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (offerPending || !validate()) return
-    setPending(true); setServerError('')
+
+    setServerError('')
+
+    // Do not trust a client-side decision, even our own previous one. Recheck
+    // the actual postcode immediately before invoking the order Server Action.
+    let currentDecision = deliveryCheck
+    if (currentDecision?.postcode !== normalisePostcode(form.postcode)) {
+      setCheckingDelivery(true)
+      try {
+        currentDecision = await checkDeliveryPostcode(form.postcode)
+        setDeliveryCheck(currentDecision)
+      } catch {
+        setServerError('We could not confirm delivery for that postcode right now. Please try again.')
+        setCheckingDelivery(false)
+        return
+      }
+      setCheckingDelivery(false)
+    }
+
+    if (!currentDecision || currentDecision.status !== 'mainland') {
+      if (currentDecision?.status === 'invalid') {
+        setErrors(e => ({ ...e, postcode: currentDecision?.message || 'Please enter a valid UK postcode' }))
+      }
+      return
+    }
+
+    setPending(true)
 
     setMetaIdentity({
       email: form.customerEmail,
@@ -411,30 +524,20 @@ function DetailsStep({
     })
 
     const fd = new FormData()
-    Object.entries(form).forEach(([k, v]) => {
-      if (k === 'shippingAddress') {
-         fd.append('shippingAddress', `${v}, ${form.postcode.toUpperCase()}`);
-      } else {
-         fd.append(k, v)
-      }
-    })
+    Object.entries(form).forEach(([k, v]) => fd.append(k, v))
 
-    // Ids and quantities only - the database looks up every price and the offer
-    // itself, so a tampered request cannot choose either one.
     const items = toOfferItems(cartItems)
-
     const res = await placeOrder(fd, items, grandTotal, extras, appliedPromotionCode)
 
     if (res?.error) { setServerError(res.error); setPending(false) }
     else if (res?.success) {
-      // res.total is the database's figure and is always present on success.
-      // Discounted orders therefore flow into the existing conversion pipeline
-      // at the actual amount due, not the pre-offer basket total.
-      trackOrderPlaced(res.orderId, res.total, toTrackedItems(cartItems));
-      clearCart();
+      trackOrderPlaced(res.orderId, res.total, toTrackedItems(cartItems))
+      clearCart()
       onSuccess(res.orderId, form.postcode.toUpperCase(), res.total)
     }
   }
+
+  const customQuote = deliveryCheck?.status === 'custom_quote'
 
   return (
     <form onSubmit={handleSubmit} noValidate>
@@ -473,30 +576,49 @@ function DetailsStep({
                <MapPin aria-hidden="true" className="absolute left-3 top-1/2 z-[1] h-3.5 w-3.5 -translate-y-1/2 text-ink-500" />
                <input
                   type="text"
+                  name="postcode"
+                  autoComplete="postal-code"
                   value={form.postcode}
-                  onChange={(e) => set('postcode')(e.target.value.toUpperCase())}
+                  onChange={(e) => setPostcode(e.target.value)}
                   className={`${fieldClass(!!errors.postcode)} uppercase`}
                />
             </div>
             <button
                type="button"
                onClick={handleFindAddress}
-               disabled={searchingPostcode || form.postcode.length < 5}
+               disabled={searchingPostcode || checkingDelivery || form.postcode.length < 5}
                className="flex cursor-pointer items-center gap-2 rounded-sm border-0 bg-ink-900 px-4 text-caption font-bold text-calico-50 transition-[background-color,opacity] duration-swift ease-out-expo disabled:cursor-not-allowed disabled:opacity-60"
             >
-               {searchingPostcode ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+               {searchingPostcode || checkingDelivery ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
                Find
             </button>
           </div>
           {errors.postcode && <p className="mt-1 text-caption text-rust-700">{errors.postcode}</p>}
-          {confirmed && !errors.postcode && (
+          {checkingDelivery && !errors.postcode && (
+            <p className="m-0 mt-2 flex items-center gap-2 text-caption text-ink-500" aria-live="polite">
+              <Loader2 aria-hidden="true" className="h-3.5 w-3.5 animate-spin" /> Checking delivery area…
+            </p>
+          )}
+          {confirmed && deliveryCheck?.status === 'mainland' && !errors.postcode && !checkingDelivery && (
             <div
               className="mt-2 grid grid-rows-[1fr] transition-[grid-template-rows] duration-base ease-out-expo"
               aria-live="polite"
             >
               <p className="m-0 flex items-center gap-2 overflow-hidden rounded-sm border border-sage-300 bg-sage-50 px-3 py-2 text-body-sm font-semibold text-sage-700">
                 <Check aria-hidden="true" className="h-4 w-4 shrink-0" />
-                We deliver free to {confirmed}
+                FREE UK Mainland delivery to {confirmed}
+              </p>
+            </div>
+          )}
+          {customQuote && !checkingDelivery && (
+            <div className="mt-2 rounded-sm border border-calico-300 bg-calico-100 px-3 py-3" aria-live="polite">
+              <p className="m-0 flex items-start gap-2 text-body-sm font-semibold text-ink-900">
+                <Truck aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-ember-700" />
+                Custom delivery quote needed for {deliveryCheck.postcode}
+              </p>
+              <p className="m-0 mt-1 text-caption leading-relaxed text-ink-500">
+                We may still be able to deliver to you. Standard online checkout covers UK Mainland,
+                so this address needs a custom delivery quote first.
               </p>
             </div>
           )}
@@ -512,7 +634,7 @@ function DetailsStep({
               }`}
             >
               <span className="truncate pr-3">
-                {form.shippingAddress || "Select your address..."}
+                {form.shippingAddress || 'Select your address...'}
               </span>
               <ChevronDown
                 aria-hidden="true"
@@ -529,8 +651,8 @@ function DetailsStep({
                     key={i}
                     type="button"
                     onClick={() => {
-                      set('shippingAddress')(addr);
-                      setDropdownOpen(false);
+                      set('shippingAddress')(addr)
+                      setDropdownOpen(false)
                     }}
                     className={`cursor-pointer border-0 border-b border-calico-100 px-4 py-3 text-left text-caption leading-snug transition-colors duration-press ease-out-expo last:border-b-0 ${
                       form.shippingAddress === addr
@@ -559,14 +681,13 @@ function DetailsStep({
         onApply={onApplyOffer}
       />
 
-      {/* ── Optional delivery extras ── */}
       <div className="mb-4">
         <div className="mb-1 font-data text-eyebrow font-bold uppercase tracking-[0.2em] text-ember-700">
           Delivery Options
         </div>
         <p className="mb-3 text-caption leading-relaxed text-ink-500">
           Delivery to a UK Mainland ground floor is free. Add anything else you need —
-          your total updates as you go, and you still pay on delivery.
+          your current online subtotal updates as you go.
         </p>
 
         <div className="flex flex-col gap-2">
@@ -631,14 +752,13 @@ function DetailsStep({
         </p>
       </div>
 
-      {/* ── How you pay ── */}
       <div className="mb-4">
         <div className="mb-1 font-data text-eyebrow font-bold uppercase tracking-[0.2em] text-ember-700">
           How You Pay
         </div>
         <p className="mb-3 text-caption leading-relaxed text-ink-500">
-          Nothing is taken now. You pay once your sofa has arrived and you&apos;re happy with it —
-          choose either method on the day, there&apos;s nothing to decide here.
+          Nothing is taken now. For a UK Mainland order, you pay once your sofa has arrived and you&apos;re happy with it.
+          For a custom-quote destination, we agree the delivery charge with you first.
         </p>
 
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -648,7 +768,7 @@ function DetailsStep({
               <span className="text-body-sm font-bold text-ink-900">Cash</span>
             </div>
             <p className="m-0 text-caption leading-relaxed text-ink-500">
-              Hand the full amount to our driver when your sofa is delivered.
+              Hand the full agreed amount to our driver when your sofa is delivered.
             </p>
           </div>
 
@@ -667,14 +787,23 @@ function DetailsStep({
         <div className="mt-3 flex items-start gap-3 rounded-sm border border-ember-500/20 bg-ember-500/[0.07] px-4 py-3">
           <ShieldCheck aria-hidden="true" className="mt-px h-4 w-4 shrink-0 text-ember-700" />
           <div className="text-caption leading-relaxed text-ink-500">
-            Your total due on delivery is <strong className="font-data tnum text-ink-900">£{grandTotal.toFixed(2)}</strong>
-            {offerDiscount > 0 ? (
-              <span>
-                {' '} (£{totalAmount.toFixed(2)} subtotal − £{offerDiscount.toFixed(2)} offer{extrasTotal > 0 ? ` + £${extrasTotal.toFixed(2)} delivery extras` : ''})
-              </span>
-            ) : extrasTotal > 0 ? (
-              <span> (£{totalAmount.toFixed(2)} for your order plus £{extrasTotal.toFixed(2)} of delivery extras)</span>
-            ) : null}.
+            {customQuote ? (
+              <>
+                Your current online subtotal is <strong className="font-data tnum text-ink-900">£{grandTotal.toFixed(2)}</strong>.
+                {' '}Your product offer remains applied; the custom delivery charge is confirmed separately.
+              </>
+            ) : (
+              <>
+                Your total due on delivery is <strong className="font-data tnum text-ink-900">£{grandTotal.toFixed(2)}</strong>
+                {offerDiscount > 0 ? (
+                  <span>
+                    {' '} (£{totalAmount.toFixed(2)} subtotal − £{offerDiscount.toFixed(2)} offer{extrasTotal > 0 ? ` + £${extrasTotal.toFixed(2)} delivery extras` : ''})
+                  </span>
+                ) : extrasTotal > 0 ? (
+                  <span> (£{totalAmount.toFixed(2)} for your order plus £{extrasTotal.toFixed(2)} of delivery extras)</span>
+                ) : null}.
+              </>
+            )}
             <span className="mt-1 block">
               We don&apos;t accept card payments of any kind.
             </span>
@@ -705,55 +834,73 @@ function DetailsStep({
         </div>
       )}
 
-      <button
-        type="submit"
-        disabled={pending || offerPending}
-        className={`flex h-14 w-full items-center justify-center gap-3 rounded-pill border-0 font-data text-eyebrow font-bold uppercase tracking-[0.1em] transition-[background-color,box-shadow] duration-swift ease-out-expo ${
-          pending
-            ? 'cursor-wait bg-ink-500 text-calico-50'
-            : 'hover-btn btn-ember sheen shadow-ember cursor-pointer bg-ember-500 text-ink-900'
-        }`}
-      >
-        {pending
-          ? <><Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" /> Placing Order…</>
-          : <><ShoppingBag aria-hidden="true" className="h-4 w-4" /> Place Order</>
-        }
-      </button>
+      {customQuote ? (
+        <div className="rounded-md border border-calico-300 bg-calico-100 p-4 sm:p-5">
+          <p className="m-0 text-body font-bold text-ink-900">Let&apos;s confirm delivery first</p>
+          <p className="m-0 mt-2 text-body-sm leading-relaxed text-ink-500">
+            We may still be able to deliver to your postcode. Your basket, configuration and online product offer stay unchanged; only the delivery charge and availability need confirming.
+          </p>
+          <a
+            href={deliveryQuoteCta.href}
+            onClick={deliveryQuoteCta.onClick}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover-btn btn-ember sheen shadow-ember mt-4 flex min-h-14 w-full items-center justify-center gap-3 rounded-pill bg-ember-500 px-5 text-center font-data text-eyebrow font-bold uppercase tracking-[0.08em] text-ink-900 no-underline"
+          >
+            <MessageCircle aria-hidden="true" className="h-4 w-4 shrink-0" />
+            Get a Delivery Quote on WhatsApp
+          </a>
+          <p className="m-0 mt-3 text-center text-caption leading-relaxed text-ink-500">
+            This is a delivery-support handoff, not a new advertising enquiry. No order is placed from this checkout until delivery is agreed.
+          </p>
+        </div>
+      ) : (
+        <>
+          <button
+            type="submit"
+            disabled={pending || offerPending || checkingDelivery || deliveryCheck?.status !== 'mainland'}
+            className={`flex h-14 w-full items-center justify-center gap-3 rounded-pill border-0 font-data text-eyebrow font-bold uppercase tracking-[0.1em] transition-[background-color,box-shadow] duration-swift ease-out-expo ${
+              pending || checkingDelivery
+                ? 'cursor-wait bg-ink-500 text-calico-50'
+                : deliveryCheck?.status !== 'mainland'
+                  ? 'cursor-not-allowed bg-ink-300 text-calico-50'
+                  : 'hover-btn btn-ember sheen shadow-ember cursor-pointer bg-ember-500 text-ink-900'
+            }`}
+          >
+            {pending
+              ? <><Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" /> Placing Order…</>
+              : checkingDelivery
+                ? <><Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" /> Checking Delivery…</>
+                : <><ShoppingBag aria-hidden="true" className="h-4 w-4" /> Place Order</>
+            }
+          </button>
 
-      <p className="mt-3 text-center text-caption leading-relaxed text-ink-500">
-        By placing this order you agree to pay on delivery. We&apos;ll send a confirmation email with a tracking link.
-      </p>
+          <p className="mt-3 text-center text-caption leading-relaxed text-ink-500">
+            By placing this order you agree to pay on delivery. We&apos;ll send a confirmation email with a tracking link.
+          </p>
+        </>
+      )}
     </form>
   )
 }
 
 export default function CheckoutClient() {
   const [step, setStep] = useState<Step>('cart')
-  /** The short reference, as placeOrder returned it. The canonical order id. */
   const [orderId, setOrderId] = useState('')
   const [orderPostcode, setOrderPostcode] = useState('')
-  /**
-   * What the database says this order costs. Held because the cart empties -
-   * and because this, not the emptied cart, is the Google Ads conversion value.
-   */
   const [orderAmount, setOrderAmount] = useState(0)
   const [direction, setDirection] = useState<'forward' | 'back'>('forward')
   const [visible, setVisible] = useState(true)
-  // Held here rather than in DetailsStep so the order summary - which renders in
-  // the sidebar and again in the mobile drawer - reflects every tick live.
   const [extras, setExtras] = useState<DeliveryOptions>(NO_EXTRAS)
-  // Customer-entered values belong to the checkout flow, not the details step.
-  // Keeping them here means Back to Cart can unmount DetailsStep without
-  // discarding what the customer already typed. This is intentionally memory
-  // only: a full page refresh still starts with an empty form.
   const [form, setForm] = useState<FormState>({
     customerName: '', customerEmail: '', customerPhone: '',
     postcode: '', shippingAddress: '', specialInstructions: '',
   })
+  // Lives beside the six form fields so Delivery -> Cart -> Delivery does not
+  // forget the fulfilment decision either. It is presentation state only; the
+  // server re-runs the classification at placement time.
+  const [deliveryCheck, setDeliveryCheck] = useState<DeliveryCheckResult | null>(null)
 
-  // Manual offer state is also flow-owned and memory-only. That preserves an
-  // applied code through Delivery -> Cart -> Delivery without creating another
-  // long-lived browser store beside the cart.
   const [offerCodeInput, setOfferCodeInput] = useState('')
   const [appliedPromotionCode, setAppliedPromotionCode] = useState<string | null>(null)
   const [offerQuote, setOfferQuote] = useState<OfferQuote | null>(null)
@@ -765,10 +912,6 @@ export default function CheckoutClient() {
   const { active: automaticOfferActive } = useOffer()
   const currentBasketKey = basketOfferKey(cartItems)
 
-  // A quote from the previous basket becomes unusable immediately when the
-  // basket changes. We do not keep showing £50 while a recalculation is in
-  // flight; the old quote simply stops participating in the total until the
-  // server has priced the new basket.
   const offerAuthorityActive = Boolean(appliedPromotionCode) || automaticOfferActive
   const effectiveOffer = quotedBasketKey === currentBasketKey && offerAuthorityActive ? offerQuote : null
   const effectiveDiscount = effectiveOffer?.valid ? effectiveOffer.discountAmount : 0
@@ -795,10 +938,6 @@ export default function CheckoutClient() {
       return
     }
 
-    // An invalid typed code is allowed to report its own error without
-    // destroying a paid entitlement that the server still validated. The
-    // automatic quote remains the financial state; the invalid string never
-    // becomes appliedPromotionCode.
     if (!res.quote.codeValid) {
       setOfferError('Offer code not recognised.')
       if (res.quote.valid && res.quote.offerSource === 'paid_entitlement') {
@@ -819,10 +958,6 @@ export default function CheckoutClient() {
     setQuotedBasketKey(snapshotKey)
   }
 
-  // Re-quote whenever the current basket changes under either legitimate
-  // authority route: shareable SOFAEXTRA or the server-only paid entitlement.
-  // The basket key still fails closed immediately while the async quote is in
-  // flight, so an old £50 can never keep reducing a newer Standard/Verona cart.
   useEffect(() => {
     if ((!appliedPromotionCode && !automaticOfferActive) || cartItems.length === 0) return
 
@@ -845,8 +980,6 @@ export default function CheckoutClient() {
   const transition = useCallback((nextStep: Step, dir: 'forward' | 'back') => {
     setDirection(dir)
     setVisible(false)
-    // Half of --dur-base. The outgoing step is mid-fade when the incoming one
-    // is mounted, so the two overlap instead of queueing.
     setTimeout(() => {
       setStep(nextStep)
       setVisible(true)
@@ -854,23 +987,21 @@ export default function CheckoutClient() {
     }, 190)
   }, [])
 
-  // Fired on the way from the basket into the details form - the moment the
-  // visitor commits to checking out. Sits in the click handler rather than in
-  // an effect on `step`, so it cannot re-fire if the user navigates back to the
-  // cart and forward again, and is not double-counted under StrictMode.
   const goNext = () => {
     if (cartItems.length > 0) {
       trackInitiateCheckout(toTrackedItems(cartItems), totalAmount)
     }
     transition('details', 'forward')
   }
-  const goBack   = () => transition('cart', 'back')
+  const goBack = () => transition('cart', 'back')
   const goSuccess = (id: string, postcode: string, amount: number) => {
     setOrderId(id)
     setOrderPostcode(postcode)
     setOrderAmount(amount)
     transition('success', 'forward')
   }
+
+  const quoteRequired = deliveryCheck?.status === 'custom_quote'
 
   return (
     <div className="grad-calico grain-light relative min-h-screen bg-calico-50 pb-16">
@@ -914,7 +1045,7 @@ export default function CheckoutClient() {
                 : direction === 'forward' ? 'translate-x-10 opacity-0' : '-translate-x-10 opacity-0'
             }`}
           >
-            {step === 'cart'    && <CartStep onNext={goNext} />}
+            {step === 'cart' && <CartStep onNext={goNext} />}
             {step === 'details' && (
               <DetailsStep
                 onBack={goBack}
@@ -930,6 +1061,8 @@ export default function CheckoutClient() {
                 offerPending={offerPending || (offerAuthorityActive && quotedBasketKey !== currentBasketKey)}
                 offerError={offerError}
                 onApplyOffer={applyOffer}
+                deliveryCheck={deliveryCheck}
+                setDeliveryCheck={setDeliveryCheck}
               />
             )}
             {step === 'success' && (
@@ -943,7 +1076,7 @@ export default function CheckoutClient() {
           {step !== 'success' && cartItems.length > 0 && (
             <div className="hidden lg:block">
               <div className="sticky top-20">
-                <OrderSummary extras={extras} offer={effectiveOffer} />
+                <OrderSummary extras={extras} offer={effectiveOffer} deliveryStatus={deliveryCheck?.status} />
               </div>
             </div>
           )}
@@ -953,8 +1086,9 @@ export default function CheckoutClient() {
           <MobileTotalBar
             total={Math.max(0, totalAmount - effectiveDiscount) + deliveryTotal(extras)}
             itemCount={cartItems.reduce((n, i) => n + i.quantity, 0)}
+            quoteRequired={quoteRequired}
           >
-            <OrderSummary extras={extras} offer={effectiveOffer} />
+            <OrderSummary extras={extras} offer={effectiveOffer} deliveryStatus={deliveryCheck?.status} />
           </MobileTotalBar>
         )}
       </div>
