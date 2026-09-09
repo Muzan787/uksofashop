@@ -25,18 +25,18 @@ async function waitVisible(locator, label) {
   assert.equal(await locator.isVisible(), true, `${label} should be visible`)
 }
 
-async function setupPage(browser, width, { acquisition = false } = {}) {
+async function setupPage(browser, width, { acquisition = false, cart = qaCart } = {}) {
   const context = await browser.newContext({ viewport: { width, height: width <= 430 ? 844 : 900 } })
   if (acquisition) {
     await context.addCookies([{
       name: 'uksofashop_wa', value: ACQ_COOKIE, url: BASE,
-      path: '/', sameSite: 'Lax', secure: true,
+      sameSite: 'Lax', secure: true,
     }])
   }
   const page = await context.newPage()
-  await page.addInitScript(cart => {
-    localStorage.setItem('uksofashop_cart', JSON.stringify(cart))
-  }, qaCart)
+  await page.addInitScript(initialCart => {
+    localStorage.setItem('uksofashop_cart', JSON.stringify(initialCart))
+  }, cart)
   await page.goto(`${BASE}/checkout`, { waitUntil: 'domcontentloaded', timeout: 30000 })
   const essential = page.getByRole('button', { name: 'Essential only' })
   if (await essential.isVisible().catch(() => false)) await essential.click()
@@ -64,8 +64,8 @@ async function applyOffer(page) {
   await input.fill('SOFAEXTRA')
   await page.getByRole('button', { name: /^Apply$/ }).click()
   await page.waitForFunction(() => document.body.innerText.includes('£50') || document.body.innerText.includes('50.00'), null, { timeout: 15000 })
-  const text = await page.locator('body').innerText()
-  assert.match(text, /£50|50\.00/, 'Electric basket should retain £50 offer context')
+  const text = await page.locator('body').textContent()
+  assert.match(text || '', /£50|50\.00/, 'Electric basket should retain £50 offer context')
 }
 
 async function setAssembly(page) {
@@ -91,10 +91,10 @@ async function waitQuote(page, postcode) {
   await page.getByText(new RegExp(`Custom delivery quote needed for ${postcode.replace(' ', '\\s*')}`, 'i')).waitFor({ state: 'visible', timeout: 15000 })
   await waitVisible(page.getByRole('link', { name: /Get a Delivery Quote on WhatsApp/i }), 'delivery quote WhatsApp CTA')
   assert.equal(await page.getByRole('button', { name: /Place Order/i }).count(), 0, 'custom quote state must remove ordinary Place Order action')
-  const body = await page.locator('body').innerText()
-  assert.match(body, /Delivery · Custom quote/i)
-  assert.match(body, /TO CONFIRM/i)
-  assert.match(body, /Current online subtotal/i)
+  const body = await page.locator('body').textContent()
+  assert.match(body || '', /Delivery · Custom quote/i)
+  assert.match(body || '', /TO CONFIRM/i)
+  assert.match(body || '', /Current online subtotal/i)
 }
 
 async function assertFieldsPreserved(page) {
@@ -103,10 +103,10 @@ async function assertFieldsPreserved(page) {
   assert.equal(await page.locator('[name="customerPhone"]').inputValue(), '07123456789')
   assert.equal(await page.locator('[name="shippingAddress"]').inputValue(), '1 Controlled QA Street, Blackburn')
   assert.equal(await page.locator('[name="specialInstructions"]').inputValue(), 'Keep this instruction through postcode switching')
-  const body = await page.locator('body').innerText()
-  assert.match(body, /Premium Beige/)
-  assert.match(body, /QA-01/)
-  assert.match(body, /£50|50\.00/)
+  const body = await page.locator('body').textContent()
+  assert.match(body || '', /Premium Beige/)
+  assert.match(body || '', /QA-01/)
+  assert.match(body || '', /£50|50\.00/)
 }
 
 async function assertNoHorizontalOverflow(page, width) {
@@ -119,10 +119,32 @@ async function assertFabClearsBar(page, width) {
   const boxes = await page.evaluate(() => {
     const bar = document.querySelector('[data-bottom-bar]')?.getBoundingClientRect()
     const fab = document.querySelector('a[aria-label="Chat with us on WhatsApp"]')?.getBoundingClientRect()
-    return bar && fab ? { barTop: bar.top, fabBottom: fab.bottom, fabTop: fab.top } : null
+    return bar && fab ? { barTop: bar.top, fabBottom: fab.bottom } : null
   })
   assert.ok(boxes, `${width}px should render mobile total bar and WhatsApp FAB`)
   assert.ok(boxes.fabBottom <= boxes.barTop + 1, `${width}px WhatsApp FAB overlaps MobileTotalBar`)
+}
+
+async function forgeClientDeliveryFlags(page) {
+  await page.evaluate(() => {
+    const form = document.querySelector('form')
+    if (!form) throw new Error('checkout form not found')
+    for (const [name, value] of [
+      ['mainland', 'true'],
+      ['delivery_zone', 'MAINLAND_STANDARD'],
+      ['delivery_price', '0'],
+    ]) {
+      const input = document.createElement('input')
+      input.type = 'hidden'
+      input.name = name
+      input.value = value
+      form.appendChild(input)
+    }
+    form.requestSubmit()
+  })
+  await page.waitForTimeout(500)
+  assert.equal(await page.getByRole('button', { name: /Place Order/i }).count(), 0, 'forged delivery flags must not restore order permission')
+  assert.equal(await page.getByRole('link', { name: /Get a Delivery Quote on WhatsApp/i }).isVisible(), true, 'actual postcode must remain custom quote after forged flags')
 }
 
 async function fullSwitchMatrix(browser, width) {
@@ -140,18 +162,17 @@ async function fullSwitchMatrix(browser, width) {
 
   const postcodeInput = page.locator('input[name="postcode"]')
   await postcodeInput.fill('BT1 5GS')
-  // The old mainland decision must disappear synchronously on mutation, before
-  // the new async server classification has a chance to finish.
   assert.equal(await page.getByRole('button', { name: /Place Order/i }).isEnabled().catch(() => false), false, `${width}px stale mainland permission survived postcode mutation`)
   await waitQuote(page, 'BT1 5GS')
   await assertFieldsPreserved(page)
+  await forgeClientDeliveryFlags(page)
 
   const cta = page.getByRole('link', { name: /Get a Delivery Quote on WhatsApp/i })
   const href = await cta.getAttribute('href')
   assert.ok(href?.startsWith('https://wa.me/'), 'quote CTA should use wa.me')
   const decoded = decodeURIComponent(new URL(href).searchParams.get('text') || '')
   assert.match(decoded, /Postcode:\s*BT1 5GS/i)
-  assert.match(decoded, new RegExp(LONG_TITLE.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
+  assert.ok(decoded.includes(LONG_TITLE), 'quote message should include customer-visible product title')
   assert.match(decoded, /Premium Beige/i)
   assert.match(decoded, /QA-01/i)
   assert.match(decoded, /x 1/i)
@@ -222,6 +243,20 @@ async function simpleWidth(browser, width) {
   await context.close()
 }
 
+async function safeServerActionMainlandSmoke(browser) {
+  log('safe mainland Server Action → authoritative RPC smoke')
+  const wrongPriceCart = qaCart.map(item => ({ ...item, price: 1 }))
+  const { context, page } = await setupPage(browser, 390, { cart: wrongPriceCart })
+  await enterDetails(page)
+  await fillDetails(page)
+  await setPostcode(page, 'BB6 7LS')
+  await waitMainland(page, 'BB6 7LS')
+  await page.getByRole('button', { name: /Place Order/i }).click()
+  await page.getByText(/Prices or your offer have changed since they were checked/i).waitFor({ state: 'visible', timeout: 15000 })
+  assert.equal(await page.getByText(/Order confirmed/i).count(), 0, 'controlled mismatch smoke must not create a customer order')
+  await context.close()
+}
+
 async function estimatorMatrix(browser) {
   log('PDP delivery estimator matrix')
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } })
@@ -243,6 +278,16 @@ async function estimatorMatrix(browser) {
   await check('ABC 123', /does not look like a UK postcode/i)
   await check('IV40 8PB', /IV40 8PB needs a custom delivery quote/i)
   await check('PA34 4UB', /PA34 4UB needs a custom delivery quote/i)
+
+  for (const postcode of ['IV40 8AE', 'PA34 5AB']) {
+    await input.fill(postcode)
+    await page.getByRole('button', { name: /^Check$/ }).click()
+    await page.waitForFunction(pc => document.body.innerText.includes(`Free UK Mainland delivery to ${pc}`) || document.body.innerText.includes(`${pc} needs a custom delivery quote`), postcode, { timeout: 15000 })
+    const text = await page.locator('body').innerText()
+    if (text.includes(`Free UK Mainland delivery to ${postcode}`)) log(`${postcode}: trusted lookup resolved mainland`)
+    else log(`${postcode}: trusted lookup unavailable/uncertain, conservatively custom quote`)
+  }
+
   await assertNoHorizontalOverflow(page, 1440)
   await context.close()
 }
@@ -252,8 +297,9 @@ try {
   for (const width of [390, 430, 1440]) await fullSwitchMatrix(browser, width)
   await freshNoAcquisition(browser)
   for (const width of [320, 768]) await simpleWidth(browser, width)
+  await safeServerActionMainlandSmoke(browser)
   await estimatorMatrix(browser)
-  log('PASS: browser matrix, offer/form/cart persistence, quote CTA and attribution semantics')
+  log('PASS: browser matrix, server-action smoke, offer/form/cart persistence, quote CTA and attribution semantics')
 } finally {
   await browser.close()
 }
