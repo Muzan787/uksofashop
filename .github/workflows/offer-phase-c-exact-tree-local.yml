@@ -1,0 +1,114 @@
+name: Offer Phase C exact-tree local browser environment
+on:
+  push:
+    branches: [qa/offer-phase-c-preview-v2]
+    paths: [.github/workflows/offer-phase-c-exact-tree-local.yml]
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 8eb47786fc772bfdb3835b1a4da6d956cc86d5f9
+          fetch-depth: 0
+      - name: Verify exact candidate and master
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "8eb47786fc772bfdb3835b1a4da6d956cc86d5f9"
+          git fetch origin master
+          test "$(git rev-parse origin/master)" = "c0a1ce2a2621aba5b3ea635452e720ea095d2ebd"
+      - name: Install dependencies
+        run: |
+          npm ci
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Start exact-tree production build with isolated Phase C backend fixture
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://localhost:5443
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_tMk28Ay_hIljhv8NQcV01Q_cI9ApS9c
+          SUPABASE_SERVICE_ROLE_KEY: qa_service_role_fixture_only
+          NEXT_PUBLIC_SITE_URL: https://localhost:3443
+          NODE_TLS_REJECT_UNAUTHORIZED: '0'
+        run: |
+          set -euo pipefail
+          openssl req -x509 -newkey rsa:2048 -nodes -keyout /tmp/key.pem -out /tmp/cert.pem -days 1 -subj '/CN=localhost' -addext 'subjectAltName=DNS:localhost,IP:127.0.0.1'
+          cat >/tmp/phasec-backend.mjs <<'JS'
+          import https from 'node:https'
+          import fs from 'node:fs'
+          import crypto from 'node:crypto'
+          const key=fs.readFileSync('/tmp/key.pem'), cert=fs.readFileSync('/tmp/cert.pem')
+          const PROD='https://nznpeqjnoobhyxwnmsez.supabase.co'
+          const PUB='sb_publishable_tMk28Ay_hIljhv8NQcV01Q_cI9ApS9c'
+          const byVisitor=new Map(), byToken=new Map()
+          const prices={
+            '1ba97d1f-f890-48f8-8ab9-57cbb147f388':[999,'ELECTRIC'],
+            '4b6dc9c2-91ec-432f-9735-abb6899b1a95':[350,'ROMA'],
+            'ff3c0414-77ba-40ef-b6b2-bd97bff2bd17':[649,'STANDARD'],
+            '01921b2b-5fe9-47d3-8eb6-b53adba27e82':[349,'EXCLUDED'],
+            'a5d2050d-c458-4e0c-b3b3-7b7c727845a0':[549,'EXCLUDED'],
+            'f262accc-1287-4375-984e-e677afd5aa01':[149,'EXCLUDED'],
+          }
+          const priority={ELECTRIC:4,ROMA:3,STANDARD:2,EXCLUDED:1}
+          function send(res,status,data,extra={}){res.writeHead(status,{'content-type':'application/json','access-control-allow-origin':'https://localhost:3443','access-control-allow-credentials':'true','access-control-allow-headers':'authorization,apikey,content-type,prefer,range,x-client-info','access-control-allow-methods':'GET,POST,PATCH,DELETE,OPTIONS',...extra});res.end(JSON.stringify(data))}
+          async function body(req){let s='';for await(const c of req)s+=c;return s?JSON.parse(s):{}}
+          function active(t){return t&&!t.revoked_at&&Date.parse(t.expires_at)>Date.now()}
+          const srv=https.createServer({key,cert},async(req,res)=>{
+            const u=new URL(req.url,'https://localhost:5443')
+            if(req.method==='OPTIONS')return send(res,204,{})
+            if(u.pathname==='/__qa/state')return send(res,200,{visitors:byVisitor.size,tokens:byToken.size})
+            if(u.pathname==='/__qa/expire'&&req.method==='POST'){const b=await body(req);const e=byVisitor.get(b.visitor_id);if(e){e.expires_at=new Date(Date.now()-1000).toISOString()}return send(res,200,{ok:true})}
+            if(u.pathname==='/__qa/reset'&&req.method==='POST'){byVisitor.clear();byToken.clear();return send(res,200,{ok:true})}
+            if(u.pathname==='/rest/v1/rpc/issue_paid_offer_entitlement'&&req.method==='POST'){
+              const b=await body(req), now=new Date(), old=byVisitor.get(b.p_visitor_id);let e
+              if(active(old)){e=old;e.source=b.p_source;e.expires_at=new Date(now.getTime()+7*864e5).toISOString()}
+              else{e={token:crypto.randomUUID(),visitor_id:b.p_visitor_id,source:b.p_source,started_at:now.toISOString(),expires_at:new Date(now.getTime()+7*864e5).toISOString(),revoked_at:null};byVisitor.set(b.p_visitor_id,e);byToken.set(e.token,e)}
+              return send(res,200,{token:e.token,source:e.source,started_at:e.started_at,expires_at:e.expires_at})
+            }
+            if(u.pathname==='/rest/v1/offer_entitlements'&&req.method==='GET'){
+              const raw=u.searchParams.get('token')||'', token=raw.startsWith('eq.')?raw.slice(3):raw, e=byToken.get(token)
+              return send(res,200,e?[{source:e.source,started_at:e.started_at,expires_at:e.expires_at,revoked_at:e.revoked_at}]:[])
+            }
+            if(u.pathname==='/rest/v1/rpc/calculate_order_offer'&&req.method==='POST'){
+              const b=await body(req), items=Array.isArray(b.p_items)?b.p_items:[], code=String(b.p_promotion_code||'').trim().toUpperCase(), codeValid=code==='SOFAEXTRA', ent=byToken.get(b.p_offer_entitlement_token), entValid=active(ent)
+              let subtotal=0,tier=null;for(const it of items){const x=prices[it.variant_id];if(!x)continue;subtotal+=x[0]*Math.min(Math.max(Number(it.quantity)||1,1),99);if(!tier||priority[x[1]]>priority[tier])tier=x[1]}
+              const amount=(codeValid||entValid)?Math.min(subtotal,{ELECTRIC:50,ROMA:30,STANDARD:20,EXCLUDED:0}[tier]||0):0
+              return send(res,200,{items_subtotal:subtotal,code_valid:codeValid,entitlement_valid:!!entValid,normalized_code:codeValid?'SOFAEXTRA':null,discount_amount:amount,discount_tier:(codeValid||entValid)?tier:null,promotion_code:codeValid?'SOFAEXTRA':null,offer_source:codeValid?'manual_code':entValid?'paid_entitlement':null})
+            }
+            if(req.method==='GET'||req.method==='HEAD'){
+              try{const target=PROD+u.pathname+u.search;const h={};for(const [k,v] of Object.entries(req.headers))if(!['host','authorization','apikey','cookie'].includes(k)&&v)h[k]=v;h.apikey=PUB;h.authorization='Bearer '+PUB;const r=await fetch(target,{method:req.method,headers:h});const buf=Buffer.from(await r.arrayBuffer());const out={};for(const [k,v] of r.headers)if(!['content-encoding','transfer-encoding','content-length'].includes(k))out[k]=v;out['access-control-allow-origin']='https://localhost:3443';out['access-control-allow-credentials']='true';res.writeHead(r.status,out);return res.end(buf)}catch(e){return send(res,502,{error:String(e)})}
+            }
+            return send(res,201,[])
+          })
+          srv.listen(5443,'127.0.0.1',()=>console.log('fixture https 5443'))
+          JS
+          node /tmp/phasec-backend.mjs >/tmp/backend.log 2>&1 &
+          echo $! >/tmp/backend.pid
+          for i in {1..20}; do curl -ks https://localhost:5443/__qa/state && break || sleep 1; done
+          npm run build
+          npm start -- -H 127.0.0.1 -p 3000 >/tmp/next.log 2>&1 &
+          echo $! >/tmp/next.pid
+          cat >/tmp/https-proxy.mjs <<'JS'
+          import https from 'node:https';import http from 'node:http';import fs from 'node:fs'
+          const srv=https.createServer({key:fs.readFileSync('/tmp/key.pem'),cert:fs.readFileSync('/tmp/cert.pem')},(req,res)=>{const headers={...req.headers,host:'localhost:3443','x-forwarded-proto':'https','x-forwarded-host':'localhost:3443'};const p=http.request({host:'127.0.0.1',port:3000,path:req.url,method:req.method,headers},r=>{res.writeHead(r.statusCode||500,r.headers);r.pipe(res)});p.on('error',e=>{res.writeHead(502);res.end(String(e))});req.pipe(p)})
+          srv.listen(3443,'127.0.0.1',()=>console.log('proxy https 3443'))
+          JS
+          node /tmp/https-proxy.mjs >/tmp/proxy.log 2>&1 &
+          echo $! >/tmp/proxy.pid
+          for i in {1..40}; do if curl -ksf https://localhost:3443/ >/dev/null; then exit 0; fi; sleep 1; done
+          cat /tmp/next.log; exit 1
+      - name: Prove local exact-tree paid qualification and secure cookie
+        env:
+          NODE_PATH: ${{ github.workspace }}/node_modules
+        run: |
+          cat >/tmp/proof.cjs <<'JS'
+          const {chromium}=require('playwright'),assert=require('assert')
+          ;(async()=>{const b=await chromium.launch({headless:true});const c=await b.newContext({viewport:{width:390,height:900},ignoreHTTPSErrors:true,serviceWorkers:'allow'});await c.addInitScript(()=>localStorage.setItem('cookie_consent','denied'));const p=await c.newPage();const api=[];p.on('response',async r=>{if(r.url().includes('/api/offer/')){let x='';try{x=await r.text()}catch{}api.push({url:r.url(),status:r.status(),body:x})}});const r=await p.goto('https://localhost:3443/?gclid=QA_LOCAL',{waitUntil:'domcontentloaded',timeout:30000});assert(r&&r.status()<500);await p.getByText('Your online offer is active · SOFAEXTRA · FREE UK Mainland Delivery',{exact:true}).waitFor({timeout:15000});const cs=await c.cookies();const oc=cs.find(x=>x.name==='uksofashop_offer'),vc=cs.find(x=>x.name==='uksofashop_vid');assert(oc&&vc);assert(oc.httpOnly);assert(oc.secure);assert.strictEqual(oc.sameSite,'Lax');assert.strictEqual(oc.path,'/');assert(! (await p.evaluate(()=>document.cookie)).includes('uksofashop_offer'));console.log('LOCAL_EXACT_TREE_QUALIFICATION=PASS');console.log('SECURE_COOKIE=PASS');console.log('API_SAFE='+JSON.stringify(api.map(x=>({status:x.status,body:x.body}))));await c.close();await b.close()})().catch(e=>{console.error(e.stack||e);process.exit(1)})
+          JS
+          node /tmp/proof.cjs
+      - name: Logs on failure
+        if: failure()
+        run: |
+          cat /tmp/backend.log || true
+          cat /tmp/next.log || true
+          cat /tmp/proxy.log || true
