@@ -2,7 +2,7 @@
 // src/components/Product/DeliveryEstimator.tsx
 
 import { useState } from 'react';
-import { AlertTriangle, Check, Loader2, Truck } from 'lucide-react';
+import { Check, Loader2, Truck } from 'lucide-react';
 import { PROMISES } from '@/constants/promises';
 import {
   classifyDeliveryPostcode,
