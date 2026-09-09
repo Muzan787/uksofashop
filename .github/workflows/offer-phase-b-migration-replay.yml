@@ -1,0 +1,53 @@
+name: Offer Phase B migration replay
+
+on:
+  push:
+    branches: [fix/offer-phase-b-discount-engine-release]
+    paths: [.github/workflows/offer-phase-b-migration-replay.yml]
+
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/offer-phase-b-discount-engine-release
+          fetch-depth: 0
+      - name: Start local Supabase and replay repository migrations
+        run: |
+          npx --yes supabase@latest start -x studio,imgproxy,edge-runtime,logflare,vector,supavisor
+          npx --yes supabase@latest db reset --local --no-seed
+      - name: Verify Phase B replay state
+        env:
+          PGURL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: |
+          psql "$PGURL" -v ON_ERROR_STOP=1 <<'SQL'
+          select count(*) = 4 as four_offer_columns
+          from information_schema.columns
+          where table_schema='public' and table_name='orders'
+            and column_name in ('discount_amount','discount_tier','promotion_code','offer_source');
+
+          select count(*) as mapped,
+                 count(*) filter (where tier='ELECTRIC') as electric,
+                 count(*) filter (where tier='ROMA') as roma,
+                 count(*) filter (where tier='STANDARD') as standard,
+                 count(*) filter (where tier='EXCLUDED') as excluded
+          from public.offer_product_tiers;
+
+          select to_regprocedure('public.calculate_order_offer(jsonb,text,uuid)') is not null as calculator_exists,
+                 to_regprocedure('public.place_order(text,text,text,text,text,jsonb,numeric,integer,boolean,boolean,boolean,text,uuid)') is not null as place_order_exists,
+                 to_regprocedure('public.track_order(text,text)') is not null as track_order_exists;
+
+          select relrowsecurity as offer_tiers_rls
+          from pg_class c join pg_namespace n on n.oid=c.relnamespace
+          where n.nspname='public' and c.relname='offer_product_tiers';
+
+          select has_table_privilege('anon','public.offer_product_tiers','select') as anon_offer_read,
+                 has_table_privilege('authenticated','public.offer_product_tiers','insert') as auth_offer_write,
+                 has_function_privilege('anon','public.calculate_order_offer(jsonb,text,uuid)','execute') as anon_calculator_execute,
+                 has_function_privilege('anon','public.place_order(text,text,text,text,text,jsonb,numeric,integer,boolean,boolean,boolean,text,uuid)','execute') as anon_place_order_execute;
+          SQL
+      - name: Stop local Supabase
+        if: always()
+        run: npx --yes supabase@latest stop --no-backup || true
