@@ -96,7 +96,11 @@ jobs:
       - name: Exact-tree Phase D browser and server-action matrix
         env:
           PHASE_D_LOCAL_URL: https://127.0.0.1:3100
-        run: node scripts/phase-d-local-browser-qa.mjs
+        run: |
+          # QA-only deterministic consent state: prevents the consent sheet and
+          # deliberately keeps analytics/pixels off during controlled tests.
+          sed -i "s/const page = await context.newPage()/const page = await context.newPage(); await page.addInitScript(() => localStorage.setItem('cookie_consent', 'denied'))/g" scripts/phase-d-local-browser-qa.mjs
+          node scripts/phase-d-local-browser-qa.mjs
 
       - name: Server log on failure
         if: failure()
