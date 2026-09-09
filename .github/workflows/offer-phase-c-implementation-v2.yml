@@ -1,0 +1,91 @@
+name: Offer Phase C implementation v2
+
+on:
+  push:
+    branches: [qa/offer-phase-c-implementation]
+
+permissions:
+  contents: write
+
+jobs:
+  implement:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/offer-phase-c-paid-entitlement
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Reuse audited implementation patch
+        run: |
+          git fetch origin qa/offer-phase-c-implementation
+          python - <<'PY'
+          from pathlib import Path
+          import subprocess
+
+          text = subprocess.check_output([
+              'git','show','origin/qa/offer-phase-c-implementation:.github/workflows/offer-phase-c-implementation.yml'
+          ], text=True)
+          lines = text.splitlines()
+          start = next(i for i,l in enumerate(lines) if l.strip() == '- name: Apply narrow Phase C source changes')
+          runline = next(i for i in range(start, len(lines)) if lines[i].strip() == 'run: |')
+          end = next(i for i in range(runline + 1, len(lines)) if lines[i].startswith('      - name:'))
+          script = '\n'.join(l[10:] if l.startswith('          ') else l for l in lines[runline + 1:end]) + '\n'
+          Path('/tmp/phase-c-implementation.sh').write_text(script)
+          PY
+          bash /tmp/phase-c-implementation.sh
+
+      - name: Make effect state transitions lint-safe
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def once(path, old, new):
+              p=Path(path); t=p.read_text(); c=t.count(old)
+              if c != 1: raise SystemExit(f'{path}: expected one match, got {c}')
+              p.write_text(t.replace(old,new,1))
+
+          once('src/components/Checkout/CheckoutClient.tsx',
+               '    setOfferPending(true)\n\n    void quoteOffer(items, appliedPromotionCode).then(res => {',
+               '    void quoteOffer(items, appliedPromotionCode).then(res => {')
+          once('src/components/Checkout/CheckoutClient.tsx',
+               '      setOfferPending(false)\n      if (res?.success) {',
+               '      if (res?.success) {')
+          once('src/components/Checkout/CheckoutClient.tsx',
+               "        if (!offerCodeInput.trim() || res.quote.codeValid) setOfferError('')\n",
+               '')
+          once('src/components/Checkout/CheckoutClient.tsx',
+               '              offerPending={offerPending}\n',
+               '              offerPending={offerPending || (offerAuthorityActive && quotedBasketKey !== currentBasketKey)}\n')
+
+          once('src/components/Offer/OfferPrompt.tsx',
+               "    if (!active || !startedAt || mobile === null || !promptAllowed(pathname)) {\n      if (!promptAllowed(pathname)) setOpen(false)\n      return\n    }",
+               "    if (!active || !startedAt || mobile === null || !promptAllowed(pathname)) return")
+          once('src/components/Offer/OfferPrompt.tsx',
+               '    setOpen(true)\n',
+               '    queueMicrotask(() => setOpen(true))\n')
+          PY
+
+      - name: Static gates
+        run: |
+          npm ci
+          npx eslint \
+            src/types/offers.ts src/types/offerEntitlement.ts src/types/supabase.ts \
+            src/utils/offers/constants.ts src/utils/offers/paidTraffic.ts \
+            src/app/api/offer/qualify/route.ts src/app/api/offer/status/route.ts \
+            src/components/Offer/OfferProvider.tsx src/components/Offer/OfferBoot.tsx src/components/Offer/OfferPrompt.tsx \
+            src/app/actions/offer.ts src/app/actions/checkout.ts \
+            src/components/Checkout/CheckoutClient.tsx src/components/Layout/Header.tsx src/app/layout.tsx
+          npx tsc --noEmit
+          npm run build
+          git diff --check
+
+      - name: Commit implementation to isolated feature branch
+        run: |
+          git config user.name "Muzan787"
+          git config user.email "109960574+Muzan787@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet && exit 0
+          git commit -m "Offer Phase C: wire paid entitlement through storefront"
+          git push origin HEAD:fix/offer-phase-c-paid-entitlement
