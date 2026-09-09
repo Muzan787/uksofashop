@@ -1,0 +1,67 @@
+name: Offer Phase C browser qualification diagnostic
+on:
+  push:
+    branches: [qa/offer-phase-c-browser-diag]
+    paths: [.github/workflows/offer-phase-c-browser-diag.yml]
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 8eb47786fc772bfdb3835b1a4da6d956cc86d5f9
+          fetch-depth: 0
+      - name: Verify exact candidate and master
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "8eb47786fc772bfdb3835b1a4da6d956cc86d5f9"
+          git fetch origin master
+          test "$(git rev-parse origin/master)" = "c0a1ce2a2621aba5b3ea635452e720ea095d2ebd"
+      - name: Install Playwright
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Diagnose exact preview qualification safely
+        env:
+          BASE: https://uksofashop-git-fix-offer-phase-c-paid-234c30-muzan787s-projects.vercel.app
+          NODE_PATH: ${{ github.workspace }}/node_modules
+        run: |
+          cat >/tmp/diag.cjs <<'JS'
+          const {chromium}=require('playwright')
+          const assert=require('assert')
+          const BASE=process.env.BASE
+          ;(async()=>{
+            const browser=await chromium.launch({headless:true})
+            const context=await browser.newContext({viewport:{width:390,height:900},serviceWorkers:'allow'})
+            await context.addInitScript(()=>localStorage.setItem('cookie_consent','denied'))
+            const page=await context.newPage()
+            const api=[]; const pageErrors=[]; const consoleErrors=[]
+            page.on('pageerror',e=>pageErrors.push(String(e.stack||e)))
+            page.on('console',m=>{if(m.type()==='error')consoleErrors.push(m.text())})
+            page.on('response',async r=>{
+              if(!r.url().includes('/api/offer/'))return
+              let body=''; try{body=await r.text()}catch{}
+              api.push({url:new URL(r.url()).pathname,status:r.status(),body:body.slice(0,1200)})
+            })
+            const resp=await page.goto(BASE+'/?gclid=QA_DIAG',{waitUntil:'domcontentloaded',timeout:30000})
+            await page.waitForTimeout(5000)
+            const cookies=await context.cookies()
+            const names=cookies.map(c=>({name:c.name,domain:c.domain,path:c.path,httpOnly:c.httpOnly,secure:c.secure,sameSite:c.sameSite,expires:c.expires>0?'set':'session'}))
+            const safeStatus=await page.evaluate(async()=>{try{const r=await fetch('/api/offer/status',{cache:'no-store'});return {status:r.status,body:await r.json()}}catch(e){return {error:String(e)}}})
+            const body=(await page.locator('body').innerText()).slice(0,1800)
+            console.log('PAGE_STATUS='+String(resp&&resp.status()))
+            console.log('FINAL_URL='+page.url())
+            console.log('COOKIE_METADATA='+JSON.stringify(names))
+            console.log('HAS_VISITOR_COOKIE='+cookies.some(c=>c.name==='uksofashop_vid'))
+            console.log('HAS_OFFER_COOKIE='+cookies.some(c=>c.name==='uksofashop_offer'))
+            console.log('OFFER_API='+JSON.stringify(api))
+            console.log('SAFE_STATUS='+JSON.stringify(safeStatus))
+            console.log('PAGE_ERRORS='+JSON.stringify(pageErrors))
+            console.log('CONSOLE_ERRORS='+JSON.stringify(consoleErrors))
+            console.log('BODY_SNIPPET='+JSON.stringify(body))
+            assert(resp && resp.status()<500)
+            await context.close(); await browser.close()
+          })().catch(e=>{console.error(e.stack||e);process.exit(1)})
+          JS
+          node /tmp/diag.cjs
