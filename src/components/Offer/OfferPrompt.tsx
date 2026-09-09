@@ -100,10 +100,7 @@ export default function OfferPrompt() {
   }, [])
 
   useEffect(() => {
-    if (!active || !startedAt || mobile === null || !promptAllowed(pathname)) {
-      if (!promptAllowed(pathname)) setOpen(false)
-      return
-    }
+    if (!active || !startedAt || mobile === null || !promptAllowed(pathname)) return
 
     const version = startedAt
     const key = `uksofashop_offer_prompt_seen:${version}`
@@ -119,7 +116,7 @@ export default function OfferPrompt() {
     // navigation or an accidental backdrop tap from causing prompt harassment.
     shownThisMount.current.add(version)
     try { localStorage.setItem(key, '1') } catch {}
-    setOpen(true)
+    queueMicrotask(() => setOpen(true))
   }, [active, startedAt, mobile, pathname])
 
   if (!open || mobile === null) return null

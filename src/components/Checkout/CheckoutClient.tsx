@@ -35,6 +35,7 @@ import MobileTotalBar from './MobileTotalBar'
 import SuccessStep from './SuccessStep'
 import AdsPurchaseConversion from './AdsPurchaseConversion'
 import OfferCode from './OfferCode'
+import { useOffer } from '@/components/Offer/OfferProvider'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 import type { Step } from './Steps'
@@ -265,7 +266,11 @@ function OrderSummary({
         </div>
         {offer?.valid && (
           <div className="flex justify-between gap-3 text-caption text-calico-300">
-            <span className="min-w-0">Offer{offer.normalizedCode ? ` · ${offer.normalizedCode}` : ''}</span>
+            <span className="min-w-0">
+              {offer.offerSource === 'paid_entitlement'
+                ? 'Online offer'
+                : `Offer${offer.normalizedCode ? ` · ${offer.normalizedCode}` : ''}`}
+            </span>
             <span className="font-data tnum shrink-0 font-bold text-sage-300">
               {discount > 0 ? `−£${discount.toFixed(2)}` : '£0.00'}
             </span>
@@ -395,7 +400,7 @@ function DetailsStep({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!validate()) return
+    if (offerPending || !validate()) return
     setPending(true); setServerError('')
 
     setMetaIdentity({
@@ -702,7 +707,7 @@ function DetailsStep({
 
       <button
         type="submit"
-        disabled={pending}
+        disabled={pending || offerPending}
         className={`flex h-14 w-full items-center justify-center gap-3 rounded-pill border-0 font-data text-eyebrow font-bold uppercase tracking-[0.1em] transition-[background-color,box-shadow] duration-swift ease-out-expo ${
           pending
             ? 'cursor-wait bg-ink-500 text-calico-50'
@@ -757,13 +762,15 @@ export default function CheckoutClient() {
   const [offerError, setOfferError] = useState('')
 
   const { cartItems, totalAmount } = useCart()
+  const { active: automaticOfferActive } = useOffer()
   const currentBasketKey = basketOfferKey(cartItems)
 
   // A quote from the previous basket becomes unusable immediately when the
   // basket changes. We do not keep showing £50 while a recalculation is in
   // flight; the old quote simply stops participating in the total until the
   // server has priced the new basket.
-  const effectiveOffer = quotedBasketKey === currentBasketKey ? offerQuote : null
+  const offerAuthorityActive = Boolean(appliedPromotionCode) || automaticOfferActive
+  const effectiveOffer = quotedBasketKey === currentBasketKey && offerAuthorityActive ? offerQuote : null
   const effectiveDiscount = effectiveOffer?.valid ? effectiveOffer.discountAmount : 0
 
   const applyOffer = async () => {
@@ -783,43 +790,57 @@ export default function CheckoutClient() {
       setOfferError(res.error)
       return
     }
-    if (!res.success || !res.quote.valid) {
-      setOfferError(res.success ? (res.quote.message || 'Offer code not recognised.') : 'Offer code not recognised.')
+    if (!res.success) {
+      setOfferError('Offer code not recognised.')
       return
     }
 
-    // Only a valid server response changes the applied authority. Typing an
-    // invalid code later therefore cannot remove a valid offer already held by
-    // this checkout flow (and the same rule will protect Phase C entitlement).
+    // An invalid typed code is allowed to report its own error without
+    // destroying a paid entitlement that the server still validated. The
+    // automatic quote remains the financial state; the invalid string never
+    // becomes appliedPromotionCode.
+    if (!res.quote.codeValid) {
+      setOfferError('Offer code not recognised.')
+      if (res.quote.valid && res.quote.offerSource === 'paid_entitlement') {
+        setOfferQuote(res.quote)
+        setQuotedBasketKey(snapshotKey)
+      }
+      return
+    }
+
+    if (!res.quote.valid) {
+      setOfferError(res.quote.message || 'Offer code not recognised.')
+      return
+    }
+
     setAppliedPromotionCode(res.quote.normalizedCode)
     setOfferCodeInput(res.quote.normalizedCode ?? code.trim().toUpperCase())
     setOfferQuote(res.quote)
     setQuotedBasketKey(snapshotKey)
   }
 
-  // Re-quote an already applied code whenever identities/quantities change.
-  // All setState calls are in the async completion, not synchronously in the
-  // effect; the stale quote is already excluded by currentBasketKey above.
+  // Re-quote whenever the current basket changes under either legitimate
+  // authority route: shareable SOFAEXTRA or the server-only paid entitlement.
+  // The basket key still fails closed immediately while the async quote is in
+  // flight, so an old £50 can never keep reducing a newer Standard/Verona cart.
   useEffect(() => {
-    if (!appliedPromotionCode || cartItems.length === 0) return
+    if ((!appliedPromotionCode && !automaticOfferActive) || cartItems.length === 0) return
 
     let cancelled = false
     const snapshotKey = currentBasketKey
     const items = toOfferItems(cartItems)
-
     void quoteOffer(items, appliedPromotionCode).then(res => {
       if (cancelled) return
       if (res?.success) {
         setOfferQuote(res.quote)
         setQuotedBasketKey(snapshotKey)
-        setOfferError('')
       } else if (res?.error) {
         setOfferError(res.error)
       }
     })
 
     return () => { cancelled = true }
-  }, [appliedPromotionCode, cartItems, currentBasketKey])
+  }, [appliedPromotionCode, automaticOfferActive, cartItems, currentBasketKey])
 
   const transition = useCallback((nextStep: Step, dir: 'forward' | 'back') => {
     setDirection(dir)
@@ -906,7 +927,7 @@ export default function CheckoutClient() {
                 offerCodeInput={offerCodeInput}
                 setOfferCodeInput={setOfferCodeInput}
                 appliedPromotionCode={appliedPromotionCode}
-                offerPending={offerPending}
+                offerPending={offerPending || (offerAuthorityActive && quotedBasketKey !== currentBasketKey)}
                 offerError={offerError}
                 onApplyOffer={applyOffer}
               />
