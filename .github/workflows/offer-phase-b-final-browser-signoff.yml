@@ -1,0 +1,500 @@
+name: Offer Phase B final browser sign-off
+
+on:
+  push:
+    branches: [qa/offer-phase-b-final-browser-signoff]
+    paths: [.github/workflows/offer-phase-b-final-browser-signoff.yml]
+
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: qa/offer-phase-b-final-browser-signoff
+          fetch-depth: 0
+
+      - name: Prove clean candidate and browser byte identity
+        run: |
+          git fetch origin master fix/offer-phase-b-recovery-release
+          test "$(git rev-parse HEAD^)" = "3200b9cdd63600bc496bdc1958ed12ce13e8ace0"
+          test "$(git rev-parse origin/master)" = "1fc9a94b95499d009677433fa187b7fda65d99ec"
+          test "$(git rev-parse origin/fix/offer-phase-b-recovery-release)" = "3200b9cdd63600bc496bdc1958ed12ce13e8ace0"
+          git diff --quiet origin/master 3200b9cdd63600bc496bdc1958ed12ce13e8ace0 -- \
+            src/components/Checkout/CheckoutClient.tsx \
+            src/components/Checkout/OfferCode.tsx \
+            src/components/Checkout/CartStep.tsx \
+            src/components/Checkout/MobileTotalBar.tsx \
+            src/app/actions/offer.ts \
+            src/app/actions/checkout.ts \
+            src/context/CartContext.tsx \
+            src/components/Layout/Mobilenav.tsx \
+            src/components/Layout/WhatsAppFab.tsx
+          printf '%s\n' \
+            '.github/workflows/offer-phase-b-patch-types.yml' \
+            'src/app/admin/orders/CopyOrderButton.tsx' \
+            'src/app/admin/orders/DirectPrintButton.tsx' \
+            'src/types/adminOrders.ts' \
+            'supabase/migrations/20260908172136_offer_phase_b_discount_engine.sql' \
+            'supabase/migrations/20260908172251_offer_phase_b_code_null_fix.sql' \
+            'supabase/migrations/20260908173108_offer_phase_b_track_order_totals.sql' \
+            | sort > /tmp/expected.txt
+          git diff --name-only origin/master 3200b9cdd63600bc496bdc1958ed12ce13e8ace0 | sort > /tmp/actual.txt
+          diff -u /tmp/expected.txt /tmp/actual.txt
+
+      - name: Install Playwright
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+
+      - name: Run final live browser matrix against byte-identical surfaces
+        env:
+          LIVE_BASE: https://www.uksofashop.co.uk
+          NODE_PATH: ${{ github.workspace }}/node_modules
+        run: |
+          cat > /tmp/offer-phase-b-final.cjs <<'JS'
+          const { chromium } = require('playwright')
+          const assert = require('assert')
+
+          const BASE = process.env.LIVE_BASE
+          const widths = [320, 390, 430, 768, 1440]
+
+          const P = {
+            electric: { variant_id:'1ba97d1f-f890-48f8-8ab9-57cbb147f388', quantity:1, price:999, title:'Hannah Electric Corner', color:'Beige', image_url:'' },
+            roma: { variant_id:'4b6dc9c2-91ec-432f-9735-abb6899b1a95', quantity:1, price:350, title:'Roma Recliner 2 Seater Manual Sofa', color:'Black', image_url:'' },
+            standard: { variant_id:'ff3c0414-77ba-40ef-b6b2-bd97bff2bd17', quantity:1, price:649, title:'Bishop U shaped Scattered Back Sofa', color:'Truffle', image_url:'' },
+            verona: { variant_id:'01921b2b-5fe9-47d3-8eb6-b53adba27e82', quantity:1, price:349, title:'Verona 2 Seater Scattered Back', color:'Grey', image_url:'' },
+            footstool: { variant_id:'f262accc-1287-4375-984e-e677afd5aa01', quantity:1, price:149, title:'Lily Footstool', color:'Grey', image_url:'' },
+          }
+          const customVerona = {
+            variant_id:'a5d2050d-c458-4e0c-b3b3-7b7c727845a0', quantity:1, price:549,
+            title:'Verona 4 Seater Corner 1c2 High Back', color:'Grey', image_url:'',
+            fabric_id:'6ce3d2c2-7f92-4276-b991-70afa07c0cf9', fabric_label:'Chenille Grey', fabric_code:'CH12', fabric_swatch:null,
+          }
+
+          const clone = x => JSON.parse(JSON.stringify(x))
+          const money = n => `£${Number(n).toFixed(2)}`
+          const sleep = ms => new Promise(r => setTimeout(r, ms))
+
+          function assertHas(text, needle, label) {
+            assert(text.includes(needle), `${label}: missing ${JSON.stringify(needle)}\n---\n${text.slice(0,3500)}`)
+          }
+          function occurrences(text, needle) { return text.split(needle).length - 1 }
+
+          async function noOverflow(page, label) {
+            const r = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, iw: window.innerWidth }))
+            assert(r.sw <= r.iw + 1, `${label}: horizontal overflow ${r.sw} > ${r.iw}`)
+          }
+
+          function genuineConsoleError(s) {
+            if (/Failed to load resource/i.test(s)) return false
+            if (/favicon/i.test(s)) return false
+            return /(?:Uncaught|TypeError|ReferenceError|Unhandled|Hydration|Minified React error)/i.test(s)
+          }
+
+          async function seeded(browser, width, cart) {
+            const context = await browser.newContext({
+              viewport: { width, height: width <= 430 ? 900 : 1000 },
+              hasTouch: width <= 430,
+              isMobile: width <= 430,
+              serviceWorkers: 'allow',
+            })
+            await context.addInitScript(({ cart }) => {
+              localStorage.setItem('uksofashop_cart', JSON.stringify(cart))
+              localStorage.setItem('cookie_consent', 'denied')
+            }, { cart })
+            const page = await context.newPage()
+            const pageErrors = []
+            const consoleErrors = []
+            page.on('pageerror', e => pageErrors.push(String(e.stack || e)))
+            page.on('console', m => { if (m.type() === 'error') consoleErrors.push(m.text()) })
+            const resp = await page.goto(`${BASE}/checkout`, { waitUntil:'domcontentloaded', timeout:30000 })
+            assert(resp && resp.status() < 500, `${width}: checkout HTTP ${resp && resp.status()}`)
+            await page.getByRole('button', { name:/Continue to delivery/i }).waitFor({ timeout:15000 })
+            await noOverflow(page, `${width}/seed`)
+            return { context, page, pageErrors, consoleErrors }
+          }
+
+          async function assertRuntime(s, label) {
+            assert.strictEqual(s.pageErrors.length, 0, `${label}: uncaught page errors\n${s.pageErrors.join('\n---\n')}`)
+            const genuine = s.consoleErrors.filter(genuineConsoleError)
+            assert.strictEqual(genuine.length, 0, `${label}: genuine console errors\n${genuine.join('\n---\n')}`)
+          }
+
+          async function goDelivery(page) {
+            await page.getByRole('button', { name:/Continue to delivery/i }).click()
+            await page.getByText('Delivery Information', { exact:true }).waitFor({ timeout:10000 })
+          }
+          async function goCart(page) {
+            await page.getByRole('button', { name:/Back to Cart/i }).click()
+            await page.getByRole('button', { name:/Continue to delivery/i }).waitFor({ timeout:10000 })
+          }
+
+          async function apply(page, code, expectValid=true) {
+            const trigger = page.getByRole('button', { name:/Have an offer code\?/i })
+            if (await trigger.isVisible().catch(() => false)) await trigger.click()
+            const input = page.getByLabel('Offer code')
+            await input.fill(code)
+            const btn = page.getByRole('button', { name:/^Apply$/i })
+            if (!code.trim()) {
+              assert(await btn.isDisabled(), 'empty code: Apply must be disabled')
+              return
+            }
+            await btn.click()
+            if (expectValid) {
+              await page.waitForFunction(() => (document.body.textContent || '').includes('Offer · SOFAEXTRA'), null, { timeout:15000 })
+            } else {
+              await page.getByText('Offer code not recognised.', { exact:true }).waitFor({ timeout:15000 })
+            }
+          }
+
+          async function summaryText(page, width) {
+            if (width >= 1024) {
+              const roots = page.locator('[data-ground="dark"]').filter({ hasText:'Order Summary' })
+              const n = await roots.count()
+              for (let i=n-1;i>=0;i--) {
+                const el = roots.nth(i)
+                if (await el.isVisible().catch(() => false)) return await el.innerText()
+              }
+              throw new Error(`${width}: visible desktop Order Summary not found`)
+            }
+            const toggle = page.locator('[data-bottom-bar] button[aria-controls="mobile-summary"]')
+            await toggle.waitFor({ state:'visible', timeout:10000 })
+            const wasOpen = (await toggle.getAttribute('aria-expanded')) === 'true'
+            if (!wasOpen) { await toggle.click(); await sleep(260) }
+            const root = page.locator('#mobile-summary [data-ground="dark"]')
+            await root.waitFor({ state:'visible', timeout:10000 })
+            const text = await root.innerText()
+            if (!wasOpen) { await toggle.click(); await sleep(180) }
+            return text
+          }
+
+          async function mobileTotalText(page) {
+            const toggle = page.locator('[data-bottom-bar] button[aria-controls="mobile-summary"]')
+            await toggle.waitFor({ state:'visible', timeout:10000 })
+            return await toggle.innerText()
+          }
+
+          async function assertFinancial(page, width, { subtotal, discount, total, valid=true, zero=false, mixed=false, label }) {
+            const text = await summaryText(page, width)
+            assertHas(text, 'Subtotal', `${label}/summary`)
+            assertHas(text, money(subtotal), `${label}/subtotal`)
+            assertHas(text, 'Delivery · UK Mainland', `${label}/delivery`)
+            assertHas(text, 'FREE', `${label}/delivery-free`)
+            assertHas(text, 'Nothing to pay today', `${label}/cod`)
+            assertHas(text, 'Total due on delivery', `${label}/total-label`)
+            assertHas(text, money(total), `${label}/total`)
+            if (valid) {
+              assertHas(text, 'Offer · SOFAEXTRA', `${label}/offer-row`)
+              if (discount > 0) assertHas(text, `−£${discount.toFixed(2)}`, `${label}/discount`)
+              else assertHas(text, '£0.00', `${label}/zero-discount`)
+            } else {
+              assert(!text.includes('Offer · SOFAEXTRA'), `${label}: unexpected valid offer row`)
+            }
+            if (zero) {
+              for (const x of ['−£20.00','−£30.00','−£50.00']) assert(!text.includes(x), `${label}: excluded basket showed ${x}`)
+            }
+            if (mixed) {
+              assert.strictEqual(occurrences(text, '−£50.00'), 1, `${label}: mixed basket did not show exactly one £50 discount`)
+              assert(!text.includes('−£30.00') && !text.includes('−£20.00'), `${label}: mixed basket stacked lower tiers`)
+            }
+            if (width <= 430) {
+              const mt = await mobileTotalText(page)
+              assertHas(mt, money(total), `${label}/mobile-total`)
+            }
+            await noOverflow(page, label)
+          }
+
+          async function validScenario(browser, width, name, cart, subtotal, discount, total, opts={}) {
+            const s = await seeded(browser, width, cart.map(clone))
+            const label = `${width}/${name}`
+            try {
+              await goDelivery(s.page)
+              assert(await s.page.getByRole('button', { name:/Have an offer code\?/i }).isVisible(), `${label}: promo not initially collapsed`)
+              assert.strictEqual(await s.page.getByLabel('Offer code').count(), 0, `${label}: offer input existed before expansion`)
+              await apply(s.page, opts.code || 'SOFAEXTRA', true)
+              if (opts.normalized) assert.strictEqual(await s.page.getByLabel('Offer code').inputValue(), 'SOFAEXTRA', `${label}: lowercase code was not normalized`)
+              if (discount === 0) {
+                const body = await s.page.locator('body').innerText()
+                assertHas(body, 'SOFAEXTRA is recognised. No extra cash discount applies to this basket.', `${label}/zero-message`)
+              }
+              await assertFinancial(s.page, width, { subtotal, discount, total, valid:true, zero:discount===0, mixed:opts.mixed, label })
+              await assertRuntime(s, label)
+            } finally { await s.context.close() }
+          }
+
+          async function invalidEmptyNoCode(browser, width) {
+            let s = await seeded(browser, width, [clone(P.standard)])
+            try {
+              await goDelivery(s.page)
+              await apply(s.page, 'NOTREAL', false)
+              await assertFinancial(s.page, width, { subtotal:649, discount:0, total:649, valid:false, label:`${width}/invalid` })
+              await assertRuntime(s, `${width}/invalid`)
+            } finally { await s.context.close() }
+
+            s = await seeded(browser, width, [clone(P.standard)])
+            try {
+              await goDelivery(s.page)
+              await apply(s.page, '', false)
+              await assertFinancial(s.page, width, { subtotal:649, discount:0, total:649, valid:false, label:`${width}/empty` })
+              await assertRuntime(s, `${width}/empty`)
+            } finally { await s.context.close() }
+
+            s = await seeded(browser, width, [clone(P.standard)])
+            try {
+              await goDelivery(s.page)
+              assert(await s.page.getByRole('button', { name:/Have an offer code\?/i }).isVisible(), `${width}/no-code: promo not optional/collapsed`)
+              assert.strictEqual(await s.page.getByLabel('Offer code').count(), 0, `${width}/no-code: promo input unexpectedly open`)
+              await assertFinancial(s.page, width, { subtotal:649, discount:0, total:649, valid:false, label:`${width}/no-code` })
+              const body = await s.page.locator('body').innerText()
+              assertHas(body, 'Cash', `${width}/no-code/cash`)
+              assertHas(body, 'Bank transfer', `${width}/no-code/bank`)
+              await assertRuntime(s, `${width}/no-code`)
+            } finally { await s.context.close() }
+          }
+
+          async function removeCartItem(page, title) {
+            await page.getByRole('button', { name:`Remove ${title} from your cart` }).click()
+            await sleep(470)
+          }
+
+          async function basketRecalc(browser) {
+            const s = await seeded(browser, 390, [clone(P.electric), clone(P.standard), clone(P.verona)])
+            try {
+              await goDelivery(s.page)
+              await apply(s.page, 'SOFAEXTRA')
+              await assertFinancial(s.page, 390, { subtotal:1997, discount:50, total:1947, label:'recalc/initial' })
+
+              await goCart(s.page)
+              await removeCartItem(s.page, P.electric.title)
+              await removeCartItem(s.page, P.verona.title)
+              await goDelivery(s.page)
+              const immediateStandard = await mobileTotalText(s.page)
+              assert(!immediateStandard.includes('£948.00'), 'recalc: stale £50 lowered Standard+Verona/Standard state')
+              await s.page.waitForFunction(() => (document.body.textContent || '').includes('−£20.00'), null, { timeout:15000 })
+              await assertFinancial(s.page, 390, { subtotal:649, discount:20, total:629, label:'recalc/standard-only' })
+
+              await goCart(s.page)
+              const veronaUndo = s.page.locator('[data-ground="dark"]').filter({ hasText:`Removed ${P.verona.title}` }).getByRole('button', { name:'Undo' })
+              await veronaUndo.waitFor({ state:'visible', timeout:3000 })
+              await veronaUndo.click()
+              await removeCartItem(s.page, P.standard.title)
+              await goDelivery(s.page)
+              const immediateVerona = await mobileTotalText(s.page)
+              assert(!immediateVerona.includes('£299.00') && !immediateVerona.includes('£329.00'), 'recalc: stale eligible discount lowered Verona')
+              await s.page.waitForFunction(() => (document.body.textContent || '').includes('No extra cash discount applies to this basket.'), null, { timeout:15000 })
+              await assertFinancial(s.page, 390, { subtotal:349, discount:0, total:349, valid:true, zero:true, label:'recalc/verona-only' })
+
+              await goCart(s.page)
+              const electricUndo = s.page.locator('[data-ground="dark"]').filter({ hasText:`Removed ${P.electric.title}` }).getByRole('button', { name:'Undo' })
+              await electricUndo.waitFor({ state:'visible', timeout:3000 })
+              await electricUndo.click()
+              await goDelivery(s.page)
+              const immediateElectric = await mobileTotalText(s.page)
+              assert(immediateElectric.includes('£1348.00') || immediateElectric.includes('£1298.00'), `recalc: Electric re-add fail-closed/final total unexpected: ${immediateElectric}`)
+              await s.page.waitForFunction(() => (document.body.textContent || '').includes('−£50.00'), null, { timeout:15000 })
+              await assertFinancial(s.page, 390, { subtotal:1348, discount:50, total:1298, label:'recalc/electric-readded' })
+              await assertRuntime(s, 'basket-recalc')
+            } finally { await s.context.close() }
+          }
+
+          async function raceQuote(browser) {
+            const s = await seeded(browser, 390, [clone(P.electric), clone(P.standard), clone(P.verona)])
+            try {
+              await goDelivery(s.page); await apply(s.page, 'SOFAEXTRA')
+              await goCart(s.page)
+              await s.page.getByRole('button', { name:`Remove ${P.electric.title} from your cart` }).click()
+              await s.page.getByRole('button', { name:`Remove ${P.standard.title} from your cart` }).click()
+              await sleep(480)
+              const eUndo = s.page.locator('[data-ground="dark"]').filter({ hasText:`Removed ${P.electric.title}` }).getByRole('button', { name:'Undo' })
+              await eUndo.waitFor({ state:'visible', timeout:2500 })
+              await eUndo.click()
+              await goDelivery(s.page)
+              const immediate = await mobileTotalText(s.page)
+              assert(immediate.includes('£1348.00') || immediate.includes('£1298.00'), `race: stale response affected immediate current total: ${immediate}`)
+              await s.page.waitForFunction(() => (document.body.textContent || '').includes('−£50.00'), null, { timeout:15000 })
+              await assertFinancial(s.page, 390, { subtotal:1348, discount:50, total:1298, label:'race/final-current-basket' })
+              await sleep(1200)
+              await assertFinancial(s.page, 390, { subtotal:1348, discount:50, total:1298, label:'race/settled-current-basket' })
+              await assertRuntime(s, 'race')
+            } finally { await s.context.close() }
+          }
+
+          async function quantityTests(browser) {
+            let s = await seeded(browser, 390, [clone(P.electric)])
+            try {
+              await goDelivery(s.page); await apply(s.page, 'SOFAEXTRA')
+              await assertFinancial(s.page,390,{subtotal:999,discount:50,total:949,label:'qty/electric-1'})
+              await goCart(s.page)
+              await s.page.getByRole('button',{name:/One more Hannah Electric Corner/i}).click()
+              await goDelivery(s.page)
+              await s.page.waitForFunction(() => (document.body.textContent || '').includes('£1948.00'), null, {timeout:15000})
+              await assertFinancial(s.page,390,{subtotal:1998,discount:50,total:1948,label:'qty/electric-2'})
+              await goCart(s.page)
+              await s.page.getByRole('button',{name:/One fewer Hannah Electric Corner/i}).click()
+              await goDelivery(s.page)
+              await s.page.waitForFunction(() => (document.body.textContent || '').includes('£949.00'), null, {timeout:15000})
+              await assertFinancial(s.page,390,{subtotal:999,discount:50,total:949,label:'qty/electric-back-1'})
+              await assertRuntime(s,'qty/electric')
+            } finally { await s.context.close() }
+
+            for (const [name,p,discount,total] of [['standard',P.standard,20,1278],['roma',P.roma,30,670]]) {
+              const item=clone(p); item.quantity=2
+              s=await seeded(browser,390,[item])
+              try {
+                await goDelivery(s.page); await apply(s.page,'SOFAEXTRA')
+                await assertFinancial(s.page,390,{subtotal:p.price*2,discount,total,label:`qty/${name}-2`})
+                await assertRuntime(s,`qty/${name}`)
+              } finally { await s.context.close() }
+            }
+          }
+
+          async function extrasMath(browser) {
+            const s=await seeded(browser,1440,[clone(P.electric)])
+            try {
+              await goDelivery(s.page); await apply(s.page,'SOFAEXTRA')
+              await s.page.getByLabel('Assembly').check()
+              await assertFinancial(s.page,1440,{subtotal:999,discount:50,total:969,label:'extras/assembly'})
+              await s.page.getByLabel('Upstairs delivery').check()
+              await assertFinancial(s.page,1440,{subtotal:999,discount:50,total:989,label:'extras/upstairs'})
+              const lift=s.page.getByText("There's a lift",{exact:true}).locator('..').locator('input[type="checkbox"]')
+              await lift.check()
+              await assertFinancial(s.page,1440,{subtotal:999,discount:50,total:989,label:'extras/lift'})
+              await s.page.getByLabel('Old sofa removal').check()
+              await assertFinancial(s.page,1440,{subtotal:999,discount:50,total:1019,label:'extras/removal'})
+              await assertRuntime(s,'extras')
+            } finally { await s.context.close() }
+          }
+
+          async function phase2DA(browser,width) {
+            const s=await seeded(browser,width,[clone(P.electric)])
+            try {
+              await goDelivery(s.page); await apply(s.page,'SOFAEXTRA')
+              await s.page.getByLabel('Full Name').fill('QA Browser State')
+              await s.page.getByLabel('Email Address').fill('qa-browser@example.com')
+              await s.page.getByLabel('Mobile Number').fill('07700900123')
+              await s.page.locator('input.uppercase').first().fill('SW1A 1AA')
+              await s.page.getByLabel('Full Address').fill('123 QA Browser Street')
+              await s.page.getByLabel('Special Instructions').fill('Phase B persistence marker')
+              await goCart(s.page); await goDelivery(s.page)
+              assert.strictEqual(await s.page.getByLabel('Full Name').inputValue(),'QA Browser State')
+              assert.strictEqual(await s.page.getByLabel('Email Address').inputValue(),'qa-browser@example.com')
+              assert.strictEqual(await s.page.getByLabel('Mobile Number').inputValue(),'07700900123')
+              assert.strictEqual(await s.page.locator('input.uppercase').first().inputValue(),'SW1A 1AA')
+              assert.strictEqual(await s.page.getByLabel('Full Address').inputValue(),'123 QA Browser Street')
+              assert.strictEqual(await s.page.getByLabel('Special Instructions').inputValue(),'Phase B persistence marker')
+              await assertFinancial(s.page,width,{subtotal:999,discount:50,total:949,label:`2DA/${width}`})
+              await assertRuntime(s,`2DA/${width}`)
+            } finally { await s.context.close() }
+          }
+
+          async function phase2DB(browser) {
+            const s=await seeded(browser,390,[clone(P.electric),clone(P.standard),clone(customVerona)])
+            try {
+              const body=await s.page.locator('body').innerText()
+              assertHas(body,customVerona.title,'2DB/title')
+              assertHas(body,'Chenille Grey','2DB/fabric')
+              assertHas(body,'CH12','2DB/code')
+              assertHas(body,'£549','2DB/catalogue-price')
+              assert(await s.page.getByRole('button',{name:/One more Verona 4 Seater Corner/i}).isVisible(),'2DB quantity missing')
+              const remove=s.page.getByRole('button',{name:`Remove ${customVerona.title} from your cart`})
+              await remove.click(); await sleep(470)
+              const toast=s.page.locator('[data-ground="dark"]').filter({hasText:`Removed ${customVerona.title}`})
+              const undo=toast.getByRole('button',{name:'Undo'})
+              await undo.waitFor({state:'visible',timeout:3000}); await undo.click()
+              await s.page.getByText(customVerona.title,{exact:true}).waitFor()
+              await noOverflow(s.page,'2DB/cart')
+              await goDelivery(s.page); await apply(s.page,'SOFAEXTRA')
+              await assertFinancial(s.page,390,{subtotal:2197,discount:50,total:2147,label:'2DB/order-level-offer'})
+              await assertRuntime(s,'2DB')
+            } finally { await s.context.close() }
+          }
+
+          function overlaps(a,b) {
+            return !!(a&&b) && !(a.x+a.width<=b.x || b.x+b.width<=a.x || a.y+a.height<=b.y || b.y+b.height<=a.y)
+          }
+          async function fixedUi(browser,width,openPromo) {
+            const s=await seeded(browser,width,[clone(P.electric)])
+            try {
+              await goDelivery(s.page)
+              if(openPromo) await s.page.getByRole('button',{name:/Have an offer code\?/i}).click()
+              const total=s.page.locator('[data-bottom-bar]:visible').first()
+              const nav=s.page.locator('nav[aria-label="Primary"]')
+              const wa=s.page.getByRole('link',{name:'Chat with us on WhatsApp'})
+              await Promise.all([total.waitFor({state:'visible'}),nav.waitFor({state:'visible'}),wa.waitFor({state:'visible'})])
+              let [tb,nb,wb]=await Promise.all([total.boundingBox(),nav.boundingBox(),wa.boundingBox()])
+              assert(!overlaps(tb,nb),`${width}/${openPromo}: total overlaps nav`)
+              assert(!overlaps(wb,tb),`${width}/${openPromo}: WhatsApp overlaps total`)
+              assert(!overlaps(wb,nb),`${width}/${openPromo}: WhatsApp overlaps nav`)
+              if(openPromo) {
+                const input=s.page.getByLabel('Offer code'); const applyBtn=s.page.getByRole('button',{name:/^Apply$/i})
+                await input.fill('SOFAEXTRA')
+                await input.scrollIntoViewIfNeeded(); await sleep(120)
+                const [ib,ab,tb2]=await Promise.all([input.boundingBox(),applyBtn.boundingBox(),total.boundingBox()])
+                assert(ib&&ab&&tb2,'fixed UI: missing promo/control geometry')
+                assert(!overlaps(ib,tb2)&&!overlaps(ab,tb2),`${width}: promo controls covered by total bar`)
+                assert(await applyBtn.isVisible(),`${width}: Apply not reachable`)
+              }
+              const y0=await s.page.evaluate(()=>window.scrollY)
+              await s.page.evaluate(()=>window.scrollTo(0,document.documentElement.scrollHeight))
+              await sleep(150)
+              const y1=await s.page.evaluate(()=>window.scrollY)
+              assert(y1>y0,`${width}: apparent scroll trap`)
+              const cta=s.page.getByRole('button',{name:/Place Order/i})
+              await cta.scrollIntoViewIfNeeded(); await sleep(120)
+              const [cb,tb3]=await Promise.all([cta.boundingBox(),total.boundingBox()])
+              assert(cb&&tb3,'fixed UI: missing CTA geometry')
+              assert(cb.y < tb3.y,`${width}: Place Order CTA entirely behind total bar`)
+              await noOverflow(s.page,`${width}/fixed-${openPromo}`)
+              await assertRuntime(s,`${width}/fixed-${openPromo}`)
+            } finally { await s.context.close() }
+          }
+
+          async function ordinaryNoOffer(browser,width) {
+            const s=await seeded(browser,width,[clone(P.standard)])
+            try {
+              await goDelivery(s.page)
+              assert(await s.page.getByRole('button',{name:/Have an offer code\?/i}).isVisible(),'ordinary: promo not optional')
+              await assertFinancial(s.page,width,{subtotal:649,discount:0,total:649,valid:false,label:`ordinary/${width}`})
+              const body=await s.page.locator('body').innerText()
+              assertHas(body,'Nothing to pay today',`ordinary/${width}/cod`)
+              assertHas(body,'Cash',`ordinary/${width}/cash`)
+              assertHas(body,'Bank transfer',`ordinary/${width}/bank`)
+              assertHas(body,'Delivered free to UK Mainland',`ordinary/${width}/free-delivery`)
+              await assertRuntime(s,`ordinary/${width}`)
+            } finally { await s.context.close() }
+          }
+
+          ;(async()=>{
+            const browser=await chromium.launch({headless:true})
+            try {
+              const scenarios=[
+                ['electric',[P.electric],999,50,949,{code:'sofaextra',normalized:true}],
+                ['roma',[P.roma],350,30,320,{}],
+                ['standard',[P.standard],649,20,629,{}],
+                ['verona',[P.verona],349,0,349,{}],
+                ['footstool',[P.footstool],149,0,149,{}],
+                ['mixed',[P.electric,P.roma,P.standard,P.verona],2347,50,2297,{mixed:true}],
+              ]
+              for(const width of widths){
+                for(const [name,cart,sub,disc,total,opts] of scenarios) await validScenario(browser,width,name,cart,sub,disc,total,opts)
+                await invalidEmptyNoCode(browser,width)
+                console.log(`WIDTH_${width}_PASS`)
+              }
+              await basketRecalc(browser); console.log('BASKET_RECALC_PASS')
+              await raceQuote(browser); console.log('STALE_RACE_QUOTE_PASS')
+              await quantityTests(browser); console.log('QUANTITY_NON_MULTIPLICATION_PASS')
+              await extrasMath(browser); console.log('EXTRAS_MATH_PASS')
+              for(const w of [390,430,1440]) { await phase2DA(browser,w); console.log(`PHASE_2DA_${w}_PASS`) }
+              await phase2DB(browser); console.log('PHASE_2DB_PASS')
+              for(const w of [320,390,430]) { await fixedUi(browser,w,false); await fixedUi(browser,w,true); console.log(`MOBILE_FIXED_${w}_PASS`) }
+              for(const w of [320,390,430,768,1440]) await ordinaryNoOffer(browser,w)
+              console.log('ORDINARY_NO_OFFER_PASS')
+              console.log('HORIZONTAL_OVERFLOW_NONE')
+              console.log('RUNTIME_ERRORS_NONE')
+              console.log('OFFER_PHASE_B_FINAL_BROWSER_MATRIX_PASS')
+            } finally { await browser.close() }
+          })().catch(e=>{console.error(e);process.exit(1)})
+          JS
+          node /tmp/offer-phase-b-final.cjs
