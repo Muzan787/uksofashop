@@ -1,0 +1,71 @@
+name: Offer Phase C route origin probe
+
+on:
+  push:
+    branches:
+      - qa/offer-phase-c-route-origin-probe
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      CANDIDATE_SHA: 8eb47786fc772bfdb3835b1a4da6d956cc86d5f9
+      NEXT_PUBLIC_SUPABASE_URL: https://nznpeqjnoobhyxwnmsez.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_tMk28Ay_hIljhv8NQcV01Q_cI9ApS9c
+      SUPABASE_SERVICE_ROLE_KEY: qa_invalid_no_production_write
+      NEXT_PUBLIC_SITE_URL: https://localhost:3443
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 8eb47786fc772bfdb3835b1a4da6d956cc86d5f9
+          fetch-depth: 0
+      - name: Verify and build exact tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$CANDIDATE_SHA"
+          npm ci
+          npm run build
+          test "$(git rev-parse HEAD)" = "$CANDIDATE_SHA"
+      - name: Capture exact request.url through original proxy topology
+        shell: bash
+        run: |
+          set -euo pipefail
+          openssl req -x509 -newkey rsa:2048 -nodes -keyout /tmp/k.pem -out /tmp/c.pem -days 1 -subj '/CN=localhost' -addext 'subjectAltName=DNS:localhost,IP:127.0.0.1' >/dev/null 2>&1
+          cat >/tmp/url-patch.cjs <<'JS'
+          const NativeURL=globalThis.URL
+          function LoggingURL(input,base){
+            const s=String(input)
+            if(s.includes('/api/offer/qualify')) console.error('[QA_URL_CONSTRUCTOR] '+JSON.stringify({input:s,base:base===undefined?null:String(base)}))
+            return new NativeURL(input,base)
+          }
+          LoggingURL.prototype=NativeURL.prototype
+          Object.setPrototypeOf(LoggingURL,NativeURL)
+          globalThis.URL=LoggingURL
+          JS
+          cat >/tmp/next-http.cjs <<'JS'
+          const next=require('next'),http=require('http')
+          const app=next({dev:false,hostname:'127.0.0.1',port:3000})
+          app.prepare().then(()=>{const h=app.getRequestHandler();http.createServer((req,res)=>{if(req.url.startsWith('/api/offer/qualify'))console.log('[QA_NEXT_INGRESS] '+JSON.stringify({url:req.url,host:req.headers.host||null,xForwardedHost:req.headers['x-forwarded-host']||null,xForwardedProto:req.headers['x-forwarded-proto']||null,xForwardedPort:req.headers['x-forwarded-port']||null,forwarded:req.headers.forwarded||null,origin:req.headers.origin||null,referer:req.headers.referer||null,socketEncrypted:!!req.socket.encrypted,cookieNames:String(req.headers.cookie||'').split(';').map(x=>x.trim().split('=')[0]).filter(Boolean)}));h(req,res)}).listen(3000,'127.0.0.1',()=>console.log('[QA_NEXT_HTTP_READY]'))}).catch(e=>{console.error(e);process.exit(1)})
+          JS
+          cat >/tmp/proxy.cjs <<'JS'
+          const https=require('https'),http=require('http'),fs=require('fs')
+          https.createServer({key:fs.readFileSync('/tmp/k.pem'),cert:fs.readFileSync('/tmp/c.pem')},(req,res)=>{const headers={...req.headers,host:'localhost:3443','x-forwarded-host':'localhost:3443','x-forwarded-proto':'https','x-forwarded-port':'3443',forwarded:'proto=https;host="localhost:3443"'};if(req.url.startsWith('/api/offer/qualify'))console.log('[QA_PROXY_INGRESS] '+JSON.stringify({url:req.url,host:req.headers.host||null,origin:req.headers.origin||null,referer:req.headers.referer||null,socketEncrypted:!!req.socket.encrypted,upstream:'http://127.0.0.1:3000'+req.url}));const p=http.request({host:'127.0.0.1',port:3000,path:req.url,method:req.method,headers},r=>{res.writeHead(r.statusCode||500,r.headers);r.pipe(res)});p.on('error',()=>{res.writeHead(502);res.end()});req.pipe(p)}).listen(3443,'127.0.0.1',()=>console.log('[QA_PROXY_READY]'))
+          JS
+          export NODE_PATH="$PWD/node_modules"
+          NODE_OPTIONS="--require=/tmp/url-patch.cjs" node /tmp/next-http.cjs >/tmp/next.log 2>&1 & echo $! >/tmp/n.pid
+          for i in {1..30}; do curl -sf http://127.0.0.1:3000/api/offer/status >/dev/null && ok=1 && break || sleep 1; done
+          test "${ok:-0}" = 1
+          node /tmp/proxy.cjs >/tmp/proxy.log 2>&1 & echo $! >/tmp/p.pid
+          for i in {1..20}; do curl -ks https://localhost:3443/api/offer/status >/dev/null && pok=1 && break || sleep 1; done
+          test "${pok:-0}" = 1
+          status=$(curl -ks -o /tmp/body.json -w '%{http_code}' -X POST 'https://localhost:3443/api/offer/qualify' -H 'Content-Type: application/json' -H 'Origin: https://localhost:3443' -H 'Referer: https://localhost:3443/?utm_source=google&utm_medium=cpc' -H 'Cookie: uksofashop_vid=11111111-1111-4111-8111-111111111111' --data '{"landingPath":"/?utm_source=google&utm_medium=cpc"}')
+          echo "QUALIFY_STATUS=$status"
+          cat /tmp/proxy.log
+          grep -E 'QA_NEXT_INGRESS|QA_URL_CONSTRUCTOR' /tmp/next.log
+          test "$status" = 400
+          test "$(git rev-parse HEAD)" = "$CANDIDATE_SHA"
