@@ -1,0 +1,58 @@
+name: Offer Phase B recovery QA
+
+on:
+  push:
+    branches: [fix/offer-phase-b-discount-engine-release]
+    paths: [.github/workflows/offer-phase-b-recovery-qa.yml]
+
+jobs:
+  static-gates:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/offer-phase-b-discount-engine-release
+          fetch-depth: 0
+      - name: Install dependencies
+        run: npm ci
+      - name: Changed Phase B application ESLint
+        run: |
+          npx eslint \
+            src/app/account/AccountTabs.tsx \
+            src/app/account/page.tsx \
+            src/app/actions/checkout.ts \
+            src/app/actions/offer.ts \
+            src/app/admin/orders/CopyOrderButton.tsx \
+            src/app/admin/orders/DirectPrintButton.tsx \
+            src/app/admin/orders/page.tsx \
+            src/app/track-order/page.tsx \
+            src/components/Checkout/CheckoutClient.tsx \
+            src/components/Checkout/OfferCode.tsx \
+            src/types/offers.ts \
+            src/types/orders.ts \
+            src/types/supabase.ts \
+            src/utils/email.ts
+      - name: TypeScript
+        run: npx tsc --noEmit
+      - name: Production build
+        run: npm run build
+      - name: Diff check
+        run: git diff --check origin/master...HEAD
+      - name: Migration reconciliation guard
+        run: |
+          test -s supabase/migrations/20260908172136_offer_phase_b_discount_engine.sql
+          test -s supabase/migrations/20260908172251_offer_phase_b_code_null_fix.sql
+          test -s supabase/migrations/20260908173108_offer_phase_b_track_order_totals.sql
+          test "$(find supabase/migrations -maxdepth 1 -type f -name '20260908172136_*' | wc -l)" -eq 1
+          test "$(find supabase/migrations -maxdepth 1 -type f -name '20260908172251_*' | wc -l)" -eq 1
+          test "$(find supabase/migrations -maxdepth 1 -type f -name '20260908173108_*' | wc -l)" -eq 1
+      - name: Protected path guard
+        run: |
+          changed="$(git diff --name-only origin/master...HEAD)"
+          forbidden='^(src/utils/tracking\.ts|src/utils/orderConversions\.ts|src/utils/metaCapi\.ts|src/utils/ga4Server\.ts|src/utils/attribution/|src/components/UI/AttributionBoot\.tsx|src/components/Checkout/CartStep\.tsx|src/components/Product/ProductPageClient\.tsx|supabase/migrations/20260907172933_atomic_confirm_order_timestamp\.sql)'
+          if printf '%s\n' "$changed" | grep -E "$forbidden"; then
+            echo 'Protected path changed in recovery delta' >&2
+            exit 1
+          fi
+          printf '%s\n' "$changed"
