@@ -7,11 +7,10 @@ import { ChevronUp } from 'lucide-react';
 interface Props {
   total: number;
   itemCount: number;
+  quoteRequired?: boolean;
   /** The summary itself, rendered inside the drawer when it is open. */
   children: React.ReactNode;
 }
-
-/** Height of the site's bottom navigation, which this sits above. */
 
 /**
  * The total, pinned, with the summary folded into it.
@@ -22,7 +21,7 @@ interface Props {
  * screen. This is the number, always visible, with the rest one tap away and
  * rising over it rather than pushing anything.
  */
-export default function MobileTotalBar({ total, itemCount, children }: Props) {
+export default function MobileTotalBar({ total, itemCount, quoteRequired = false, children }: Props) {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -76,15 +75,17 @@ export default function MobileTotalBar({ total, itemCount, children }: Props) {
           className="flex h-14 w-full items-center gap-3 border-t border-calico-300 px-4 text-left"
         >
           <span className="flex min-w-0 flex-1 flex-col">
-            <span className="font-data text-caption tabular-nums text-ink-500">
-              {itemCount} {itemCount === 1 ? 'item' : 'items'} · due on delivery
+            <span className="truncate font-data text-caption tabular-nums text-ink-500">
+              {quoteRequired
+                ? 'Current online subtotal · delivery quote needed'
+                : `${itemCount} ${itemCount === 1 ? 'item' : 'items'} · due on delivery`}
             </span>
             <span className="font-data text-body font-semibold tabular-nums text-ink-900">
-              £{total.toFixed(2)}
+              £{total.toFixed(2)}{quoteRequired ? ' + delivery quote' : ''}
             </span>
           </span>
 
-          <span className="flex items-center gap-1.5 text-caption font-semibold text-ember-700">
+          <span className="flex shrink-0 items-center gap-1.5 text-caption font-semibold text-ember-700">
             {open ? 'Hide' : 'Details'}
             <ChevronUp
               aria-hidden="true"
