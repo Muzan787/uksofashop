@@ -1,0 +1,357 @@
+name: Offer Phase C DB gates v2
+
+on:
+  push:
+    branches:
+      - qa/offer-phase-c-gates
+
+permissions:
+  contents: read
+
+jobs:
+  db-gates:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ukss_phasec
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d ukss_phasec"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      PGPASSWORD: postgres
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGUSER: postgres
+      PGDATABASE: ukss_phasec
+      FEATURE_SHA: 8eb47786fc772bfdb3835b1a4da6d956cc86d5f9
+      MASTER_SHA: c0a1ce2a2621aba5b3ea635452e720ea095d2ebd
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.FEATURE_SHA }}
+          fetch-depth: 0
+
+      - name: Verify exact candidate
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$FEATURE_SHA"
+          git fetch origin master
+          test "$(git rev-parse origin/master)" = "$MASTER_SHA"
+
+      - name: Build production-shaped Phase B fixture
+        run: |
+          set -euo pipefail
+          psql -v ON_ERROR_STOP=1 <<'SQL'
+          create extension if not exists pgcrypto;
+          do $$ begin create role anon noinherit; exception when duplicate_object then null; end $$;
+          do $$ begin create role authenticated noinherit; exception when duplicate_object then null; end $$;
+          do $$ begin create role service_role noinherit bypassrls; exception when duplicate_object then null; end $$;
+
+          create table public.products (
+            id uuid primary key,
+            base_price numeric(10,2) not null default 500,
+            is_active boolean not null default true,
+            custom_made boolean not null default false
+          );
+          create table public.product_variants (
+            id uuid primary key,
+            product_id uuid not null references public.products(id) on delete cascade,
+            price_adjustment numeric(10,2) default 0
+          );
+          create table public.fabric_collections (
+            id uuid primary key default gen_random_uuid(),
+            name text not null
+          );
+          create table public.fabrics (
+            id uuid primary key default gen_random_uuid(),
+            collection_id uuid references public.fabric_collections(id),
+            code text,
+            name text,
+            is_active boolean not null default true
+          );
+          create table public.orders (
+            id uuid primary key default gen_random_uuid(),
+            customer_name text not null,
+            customer_email text,
+            customer_phone text not null,
+            shipping_address text not null,
+            special_instructions text,
+            status text,
+            items_subtotal numeric(10,2) not null default 0,
+            delivery_floor integer not null default 0,
+            delivery_has_lift boolean not null default false,
+            fee_upstairs numeric(10,2) not null default 0,
+            wants_assembly boolean not null default false,
+            fee_assembly numeric(10,2) not null default 0,
+            wants_sofa_removal boolean not null default false,
+            fee_sofa_removal numeric(10,2) not null default 0,
+            delivery_total numeric(10,2) not null default 0,
+            total_amount numeric(10,2) not null default 0,
+            has_made_to_order boolean not null default false
+          );
+          create table public.order_items (
+            id uuid primary key default gen_random_uuid(),
+            order_id uuid not null references public.orders(id) on delete cascade,
+            variant_id uuid not null references public.product_variants(id),
+            quantity integer not null,
+            price_at_time_of_purchase numeric(10,2) not null,
+            fabric_id uuid references public.fabrics(id),
+            fabric_code text,
+            fabric_name text,
+            fabric_collection text
+          );
+          SQL
+
+          python <<'PY'
+          from pathlib import Path
+          import re
+          text=Path('supabase/migrations/20260908172136_offer_phase_b_discount_engine.sql').read_text()
+          rows=re.findall(r"\('([0-9a-f-]{36})'::uuid, '(ELECTRIC|ROMA|STANDARD|EXCLUDED)'\)", text)
+          assert len(rows)==38, len(rows)
+          prices={
+            'b949d45a-2df6-4f4d-a92a-0e6ade9c67a0':999,
+            'e4382057-b9b0-4e12-a5c6-aff607973e16':350,
+            '2360afa3-9817-4bc8-96ef-9e5e688cdf0b':649,
+            'a0bc19fc-a578-402c-9c39-ab8ed4dd7bf6':529,
+            'cd3a3b61-e91c-4ffb-8ff0-6a4202d84fa7':149,
+          }
+          Path('/tmp/seed.sql').write_text('\n'.join(
+            f"insert into public.products(id,base_price,is_active,custom_made) values ('{pid}'::uuid,{prices.get(pid,500)},true,false);"
+            for pid,_ in rows
+          )+'\n')
+          PY
+          psql -v ON_ERROR_STOP=1 -f /tmp/seed.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/20260908172136_offer_phase_b_discount_engine.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/20260908172251_offer_phase_b_code_null_fix.sql
+
+          psql -v ON_ERROR_STOP=1 <<'SQL'
+          insert into public.product_variants(id,product_id,price_adjustment) values
+            ('11111111-1111-4111-8111-111111111111','b949d45a-2df6-4f4d-a92a-0e6ade9c67a0',0),
+            ('22222222-2222-4222-8222-222222222222','e4382057-b9b0-4e12-a5c6-aff607973e16',0),
+            ('33333333-3333-4333-8333-333333333333','2360afa3-9817-4bc8-96ef-9e5e688cdf0b',0),
+            ('44444444-4444-4444-8444-444444444444','a0bc19fc-a578-402c-9c39-ab8ed4dd7bf6',0),
+            ('55555555-5555-4555-8555-555555555555','cd3a3b61-e91c-4ffb-8ff0-6a4202d84fa7',0);
+
+          -- Mirror the production service-role catalogue read posture verified
+          -- immediately before this harness was created. Phase B's invoker
+          -- calculator already depends on these SELECT privileges in production.
+          grant select on public.products, public.product_variants,
+            public.fabric_collections, public.fabrics, public.orders,
+            public.order_items to service_role;
+          SQL
+          echo PHASE_B_FIXTURE=PASS
+
+      - name: Replay exact Phase C migration and inspect authority
+        run: |
+          set -euo pipefail
+          sha256sum supabase/migrations/20260909060000_offer_phase_c_paid_entitlements.sql | tee /tmp/phasec-migration.sha256
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/20260909060000_offer_phase_c_paid_entitlements.sql
+          psql -v ON_ERROR_STOP=1 <<'SQL'
+          do $$
+          declare cols text[]; pii int; policies int;
+          begin
+            select array_agg(column_name order by ordinal_position) into cols
+            from information_schema.columns
+            where table_schema='public' and table_name='offer_entitlements';
+            if cols is distinct from array['id','token','visitor_id','source','qualifying_arrival_id','started_at','expires_at','revoked_at','created_at','updated_at']::text[]
+              then raise exception 'column mismatch %',cols; end if;
+            select count(*) into pii from information_schema.columns
+              where table_schema='public' and table_name='offer_entitlements'
+                and column_name ~* '(name|email|phone|address)';
+            if pii<>0 then raise exception 'PII columns'; end if;
+            if not (select relrowsecurity from pg_class where oid='public.offer_entitlements'::regclass)
+              then raise exception 'RLS disabled'; end if;
+            select count(*) into policies from pg_policies where schemaname='public' and tablename='offer_entitlements';
+            if policies<>0 then raise exception 'unexpected policies %',policies; end if;
+            if not exists(select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+              where n.nspname='public' and p.proname='issue_paid_offer_entitlement' and p.prosecdef
+                and p.proconfig @> array['search_path=public']::text[]) then raise exception 'issuer mode'; end if;
+            if not exists(select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+              where n.nspname='public' and p.proname='calculate_order_offer' and not p.prosecdef
+                and p.provolatile='s' and p.proconfig @> array['search_path=public']::text[]) then raise exception 'calculator mode'; end if;
+          end $$;
+
+          do $$ begin
+            if has_table_privilege('anon','public.offer_entitlements','SELECT,INSERT,UPDATE,DELETE')
+               or has_table_privilege('authenticated','public.offer_entitlements','SELECT,INSERT,UPDATE,DELETE')
+              then raise exception 'client table privilege'; end if;
+            if not has_table_privilege('service_role','public.offer_entitlements','SELECT,INSERT,UPDATE,DELETE')
+              then raise exception 'service table privilege'; end if;
+            if has_function_privilege('anon','public.issue_paid_offer_entitlement(uuid,text,uuid)','EXECUTE')
+               or has_function_privilege('authenticated','public.issue_paid_offer_entitlement(uuid,text,uuid)','EXECUTE')
+              then raise exception 'client issuer execute'; end if;
+            if has_function_privilege('anon','public.calculate_order_offer(jsonb,text,uuid)','EXECUTE')
+               or has_function_privilege('authenticated','public.calculate_order_offer(jsonb,text,uuid)','EXECUTE')
+              then raise exception 'client calculator execute'; end if;
+            if not has_function_privilege('service_role','public.issue_paid_offer_entitlement(uuid,text,uuid)','EXECUTE')
+               or not has_function_privilege('service_role','public.calculate_order_offer(jsonb,text,uuid)','EXECUTE')
+              then raise exception 'service function privilege'; end if;
+            if not has_function_privilege('anon','public.place_order(text,text,text,text,text,jsonb,numeric,integer,boolean,boolean,boolean,text,uuid)','EXECUTE')
+              then raise exception 'anon place_order boundary regressed'; end if;
+          end $$;
+          SQL
+          echo ISOLATED_MIGRATION_REPLAY=PASS
+          echo SECURITY_RLS_ACL_DEFINITION=PASS
+
+      - name: Entitlement lifetime and calculator matrix
+        run: |
+          set -euo pipefail
+          visitor=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa
+          first=$(psql -X -qAt -v ON_ERROR_STOP=1 -c "set role service_role; select public.issue_paid_offer_entitlement('$visitor'::uuid,'meta_ads','aaaaaaaa-bbbb-4aaa-8aaa-aaaaaaaaaaaa'::uuid);" | tail -n1)
+          token1=$(jq -r .token <<<"$first")
+          start1=$(jq -r .started_at <<<"$first")
+          exp1=$(jq -r .expires_at <<<"$first")
+          sleep 1
+          second=$(psql -X -qAt -v ON_ERROR_STOP=1 -c "set role service_role; select public.issue_paid_offer_entitlement('$visitor'::uuid,'google_ads','aaaaaaaa-cccc-4aaa-8aaa-aaaaaaaaaaaa'::uuid);" | tail -n1)
+          token2=$(jq -r .token <<<"$second")
+          start2=$(jq -r .started_at <<<"$second")
+          exp2=$(jq -r .expires_at <<<"$second")
+          test "$token1" = "$token2"
+          test "$start1" = "$start2"
+          python - "$exp1" "$exp2" <<'PY'
+          import sys,datetime
+          a=datetime.datetime.fromisoformat(sys.argv[1].replace(' ','T'))
+          b=datetime.datetime.fromisoformat(sys.argv[2].replace(' ','T'))
+          assert b>a
+          PY
+          before=$(psql -X -qAt -c "select expires_at from public.offer_entitlements where token='$token2'::uuid")
+          sleep 1
+          psql -X -qAt -c "select source,started_at,expires_at from public.offer_entitlements where token='$token2'::uuid" >/dev/null
+          after=$(psql -X -qAt -c "select expires_at from public.offer_entitlements where token='$token2'::uuid")
+          test "$before" = "$after"
+          echo ENTITLEMENT_REFRESH_SAME_TOKEN=PASS
+          echo STATUS_NO_EXTENSION=PASS
+
+          quote() {
+            local items="$1" code="$2" tok="$3"
+            psql -X -qAt -v ON_ERROR_STOP=1 -c "set role service_role; select public.calculate_order_offer('$items'::jsonb,$code,$tok);" | tail -n1
+          }
+          assertq() {
+            local label="$1" json="$2" amount="$3" tier="$4" source="$5" cv="$6" ev="$7"
+            jq -e --argjson a "$amount" --arg t "$tier" --arg s "$source" --argjson cv "$cv" --argjson ev "$ev" '
+              (.discount_amount|tonumber)==$a and ((.discount_tier//"")==$t) and ((.offer_source//"")==$s) and .code_valid==$cv and .entitlement_valid==$ev
+            ' <<<"$json" >/dev/null || { echo "$label failed: $json"; exit 1; }
+            echo "$label=PASS"
+          }
+          E='[{"variant_id":"11111111-1111-4111-8111-111111111111","quantity":1}]'
+          E2='[{"variant_id":"11111111-1111-4111-8111-111111111111","quantity":2}]'
+          R='[{"variant_id":"22222222-2222-4222-8222-222222222222","quantity":1}]'
+          S='[{"variant_id":"33333333-3333-4333-8333-333333333333","quantity":1}]'
+          V='[{"variant_id":"44444444-4444-4444-8444-444444444444","quantity":1}]'
+          F='[{"variant_id":"55555555-5555-4555-8555-555555555555","quantity":1}]'
+          MIX='[{"variant_id":"22222222-2222-4222-8222-222222222222","quantity":1},{"variant_id":"33333333-3333-4333-8333-333333333333","quantity":1},{"variant_id":"11111111-1111-4111-8111-111111111111","quantity":1}]'
+          assertq AUTO_ELECTRIC "$(quote "$E" NULL "'$token2'::uuid")" 50 ELECTRIC paid_entitlement false true
+          assertq ELECTRIC_QTY2_ONCE "$(quote "$E2" NULL "'$token2'::uuid")" 50 ELECTRIC paid_entitlement false true
+          assertq AUTO_ROMA "$(quote "$R" NULL "'$token2'::uuid")" 30 ROMA paid_entitlement false true
+          assertq AUTO_STANDARD "$(quote "$S" NULL "'$token2'::uuid")" 20 STANDARD paid_entitlement false true
+          assertq AUTO_VERONA "$(quote "$V" NULL "'$token2'::uuid")" 0 EXCLUDED paid_entitlement false true
+          assertq AUTO_FOOTSTOOL "$(quote "$F" NULL "'$token2'::uuid")" 0 EXCLUDED paid_entitlement false true
+          assertq MIXED_HIGHEST_ONCE "$(quote "$MIX" NULL "'$token2'::uuid")" 50 ELECTRIC paid_entitlement false true
+          assertq TOKEN_VALID_CODE "$(quote "$E" "'SOFAEXTRA'" "'$token2'::uuid")" 50 ELECTRIC manual_code true true
+          assertq TOKEN_INVALID_CODE "$(quote "$E" "'WRONG'" "'$token2'::uuid")" 50 ELECTRIC paid_entitlement false true
+          assertq MANUAL_ONLY "$(quote "$E" "'SOFAEXTRA'" NULL)" 50 ELECTRIC manual_code true false
+          assertq NO_AUTHORITY "$(quote "$E" NULL NULL)" 0 '' '' false false
+          assertq INVALID_TOKEN "$(quote "$E" NULL "'99999999-9999-4999-8999-999999999999'::uuid")" 0 '' '' false false
+
+          psql -v ON_ERROR_STOP=1 -c "update public.offer_entitlements set started_at=now()-interval '8 days', expires_at=now()-interval '1 second' where token='$token2'::uuid" >/dev/null
+          assertq EXPIRED_TOKEN "$(quote "$E" NULL "'$token2'::uuid")" 0 '' '' false false
+          sleep 1
+          fresh=$(psql -X -qAt -v ON_ERROR_STOP=1 -c "set role service_role; select public.issue_paid_offer_entitlement('$visitor'::uuid,'meta_ads',null);" | tail -n1)
+          token3=$(jq -r .token <<<"$fresh")
+          test "$token3" != "$token2"
+          assertq NEW_CLICK_AFTER_EXPIRY "$(quote "$E" NULL "'$token3'::uuid")" 50 ELECTRIC paid_entitlement false true
+          echo "$token3" >/tmp/active-token
+
+          victim=bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb
+          deleted=$(psql -X -qAt -v ON_ERROR_STOP=1 -c "set role service_role; select public.issue_paid_offer_entitlement('$victim'::uuid,'google_ads',null);" | tail -n1)
+          deleted_token=$(jq -r .token <<<"$deleted")
+          psql -v ON_ERROR_STOP=1 -c "delete from public.offer_entitlements where token='$deleted_token'::uuid" >/dev/null
+          assertq DELETED_TOKEN "$(quote "$E" NULL "'$deleted_token'::uuid")" 0 '' '' false false
+          echo CALCULATOR_MATRIX=PASS
+          echo TOKEN_MANUAL_PRECEDENCE=PASS
+          echo EXPIRY_FAIL_CLOSED=PASS
+
+      - name: ACL rejection and expiry between quote/order
+        run: |
+          set -euo pipefail
+          expect_fail() {
+            local label="$1" sql="$2"
+            if psql -X -q -v ON_ERROR_STOP=1 -c "$sql" >/tmp/fail.out 2>/tmp/fail.err; then
+              echo "$label unexpectedly succeeded"; cat /tmp/fail.out /tmp/fail.err; exit 1
+            fi
+            echo "$label=PASS"
+          }
+          expect_fail ANON_DIRECT_INSERT "set role anon; insert into public.offer_entitlements(visitor_id,source,expires_at) values(gen_random_uuid(),'google_ads',now()+interval '7 days');"
+          expect_fail AUTH_DIRECT_INSERT "set role authenticated; insert into public.offer_entitlements(visitor_id,source,expires_at) values(gen_random_uuid(),'google_ads',now()+interval '7 days');"
+          expect_fail ANON_DIRECT_UPDATE "set role anon; update public.offer_entitlements set expires_at=now()+interval '100 days';"
+          expect_fail ANON_TOKEN_MINT "set role anon; select public.issue_paid_offer_entitlement(gen_random_uuid(),'google_ads',null);"
+          expect_fail ANON_CALCULATOR "set role anon; select public.calculate_order_offer('[{\"variant_id\":\"11111111-1111-4111-8111-111111111111\",\"quantity\":1}]'::jsonb,null,null);"
+
+          token=$(cat /tmp/active-token)
+          items='[{"variant_id":"11111111-1111-4111-8111-111111111111","quantity":1}]'
+          auto=$(psql -X -qAt -v ON_ERROR_STOP=1 -c "set role anon; select public.place_order('QA','qa@example.invalid','07000000000','QA address',null,'$items'::jsonb,949,0,false,false,false,null,'$token'::uuid);" | tail -n1)
+          jq -e '.discount_amount==50 and .offer_source=="paid_entitlement" and .promotion_code==null and .total_amount==949' <<<"$auto" >/dev/null
+          auto_id=$(jq -r .id <<<"$auto")
+          psql -v ON_ERROR_STOP=1 -c "update public.offer_entitlements set started_at=now()-interval '8 days', expires_at=now()-interval '1 second' where token='$token'::uuid" >/dev/null
+          expect_fail EXPIRED_BETWEEN_QUOTE_ORDER "set role anon; select public.place_order('QA','qa2@example.invalid','07000000001','QA address',null,'$items'::jsonb,949,0,false,false,false,null,'$token'::uuid);"
+          manual=$(psql -X -qAt -v ON_ERROR_STOP=1 -c "set role anon; select public.place_order('QA','qa3@example.invalid','07000000002','QA address',null,'$items'::jsonb,949,0,false,false,false,'SOFAEXTRA','$token'::uuid);" | tail -n1)
+          jq -e '.discount_amount==50 and .offer_source=="manual_code" and .promotion_code=="SOFAEXTRA" and .total_amount==949' <<<"$manual" >/dev/null
+          manual_id=$(jq -r .id <<<"$manual")
+          psql -v ON_ERROR_STOP=1 -c "delete from public.orders where id in ('$auto_id'::uuid,'$manual_id'::uuid)" >/dev/null
+          echo SECURITY_RLS_ACL=PASS
+          echo EXPIRY_BETWEEN_QUOTE_ORDER=PASS
+          echo EXPIRED_TOKEN_PLUS_MANUAL_CODE=PASS
+
+      - name: Token randomness and source leakage checks
+        run: |
+          set -euo pipefail
+          psql -X -qAt -c "select pg_get_functiondef('public.issue_paid_offer_entitlement(uuid,text,uuid)'::regprocedure)" >/tmp/issuer.txt
+          grep -q 'gen_random_uuid()' /tmp/issuer.txt
+          grep -q 'SECURITY DEFINER' /tmp/issuer.txt
+          grep -q "SET search_path TO 'public'" /tmp/issuer.txt
+          ! grep -Eq '(md5|sha1|visitor_id *\|\||timestamp.*token)' /tmp/issuer.txt
+          grep -q 'httpOnly: true' src/app/api/offer/qualify/route.ts
+          grep -q "sameSite: 'lax'" src/app/api/offer/qualify/route.ts
+          grep -q 'maxAge: OFFER_ENTITLEMENT_MAX_AGE_S' src/app/api/offer/qualify/route.ts
+          grep -q 'OFFER_ENTITLEMENT_MAX_AGE_S = 7 \* 24 \* 60 \* 60' src/utils/offers/constants.ts
+          ! grep -R --line-number -E 'token[[:space:]]*:' src/components/Offer src/types/offerEntitlement.ts
+          ! grep -R --line-number 'uksofashop_offer' src/components/Offer
+          ! grep -R --line-number -E 'localStorage.*(token|uksofashop_offer)|sessionStorage.*(token|uksofashop_offer)' src/components/Offer src/app/api/offer
+          echo TOKEN_RANDOMNESS=PASS
+          echo PUBLIC_TOKEN_LEAKAGE_SOURCE=PASS
+
+      - name: Summary
+        run: |
+          cat <<EOF | tee /tmp/phasec-db-gates-v2.txt
+          FEATURE_SHA=$FEATURE_SHA
+          MASTER_SHA=$MASTER_SHA
+          MIGRATION_SHA256=$(cut -d' ' -f1 /tmp/phasec-migration.sha256)
+          PHASE_B_FIXTURE=PASS
+          ISOLATED_MIGRATION_REPLAY=PASS
+          SECURITY_RLS_ACL_DEFINITION=PASS
+          ENTITLEMENT_REFRESH_SAME_TOKEN=PASS
+          STATUS_NO_EXTENSION=PASS
+          CALCULATOR_MATRIX=PASS
+          TOKEN_MANUAL_PRECEDENCE=PASS
+          EXPIRY_FAIL_CLOSED=PASS
+          NEW_CLICK_AFTER_EXPIRY=PASS
+          SECURITY_RLS_ACL=PASS
+          EXPIRY_BETWEEN_QUOTE_ORDER=PASS
+          EXPIRED_TOKEN_PLUS_MANUAL_CODE=PASS
+          TOKEN_RANDOMNESS=PASS
+          PUBLIC_TOKEN_LEAKAGE_SOURCE=PASS
+          EOF
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: offer-phase-c-db-gates-v2
+          path: |
+            /tmp/phasec-db-gates-v2.txt
+            /tmp/phasec-migration.sha256
