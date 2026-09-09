@@ -109,9 +109,9 @@ export function floorName(floor: number): string {
 }
 
 /**
- * Where we deliver. Northern Ireland, the Isle of Man and the Scottish Islands
- * aren't refused - we just don't quote for them automatically, so those
- * customers are asked to get in touch rather than ordering online.
+ * Where the standard checkout applies. Non-mainland addresses are not refused:
+ * they move to a custom quote so the team can confirm both availability and the
+ * delivery charge before taking the order.
  */
 export const DELIVERY_AREA_NOTE =
-  'We deliver free across UK Mainland. For Northern Ireland, the Isle of Man and the Scottish Islands, please contact us before ordering so we can arrange delivery for you.'
+  'FREE delivery applies to UK Mainland. Northern Ireland, the Isle of Man, Channel Islands, Scottish islands, Isle of Wight, Isles of Scilly and other non-mainland destinations need a custom delivery quote first.'
