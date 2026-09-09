@@ -1,0 +1,222 @@
+name: Offer Phase B presentation QA
+
+on:
+  push:
+    branches: [fix/offer-phase-b-discount-engine-release]
+    paths: [.github/workflows/offer-phase-b-presentation-qa.yml]
+
+jobs:
+  presentation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 3200b9cdd63600bc496bdc1958ed12ce13e8ace0
+          fetch-depth: 0
+      - name: Verify exact clean candidate and install dependencies
+        run: |
+          test "$(git rev-parse HEAD)" = "3200b9cdd63600bc496bdc1958ed12ce13e8ace0"
+          npm ci
+      - name: Render exact email module with a networkless mocked transporter
+        run: |
+          cat > email-render-qa.cjs <<'JS'
+          const fs = require('fs')
+          const path = require('path')
+          const ts = require('typescript')
+          const Module = require('module')
+          const assert = require('assert')
+
+          const captured = []
+          const originalLoad = Module._load
+          Module._load = function(request, parent, isMain) {
+            if (request === 'nodemailer') {
+              return { __esModule: true, default: { createTransport: () => ({ sendMail: async opts => { captured.push(opts); return { messageId: 'qa' } } }) } }
+            }
+            if (request === '@/utils/phone') return { whatsAppLink: () => null }
+            if (request === '@/constants/contact') return { PHONE_DISPLAY: '01234 567890' }
+            return originalLoad.call(this, request, parent, isMain)
+          }
+
+          process.env.EMAIL_USER = 'qa@example.com'
+          process.env.EMAIL_APP_PASSWORD = 'not-used'
+          process.env.ADMIN_EMAIL = 'admin@example.com'
+          process.env.NEXT_PUBLIC_SITE_URL = 'https://www.uksofashop.co.uk'
+
+          const src = fs.readFileSync('src/utils/email.ts', 'utf8')
+          const out = ts.transpileModule(src, { compilerOptions: {
+            module: ts.ModuleKind.CommonJS,
+            target: ts.ScriptTarget.ES2020,
+            esModuleInterop: true,
+            jsx: ts.JsxEmit.ReactJSX,
+          }}).outputText
+          fs.writeFileSync('/tmp/email-render-qa.cjs', out)
+          const email = require('/tmp/email-render-qa.cjs')
+
+          const breakdown = { lines: [], total: 0 }
+          async function main() {
+            await email.sendOrderConfirmation('c1@example.com','QA Discount','AAAABBBB','00000000-0000-4000-8000-000000000001',949,999,breakdown,50,'SOFAEXTRA')
+            await email.sendOrderConfirmation('c2@example.com','QA Zero','CCCCDDDD','00000000-0000-4000-8000-000000000002',349,349,breakdown,0,'SOFAEXTRA')
+            await email.sendOrderConfirmation('c3@example.com','QA None','EEEEFFFF','00000000-0000-4000-8000-000000000003',649,649,breakdown,0,null)
+            await email.sendAdminOrderNotification('QA Discount','c1@example.com','07700900123','AAAABBBB','00000000-0000-4000-8000-000000000001',949,999,breakdown,50,'SOFAEXTRA')
+            await email.sendAdminOrderNotification('QA Zero','c2@example.com','07700900123','CCCCDDDD','00000000-0000-4000-8000-000000000002',349,349,breakdown,0,'SOFAEXTRA')
+            await email.sendAdminOrderNotification('QA None','c3@example.com','07700900123','EEEEFFFF','00000000-0000-4000-8000-000000000003',649,649,breakdown,0,null)
+            assert.strictEqual(captured.length, 6)
+            for (const i of [0,3]) {
+              const h = captured[i].html
+              assert(h.includes('Offer · SOFAEXTRA'))
+              assert(h.includes('−£50.00'))
+              assert(h.includes('£949.00'))
+              assert(h.includes('Delivery (UK Mainland, ground floor)'))
+              assert(h.includes('FREE'))
+            }
+            for (const i of [1,2,4,5]) {
+              const h = captured[i].html
+              assert(!h.includes('−£0.00'))
+              assert(!h.includes('Offer · SOFAEXTRA'))
+            }
+            assert(captured[1].html.includes('£349.00'))
+            assert(captured[2].html.includes('£649.00'))
+            console.log('EMAIL_PRESENTATION_MATRIX_PASS')
+          }
+          main().catch(e => { console.error(e); process.exit(1) })
+          JS
+          node email-render-qa.cjs
+      - name: Static admin-detail financial semantics guard
+        run: |
+          grep -F 'order.promotion_code' src/app/admin/orders/page.tsx
+          grep -F 'order.offer_source' src/app/admin/orders/page.tsx
+          grep -F 'order.discount_tier' src/app/admin/orders/page.tsx
+          grep -F 'order.discount_amount' src/app/admin/orders/page.tsx
+          grep -F 'order.items_subtotal' src/app/admin/orders/page.tsx
+          grep -F 'order.delivery_total' src/app/admin/orders/page.tsx
+          grep -F 'order.total_amount' src/app/admin/orders/page.tsx
+          grep -F '{ORGANISATION_NAME} &nbsp;&bull;&nbsp; {ADDRESS_LINE} &nbsp;&bull;&nbsp; {PHONE_DISPLAY}' src/app/admin/orders/DirectPrintButton.tsx
+          grep -F "Date unavailable" src/app/admin/orders/DirectPrintButton.tsx
+          grep -F "Date unavailable" src/app/admin/orders/CopyOrderButton.tsx
+          echo ADMIN_SOURCE_FINANCIAL_GUARD_PASS
+      - name: Build temporary fixture-only presentation route without changing release tree
+        run: |
+          python <<'PY'
+          from pathlib import Path
+          p=Path('src/app/track-order/page.tsx')
+          s=p.read_text()
+          old='function Result({ order }: { order: TrackedOrder }) {'
+          new='export function Result({ order }: { order: TrackedOrder }) {'
+          if s.count(old) != 1: raise SystemExit('track Result export anchor mismatch')
+          p.write_text(s.replace(old,new,1))
+          PY
+          mkdir -p src/app/qa-phaseb-presentation
+          cat > src/app/qa-phaseb-presentation/page.tsx <<'TSX'
+          'use client'
+          import AccountTabs, { type AccountOrder } from '@/app/account/AccountTabs'
+          import { Result } from '@/app/track-order/page'
+          import DirectPrintButton from '@/app/admin/orders/DirectPrintButton'
+          import { formatOrderForCopy } from '@/app/admin/orders/CopyOrderButton'
+          import type { AdminOrderDisplay } from '@/types/adminOrders'
+          import type { TrackedOrder } from '@/types/orders'
+
+          const item = { title: 'Hannah Electric Corner', slug: null, color: 'Beige', image: null, quantity: 1, price: 999 }
+          const accountOrders: AccountOrder[] = [
+            { id:'11111111-1111-4111-8111-111111111111', status:'pending_cod', createdAt:'2026-09-09T00:00:00Z', total:969, itemsSubtotal:999, discountAmount:50, promotionCode:'SOFAEXTRA', offerSource:'manual_code', deliveryTotal:20, feeUpstairs:0, feeAssembly:20, feeSofaRemoval:0, items:[item] },
+            { id:'22222222-2222-4222-8222-222222222222', status:'pending_cod', createdAt:'2026-09-09T00:00:00Z', total:349, itemsSubtotal:349, discountAmount:0, promotionCode:'SOFAEXTRA', offerSource:'manual_code', deliveryTotal:0, feeUpstairs:0, feeAssembly:0, feeSofaRemoval:0, items:[{...item,title:'Verona 2 Seater Scattered Back',price:349}] },
+            { id:'33333333-3333-4333-8333-333333333333', status:'pending_cod', createdAt:'2026-09-09T00:00:00Z', total:649, itemsSubtotal:649, discountAmount:0, promotionCode:null, offerSource:null, deliveryTotal:0, feeUpstairs:0, feeAssembly:0, feeSofaRemoval:0, items:[{...item,title:'Bishop U shaped Scattered Back Sofa',price:649}] },
+          ]
+
+          function tracked(id:string,total:number,subtotal:number,discount:number,code:string|null,source:string|null): TrackedOrder {
+            return {
+              id, status:'pending_cod', created_at:'2026-09-09T00:00:00Z', total_amount:total,
+              items_subtotal:subtotal, discount_amount:discount, discount_tier:discount ? 'ELECTRIC' : (code ? 'EXCLUDED' : null),
+              promotion_code:code, offer_source:source, delivery_total: total - subtotal + discount,
+              delivery_floor:0, delivery_has_lift:false, fee_upstairs:0, fee_assembly: total - subtotal + discount, fee_sofa_removal:0,
+              order_items:[{ quantity:1, price_at_time_of_purchase:subtotal, fabric_code:null, fabric_name:null, fabric_collection:null, product_variants:{ color:'Beige', sku:'QA', products:{ title:'QA Sofa' } } }]
+            } as TrackedOrder
+          }
+          const trackDiscount=tracked('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',969,999,50,'SOFAEXTRA','manual_code')
+          const trackZero=tracked('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',349,349,0,'SOFAEXTRA','manual_code')
+          const trackNone=tracked('cccccccc-cccc-4ccc-8ccc-cccccccccccc',649,649,0,null,null)
+
+          const admin: AdminOrderDisplay = {
+            id:'dddddddd-dddd-4ddd-8ddd-dddddddddddd', created_at:null, customer_name:'QA Admin', customer_email:'qa@example.com', customer_phone:'07700900123', shipping_address:'1 QA Street, London, SW1A 1AA',
+            items_subtotal:999, discount_amount:50, discount_tier:'ELECTRIC', promotion_code:'SOFAEXTRA', offer_source:'manual_code', delivery_total:20,
+            delivery_floor:1, delivery_has_lift:true, fee_upstairs:0, fee_assembly:20, fee_sofa_removal:0, wants_assembly:true, wants_sofa_removal:false, total_amount:969,
+            order_items:[{ quantity:1, price_at_time_of_purchase:999, fabric_code:null, fabric_name:null, fabric_collection:null, product_variants:{ color:'Beige', sku:'QA-E', products:{ title:'Hannah Electric Corner' } } }]
+          }
+          const adminZero: AdminOrderDisplay = { ...admin, id:'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee', created_at:'2026-09-09T00:00:00Z', items_subtotal:349, discount_amount:0, discount_tier:'EXCLUDED', promotion_code:'SOFAEXTRA', offer_source:'manual_code', delivery_total:0, fee_assembly:0, wants_assembly:false, total_amount:349 }
+          const adminNone: AdminOrderDisplay = { ...adminZero, id:'ffffffff-ffff-4fff-8fff-ffffffffffff', items_subtotal:649, discount_tier:null, promotion_code:null, offer_source:null, total_amount:649 }
+
+          export default function Page(){ return <main className="p-6 space-y-10">
+            <section id="account-fixtures"><h1>Account fixtures</h1><AccountTabs orders={accountOrders} reviews={[]} wishlist={[]} /></section>
+            <section id="track-discount"><Result order={trackDiscount}/></section>
+            <section id="track-zero"><Result order={trackZero}/></section>
+            <section id="track-none"><Result order={trackNone}/></section>
+            <section id="admin-fixture"><h2>Admin print/copy fixture</h2><DirectPrintButton order={admin}/><pre id="copy-discount">{formatOrderForCopy(admin)}</pre><pre id="copy-zero">{formatOrderForCopy(adminZero)}</pre><pre id="copy-none">{formatOrderForCopy(adminNone)}</pre></section>
+          </main> }
+          TSX
+          git diff --check
+      - name: Install Playwright and start fixture route
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install chromium
+          NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321 \
+          NEXT_PUBLIC_SUPABASE_ANON_KEY=dummy \
+          SUPABASE_SERVICE_ROLE_KEY=dummy \
+          NEXT_PUBLIC_SITE_URL=http://127.0.0.1:3000 \
+          npm run dev > /tmp/phaseb-next.log 2>&1 &
+          echo $! > /tmp/phaseb-next.pid
+          for i in $(seq 1 40); do curl -fsS http://127.0.0.1:3000/qa-phaseb-presentation >/dev/null && exit 0; sleep 1; done
+          cat /tmp/phaseb-next.log
+          exit 1
+      - name: Browser presentation matrix
+        env:
+          NODE_PATH: ${{ github.workspace }}/node_modules
+        run: |
+          cat > presentation-browser.cjs <<'JS'
+          const { chromium } = require('playwright')
+          const assert = require('assert')
+          ;(async()=>{
+            const browser=await chromium.launch({headless:true})
+            try {
+              const page=await browser.newPage({viewport:{width:1200,height:1000}})
+              const errors=[]; page.on('pageerror',e=>errors.push(String(e)))
+              await page.goto('http://127.0.0.1:3000/qa-phaseb-presentation',{waitUntil:'networkidle',timeout:30000})
+
+              const cards=page.locator('#account-fixtures article')
+              assert.strictEqual(await cards.count(),3)
+              await cards.nth(0).locator('button').first().click()
+              let t=await cards.nth(0).innerText(); assert(t.includes('Offer · SOFAEXTRA') && t.includes('−£50.00') && t.includes('Assembly') && t.includes('£969.00'))
+              await cards.nth(1).locator('button').first().click()
+              t=await cards.nth(1).innerText(); assert(!t.includes('−£0.00') && !t.includes('Offer · SOFAEXTRA') && t.includes('£349.00'))
+              await cards.nth(2).locator('button').first().click()
+              t=await cards.nth(2).innerText(); assert(!t.includes('Offer ·') && t.includes('£649.00'))
+              console.log('CUSTOMER_ACCOUNT_PRESENTATION_PASS')
+
+              t=await page.locator('#track-discount').innerText(); assert(t.includes('Offer · SOFAEXTRA') && t.includes('−£50.00') && t.includes('Assembly') && t.includes('£969.00'))
+              t=await page.locator('#track-zero').innerText(); assert(!t.includes('−£0.00') && !t.includes('Offer · SOFAEXTRA') && t.includes('£349.00'))
+              t=await page.locator('#track-none').innerText(); assert(!t.includes('Offer ·') && t.includes('£649.00'))
+              console.log('TRACK_ORDER_UI_PRESENTATION_PASS')
+
+              const c1=await page.locator('#copy-discount').innerText(); assert(c1.includes('Offer SOFAEXTRA: −£50.00') && c1.includes('Assembly: £20.00') && c1.includes('Total: £969.00') && c1.includes('Order on Date unavailable'))
+              const c2=await page.locator('#copy-zero').innerText(); assert(!c2.includes('Offer SOFAEXTRA') && !c2.includes('−£0.00') && c2.includes('Total: £349.00'))
+              const c3=await page.locator('#copy-none').innerText(); assert(!c3.includes('Offer') && c3.includes('Total: £649.00'))
+
+              await page.locator('#admin-fixture button[title="Print Elegant PDF Receipt"]').click()
+              await page.waitForTimeout(120)
+              const iframe=page.locator('iframe').first(); await iframe.waitFor({state:'attached'})
+              const html=await iframe.evaluate(el=>el.contentDocument?.documentElement.innerHTML || '')
+              assert(html.includes('Subtotal') && html.includes('£999.00'))
+              assert(html.includes('Offer · SOFAEXTRA') && html.includes('−£50.00'))
+              assert(html.includes('Assembly') && html.includes('£20.00'))
+              assert(html.includes('Total Due') && html.includes('£969.00'))
+              assert(html.includes('Date unavailable'))
+              assert(html.includes('{ORGANISATION_NAME}') && html.includes('{ADDRESS_LINE}') && html.includes('{PHONE_DISPLAY}'))
+              assert(!html.includes('undefined'))
+              console.log('ADMIN_PRINT_COPY_PRESENTATION_PASS')
+              assert.strictEqual(errors.length,0,`presentation page errors: ${errors.join(' | ')}`)
+            } finally { await browser.close() }
+          })().catch(e=>{console.error(e);process.exit(1)})
+          JS
+          node presentation-browser.cjs
+      - name: Stop fixture server
+        if: always()
+        run: kill $(cat /tmp/phaseb-next.pid) 2>/dev/null || true
