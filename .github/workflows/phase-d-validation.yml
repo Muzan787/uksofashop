@@ -19,7 +19,7 @@ permissions:
 jobs:
   static-gates:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
         with:
@@ -48,6 +48,9 @@ jobs:
 
       - name: TypeScript
         run: npx tsc --noEmit
+
+      - name: Exact candidate production build
+        run: npm run build
 
       - name: Diff whitespace check
         run: git diff --check origin/master...HEAD
