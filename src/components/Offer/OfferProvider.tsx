@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useMemo, useState } from 'react'
+import { createContext, useCallback, useContext, useMemo, useState } from 'react'
 import {
   INACTIVE_OFFER_ENTITLEMENT,
   type PublicOfferEntitlement,
@@ -14,17 +14,19 @@ interface OfferContextValue extends PublicOfferEntitlement {
 const OfferContext = createContext<OfferContextValue | null>(null)
 
 export function OfferProvider({ children }: { children: React.ReactNode }) {
-  const [entitlement, setEntitlement] = useState<PublicOfferEntitlement>(INACTIVE_OFFER_ENTITLEMENT)
+  const [entitlement, setEntitlementState] = useState<PublicOfferEntitlement>(INACTIVE_OFFER_ENTITLEMENT)
   const [ready, setReady] = useState(false)
+
+  const setEntitlement = useCallback((state: PublicOfferEntitlement) => {
+    setEntitlementState(state)
+    setReady(true)
+  }, [])
 
   const value = useMemo<OfferContextValue>(() => ({
     ...entitlement,
     ready,
-    setEntitlement: state => {
-      setEntitlement(state)
-      setReady(true)
-    },
-  }), [entitlement, ready])
+    setEntitlement,
+  }), [entitlement, ready, setEntitlement])
 
   return <OfferContext.Provider value={value}>{children}</OfferContext.Provider>
 }
