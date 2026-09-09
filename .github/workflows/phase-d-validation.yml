@@ -1,0 +1,55 @@
+name: Offer Phase D validation
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - 'src/app/actions/checkout.ts'
+      - 'src/components/Checkout/**'
+      - 'src/components/Product/DeliveryEstimator.tsx'
+      - 'src/constants/delivery.ts'
+      - 'src/utils/postcode.ts'
+      - 'scripts/phase-d-postcode-policy.test.mjs'
+      - 'supabase/migrations/20260909110000_offer_phase_d_mainland_delivery_rpc_lock.sql'
+      - '.github/workflows/phase-d-validation.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  static-gates:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Postcode policy matrix
+        run: node --experimental-strip-types scripts/phase-d-postcode-policy.test.mjs
+
+      - name: ESLint
+        run: npm run lint
+
+      - name: TypeScript
+        run: npx tsc --noEmit
+
+      - name: Diff whitespace check
+        run: git diff --check origin/master...HEAD
+
+      - name: Protected-path diff guard
+        run: |
+          changed="$(git diff --name-only origin/master...HEAD)"
+          printf '%s\n' "$changed"
+          if printf '%s\n' "$changed" | grep -E '^(src/utils/tracking\.ts|src/utils/orderConversions\.ts|src/utils/metaCapi\.ts|src/utils/ga4Server\.ts|src/utils/attribution/|src/context/CartContext\.tsx|src/components/Checkout/CartStep\.tsx|src/components/Product/(ProductPageClient|BuyBox|Reviews)|.*confirm_order|.*offer_entitlements)'; then
+            echo 'Protected Phase B/C/tracking path changed unexpectedly.' >&2
+            exit 1
+          fi
