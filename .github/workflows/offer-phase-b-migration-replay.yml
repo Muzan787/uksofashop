@@ -1,4 +1,4 @@
-name: Offer Phase B migration replay
+name: Offer Phase B targeted migration replay
 
 on:
   push:
@@ -6,48 +6,353 @@ on:
     paths: [.github/workflows/offer-phase-b-migration-replay.yml]
 
 jobs:
-  replay:
+  targeted-replay:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      PGURL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
     steps:
       - uses: actions/checkout@v4
         with:
           ref: fix/offer-phase-b-discount-engine-release
           fetch-depth: 0
-      - name: Start local Supabase and replay repository migrations
+
+      - name: Build minimal pre-Phase-B fixture
         run: |
-          npx --yes supabase@latest start -x studio,imgproxy,edge-runtime,logflare,vector,supavisor
-          npx --yes supabase@latest db reset --local --no-seed
-      - name: Verify Phase B replay state
-        env:
-          PGURL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          python <<'PY'
+          from pathlib import Path
+          import re
+
+          migration = Path('supabase/migrations/20260908172136_offer_phase_b_discount_engine.sql').read_text()
+          ids = re.findall(r"\('([0-9a-f-]{36})'::uuid, '(?:ELECTRIC|ROMA|STANDARD|EXCLUDED)'\)", migration)
+          if len(ids) != 38 or len(set(ids)) != 38:
+              raise SystemExit(f'expected 38 unique mapped product ids, got {len(ids)} / {len(set(ids))}')
+
+          values = ',\n'.join(
+              f"('{pid}'::uuid, 'Fixture product {i+1}', 100, true, false)"
+              for i, pid in enumerate(ids)
+          )
+
+          sql = r'''
+          create extension if not exists pgcrypto;
+
+          do $$ begin create role anon nologin; exception when duplicate_object then null; end $$;
+          do $$ begin create role authenticated nologin; exception when duplicate_object then null; end $$;
+          do $$ begin create role service_role nologin; exception when duplicate_object then null; end $$;
+
+          create schema if not exists auth;
+          create or replace function auth.uid() returns uuid
+          language sql stable
+          as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
+
+          create table public.admins (
+            id uuid primary key,
+            created_at timestamptz default now()
+          );
+
+          create or replace function public.is_admin() returns boolean
+          language sql stable security definer set search_path to 'public'
+          as $$ select exists(select 1 from public.admins where id = auth.uid()) $$;
+
+          create table public.products (
+            id uuid primary key,
+            title text not null,
+            base_price numeric not null,
+            is_active boolean default true,
+            custom_made boolean default false
+          );
+
+          create table public.product_variants (
+            id uuid primary key,
+            product_id uuid not null references public.products(id),
+            price_adjustment numeric default 0,
+            color text,
+            sku text
+          );
+
+          create table public.fabric_collections (
+            id uuid primary key default gen_random_uuid(),
+            name text not null
+          );
+
+          create table public.fabrics (
+            id uuid primary key default gen_random_uuid(),
+            collection_id uuid references public.fabric_collections(id),
+            is_active boolean default true,
+            code text,
+            name text
+          );
+
+          create table public.orders (
+            id uuid primary key default gen_random_uuid(),
+            created_at timestamptz default now(),
+            customer_name text not null,
+            customer_email text,
+            customer_phone text not null,
+            shipping_address text not null,
+            special_instructions text,
+            status text default 'pending_cod',
+            source text default 'website',
+            items_subtotal numeric default 0,
+            delivery_floor integer default 0,
+            delivery_has_lift boolean default false,
+            fee_upstairs numeric default 0,
+            wants_assembly boolean default false,
+            fee_assembly numeric default 0,
+            wants_sofa_removal boolean default false,
+            fee_sofa_removal numeric default 0,
+            delivery_total numeric default 0,
+            total_amount numeric not null,
+            has_made_to_order boolean default false,
+            visitor_id text,
+            session_id text,
+            arrival_id text,
+            gclid text,
+            gbraid text,
+            wbraid text,
+            fbclid text,
+            utm_source text,
+            utm_medium text,
+            utm_campaign text,
+            utm_content text,
+            utm_term text,
+            ga_client_id text,
+            meta_fbp text,
+            meta_fbc text,
+            whatsapp_reference text
+          );
+
+          create table public.order_items (
+            id uuid primary key default gen_random_uuid(),
+            order_id uuid not null references public.orders(id) on delete cascade,
+            variant_id uuid not null references public.product_variants(id),
+            quantity integer not null,
+            price_at_time_of_purchase numeric not null,
+            fabric_id uuid references public.fabrics(id),
+            fabric_code text,
+            fabric_name text,
+            fabric_collection text
+          );
+
+          create table public.whatsapp_enquiries (
+            id uuid primary key default gen_random_uuid(),
+            reference text unique not null,
+            visitor_id text,
+            session_id text,
+            arrival_id text,
+            gclid text,
+            gbraid text,
+            wbraid text,
+            fbclid text,
+            utm_source text,
+            utm_medium text,
+            utm_campaign text,
+            utm_content text,
+            utm_term text,
+            ga_client_id text,
+            meta_fbp text,
+            meta_fbc text,
+            converted_order_id uuid,
+            converted_at timestamptz
+          );
+
+          create function public.place_order(text,text,text,text,text,jsonb,numeric,integer,boolean,boolean,boolean)
+          returns jsonb language sql as $$ select '{}'::jsonb $$;
+          ''' + f"\ninsert into public.products(id,title,base_price,is_active,custom_made) values\n{values};\n" + r'''
+          update public.products set base_price=999 where id='b949d45a-2df6-4f4d-a92a-0e6ade9c67a0';
+          update public.products set base_price=350 where id='e4382057-b9b0-4e12-a5c6-aff607973e16';
+          update public.products set base_price=649 where id='2360afa3-9817-4bc8-96ef-9e5e688cdf0b';
+          update public.products set base_price=349 where id='ff2c0e1d-2264-413c-b9c2-7d01d4c64ef2';
+          update public.products set base_price=149 where id='cd3a3b61-e91c-4ffb-8ff0-6a4202d84fa7';
+
+          insert into public.product_variants(id,product_id,price_adjustment,color,sku) values
+          ('11111111-1111-4111-8111-111111111111','b949d45a-2df6-4f4d-a92a-0e6ade9c67a0',0,'Grey','FIX-E'),
+          ('22222222-2222-4222-8222-222222222222','e4382057-b9b0-4e12-a5c6-aff607973e16',0,'Grey','FIX-R'),
+          ('33333333-3333-4333-8333-333333333333','2360afa3-9817-4bc8-96ef-9e5e688cdf0b',0,'Grey','FIX-S'),
+          ('44444444-4444-4444-8444-444444444444','ff2c0e1d-2264-413c-b9c2-7d01d4c64ef2',0,'Grey','FIX-V'),
+          ('55555555-5555-4555-8555-555555555555','cd3a3b61-e91c-4ffb-8ff0-6a4202d84fa7',0,'Grey','FIX-F');
+
+          insert into public.admins(id) values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
+          '''
+          Path('/tmp/pre_phase_b_fixture.sql').write_text(sql)
+          PY
+          psql "$PGURL" -v ON_ERROR_STOP=1 -f /tmp/pre_phase_b_fixture.sql
+
+      - name: Install exact pre-existing manual WhatsApp order function
+        run: |
+          psql "$PGURL" -v ON_ERROR_STOP=1 -f supabase/migrations/20260906160000_manual_order_whatsapp_reference.sql
+
+      - name: Replay exact three Phase B repository migrations sequentially
+        run: |
+          psql "$PGURL" -v ON_ERROR_STOP=1 -f supabase/migrations/20260908172136_offer_phase_b_discount_engine.sql
+          psql "$PGURL" -v ON_ERROR_STOP=1 -f supabase/migrations/20260908172251_offer_phase_b_code_null_fix.sql
+          psql "$PGURL" -v ON_ERROR_STOP=1 -f supabase/migrations/20260908173108_offer_phase_b_track_order_totals.sql
+
+      - name: Verify reconstructed schema ACLs RLS mappings and constraints
         run: |
           psql "$PGURL" -v ON_ERROR_STOP=1 <<'SQL'
-          select count(*) = 4 as four_offer_columns
-          from information_schema.columns
-          where table_schema='public' and table_name='orders'
-            and column_name in ('discount_amount','discount_tier','promotion_code','offer_source');
+          do $$
+          declare
+            v_count int;
+          begin
+            select count(*) into v_count
+            from information_schema.columns
+            where table_schema='public' and table_name='orders'
+              and column_name in ('discount_amount','discount_tier','promotion_code','offer_source');
+            if v_count <> 4 then raise exception 'expected four Phase B order columns, got %', v_count; end if;
 
-          select count(*) as mapped,
-                 count(*) filter (where tier='ELECTRIC') as electric,
-                 count(*) filter (where tier='ROMA') as roma,
-                 count(*) filter (where tier='STANDARD') as standard,
-                 count(*) filter (where tier='EXCLUDED') as excluded
-          from public.offer_product_tiers;
+            if not exists (
+              select 1 from information_schema.columns
+              where table_schema='public' and table_name='orders'
+                and column_name='discount_amount' and is_nullable='NO' and column_default='0'
+            ) then raise exception 'discount_amount default/nullability mismatch'; end if;
 
-          select to_regprocedure('public.calculate_order_offer(jsonb,text,uuid)') is not null as calculator_exists,
-                 to_regprocedure('public.place_order(text,text,text,text,text,jsonb,numeric,integer,boolean,boolean,boolean,text,uuid)') is not null as place_order_exists,
-                 to_regprocedure('public.track_order(text,text)') is not null as track_order_exists;
+            select count(*) into v_count from public.offer_product_tiers;
+            if v_count <> 38 then raise exception 'expected 38 mappings, got %', v_count; end if;
+            if (select count(*) from public.offer_product_tiers where tier='ELECTRIC') <> 7 then raise exception 'electric count mismatch'; end if;
+            if (select count(*) from public.offer_product_tiers where tier='ROMA') <> 5 then raise exception 'roma count mismatch'; end if;
+            if (select count(*) from public.offer_product_tiers where tier='STANDARD') <> 11 then raise exception 'standard count mismatch'; end if;
+            if (select count(*) from public.offer_product_tiers where tier='EXCLUDED') <> 15 then raise exception 'excluded count mismatch'; end if;
 
-          select relrowsecurity as offer_tiers_rls
-          from pg_class c join pg_namespace n on n.oid=c.relnamespace
-          where n.nspname='public' and c.relname='offer_product_tiers';
+            if not (select relrowsecurity from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relname='offer_product_tiers') then
+              raise exception 'offer_product_tiers RLS disabled';
+            end if;
 
-          select has_table_privilege('anon','public.offer_product_tiers','select') as anon_offer_read,
-                 has_table_privilege('authenticated','public.offer_product_tiers','insert') as auth_offer_write,
-                 has_function_privilege('anon','public.calculate_order_offer(jsonb,text,uuid)','execute') as anon_calculator_execute,
-                 has_function_privilege('anon','public.place_order(text,text,text,text,text,jsonb,numeric,integer,boolean,boolean,boolean,text,uuid)','execute') as anon_place_order_execute;
+            if has_table_privilege('anon','public.offer_product_tiers','select') then raise exception 'anon can read offer tiers'; end if;
+            if has_table_privilege('authenticated','public.offer_product_tiers','insert') then raise exception 'authenticated can mutate offer tiers'; end if;
+            if not has_table_privilege('service_role','public.offer_product_tiers','select') then raise exception 'service role lacks tier access'; end if;
+
+            if has_function_privilege('anon','public.calculate_order_offer(jsonb,text,uuid)','execute') then raise exception 'anon calculator execution unexpectedly granted'; end if;
+            if not has_function_privilege('service_role','public.calculate_order_offer(jsonb,text,uuid)','execute') then raise exception 'service role calculator execution missing'; end if;
+            if not has_function_privilege('anon','public.place_order(text,text,text,text,text,jsonb,numeric,integer,boolean,boolean,boolean,text,uuid)','execute') then raise exception 'anon place_order execution missing'; end if;
+            if not has_function_privilege('anon','public.track_order(text,text)','execute') then raise exception 'anon track_order execution missing'; end if;
+
+            if to_regprocedure('public.calculate_order_offer(jsonb,text,uuid)') is null then raise exception 'calculator missing'; end if;
+            if to_regprocedure('public.place_order(text,text,text,text,text,jsonb,numeric,integer,boolean,boolean,boolean,text,uuid)') is null then raise exception 'place_order missing'; end if;
+            if to_regprocedure('public.track_order(text,text)') is null then raise exception 'track_order missing'; end if;
+
+            select count(*) into v_count
+            from pg_constraint
+            where conrelid='public.orders'::regclass
+              and conname in ('orders_discount_amount_nonnegative','orders_discount_tier_check','orders_offer_source_check','orders_promotion_code_normalized');
+            if v_count <> 4 then raise exception 'Phase B order constraint count mismatch: %', v_count; end if;
+
+            if ((public.calculate_order_offer(jsonb_build_array(jsonb_build_object('variant_id','11111111-1111-4111-8111-111111111111','quantity',1)), null, null)->>'code_valid')::boolean) is distinct from false then
+              raise exception 'null code_valid not deterministic false';
+            end if;
+          end $$;
+
+          select 'TARGETED_REPLAY_PASS' as result,
+                 md5(pg_get_functiondef('public.calculate_order_offer(jsonb,text,uuid)'::regprocedure)) as calculator_def_md5,
+                 md5(pg_get_functiondef('public.place_order(text,text,text,text,text,jsonb,numeric,integer,boolean,boolean,boolean,text,uuid)'::regprocedure)) as place_order_def_md5,
+                 md5(pg_get_functiondef('public.track_order(text,text)'::regprocedure)) as track_order_def_md5;
           SQL
-      - name: Stop local Supabase
-        if: always()
-        run: npx --yes supabase@latest stop --no-backup || true
+
+      - name: Manual WhatsApp order runtime regression with rollback
+        run: |
+          psql "$PGURL" -v ON_ERROR_STOP=1 <<'SQL'
+          begin;
+          set local request.jwt.claim.sub = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+          do $$
+          declare
+            v_result jsonb;
+            v_order public.orders%rowtype;
+            v_item public.order_items%rowtype;
+          begin
+            v_result := public.place_manual_order(
+              'QA Manual Runtime',
+              'qa-manual@example.com',
+              '07700900999',
+              '1 QA Street, London, SW1A 1AA',
+              'targeted runtime regression',
+              jsonb_build_array(jsonb_build_object(
+                'variant_id','33333333-3333-4333-8333-333333333333',
+                'quantity',1,
+                'unit_price',601.23
+              )),
+              12.34,
+              'whatsapp',
+              null
+            );
+
+            select * into v_order from public.orders where id=(v_result->>'id')::uuid;
+            select * into v_item from public.order_items where order_id=v_order.id limit 1;
+
+            if v_order.discount_amount <> 0 then raise exception 'manual discount_amount expected 0, got %', v_order.discount_amount; end if;
+            if v_order.discount_tier is not null then raise exception 'manual discount_tier should be null'; end if;
+            if v_order.promotion_code is not null then raise exception 'manual promotion_code should be null'; end if;
+            if v_order.offer_source is not null then raise exception 'manual offer_source should be null'; end if;
+            if v_order.source <> 'whatsapp' then raise exception 'manual source mismatch: %', v_order.source; end if;
+            if v_item.price_at_time_of_purchase <> 601.23 then raise exception 'agreed unit price mismatch: %', v_item.price_at_time_of_purchase; end if;
+            if v_order.items_subtotal <> 601.23 then raise exception 'manual subtotal mismatch: %', v_order.items_subtotal; end if;
+            if v_order.delivery_total <> 12.34 then raise exception 'manual delivery mismatch: %', v_order.delivery_total; end if;
+            if v_order.total_amount <> 613.57 then raise exception 'manual total mismatch: %', v_order.total_amount; end if;
+            raise notice 'MANUAL_WHATSAPP_RUNTIME_PASS order=% subtotal=% total=%', v_order.id, v_order.items_subtotal, v_order.total_amount;
+          end $$;
+          rollback;
+          select case when count(*)=0 then 'MANUAL_ROLLBACK_CLEAN_PASS' else 'MANUAL_ROLLBACK_CLEAN_FAIL' end as result from public.orders;
+          SQL
+
+      - name: Track order runtime privacy and financial breakdown with rollback
+        run: |
+          psql "$PGURL" -v ON_ERROR_STOP=1 <<'SQL'
+          begin;
+          insert into public.orders(
+            id, customer_name, customer_email, customer_phone, shipping_address,
+            special_instructions, status, source, items_subtotal,
+            discount_amount, discount_tier, promotion_code, offer_source,
+            delivery_floor, delivery_has_lift, fee_upstairs,
+            wants_assembly, fee_assembly, wants_sofa_removal, fee_sofa_removal,
+            delivery_total, total_amount, has_made_to_order,
+            visitor_id, gclid
+          ) values (
+            'abcdef12-0000-4000-8000-000000000001',
+            'Private QA Name','private@example.com','07700900123','1 QA Street, London, SW1A 1AA',
+            'private note','pending_cod','website',999,
+            50,'ELECTRIC','SOFAEXTRA','manual_code',
+            1,true,20,false,0,false,0,
+            20,969,false,'private-visitor','private-gclid'
+          );
+          insert into public.order_items(order_id,variant_id,quantity,price_at_time_of_purchase)
+          values('abcdef12-0000-4000-8000-000000000001','11111111-1111-4111-8111-111111111111',1,999);
+
+          do $$
+          declare
+            j jsonb;
+          begin
+            j := public.track_order('ABCDEF12','SW1A 1AA');
+            if j is null then raise exception 'correct reference/postcode returned null'; end if;
+            if (j->>'items_subtotal')::numeric <> 999 then raise exception 'track subtotal mismatch'; end if;
+            if (j->>'discount_amount')::numeric <> 50 then raise exception 'track discount mismatch'; end if;
+            if j->>'discount_tier' <> 'ELECTRIC' then raise exception 'track tier mismatch'; end if;
+            if j->>'promotion_code' <> 'SOFAEXTRA' then raise exception 'track code mismatch'; end if;
+            if j->>'offer_source' <> 'manual_code' then raise exception 'track source mismatch'; end if;
+            if (j->>'delivery_total')::numeric <> 20 then raise exception 'track delivery mismatch'; end if;
+            if (j->>'total_amount')::numeric <> 969 then raise exception 'track total mismatch'; end if;
+            if not (j ? 'order_items') then raise exception 'track items missing'; end if;
+
+            if j ?| array['customer_name','customer_email','customer_phone','shipping_address','special_instructions','visitor_id','session_id','arrival_id','gclid','gbraid','wbraid','fbclid','utm_source','utm_medium','utm_campaign','utm_content','utm_term','ga_client_id','meta_fbp','meta_fbc','whatsapp_reference'] then
+              raise exception 'track_order leaked private/internal key(s): %', j;
+            end if;
+
+            if public.track_order('ABCDEF12','EC1A 1BB') is not null then
+              raise exception 'wrong postcode should return null';
+            end if;
+            raise notice 'TRACK_ORDER_RUNTIME_PASS %', j;
+          end $$;
+          rollback;
+          select case when count(*)=0 then 'TRACK_ORDER_ROLLBACK_CLEAN_PASS' else 'TRACK_ORDER_ROLLBACK_CLEAN_FAIL' end as result from public.orders;
+          SQL
