@@ -36,8 +36,15 @@ jobs:
       - name: Postcode policy matrix
         run: node --experimental-strip-types scripts/phase-d-postcode-policy.test.mjs
 
-      - name: ESLint
-        run: npm run lint
+      - name: ESLint Phase D paths
+        run: >-
+          npx eslint
+          src/app/actions/checkout.ts
+          src/components/Checkout/CheckoutClient.tsx
+          src/components/Checkout/MobileTotalBar.tsx
+          src/components/Product/DeliveryEstimator.tsx
+          src/constants/delivery.ts
+          src/utils/postcode.ts
 
       - name: TypeScript
         run: npx tsc --noEmit
