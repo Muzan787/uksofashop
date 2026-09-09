@@ -49,26 +49,30 @@ export async function POST(request: Request) {
     return json(INACTIVE_OFFER_ENTITLEMENT, 400)
   }
 
-  // A client boolean such as isPaidVisitor is never accepted. The endpoint
-  // verifies that the submitted path is the page the browser is actually on,
-  // then classifies only explicit click ids / controlled paid UTMs in that URL.
-  // The Referer here is same-origin request context, not a google.com or
-  // facebook.com referrer used as financial proof.
+  // A client boolean such as isPaidVisitor is never accepted. The same-origin
+  // browser Referer establishes which storefront URL initiated this request;
+  // only its explicit click ids / controlled paid UTMs are classified. This is
+  // not using a google.com/facebook.com referrer as financial proof.
   const requestUrl = new URL(request.url)
   const refererRaw = hdrs.get('referer')
   let referer: URL
+  let submitted: URL
   try {
     if (!refererRaw) return json(INACTIVE_OFFER_ENTITLEMENT, 400)
     referer = new URL(refererRaw)
+    submitted = new URL(landingPath, requestUrl.origin)
   } catch {
     return json(INACTIVE_OFFER_ENTITLEMENT, 400)
   }
 
-  if (referer.origin !== requestUrl.origin || `${referer.pathname}${referer.search}` !== landingPath) {
+  if (referer.origin !== requestUrl.origin || submitted.pathname !== referer.pathname) {
     return json(INACTIVE_OFFER_ENTITLEMENT, 400)
   }
 
-  const paidSource = classifyPaidLanding(landingPath)
+  // Query-string encoding can be normalised differently by URLSearchParams
+  // (for example %20 versus +). Classify the browser's actual Referer query
+  // rather than trusting the JSON copy supplied by React.
+  const paidSource = classifyPaidLanding(`${referer.pathname}${referer.search}`)
   if (!paidSource) return json(INACTIVE_OFFER_ENTITLEMENT, 400)
 
   const jar = await cookies()
