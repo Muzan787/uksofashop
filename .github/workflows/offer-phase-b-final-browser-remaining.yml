@@ -1,0 +1,144 @@
+name: Offer Phase B remaining browser gates
+
+on:
+  push:
+    branches: [qa/offer-phase-b-final-browser-signoff]
+    paths: [.github/workflows/offer-phase-b-final-browser-remaining.yml]
+
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: qa/offer-phase-b-final-browser-signoff
+          fetch-depth: 0
+
+      - name: Reverify immutable release/browser baseline
+        run: |
+          git fetch origin master fix/offer-phase-b-recovery-release
+          test "$(git rev-parse origin/master)" = "1fc9a94b95499d009677433fa187b7fda65d99ec"
+          test "$(git rev-parse origin/fix/offer-phase-b-recovery-release)" = "3200b9cdd63600bc496bdc1958ed12ce13e8ace0"
+          git diff --quiet origin/master 3200b9cdd63600bc496bdc1958ed12ce13e8ace0 -- \
+            src/components/Checkout/CheckoutClient.tsx \
+            src/components/Checkout/OfferCode.tsx \
+            src/components/Checkout/CartStep.tsx \
+            src/components/Checkout/MobileTotalBar.tsx \
+            src/app/actions/offer.ts \
+            src/app/actions/checkout.ts \
+            src/context/CartContext.tsx \
+            src/components/Layout/Mobilenav.tsx \
+            src/components/Layout/WhatsAppFab.tsx
+
+      - name: Install Playwright
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+
+      - name: Run remaining live browser gates
+        env:
+          LIVE_BASE: https://www.uksofashop.co.uk
+          NODE_PATH: ${{ github.workspace }}/node_modules
+        run: |
+          cat > /tmp/phaseb-remaining.cjs <<'JS'
+          const { chromium } = require('playwright')
+          const assert = require('assert')
+          const BASE = process.env.LIVE_BASE
+          const P = {
+            electric:{variant_id:'1ba97d1f-f890-48f8-8ab9-57cbb147f388',quantity:1,price:999,title:'Hannah Electric Corner',color:'Beige',image_url:''},
+            roma:{variant_id:'4b6dc9c2-91ec-432f-9735-abb6899b1a95',quantity:1,price:350,title:'Roma Recliner 2 Seater Manual Sofa',color:'Black',image_url:''},
+            standard:{variant_id:'ff3c0414-77ba-40ef-b6b2-bd97bff2bd17',quantity:1,price:649,title:'Bishop U shaped Scattered Back Sofa',color:'Truffle',image_url:''},
+            verona:{variant_id:'01921b2b-5fe9-47d3-8eb6-b53adba27e82',quantity:1,price:349,title:'Verona 2 Seater Scattered Back',color:'Grey',image_url:''},
+          }
+          const custom={variant_id:'a5d2050d-c458-4e0c-b3b3-7b7c727845a0',quantity:1,price:549,title:'Verona 4 Seater Corner 1c2 High Back',color:'Grey',image_url:'',fabric_id:'6ce3d2c2-7f92-4276-b991-70afa07c0cf9',fabric_label:'Chenille Grey',fabric_code:'CH12',fabric_swatch:null}
+          const clone=x=>JSON.parse(JSON.stringify(x))
+          const sleep=ms=>new Promise(r=>setTimeout(r,ms))
+          const money=n=>`£${Number(n).toFixed(2)}`
+          const has=(t,n,l)=>assert(t.includes(n),`${l}: missing ${JSON.stringify(n)}\n${t.slice(0,2500)}`)
+
+          async function seeded(browser,width,cart){
+            const context=await browser.newContext({viewport:{width,height:width<=430?900:1000},hasTouch:width<=430,isMobile:width<=430,serviceWorkers:'allow'})
+            await context.addInitScript(({cart})=>{localStorage.setItem('uksofashop_cart',JSON.stringify(cart));localStorage.setItem('cookie_consent','denied')},{cart})
+            const page=await context.newPage(); const pageErrors=[]; const consoleErrors=[]
+            page.on('pageerror',e=>pageErrors.push(String(e.stack||e)))
+            page.on('console',m=>{if(m.type()==='error') consoleErrors.push(m.text())})
+            const r=await page.goto(`${BASE}/checkout`,{waitUntil:'domcontentloaded',timeout:30000}); assert(r&&r.status()<500)
+            await page.getByRole('button',{name:/Continue to delivery/i}).waitFor({timeout:15000})
+            return {context,page,pageErrors,consoleErrors}
+          }
+          async function runtime(s,l){
+            assert.strictEqual(s.pageErrors.length,0,`${l}: page errors ${s.pageErrors.join(' | ')}`)
+            const g=s.consoleErrors.filter(x=>!(/Failed to load resource|favicon/i.test(x))&&/(Uncaught|TypeError|ReferenceError|Unhandled|Hydration|Minified React error)/i.test(x))
+            assert.strictEqual(g.length,0,`${l}: genuine console errors ${g.join(' | ')}`)
+          }
+          async function overflow(p,l){const x=await p.evaluate(()=>[document.documentElement.scrollWidth,innerWidth]);assert(x[0]<=x[1]+1,`${l}: overflow ${x}`)}
+          async function delivery(p){await p.getByRole('button',{name:/Continue to delivery/i}).click();await p.getByText('Delivery Information',{exact:true}).waitFor({timeout:10000})}
+          async function cart(p){await p.getByRole('button',{name:/Back to Cart/i}).click();await p.getByRole('button',{name:/Continue to delivery/i}).waitFor({timeout:10000})}
+          async function apply(p,code='SOFAEXTRA'){
+            const trig=p.getByRole('button',{name:/Have an offer code\?/i});if(await trig.isVisible().catch(()=>false)) await trig.click()
+            await p.getByLabel('Offer code').fill(code);await p.getByRole('button',{name:/^Apply$/i}).click()
+            await p.waitForFunction(()=>(document.body.textContent||'').includes('Offer · SOFAEXTRA'),null,{timeout:15000})
+          }
+          async function mobileTotal(p){const b=p.locator('[data-bottom-bar] button[aria-controls="mobile-summary"]');await b.waitFor({state:'visible'});return await b.innerText()}
+          async function summary(p,width){
+            if(width>=1024){const q=p.locator('[data-ground="dark"]').filter({hasText:'Order Summary'});for(let i=(await q.count())-1;i>=0;i--){if(await q.nth(i).isVisible().catch(()=>false))return await q.nth(i).innerText()}throw Error('desktop summary missing')}
+            const b=p.locator('[data-bottom-bar] button[aria-controls="mobile-summary"]');await b.waitFor({state:'visible'});const open=(await b.getAttribute('aria-expanded'))==='true';if(!open){await b.click();await sleep(240)}const q=p.locator('#mobile-summary [data-ground="dark"]');await q.waitFor({state:'visible'});const t=await q.innerText();if(!open){await b.click();await sleep(160)}return t
+          }
+          async function financial(p,width,sub,disc,total,label,zero=false){const t=await summary(p,width);has(t,'Subtotal',label);has(t,money(sub),label);has(t,'Delivery · UK Mainland',label);has(t,'FREE',label);has(t,'Nothing to pay today',label);has(t,'Offer · SOFAEXTRA',label);has(t,disc?`−£${disc.toFixed(2)}`:'£0.00',label);has(t,money(total),label);if(zero)for(const x of ['−£20.00','−£30.00','−£50.00'])assert(!t.includes(x),`${label}: excluded discount ${x}`);if(width<=430)has(await mobileTotal(p),money(total),`${label}/mobile`);await overflow(p,label)}
+          async function remove(p,title){await p.getByRole('button',{name:`Remove ${title} from your cart`}).click();await sleep(410)}
+          function undoFor(p,title){return p.locator('[data-ground="dark"]').filter({hasText:`Removed ${title}`}).getByRole('button',{name:'Undo'})}
+
+          async function recalc(browser){
+            const s=await seeded(browser,390,[clone(P.electric),clone(P.standard),clone(P.verona)])
+            try{
+              await delivery(s.page);await apply(s.page);await financial(s.page,390,1997,50,1947,'recalc/initial')
+              await cart(s.page);await remove(s.page,P.electric.title);await remove(s.page,P.verona.title);await delivery(s.page)
+              let mt=await mobileTotal(s.page);assert(!mt.includes('£948.00'),'stale £50 affected Standard-only immediate total')
+              await s.page.waitForFunction(()=>(document.body.textContent||'').includes('−£20.00'),null,{timeout:15000});mt=await mobileTotal(s.page);has(mt,'£629.00','recalc/standard-only')
+              await cart(s.page)
+              const vu=undoFor(s.page,P.verona.title), eu=undoFor(s.page,P.electric.title)
+              await vu.waitFor({state:'visible',timeout:3000});await vu.click({force:true});await eu.waitFor({state:'visible',timeout:3000});await eu.click({force:true})
+              await remove(s.page,P.standard.title);await remove(s.page,P.electric.title);await delivery(s.page)
+              mt=await mobileTotal(s.page);assert(!mt.includes('£299.00')&&!mt.includes('£329.00'),'stale eligible discount affected Verona immediate total')
+              await s.page.waitForFunction(()=>(document.body.textContent||'').includes('No extra cash discount applies to this basket.'),null,{timeout:15000});mt=await mobileTotal(s.page);has(mt,'£349.00','recalc/verona-only')
+              await cart(s.page);const eu2=undoFor(s.page,P.electric.title);await eu2.waitFor({state:'visible',timeout:3000});await eu2.click({force:true});await delivery(s.page)
+              mt=await mobileTotal(s.page);assert(mt.includes('£1348.00')||mt.includes('£1298.00'),`Electric re-add not fail-closed/final: ${mt}`)
+              await s.page.waitForFunction(()=>(document.body.textContent||'').includes('−£50.00'),null,{timeout:15000});await financial(s.page,390,1348,50,1298,'recalc/electric-readded')
+              await runtime(s,'recalc')
+            }finally{await s.context.close()}
+          }
+
+          async function race(browser){
+            const s=await seeded(browser,390,[clone(P.electric),clone(P.standard),clone(P.verona)])
+            try{
+              await delivery(s.page);await apply(s.page);await cart(s.page)
+              await s.page.getByRole('button',{name:`Remove ${P.electric.title} from your cart`}).click();await sleep(70)
+              await s.page.getByRole('button',{name:`Remove ${P.standard.title} from your cart`}).click();await sleep(430)
+              const eu=undoFor(s.page,P.electric.title);await eu.waitFor({state:'visible',timeout:2500});await eu.click({force:true});await delivery(s.page)
+              const mt=await mobileTotal(s.page);assert(mt.includes('£1348.00')||mt.includes('£1298.00'),`race immediate current total wrong: ${mt}`)
+              await s.page.waitForFunction(()=>(document.body.textContent||'').includes('−£50.00'),null,{timeout:15000});await financial(s.page,390,1348,50,1298,'race/final')
+              await sleep(1300);await financial(s.page,390,1348,50,1298,'race/settled');await runtime(s,'race')
+            }finally{await s.context.close()}
+          }
+
+          async function quantities(browser){
+            let s=await seeded(browser,390,[clone(P.electric)])
+            try{await delivery(s.page);await apply(s.page);await financial(s.page,390,999,50,949,'qty/E1');await cart(s.page);await s.page.getByRole('button',{name:/One more Hannah Electric Corner/i}).click();await delivery(s.page);await s.page.waitForFunction(()=>(document.body.textContent||'').includes('£1948.00'),null,{timeout:15000});await financial(s.page,390,1998,50,1948,'qty/E2');await cart(s.page);await s.page.getByRole('button',{name:/One fewer Hannah Electric Corner/i}).click();await delivery(s.page);await s.page.waitForFunction(()=>(document.body.textContent||'').includes('£949.00'),null,{timeout:15000});await financial(s.page,390,999,50,949,'qty/E1b');await runtime(s,'qty/E')}finally{await s.context.close()}
+            for(const [n,p,d,t] of [['S',P.standard,20,1278],['R',P.roma,30,670]]){const i=clone(p);i.quantity=2;s=await seeded(browser,390,[i]);try{await delivery(s.page);await apply(s.page);await financial(s.page,390,p.price*2,d,t,`qty/${n}2`);await runtime(s,`qty/${n}`)}finally{await s.context.close()}}
+          }
+
+          async function extras(browser){const s=await seeded(browser,1440,[clone(P.electric)]);try{await delivery(s.page);await apply(s.page);await s.page.getByLabel('Assembly').check();await financial(s.page,1440,999,50,969,'extras/assembly');await s.page.getByLabel('Upstairs delivery').check();await financial(s.page,1440,999,50,989,'extras/upstairs');const lift=s.page.getByText("There's a lift",{exact:true}).locator('..').locator('input[type="checkbox"]');await lift.check();await financial(s.page,1440,999,50,989,'extras/lift');await s.page.getByLabel('Old sofa removal').check();await financial(s.page,1440,999,50,1019,'extras/removal');await runtime(s,'extras')}finally{await s.context.close()}}
+
+          async function phaseA(browser,width){const s=await seeded(browser,width,[clone(P.electric)]);try{await delivery(s.page);await apply(s.page);await s.page.getByLabel('Full Name').fill('QA Browser State');await s.page.getByLabel('Email Address').fill('qa-browser@example.com');await s.page.getByLabel('Mobile Number').fill('07700900123');await s.page.locator('input.uppercase').first().fill('SW1A 1AA');await s.page.getByLabel('Full Address').fill('123 QA Browser Street');await s.page.getByLabel('Special Instructions').fill('Phase B persistence marker');await cart(s.page);await delivery(s.page);assert.strictEqual(await s.page.getByLabel('Full Name').inputValue(),'QA Browser State');assert.strictEqual(await s.page.getByLabel('Email Address').inputValue(),'qa-browser@example.com');assert.strictEqual(await s.page.getByLabel('Mobile Number').inputValue(),'07700900123');assert.strictEqual(await s.page.locator('input.uppercase').first().inputValue(),'SW1A 1AA');assert.strictEqual(await s.page.getByLabel('Full Address').inputValue(),'123 QA Browser Street');assert.strictEqual(await s.page.getByLabel('Special Instructions').inputValue(),'Phase B persistence marker');await financial(s.page,width,999,50,949,`2DA/${width}`);await runtime(s,`2DA/${width}`)}finally{await s.context.close()}}
+
+          async function phaseB(browser){const s=await seeded(browser,390,[clone(P.electric),clone(P.standard),clone(custom)]);try{const t=await s.page.locator('body').innerText();for(const x of [custom.title,'Chenille Grey','CH12','£549'])has(t,x,'2DB/cart');assert(await s.page.getByRole('button',{name:/One more Verona 4 Seater Corner/i}).isVisible());const rm=s.page.getByRole('button',{name:`Remove ${custom.title} from your cart`});await rm.click();await sleep(410);const u=undoFor(s.page,custom.title);await u.waitFor({state:'visible'});await u.click({force:true});await s.page.getByText(custom.title,{exact:true}).waitFor();await overflow(s.page,'2DB/cart');await delivery(s.page);await apply(s.page);await financial(s.page,390,2197,50,2147,'2DB/offer');await runtime(s,'2DB')}finally{await s.context.close()}}
+
+          function ov(a,b){return !!(a&&b)&&!(a.x+a.width<=b.x||b.x+b.width<=a.x||a.y+a.height<=b.y||b.y+b.height<=a.y)}
+          async function fixed(browser,width,open){const s=await seeded(browser,width,[clone(P.electric)]);try{await delivery(s.page);if(open)await s.page.getByRole('button',{name:/Have an offer code\?/i}).click();const total=s.page.locator('[data-bottom-bar]:visible').first(),nav=s.page.locator('nav[aria-label="Primary"]'),wa=s.page.getByRole('link',{name:'Chat with us on WhatsApp'});await Promise.all([total.waitFor({state:'visible'}),nav.waitFor({state:'visible'}),wa.waitFor({state:'visible'})]);let [tb,nb,wb]=await Promise.all([total.boundingBox(),nav.boundingBox(),wa.boundingBox()]);assert(!ov(tb,nb)&&!ov(wb,tb)&&!ov(wb,nb),`${width}/${open}: fixed overlap`);if(open){const i=s.page.getByLabel('Offer code'),a=s.page.getByRole('button',{name:/^Apply$/i});await i.fill('SOFAEXTRA');await i.scrollIntoViewIfNeeded();await sleep(100);const [ib,ab,t2]=await Promise.all([i.boundingBox(),a.boundingBox(),total.boundingBox()]);assert(ib&&ab&&t2&&!ov(ib,t2)&&!ov(ab,t2),`${width}: promo covered`)}const y0=await s.page.evaluate(()=>scrollY);await s.page.evaluate(()=>scrollTo(0,document.documentElement.scrollHeight));await sleep(120);assert((await s.page.evaluate(()=>scrollY))>y0,`${width}: scroll trap`);await overflow(s.page,`fixed/${width}/${open}`);await runtime(s,`fixed/${width}/${open}`)}finally{await s.context.close()}}
+
+          async function ordinary(browser,width){const s=await seeded(browser,width,[clone(P.standard)]);try{await delivery(s.page);assert(await s.page.getByRole('button',{name:/Have an offer code\?/i}).isVisible());const t=await summary(s.page,width);has(t,'Subtotal','ordinary');has(t,'£649.00','ordinary');has(t,'Delivery · UK Mainland','ordinary');has(t,'FREE','ordinary');has(t,'Nothing to pay today','ordinary');has(t,'Total due on delivery','ordinary');has(t,'£649.00','ordinary');assert(!t.includes('Offer · SOFAEXTRA'));const body=await s.page.locator('body').innerText();has(body,'Cash','ordinary');has(body,'Bank transfer','ordinary');has(body,'Delivered free to UK Mainland','ordinary');await overflow(s.page,`ordinary/${width}`);await runtime(s,`ordinary/${width}`)}finally{await s.context.close()}}
+
+          ;(async()=>{const browser=await chromium.launch({headless:true});try{await recalc(browser);console.log('BASKET_RECALC_PASS');await race(browser);console.log('STALE_RACE_QUOTE_PASS');await quantities(browser);console.log('QUANTITY_NON_MULTIPLICATION_PASS');await extras(browser);console.log('EXTRAS_MATH_PASS');for(const w of [390,430,1440]){await phaseA(browser,w);console.log(`PHASE_2DA_${w}_PASS`)}await phaseB(browser);console.log('PHASE_2DB_PASS');for(const w of [320,390,430]){await fixed(browser,w,false);await fixed(browser,w,true);console.log(`MOBILE_FIXED_${w}_PASS`)}for(const w of [320,390,430,768,1440])await ordinary(browser,w);console.log('ORDINARY_NO_OFFER_PASS');console.log('HORIZONTAL_OVERFLOW_NONE');console.log('RUNTIME_ERRORS_NONE');console.log('OFFER_PHASE_B_REMAINING_GATES_PASS')}finally{await browser.close()}})().catch(e=>{console.error(e);process.exit(1)})
+          JS
+          node /tmp/phaseb-remaining.cjs
