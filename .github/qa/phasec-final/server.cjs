@@ -1,0 +1,6 @@
+const next=require('/tmp/candidate/node_modules/next')
+const https=require('https')
+const fs=require('fs')
+process.chdir('/tmp/candidate')
+const app=next({dev:false,hostname:'localhost',port:3443,dir:'/tmp/candidate'})
+app.prepare().then(()=>{const handle=app.getRequestHandler();https.createServer({key:fs.readFileSync('/tmp/phasec-key.pem'),cert:fs.readFileSync('/tmp/phasec-cert.pem')},(req,res)=>handle(req,res)).listen(3443,'127.0.0.1',()=>console.log('[QA_NEXT_HTTPS] ready'))}).catch(e=>{console.error(e);process.exit(1)})
