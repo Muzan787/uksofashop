@@ -63,6 +63,9 @@ function itemBlock(item: AdminOrderItemDisplay): string {
 export function formatOrderForCopy(order: AdminOrderDisplay): string {
   const { address, postcode } = splitAddress(order.shipping_address)
   const items = order.order_items ?? []
+  const orderDate = order.created_at
+    ? new Date(order.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    : 'Date unavailable'
 
   const extras = [
     Number(order.fee_upstairs ?? 0) > 0 && `Upstairs: ${money(order.fee_upstairs)}`,
@@ -84,7 +87,7 @@ export function formatOrderForCopy(order: AdminOrderDisplay): string {
 
   const blocks = [
     [
-      `Order on ${new Date(order.created_at ?? '').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`,
+      `Order on ${orderDate}`,
       `Delivery: ${DELIVERY_WINDOW}`,
     ].join('\n'),
 
