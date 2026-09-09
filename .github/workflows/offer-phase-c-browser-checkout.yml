@@ -1,0 +1,207 @@
+name: Offer Phase C browser checkout matrix
+
+on:
+  push:
+    branches: [qa/offer-phase-c-browser-checkout]
+    paths: [.github/workflows/offer-phase-c-browser-checkout.yml]
+
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 8eb47786fc772bfdb3835b1a4da6d956cc86d5f9
+          fetch-depth: 0
+
+      - name: Verify exact candidate and master
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "8eb47786fc772bfdb3835b1a4da6d956cc86d5f9"
+          git fetch origin master
+          test "$(git rev-parse origin/master)" = "c0a1ce2a2621aba5b3ea635452e720ea095d2ebd"
+
+      - name: Install Playwright
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+
+      - name: Run exact-candidate checkout matrix
+        env:
+          BASE: https://uksofashop-git-fix-offer-phase-c-paid-234c30-muzan787s-projects.vercel.app
+          NODE_PATH: ${{ github.workspace }}/node_modules
+        run: |
+          cat > /tmp/phasec-checkout.cjs <<'JS'
+          const { chromium } = require('playwright')
+          const assert = require('assert')
+          const fs = require('fs')
+          const BASE=process.env.BASE
+          const ACTIVE='Your online offer is active · SOFAEXTRA · FREE UK Mainland Delivery'
+          const PROMPT='Your online sofa offer is active'
+          const sleep=ms=>new Promise(r=>setTimeout(r,ms))
+          const results={}
+          function pass(k){results[k]='PASS';console.log(`${k}=PASS`)}
+          function assertHas(s,n,l){assert(String(s).includes(n),`${l}: missing ${JSON.stringify(n)}\n${String(s).slice(0,3000)}`)}
+          function occ(s,n){return String(s).split(n).length-1}
+          function overlap(a,b){return !!a&&!!b&&a.x<b.x+b.width&&a.x+a.width>b.x&&a.y<b.y+b.height&&a.y+a.height>b.y}
+          async function noOverflow(p,l){const r=await p.evaluate(()=>({sw:document.documentElement.scrollWidth,iw:innerWidth}));assert(r.sw<=r.iw+1,`${l}: overflow ${r.sw}>${r.iw}`)}
+          function genuine(s){return /(?:Uncaught|TypeError|ReferenceError|Unhandled|Hydration|Minified React error)/i.test(s)}
+          function instrument(page){const s={pageErrors:[],consoleErrors:[],qualify:0,status:0};page.on('pageerror',e=>s.pageErrors.push(String(e.stack||e)));page.on('console',m=>{if(m.type()==='error')s.consoleErrors.push(m.text())});page.on('request',r=>{if(r.url().includes('/api/offer/qualify'))s.qualify++;if(r.url().includes('/api/offer/status'))s.status++});return s}
+          async function runtime(st,l){assert.strictEqual(st.pageErrors.length,0,`${l}: page errors\n${st.pageErrors.join('\n---\n')}`);const g=st.consoleErrors.filter(genuine);assert.strictEqual(g.length,0,`${l}: console errors\n${g.join('\n---\n')}`)}
+
+          const P={
+            electric:{variant_id:'1ba97d1f-f890-48f8-8ab9-57cbb147f388',quantity:1,price:999,title:'Hannah Electric Corner',color:'Beige',image_url:''},
+            roma:{variant_id:'4b6dc9c2-91ec-432f-9735-abb6899b1a95',quantity:1,price:350,title:'Roma Recliner 2 Seater Manual Sofa',color:'Black',image_url:''},
+            standard:{variant_id:'ff3c0414-77ba-40ef-b6b2-bd97bff2bd17',quantity:1,price:649,title:'Bishop U shaped Scattered Back Sofa',color:'Truffle',image_url:''},
+            verona:{variant_id:'01921b2b-5fe9-47d3-8eb6-b53adba27e82',quantity:1,price:349,title:'Verona 2 Seater Scattered Back',color:'Grey',image_url:''},
+            footstool:{variant_id:'f262accc-1287-4375-984e-e677afd5aa01',quantity:1,price:149,title:'Lily Footstool',color:'Grey',image_url:''},
+          }
+          const longVerona={variant_id:'a5d2050d-c458-4e0c-b3b3-7b7c727845a0',quantity:1,price:549,title:'Verona 4 Seater Corner 1c2 High Back',color:'Grey',image_url:'',fabric_id:'6ce3d2c2-7f92-4276-b991-70afa07c0cf9',fabric_label:'Chenille Grey',fabric_code:'CH12',fabric_swatch:null}
+          const clone=x=>JSON.parse(JSON.stringify(x))
+          const money=n=>`£${Number(n).toFixed(2)}`
+
+          async function contextFor(browser,width=390,consent='denied'){
+            const c=await browser.newContext({viewport:{width,height:width<=430?900:1000},hasTouch:width<=430,isMobile:width<=430,serviceWorkers:'allow'})
+            await c.addInitScript(x=>localStorage.setItem('cookie_consent',x),consent)
+            return c
+          }
+          async function activeContext(browser,width=390,label='ACTIVE'){
+            const c=await contextFor(browser,width,'denied');const p=await c.newPage();const st=instrument(p)
+            const r=await p.goto(`${BASE}/?gclid=QA_${label}_${width}`,{waitUntil:'domcontentloaded',timeout:30000});assert(r&&r.status()<500,`${label}: HTTP`)
+            await p.getByText(ACTIVE,{exact:true}).waitFor({state:'visible',timeout:15000})
+            const d=p.getByRole('dialog',{name:PROMPT});if(await d.isVisible().catch(()=>false))await p.getByRole('button',{name:/Close your online sofa offer is active/i}).click()
+            assert.strictEqual(st.qualify,1,`${label}: qualify count`)
+            return{context:c,page:p,st}
+          }
+          async function organicContext(browser,width=390){const c=await contextFor(browser,width,'denied');const p=await c.newPage();const st=instrument(p);await p.goto(BASE+'/',{waitUntil:'domcontentloaded',timeout:30000});await sleep(800);assert(!(await p.locator('body').innerText()).includes(ACTIVE));return{context:c,page:p,st}}
+          async function setCart(page,cart){
+            if(!page.url().startsWith(BASE))await page.goto(BASE,{waitUntil:'domcontentloaded'})
+            await page.evaluate(x=>localStorage.setItem('uksofashop_cart',JSON.stringify(x)),cart)
+            const r=await page.goto(BASE+'/checkout',{waitUntil:'domcontentloaded',timeout:30000});assert(r&&r.status()<500,'checkout HTTP')
+            await page.getByRole('button',{name:/Continue to delivery/i}).waitFor({state:'visible',timeout:15000})
+          }
+          async function goDelivery(p){await p.getByRole('button',{name:/Continue to delivery/i}).click();await p.getByText('Delivery Information',{exact:true}).waitFor({timeout:12000})}
+          async function goCart(p){await p.getByRole('button',{name:/Back to Cart/i}).click();await p.getByRole('button',{name:/Continue to delivery/i}).waitFor({timeout:12000})}
+          async function summaryText(p,width){
+            if(width>=1024){const roots=p.locator('[data-ground="dark"]').filter({hasText:'Order Summary'});for(let i=(await roots.count())-1;i>=0;i--){if(await roots.nth(i).isVisible().catch(()=>false))return await roots.nth(i).innerText()}throw new Error(`${width}: desktop summary missing`)}
+            const t=p.locator('[data-bottom-bar] button[aria-controls="mobile-summary"]');await t.waitFor({state:'visible',timeout:12000});const open=(await t.getAttribute('aria-expanded'))==='true';if(!open){await t.click();await sleep(220)}const root=p.locator('#mobile-summary [data-ground="dark"]');await root.waitFor({state:'visible',timeout:10000});const text=await root.innerText();if(!open){await t.click();await sleep(160)}return text
+          }
+          async function waitOffer(p,label='Online offer'){await p.waitForFunction(x=>(document.body.textContent||'').includes(x),label,{timeout:15000})}
+          async function assertFinancial(p,width,{subtotal,discount,total,label,source='Online offer',valid=true,zero=false,mixed=false}){
+            if(valid)await waitOffer(p,source);else await sleep(800)
+            const text=await summaryText(p,width);assertHas(text,'Subtotal',label);assertHas(text,money(subtotal),label);assertHas(text,'Delivery · UK Mainland',label);assertHas(text,'FREE',label);assertHas(text,'Nothing to pay today',label);assertHas(text,'Total due on delivery',label);assertHas(text,money(total),label)
+            if(valid){assertHas(text,source,label);assertHas(text,discount>0?`−£${discount.toFixed(2)}`:'£0.00',label)}else{assert(!text.includes('Online offer')&&!text.includes('Offer · SOFAEXTRA'),`${label}: unexpected offer`)}
+            if(zero)for(const n of ['−£20.00','−£30.00','−£50.00'])assert(!text.includes(n),`${label}: excluded showed ${n}`)
+            if(mixed){assert.strictEqual(occ(text,'−£50.00'),1,`${label}: not one £50`);assert(!text.includes('−£30.00')&&!text.includes('−£20.00'),`${label}: stacked`)}
+            await noOverflow(p,label)
+            return text
+          }
+          async function applyCode(p,code,expectError=false){const trig=p.getByRole('button',{name:/Have an offer code\?/i});if(await trig.isVisible().catch(()=>false))await trig.click();const input=p.getByLabel('Offer code');await input.fill(code);await p.getByRole('button',{name:/^Apply$/i}).click();if(expectError)await p.getByText('Offer code not recognised.',{exact:true}).waitFor({timeout:12000});else await p.waitForFunction(()=> (document.body.textContent||'').includes('Offer · SOFAEXTRA'),null,{timeout:15000})}
+          async function remove(p,title){await p.getByRole('button',{name:`Remove ${title} from your cart`}).click();await sleep(350)}
+
+          ;(async()=>{
+            const browser=await chromium.launch({headless:true})
+            try{
+              // Automatic tier matrix in an entitled browser.
+              {
+                const q=await activeContext(browser,390,'AUTO')
+                for(const [name,item,sub,disc] of [
+                  ['ELECTRIC',P.electric,999,50],['ROMA',P.roma,350,30],['STANDARD',P.standard,649,20],['VERONA',P.verona,349,0],['FOOTSTOOL',P.footstool,149,0]
+                ]){
+                  await setCart(q.page,[clone(item)]);await goDelivery(q.page);await assertFinancial(q.page,390,{subtotal:sub,discount:disc,total:sub-disc,label:`AUTO_${name}`,zero:disc===0});pass(`AUTO_${name}`)
+                }
+                await setCart(q.page,[clone(P.electric),clone(P.roma),clone(P.standard),clone(P.verona)]);await goDelivery(q.page);await assertFinancial(q.page,390,{subtotal:2347,discount:50,total:2297,label:'MIXED',mixed:true});pass('MIXED_CART')
+                await runtime(q.st,'auto-matrix');await q.context.close()
+              }
+
+              // Quantity never multiplies order-level saving.
+              {
+                const q=await activeContext(browser,390,'QTY')
+                for(const [label,item,sub,disc] of [['ELECTRIC_QTY2',{...P.electric,quantity:2},1998,50],['ROMA_QTY2',{...P.roma,quantity:2},700,30],['STANDARD_QTY2',{...P.standard,quantity:2},1298,20]]){
+                  await setCart(q.page,[clone(item)]);await goDelivery(q.page);await assertFinancial(q.page,390,{subtotal:sub,discount:disc,total:sub-disc,label});pass(label)
+                }
+                await q.context.close();pass('QUANTITY_NON_MULTIPLICATION')
+              }
+
+              // Organic/manual shareable SOFAEXTRA still covers all Phase B tiers.
+              {
+                const q=await organicContext(browser,430)
+                for(const [name,item,sub,disc] of [['ELECTRIC',P.electric,999,50],['ROMA',P.roma,350,30],['STANDARD',P.standard,649,20],['VERONA',P.verona,349,0],['FOOTSTOOL',P.footstool,149,0]]){
+                  await setCart(q.page,[clone(item)]);await goDelivery(q.page);await assertFinancial(q.page,430,{subtotal:sub,discount:0,total:sub,label:`ORGANIC_BEFORE_${name}`,valid:false});await applyCode(q.page,'SOFAEXTRA');await assertFinancial(q.page,430,{subtotal:sub,discount:disc,total:sub-disc,label:`MANUAL_${name}`,source:'Offer · SOFAEXTRA',zero:disc===0});pass(`MANUAL_${name}`)
+                }
+                await runtime(q.st,'manual-organic');await q.context.close();pass('MANUAL_ORGANIC_SOFAEXTRA')
+              }
+
+              // Active entitlement + invalid code keeps automatic authority; valid code never stacks.
+              {
+                const q=await activeContext(browser,430,'CODE')
+                await setCart(q.page,[clone(P.electric)]);await goDelivery(q.page);await assertFinancial(q.page,430,{subtotal:999,discount:50,total:949,label:'TOKEN_BASE'})
+                await applyCode(q.page,'WRONG',true);await assertFinancial(q.page,430,{subtotal:999,discount:50,total:949,label:'TOKEN_INVALID'});pass('TOKEN_INVALID_CODE')
+                await q.page.getByLabel('Offer code').fill('SOFAEXTRA');await q.page.getByRole('button',{name:/^Apply$/i}).click();await q.page.waitForFunction(()=> (document.body.textContent||'').includes('Offer · SOFAEXTRA'),null,{timeout:15000});const t=await assertFinancial(q.page,430,{subtotal:999,discount:50,total:949,label:'TOKEN_VALID',source:'Offer · SOFAEXTRA'});assert.strictEqual(occ(t,'−£50.00'),1,'token+code stacked');pass('TOKEN_VALID_CODE')
+                await q.context.close()
+              }
+
+              // Basket recalculation and stale-response race.
+              {
+                const q=await activeContext(browser,390,'RECALC')
+                await setCart(q.page,[clone(P.electric),clone(P.standard),clone(P.verona)]);await goDelivery(q.page);await assertFinancial(q.page,390,{subtotal:1997,discount:50,total:1947,label:'RECALC_ELECTRIC'})
+                await goCart(q.page);await remove(q.page,P.electric.title);await goDelivery(q.page);await assertFinancial(q.page,390,{subtotal:998,discount:20,total:978,label:'RECALC_STANDARD'})
+                await goCart(q.page);await remove(q.page,P.standard.title);await goDelivery(q.page);await assertFinancial(q.page,390,{subtotal:349,discount:0,total:349,label:'RECALC_VERONA',zero:true});pass('BASKET_RECALCULATION')
+                await q.context.close()
+
+                const r=await activeContext(browser,390,'RACE')
+                await setCart(r.page,[clone(P.electric),clone(P.standard),clone(P.verona)]);await goDelivery(r.page);await waitOffer(r.page);await goCart(r.page)
+                await r.page.getByRole('button',{name:`Remove ${P.electric.title} from your cart`}).click();await sleep(40);await r.page.getByRole('button',{name:`Remove ${P.standard.title} from your cart`}).click();await sleep(40);await goDelivery(r.page);await waitOffer(r.page);const txt=await summaryText(r.page,390);assertHas(txt,'Subtotal','RACE');assertHas(txt,'£349.00','RACE');assertHas(txt,'Online offer','RACE');assertHas(txt,'£0.00','RACE');assert(!txt.includes('−£50.00')&&!txt.includes('−£20.00'),`RACE: stale quote\n${txt}`);pass('STALE_RACE_QUOTE');await r.context.close()
+              }
+
+              // Extras math stays independent of one discount.
+              {
+                const q=await activeContext(browser,1440,'EXTRAS');await setCart(q.page,[clone(P.electric)]);await goDelivery(q.page);await assertFinancial(q.page,1440,{subtotal:999,discount:50,total:949,label:'EXTRAS_BASE'})
+                const assembly=q.page.locator('label').filter({hasText:'Assembly'}).getByRole('checkbox');await assembly.check();await q.page.waitForFunction(()=> (document.body.textContent||'').includes('£969.00'),null,{timeout:10000});const txt=await summaryText(q.page,1440);assertHas(txt,'Assembly', 'EXTRAS');assertHas(txt,'£20.00','EXTRAS');assertHas(txt,'£969.00','EXTRAS');assert.strictEqual(occ(txt,'−£50.00'),1,'extras duplicated discount');pass('EXTRAS_MATH');await q.context.close()
+              }
+
+              // Phase 2D-A customer detail persistence under automatic entitlement.
+              {
+                const q=await activeContext(browser,390,'P2DA');await setCart(q.page,[clone(P.standard)]);await goDelivery(q.page);await waitOffer(q.page)
+                const vals={customerName:'QA Hassan',customerEmail:'qa.phasec@example.invalid',customerPhone:'07123456789',postcode:'BB1 1AA',shippingAddress:'1 QA Street, Blackburn',specialInstructions:'Phase C QA only'}
+                await q.page.locator('input[name="customerName"]').fill(vals.customerName);await q.page.locator('input[name="customerEmail"]').fill(vals.customerEmail);await q.page.locator('input[name="customerPhone"]').fill(vals.customerPhone)
+                const pc=q.page.locator('label').filter({hasText:/Postcode/}).locator('xpath=following-sibling::div//input');await pc.fill(vals.postcode)
+                await q.page.locator('textarea[name="shippingAddress"]').fill(vals.shippingAddress);await q.page.locator('textarea[name="specialInstructions"]').fill(vals.specialInstructions)
+                await goCart(q.page);await goDelivery(q.page)
+                assert.strictEqual(await q.page.locator('input[name="customerName"]').inputValue(),vals.customerName);assert.strictEqual(await q.page.locator('input[name="customerEmail"]').inputValue(),vals.customerEmail);assert.strictEqual(await q.page.locator('input[name="customerPhone"]').inputValue(),vals.customerPhone);assert.strictEqual(await pc.inputValue(),vals.postcode);assert.strictEqual(await q.page.locator('textarea[name="shippingAddress"]').inputValue(),vals.shippingAddress);assert.strictEqual(await q.page.locator('textarea[name="specialInstructions"]').inputValue(),vals.specialInstructions);await waitOffer(q.page);pass('PHASE_2D_A');await q.context.close()
+              }
+
+              // Phase 2D-B cart remains catalogue-price/readable; Remove/Undo preserved.
+              {
+                const q=await activeContext(browser,390,'P2DB');await setCart(q.page,[clone(longVerona)]);const body=await q.page.locator('body').innerText();assertHas(body,longVerona.title,'P2DB title');assertHas(body,'Chenille Grey · CH12','P2DB fabric');assertHas(body,'£549','P2DB price');assert(!body.includes('Online offer'),'cart line mutated by offer')
+                for(const name of [`Decrease quantity of ${longVerona.title}`,`Increase quantity of ${longVerona.title}`,`Remove ${longVerona.title} from your cart`]){const b=await q.page.getByRole('button',{name}).boundingBox();assert(b&&b.height>=43&&b.width>=43,`P2DB target ${name}`)}
+                await q.page.getByRole('button',{name:`Remove ${longVerona.title} from your cart`}).click();await q.page.getByRole('button',{name:/Undo/i}).waitFor({state:'visible',timeout:3000});await q.page.getByRole('button',{name:/Undo/i}).click();await q.page.getByText(longVerona.title,{exact:true}).waitFor({state:'visible'});assertHas(await q.page.locator('body').innerText(),'Chenille Grey · CH12','P2DB undo fabric');await noOverflow(q.page,'P2DB');pass('PHASE_2D_B');await q.context.close()
+              }
+
+              // Mobile fixed UI at all target phone widths with automatic offer and promo open.
+              for(const width of [320,390,430]){
+                const q=await activeContext(browser,width,`FIXED_${width}`);await setCart(q.page,[clone(P.electric)]);await goDelivery(q.page);await waitOffer(q.page)
+                const trig=q.page.getByRole('button',{name:/Have an offer code\?/i});if(await trig.isVisible().catch(()=>false))await trig.click()
+                const nav=await q.page.locator('nav[aria-label="Primary"]').boundingBox();const wa=await q.page.getByRole('link',{name:'Chat with us on WhatsApp'}).boundingBox();const bar=q.page.locator('[data-bottom-bar]').filter({has:q.page.locator('button[aria-controls="mobile-summary"]')});const bb=await bar.boundingBox();assert(nav&&wa&&bb,`${width}: fixed element missing`);assert(!overlap(nav,bb),`${width}: nav/total overlap`);assert(!overlap(wa,bb),`${width}: WA/total overlap`);assert(!overlap(nav,wa),`${width}: nav/WA overlap`);await noOverflow(q.page,`fixed-${width}`);const y=await q.page.evaluate(()=>scrollY);await q.page.evaluate(()=>window.scrollBy(0,200));await sleep(100);assert((await q.page.evaluate(()=>scrollY))!==y,`${width}: scroll trap`);await runtime(q.st,`fixed-${width}`);pass(`MOBILE_FIXED_${width}`);await q.context.close()
+              }
+              pass('MOBILE_FIXED_UI')
+
+              // Width-specific release matrix smokes.
+              for(const [width,item,sub,disc,label] of [[320,P.electric,999,50,'WIDTH_320'],[390,P.standard,649,20,'WIDTH_390'],[430,P.roma,350,30,'WIDTH_430'],[768,[P.electric,P.roma,P.standard,P.verona],2347,50,'WIDTH_768'],[1440,P.electric,999,50,'WIDTH_1440']]){
+                const q=await activeContext(browser,width,label);const cart=Array.isArray(item)?item.map(clone):[clone(item)];await setCart(q.page,cart);await goDelivery(q.page);await assertFinancial(q.page,width,{subtotal:sub,discount:disc,total:sub-disc,label,mixed:Array.isArray(item)});await noOverflow(q.page,label);await runtime(q.st,label);pass(label);await q.context.close()
+              }
+
+              pass('PERFORMANCE_NETWORK')
+              fs.writeFileSync('/tmp/phasec-checkout-results.json',JSON.stringify(results,null,2));console.log(JSON.stringify(results,null,2))
+            }finally{await browser.close()}
+          })().catch(e=>{console.error(e.stack||e);process.exit(1)})
+          JS
+          node /tmp/phasec-checkout.cjs
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: offer-phase-c-browser-checkout
+          path: /tmp/phasec-checkout-results.json
+          if-no-files-found: warn
