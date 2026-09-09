@@ -1,5 +1,6 @@
 // src/app/layout.tsx
 import type { Metadata, Viewport } from 'next'
+import { Suspense } from 'react'
 import { Geist, Geist_Mono, Fraunces } from "next/font/google";
 import "./globals.css";
 import { CartProvider } from "@/context/CartContext";
@@ -17,6 +18,9 @@ import { ogImage } from '@/utils/socialImage';
 import { CONSENT_DEFAULT_SNIPPET } from '@/utils/consentMode';
 import { ANALYTICS_REDACTION_SNIPPET } from '@/utils/redactUrl';
 import { PALETTE } from '@/constants/palette';
+import { OfferProvider } from '@/components/Offer/OfferProvider';
+import OfferBoot from '@/components/Offer/OfferBoot';
+import OfferPrompt from '@/components/Offer/OfferPrompt';
 
 
 const geistSans = Geist({
@@ -185,6 +189,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </head>
       <body className="antialiased bg-calico-50 flex flex-col min-h-screen">
         <CartProvider>
+          <OfferProvider>
           {/* ── Toasts ─────────────────────────────────────────────────────
               On the tokens: Ink 900 with Calico 50 copy and an ember rule down
               the leading edge, sage where something succeeded and rust where
@@ -226,9 +231,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <AnalyticsRedaction />
           <TrackingScripts />
           <AttributionBoot />
+          <Suspense fallback={null}>
+            <OfferBoot />
+          </Suspense>
+          <OfferPrompt />
 
           <CookieConsent />
           
+          </OfferProvider>
         </CartProvider>
       </body>
     </html>

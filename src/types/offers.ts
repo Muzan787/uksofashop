@@ -9,6 +9,7 @@ export type OfferSource = 'manual_code' | 'paid_entitlement'
  */
 export interface OfferQuote {
   valid: boolean
+  codeValid: boolean
   normalizedCode: string | null
   discountAmount: number
   discountTier: OfferTier | null

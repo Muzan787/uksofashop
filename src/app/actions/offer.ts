@@ -1,9 +1,11 @@
 'use server'
 
+import { cookies } from 'next/headers'
 import { z } from 'zod'
 import { createAdminClient } from '@/utils/supabase/admin'
 import type { CartItem } from '@/app/actions/checkout'
 import type { OfferQuote, OfferQuoteResult, OfferTier, OfferSource } from '@/types/offers'
+import { OFFER_ENTITLEMENT_COOKIE } from '@/utils/offers/constants'
 
 const itemsSchema = z.array(z.object({
   variant_id: z.string().uuid(),
@@ -11,7 +13,7 @@ const itemsSchema = z.array(z.object({
   fabric_id: z.string().uuid().nullish(),
 })).min(1, 'Your cart is empty.')
 
-const entitlementSchema = z.string().uuid().nullish()
+const tokenSchema = z.string().uuid()
 
 function asTier(value: unknown): OfferTier | null {
   return value === 'ELECTRIC' || value === 'ROMA' || value === 'STANDARD' || value === 'EXCLUDED'
@@ -24,31 +26,22 @@ function asSource(value: unknown): OfferSource | null {
 }
 
 /**
- * Ask the database for the current authoritative basket offer.
- *
- * The action accepts basket identities and an optional customer-facing code,
- * never a client-selected discount or tier. The database re-prices the basket
- * and runs the same calculator place_order calls again at final submission.
- *
- * entitlementToken is the Phase C input contract only. The Phase B database
- * deliberately grants it no authority, so a fabricated token cannot unlock an
- * offer before paid-visitor entitlement issuance actually exists.
+ * Ask the database for the current authoritative basket offer. The caller may
+ * supply a shareable customer-facing code, but never a paid entitlement token,
+ * tier or amount. The opaque Phase C bearer is read only from the HttpOnly
+ * first-party cookie on this server action and is revalidated by PostgreSQL.
  */
 export async function quoteOffer(
   cartItems: CartItem[],
   promotionCode: string | null = null,
-  entitlementToken: string | null = null,
 ): Promise<OfferQuoteResult> {
   const validatedItems = itemsSchema.safeParse(cartItems)
   if (!validatedItems.success) {
     return { error: validatedItems.error.issues[0]?.message ?? 'Your cart is not valid.' }
   }
 
-  const validatedEntitlement = entitlementSchema.safeParse(entitlementToken)
-  if (!validatedEntitlement.success) {
-    return { error: 'That offer entitlement is not valid.' }
-  }
-
+  const jar = await cookies()
+  const parsedToken = tokenSchema.safeParse(jar.get(OFFER_ENTITLEMENT_COOKIE)?.value)
   const admin = createAdminClient()
   const { data, error } = await admin.rpc('calculate_order_offer', {
     p_items: validatedItems.data.map(item => ({
@@ -57,7 +50,7 @@ export async function quoteOffer(
       fabric_id: item.fabric_id ?? null,
     })),
     p_promotion_code: promotionCode,
-    p_offer_entitlement_token: validatedEntitlement.data ?? null,
+    p_offer_entitlement_token: parsedToken.success ? parsedToken.data : null,
   })
 
   if (error || !data || typeof data !== 'object' || Array.isArray(data)) {
@@ -69,28 +62,37 @@ export async function quoteOffer(
     if (message.includes('EMPTY_CART')) {
       return { error: 'Your cart is empty.' }
     }
-    return { error: 'We could not check that offer code. Please try again.' }
+    return { error: 'We could not check that offer. Please try again.' }
   }
 
   const raw = data as Record<string, unknown>
-  const normalizedCode = typeof raw.normalized_code === 'string' ? raw.normalized_code : null
+  const codeValid = raw.code_valid === true
+  const entitlementValid = raw.entitlement_valid === true
+  const normalizedCode = codeValid && typeof raw.normalized_code === 'string' ? raw.normalized_code : null
   const discountAmount = Number(raw.discount_amount ?? 0)
   const discountTier = asTier(raw.discount_tier)
   const offerSource = asSource(raw.offer_source)
   const itemsSubtotal = Number(raw.items_subtotal ?? 0)
-  const valid = raw.code_valid === true || offerSource === 'paid_entitlement'
+  const valid = codeValid || entitlementValid
 
   let message = ''
-  if (!valid) {
-    message = promotionCode?.trim() ? 'Offer code not recognised.' : ''
+  if (promotionCode?.trim() && !codeValid) {
+    message = 'Offer code not recognised.'
+  } else if (!valid) {
+    message = ''
   } else if (discountAmount > 0) {
-    message = `${normalizedCode ?? 'Offer'} applied · £${discountAmount.toFixed(0)} off`
+    message = offerSource === 'paid_entitlement'
+      ? `Online offer applied · £${discountAmount.toFixed(0)} off`
+      : `${normalizedCode ?? 'Offer'} applied · £${discountAmount.toFixed(0)} off`
   } else {
-    message = `${normalizedCode ?? 'Offer'} is recognised. No extra cash discount applies to this basket.`
+    message = offerSource === 'paid_entitlement'
+      ? 'Your online offer is active. No extra cash discount applies to this basket.'
+      : `${normalizedCode ?? 'Offer'} is recognised. No extra cash discount applies to this basket.`
   }
 
   const quote: OfferQuote = {
     valid,
+    codeValid,
     normalizedCode,
     discountAmount: Number.isFinite(discountAmount) ? Math.max(0, discountAmount) : 0,
     discountTier,

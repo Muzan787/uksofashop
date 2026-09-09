@@ -195,6 +195,45 @@ export type Database = {
         }
         Relationships: []
       }
+      offer_entitlements: {
+        Row: {
+          id: string
+          token: string
+          visitor_id: string
+          source: string
+          qualifying_arrival_id: string | null
+          started_at: string
+          expires_at: string
+          revoked_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          token?: string
+          visitor_id: string
+          source: string
+          qualifying_arrival_id?: string | null
+          started_at?: string
+          expires_at: string
+          revoked_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          token?: string
+          visitor_id?: string
+          source?: string
+          qualifying_arrival_id?: string | null
+          started_at?: string
+          expires_at?: string
+          revoked_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       offer_product_tiers: {
         Row: {
           product_id: string
@@ -1109,6 +1148,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      issue_paid_offer_entitlement: {
+        Args: {
+          p_visitor_id: string
+          p_source: string
+          p_arrival_id?: string | null
+        }
+        Returns: Json
+      }
       calculate_order_offer: {
         Args: {
           p_items: Json
