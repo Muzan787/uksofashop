@@ -1,0 +1,92 @@
+name: Offer Phase C expiry supplement v8
+
+on:
+  push:
+    branches: [qa/offer-phase-c-expiry-supplement-v8]
+    paths: [.github/workflows/offer-phase-c-expiry-supplement-v8.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  expiry:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      CANDIDATE_SHA: 8eb47786fc772bfdb3835b1a4da6d956cc86d5f9
+      MASTER_SHA: c0a1ce2a2621aba5b3ea635452e720ea095d2ebd
+      NEXT_PUBLIC_SUPABASE_URL: https://localhost:5443
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_tMk28Ay_hIljhv8NQcV01Q_cI9ApS9c
+      SUPABASE_SERVICE_ROLE_KEY: qa_service_role_fixture_only
+      NEXT_PUBLIC_SITE_URL: https://localhost:3443
+      NODE_TLS_REJECT_UNAUTHORIZED: '0'
+      BASE: https://localhost:3443
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify exact refs and candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin master fix/offer-phase-c-paid-entitlement
+          test "$(git rev-parse origin/master)" = "$MASTER_SHA"
+          test "$(git rev-parse origin/fix/offer-phase-c-paid-entitlement)" = "$CANDIDATE_SHA"
+          git worktree add --detach /tmp/candidate "$CANDIDATE_SHA"
+          test "$(git -C /tmp/candidate rev-parse HEAD)" = "$CANDIDATE_SHA"
+          test -z "$(git -C /tmp/candidate status --porcelain)"
+
+      - name: Install and build exact candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/candidate
+          npm ci
+          npm install -g playwright@1.55.0
+          playwright install --with-deps chromium
+          npm run build
+          test "$(git rev-parse HEAD)" = "$CANDIDATE_SHA"
+          test -z "$(git diff --name-only -- src supabase package.json package-lock.json next.config.ts next.config.js)"
+
+      - name: Start isolated fixture and direct HTTPS candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          openssl req -x509 -newkey rsa:2048 -nodes -keyout /tmp/phasec-key.pem -out /tmp/phasec-cert.pem -days 1 -subj '/CN=localhost' -addext 'subjectAltName=DNS:localhost,IP:127.0.0.1' >/dev/null 2>&1
+          node .github/qa/phasec-final/backend.mjs >/tmp/phasec-backend.log 2>&1 &
+          for i in {1..30}; do curl -ksf https://localhost:5443/__qa/state >/dev/null && b=1 && break || sleep 1; done
+          test "${b:-0}" = 1
+          node .github/qa/phasec-final/server.cjs >/tmp/phasec-next.log 2>&1 &
+          for i in {1..40}; do curl -ksf https://localhost:3443/ >/dev/null && n=1 && break || sleep 1; done
+          test "${n:-0}" = 1
+          echo HARNESS=DIRECT_HTTPS
+
+      - name: Patch QA-only mobile summary state and run supplement
+        shell: bash
+        env:
+          NODE_PATH: /usr/local/lib/node_modules
+        run: |
+          set -euo pipefail
+          cp .github/qa/phasec-final/supplement.cjs /tmp/supplement.cjs
+          python - <<'PY'
+          import pathlib
+          p=pathlib.Path('/tmp/supplement.cjs')
+          s=p.read_text()
+          old="const trig=p.getByRole('button',{name:/Have an offer code\\?/i});if(await trig.isVisible().catch(()=>false))await trig.click();"
+          new="const closeSummary=p.getByRole('button',{name:'Close order summary'});if(await closeSummary.isVisible().catch(()=>false))await closeSummary.click();const trig=p.getByRole('button',{name:/Have an offer code\\?/i});if(await trig.isVisible().catch(()=>false))await trig.click();"
+          if old not in s: raise SystemExit('expected expiry promo trigger block not found')
+          p.write_text(s.replace(old,new,1))
+          PY
+          test "$(git -C /tmp/candidate rev-parse HEAD)" = "$CANDIDATE_SHA"
+          node /tmp/supplement.cjs
+          test -s /tmp/phasec-supplement-results.json
+          cat /tmp/phasec-supplement-results.json
+          echo EXPIRY_SUPPLEMENT=PASS
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: offer-phase-c-expiry-supplement-v8
+          path: /tmp/phasec-supplement-results.json
+          if-no-files-found: warn
