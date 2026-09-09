@@ -150,7 +150,9 @@ async function openQuoteSummary(page) {
     const drawer = page.locator('#mobile-summary')
     await drawer.getByText(/Delivery · Custom quote/i).waitFor({ state: 'visible', timeout: 5000 })
     await drawer.getByText(/TO CONFIRM/i).waitFor({ state: 'visible', timeout: 5000 })
-    return async () => { await page.getByRole('button', { name: 'Close order summary' }).click() }
+    // The fixed summary bar deliberately sits above the backdrop. Close from
+    // the bar's own toggle so the harness follows the reachable UI control.
+    return async () => { await toggle.click() }
   }
   const body = await page.locator('body').innerText()
   assert.match(body, /Delivery · Custom quote/i)
@@ -174,7 +176,10 @@ async function applyOffer(page, amount) {
   if (await reveal.isVisible().catch(() => false)) await reveal.click()
   await page.getByLabel('Offer code').fill('SOFAEXTRA')
   await page.getByRole('button', { name: /^Apply$/ }).click()
-  await page.getByText(new RegExp(`SOFAEXTRA applied · £${amount} off`, 'i')).waitFor({ state: 'visible', timeout: 15000 })
+  const confirmation = amount > 0
+    ? new RegExp(`SOFAEXTRA applied · £${amount} off`, 'i')
+    : /SOFAEXTRA is recognised\. No extra cash discount applies to this basket\./i
+  await page.getByText(confirmation).waitFor({ state: 'visible', timeout: 15000 })
 }
 async function setAssembly(page) {
   const label = page.locator('label').filter({ hasText: 'Assembly' }).first()
@@ -315,7 +320,10 @@ async function responsiveCase(browser, width, postcode, expected) {
 async function manualOfferCase(browser, name, cart, amount) {
   await withCheckout(browser, `Phase B manual ${name} £${amount}`, 768, { cart }, async ({ page }) => {
     await enterDetails(page); await fillDetails(page); await applyOffer(page, amount); await setPostcode(page, 'BB6 7LS'); await waitMainland(page, 'BB6 7LS')
-    const label = page.getByText('Online offer', { exact: true }).first(); await label.waitFor({ state: 'visible', timeout: 5000 })
+    const toggle = page.locator('button[aria-controls="mobile-summary"]')
+    await toggle.click()
+    const summary = page.locator('#mobile-summary')
+    const label = summary.getByText('Offer · SOFAEXTRA', { exact: true }).first(); await label.waitFor({ state: 'visible', timeout: 5000 })
     const text = await label.locator('..').innerText(); assert.match(text, amount > 0 ? new RegExp(`[−-]£${amount}\\.00`) : /£0\.00/)
   })
 }
