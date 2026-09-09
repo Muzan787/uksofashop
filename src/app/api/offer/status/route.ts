@@ -48,14 +48,7 @@ export async function GET(request: Request) {
   }
 
   const expiresAt = data?.expires_at ? Date.parse(data.expires_at) : Number.NaN
-  const active = Boolean(
-    data &&
-    !data.revoked_at &&
-    Number.isFinite(expiresAt) &&
-    expiresAt > Date.now(),
-  )
-
-  if (!active) {
+  if (!data || data.revoked_at || !Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
     const response = json(INACTIVE_OFFER_ENTITLEMENT)
     clearCookie(response, request)
     return response
