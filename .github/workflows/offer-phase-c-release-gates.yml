@@ -1,0 +1,117 @@
+name: Offer Phase C clean release gates
+
+on:
+  push:
+    branches: [qa/offer-phase-c-release-gates]
+    paths: [.github/workflows/offer-phase-c-release-gates.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  release-gates:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      RELEASE_SHA: a8c4a41be63e23935196e8eea13278917eda1c32
+      CANDIDATE_SHA: 8eb47786fc772bfdb3835b1a4da6d956cc86d5f9
+      MASTER_SHA: c0a1ce2a2621aba5b3ea635452e720ea095d2ebd
+      EXPECTED_MIGRATION_SHA256: 0531846e23d53e76201cd1cb076f9093ff9e7c1332a59f349521148b752c1fac
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: a8c4a41be63e23935196e8eea13278917eda1c32
+          fetch-depth: 0
+
+      - name: Exact release identity and byte tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin master fix/offer-phase-c-paid-entitlement fix/offer-phase-c-paid-entitlement-release
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          test "$(git rev-parse origin/master)" = "$MASTER_SHA"
+          test "$(git rev-parse origin/fix/offer-phase-c-paid-entitlement)" = "$CANDIDATE_SHA"
+          test "$(git rev-parse origin/fix/offer-phase-c-paid-entitlement-release)" = "$RELEASE_SHA"
+          test "$(git rev-parse "$RELEASE_SHA^{tree}")" = "$(git rev-parse "$CANDIDATE_SHA^{tree}")"
+          test "$(git rev-list --count "$MASTER_SHA..$RELEASE_SHA")" = 1
+          test -z "$(git status --porcelain)"
+          echo TREE_IDENTITY=PASS
+          echo ONE_CLEAN_COMMIT=PASS
+
+      - name: Release diff and protected paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --name-only "$MASTER_SHA..$RELEASE_SHA" | tee /tmp/release-files.txt
+          cat >/tmp/expected-files.txt <<'EOF'
+          src/app/actions/checkout.ts
+          src/app/actions/offer.ts
+          src/app/api/offer/qualify/route.ts
+          src/app/api/offer/status/route.ts
+          src/app/layout.tsx
+          src/components/Checkout/CheckoutClient.tsx
+          src/components/Layout/Header.tsx
+          src/components/Offer/OfferBoot.tsx
+          src/components/Offer/OfferPrompt.tsx
+          src/components/Offer/OfferProvider.tsx
+          src/types/offerEntitlement.ts
+          src/types/offers.ts
+          src/types/supabase.ts
+          src/utils/offers/constants.ts
+          src/utils/offers/paidTraffic.ts
+          supabase/migrations/20260909060000_offer_phase_c_paid_entitlements.sql
+          EOF
+          sort -o /tmp/release-files.txt /tmp/release-files.txt
+          sort -o /tmp/expected-files.txt /tmp/expected-files.txt
+          diff -u /tmp/expected-files.txt /tmp/release-files.txt
+          for p in \
+            src/utils/tracking.ts \
+            src/utils/orderConversions.ts \
+            src/utils/metaCapi.ts \
+            src/utils/ga4Server.ts \
+            src/context/CartContext.tsx \
+            src/components/Checkout/CartStep.tsx; do
+            ! grep -Fxq "$p" /tmp/release-files.txt
+          done
+          ! grep -E '^src/utils/attribution/' /tmp/release-files.txt
+          ! grep -E 'AttributionBoot|WhatsApp|ProductPageClient|BuyBox|Reviews|confirm_order|google_offline' /tmp/release-files.txt
+          echo RELEASE_DIFF=PASS
+          echo PROTECTED_PATHS=PASS
+
+      - name: Migration digest
+        shell: bash
+        run: |
+          set -euo pipefail
+          got="$(sha256sum supabase/migrations/20260909060000_offer_phase_c_paid_entitlements.sql | awk '{print $1}')"
+          echo "MIGRATION_SHA256=$got"
+          test "$got" = "$EXPECTED_MIGRATION_SHA256"
+          echo MIGRATION_DIGEST=PASS
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Changed-file ESLint
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t files < <(git diff --name-only "$MASTER_SHA..$RELEASE_SHA" -- '*.ts' '*.tsx')
+          test "${#files[@]}" -gt 0
+          npx eslint "${files[@]}"
+          echo ESLINT=PASS
+
+      - name: TypeScript
+        run: |
+          npx tsc --noEmit
+          echo TYPESCRIPT=PASS
+
+      - name: Build
+        run: |
+          npm run build
+          echo BUILD=PASS
+
+      - name: Diff check
+        shell: bash
+        run: |
+          git diff --check "$MASTER_SHA..$RELEASE_SHA"
+          test -z "$(git status --porcelain)"
+          echo DIFF_CHECK=PASS
