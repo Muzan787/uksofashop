@@ -1,10 +1,9 @@
 'use client'
 // src/app/admin/orders/DirectPrintButton.tsx
 import { Printer } from 'lucide-react'
-import { ADDRESS_LINE, PHONE_DISPLAY } from '@/constants/contact'
-import { ORGANISATION_NAME } from '@/utils/schema'
+import type { AdminOrderDisplay, AdminOrderItemDisplay } from '@/types/adminOrders'
 
-export default function DirectPrintButton({ order }: { order: any }) {
+export default function DirectPrintButton({ order }: { order: AdminOrderDisplay }) {
   
   const handlePrint = () => {
     // TOGGLE THIS: Change `order` to `DUMMY_CUSTOM_ORDER` when you want to use the custom data
@@ -256,7 +255,7 @@ export default function DirectPrintButton({ order }: { order: any }) {
               <div class="invoice-details">
                 <div class="invoice-label">Invoice No.</div>
                 <div class="invoice-number">#${activeOrder.id.split('-')[0].toUpperCase()}</div>
-                <div class="invoice-date">${new Date(activeOrder.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
+                <div class="invoice-date">${activeOrder.created_at ? new Date(activeOrder.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : 'Date unavailable'}</div>
               </div>
             </div>
 
@@ -284,7 +283,7 @@ export default function DirectPrintButton({ order }: { order: any }) {
                 </tr>
               </thead>
               <tbody>
-                ${activeOrder.order_items.map((item: any) => `
+                ${activeOrder.order_items.map((item: AdminOrderItemDisplay) => `
                   <tr>
                     <td>
                       <div class="item-title">${item.product_variants?.products?.title}</div>
@@ -341,7 +340,7 @@ export default function DirectPrintButton({ order }: { order: any }) {
             <div class="footer">
                <div class="thank-you">Thank you for your business.</div>
                <div class="company-details">
-                 ${ORGANISATION_NAME} &nbsp;&bull;&nbsp; ${ADDRESS_LINE} &nbsp;&bull;&nbsp; ${PHONE_DISPLAY}
+                 {ORGANISATION_NAME} &nbsp;&bull;&nbsp; {ADDRESS_LINE} &nbsp;&bull;&nbsp; {PHONE_DISPLAY}
                </div>
                <div class="guarantee-badge">1-year Frame Guarantee</div>
             </div>
