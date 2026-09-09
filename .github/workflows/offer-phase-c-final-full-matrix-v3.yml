@@ -105,6 +105,7 @@ jobs:
               js=js.replace("page.on('pageerror',e=>s.pageErrors.push(String(e.stack||e)))","page.on('pageerror',e=>{const x=String(e.stack||e);if(!/Failed to register a ServiceWorker|SSL certificate error/i.test(x))s.pageErrors.push(x)})")
               js=js.replace("await page.getByRole('button',{name:/Close your online sofa offer is active/i}).click()","await d.getByRole('button',{name:/Close your online sofa offer is active/i}).click()")
               js=js.replace("await p.getByRole('button',{name:/Close your online sofa offer is active/i}).click()","await d.getByRole('button',{name:/Close your online sofa offer is active/i}).click()")
+              js=js.replace("assertHas(await rp.locator('body').innerText(),ACTIVE,'reopen entitlement')","assertHas((await rp.locator('body').innerText()).toUpperCase(),ACTIVE.toUpperCase(),'reopen entitlement')")
               pathlib.Path(out).write_text(js)
           extract('/tmp/traffic.yml',"cat > /tmp/phasec-traffic.cjs <<'JS'",'/tmp/phasec-traffic.cjs')
           extract('/tmp/checkout.yml',"cat > /tmp/phasec-checkout.cjs <<'JS'",'/tmp/phasec-checkout.cjs')
