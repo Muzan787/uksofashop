@@ -1,4 +1,5 @@
 name: Offer Phase B recovery QA
+# Final static rerun after the nullable-date display recovery.
 
 on:
   push:
