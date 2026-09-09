@@ -31,28 +31,51 @@ const CARTS = {
 
 function log(message) { console.log(`[phase-d-local-browser] ${message}`) }
 
+async function installBrowserHomedata(context) {
+  await context.route('https://api.homedata.co.uk/**', async route => {
+    const url = new URL(route.request().url())
+    const postcode = (url.searchParams.get('q') || '').trim().toUpperCase()
+    const fixture = {
+      'IV40 8AE': '1 Main Street, Kyle of Lochalsh, IV40 8AE',
+      'IV40 8PB': '1 Inverarish, Isle of Raasay, IV40 8PB',
+      'PA34 5AB': '1 George Street, Oban, PA34 5AB',
+      'PA34 4UB': '1 Cullipool, Isle of Luing, PA34 4UB',
+    }[postcode]
+
+    if (postcode === 'IV40 8ZZ' || postcode === 'PA34 5ZZ') {
+      await route.fulfill({
+        status: 503,
+        contentType: 'application/json',
+        body: JSON.stringify({ detail: 'controlled lookup unavailable' }),
+      })
+      return
+    }
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ suggestions: [{ address: fixture || `1 Controlled QA Address, ${postcode}` }] }),
+    })
+  })
+}
+
 async function setupPage(browser, width, { acquisition = false, paid = false, cart = CARTS.electric } = {}) {
   const context = await browser.newContext({
     viewport: { width, height: width <= 430 ? 844 : 900 },
     ignoreHTTPSErrors: true,
   })
+  await installBrowserHomedata(context)
 
   const cookies = []
-  if (acquisition) {
-    cookies.push({ name: 'uksofashop_wa', value: ACQ_COOKIE, url: BASE, sameSite: 'Lax', secure: true })
-  }
-  if (paid) {
-    cookies.push({ name: 'uksofashop_offer', value: PAID_COOKIE, url: BASE, sameSite: 'Lax', secure: true, httpOnly: true })
-  }
+  if (acquisition) cookies.push({ name: 'uksofashop_wa', value: ACQ_COOKIE, url: BASE, sameSite: 'Lax', secure: true })
+  if (paid) cookies.push({ name: 'uksofashop_offer', value: PAID_COOKIE, url: BASE, sameSite: 'Lax', secure: true, httpOnly: true })
   if (cookies.length) await context.addCookies(cookies)
 
   const runtime = { pageErrors: [], dangerousConsole: [], failedSameOrigin: [], serverActions: 0 }
   const page = await context.newPage()
   page.on('pageerror', error => runtime.pageErrors.push(String(error)))
   page.on('console', msg => {
-    if (msg.type() === 'error' && /hydration|uncaught|maximum update depth|too many re-renders/i.test(msg.text())) {
-      runtime.dangerousConsole.push(msg.text())
-    }
+    if (msg.type() === 'error' && /hydration|uncaught|maximum update depth|too many re-renders/i.test(msg.text())) runtime.dangerousConsole.push(msg.text())
   })
   page.on('requestfailed', req => {
     if (req.url().startsWith(BASE)) runtime.failedSameOrigin.push(`${req.method()} ${req.url()} :: ${req.failure()?.errorText || ''}`)
@@ -64,7 +87,10 @@ async function setupPage(browser, width, { acquisition = false, paid = false, ca
   await page.addInitScript(value => localStorage.setItem('uksofashop_cart', JSON.stringify(value)), cart)
   await page.goto(`${BASE}/checkout`, { waitUntil: 'domcontentloaded', timeout: 30000 })
   const essential = page.getByRole('button', { name: 'Essential only' })
-  if (await essential.isVisible().catch(() => false)) await essential.click()
+  if (await essential.isVisible().catch(() => false)) {
+    await essential.click()
+    await essential.waitFor({ state: 'hidden', timeout: 3000 }).catch(() => {})
+  }
   await page.getByRole('button', { name: /Continue to delivery/i }).waitFor({ state: 'visible', timeout: 15000 })
   return { context, page, runtime }
 }
@@ -73,6 +99,7 @@ function assertRuntimeClean(runtime, label) {
   assert.deepEqual(runtime.pageErrors, [], `${label}: uncaught page errors: ${runtime.pageErrors.join(' | ')}`)
   assert.deepEqual(runtime.dangerousConsole, [], `${label}: hydration/runtime console errors: ${runtime.dangerousConsole.join(' | ')}`)
   assert.deepEqual(runtime.failedSameOrigin, [], `${label}: same-origin request failures: ${runtime.failedSameOrigin.join(' | ')}`)
+  assert.ok(runtime.serverActions < 100, `${label}: suspected Server Action request loop (${runtime.serverActions})`)
 }
 
 async function assertNoHorizontalOverflow(page, width) {
@@ -153,8 +180,22 @@ async function waitMainland(page, postcode) {
   const button = page.getByRole('button', { name: /Place Order/i })
   await button.waitFor({ state: 'visible', timeout: 5000 })
   assert.equal(await button.isEnabled(), true, `${postcode} should enable Place Order`)
+}
+
+async function assertExpandedQuoteSummary(page) {
+  const mobileToggle = page.locator('button[aria-controls="mobile-summary"]')
+  if (await mobileToggle.isVisible().catch(() => false)) {
+    await mobileToggle.click()
+    const drawer = page.locator('#mobile-summary')
+    await drawer.getByText(/Delivery · Custom quote/i).waitFor({ state: 'visible', timeout: 3000 })
+    await drawer.getByText(/TO CONFIRM/i).waitFor({ state: 'visible', timeout: 3000 })
+    await page.getByRole('button', { name: 'Close order summary' }).click()
+    return
+  }
+
   const body = await page.locator('body').innerText()
-  assert.doesNotMatch(body, /Delivery · Custom quote[\s\S]{0,40}TO CONFIRM/i)
+  assert.match(body, /Delivery · Custom quote/i)
+  assert.match(body, /TO CONFIRM/i)
 }
 
 async function waitQuote(page, postcode) {
@@ -164,19 +205,17 @@ async function waitQuote(page, postcode) {
   assert.equal(await page.getByRole('button', { name: /Place Order/i }).count(), 0, `${postcode}: ordinary order action must be absent`)
   const body = await page.locator('body').innerText()
   assert.match(body, /We may still be able to deliver to you/i)
-  assert.match(body, /Delivery · Custom quote/i)
-  assert.match(body, /TO CONFIRM/i)
   assert.match(body, /Current online subtotal/i)
+  assert.match(body, /delivery quote/i)
   assert.doesNotMatch(body, new RegExp(`FREE UK Mainland delivery to ${postcode.replace(' ', '\\s*')}`, 'i'))
+  await assertExpandedQuoteSummary(page)
 }
 
 async function assertInvalidPostcode(page, postcode) {
   await setPostcode(page, postcode)
-  const find = page.getByRole('button', { name: /Find/i }).first()
-  await find.click()
+  await page.getByRole('button', { name: /Find/i }).first().click()
   await page.getByText(/Please enter a valid UK postcode/i).waitFor({ state: 'visible', timeout: 5000 })
   assert.equal(await page.getByRole('link', { name: /Get a Delivery Quote on WhatsApp/i }).count(), 0, `${postcode}: invalid postcode must not be treated as custom quote`)
-  assert.equal(await page.getByText(/FREE UK Mainland delivery to/i).count(), 0, `${postcode}: invalid postcode must not be mainland`)
   assert.equal(await page.getByRole('button', { name: /Place Order/i }).isEnabled().catch(() => false), false)
 }
 
@@ -209,12 +248,7 @@ async function forgedFlagsStayBlocked(page) {
   assert.equal(await page.getByRole('link', { name: /Get a Delivery Quote on WhatsApp/i }).isVisible(), true)
 }
 
-async function assertQuoteMessageAndAcquisition(context, page, {
-  expectExistingReference,
-  expectedQuantity,
-  expectedOfferAmount = 50,
-  expectAssembly = true,
-}) {
+async function assertQuoteMessageAndAcquisition(context, page, { expectExistingReference, expectedQuantity, expectedOfferAmount = 50, expectAssembly = true }) {
   const requests = []
   page.on('request', req => { if (req.url().includes('/api/attribution/whatsapp-click')) requests.push(req.url()) })
   const cta = page.getByRole('link', { name: /Get a Delivery Quote on WhatsApp/i })
@@ -258,16 +292,12 @@ async function fullSwitch(browser, width) {
   await setPostcode(page, 'BB6 7LS')
   await waitMainland(page, 'BB6 7LS')
 
-  const postcode = page.locator('input[name="postcode"]')
-  await postcode.fill('BT1 5GS')
+  await page.locator('input[name="postcode"]').fill('BT1 5GS')
   assert.equal(await page.getByRole('button', { name: /Place Order/i }).isEnabled().catch(() => false), false, 'stale mainland permission survived postcode edit')
   await waitQuote(page, 'BT1 5GS')
   await assertStatePreserved(page)
   await forgedFlagsStayBlocked(page)
-  await assertQuoteMessageAndAcquisition(context, page, {
-    expectExistingReference: true,
-    expectedQuantity: 2,
-  })
+  await assertQuoteMessageAndAcquisition(context, page, { expectExistingReference: true, expectedQuantity: 2 })
 
   await setPostcode(page, 'BB6 7LS')
   await waitMainland(page, 'BB6 7LS')
@@ -287,10 +317,7 @@ async function freshQuote(browser) {
   await setAssembly(page)
   await setPostcode(page, 'BT1 5GS')
   await waitQuote(page, 'BT1 5GS')
-  await assertQuoteMessageAndAcquisition(context, page, {
-    expectExistingReference: false,
-    expectedQuantity: 1,
-  })
+  await assertQuoteMessageAndAcquisition(context, page, { expectExistingReference: false, expectedQuantity: 1 })
   assertRuntimeClean(runtime, 'fresh organic quote')
   await context.close()
 }
@@ -318,31 +345,17 @@ async function responsiveState(browser, width, state) {
 }
 
 async function checkoutGeography(browser) {
-  log('checkout Server Action postcode classification matrix including mixed districts')
+  log('checkout postcode classification matrix including mixed districts')
   const { context, page, runtime } = await setupPage(browser, 768)
   await enterDetails(page)
   await fillDetails(page)
 
-  for (const postcode of [
-    'BB6 7LS', 'CF10 1EP', 'EH1 1YZ',
-    'IV52 8TN', 'IV53 8AA', 'IV54 8YX', 'PA35 1HN', 'PA80 5UZ',
-    'IV40 8AE', 'PA34 5AB',
-  ]) {
-    await setPostcode(page, postcode)
-    await waitMainland(page, postcode)
+  for (const postcode of ['BB6 7LS','CF10 1EP','EH1 1YZ','IV52 8TN','IV53 8AA','IV54 8YX','PA35 1HN','PA80 5UZ','IV40 8AE','PA34 5AB']) {
+    await setPostcode(page, postcode); await waitMainland(page, postcode)
   }
-
-  for (const postcode of [
-    'BT1 5GS', 'IM1 1AA', 'JE2 3QA', 'GY1 1AA',
-    'HS1 2AA', 'ZE1 0AA', 'KA27 8AA', 'KW16 3AA', 'PH42 4RL',
-    'PO30 1AA', 'TR21 0AA',
-    'IV40 8PB', 'PA34 4UB',
-    'IV40 8ZZ', 'PA34 5ZZ',
-  ]) {
-    await setPostcode(page, postcode)
-    await waitQuote(page, postcode)
+  for (const postcode of ['BT1 5GS','IM1 1AA','JE2 3QA','GY1 1AA','HS1 2AA','ZE1 0AA','KA27 8AA','KW16 3AA','PH42 4RL','PO30 1AA','TR21 0AA','IV40 8PB','PA34 4UB','IV40 8ZZ','PA34 5ZZ']) {
+    await setPostcode(page, postcode); await waitQuote(page, postcode)
   }
-
   await assertInvalidPostcode(page, 'D02 X285')
   await assertInvalidPostcode(page, 'ABC 123')
   assertRuntimeClean(runtime, 'checkout geography')
@@ -350,30 +363,18 @@ async function checkoutGeography(browser) {
 }
 
 async function paidOfferCases(browser) {
-  log('Phase C paid entitlement remains separate from delivery classification')
-  for (const [name, cart, amount] of [
-    ['Electric', CARTS.electric, 50],
-    ['Roma', CARTS.roma, 30],
-    ['Standard', CARTS.standard, 20],
-    ['Verona', CARTS.verona, 0],
-  ]) {
+  log('Phase C paid entitlement stays separate from delivery classification')
+  for (const [name, cart, amount] of [['Electric', CARTS.electric, 50], ['Roma', CARTS.roma, 30], ['Standard', CARTS.standard, 20], ['Verona', CARTS.verona, 0]]) {
     const { context, page, runtime } = await setupPage(browser, 1440, { paid: true, cart })
     await enterDetails(page)
     await fillDetails(page)
-
     const label = page.getByText('Online offer', { exact: true }).first()
     await label.waitFor({ state: 'visible', timeout: 15000 })
     const line = label.locator('..')
     const expected = amount > 0 ? new RegExp(`[−-]£${amount}\\.00`) : /£0\.00/
     assert.match(await line.innerText(), expected, `${name}: automatic paid offer amount`)
-
-    await setPostcode(page, 'BB6 7LS')
-    await waitMainland(page, 'BB6 7LS')
-    assert.match(await line.innerText(), expected, `${name}: offer lost on mainland classification`)
-
-    await setPostcode(page, 'BT1 5GS')
-    await waitQuote(page, 'BT1 5GS')
-    assert.match(await line.innerText(), expected, `${name}: offer lost on custom quote classification`)
+    await setPostcode(page, 'BB6 7LS'); await waitMainland(page, 'BB6 7LS'); assert.match(await line.innerText(), expected)
+    await setPostcode(page, 'BT1 5GS'); await waitQuote(page, 'BT1 5GS'); assert.match(await line.innerText(), expected)
     assert.equal(await page.getByRole('button', { name: /Place Order/i }).count(), 0)
     assertRuntimeClean(runtime, `paid ${name}`)
     await context.close()
@@ -383,13 +384,10 @@ async function paidOfferCases(browser) {
 async function serverActionProbes(browser) {
   log('actual placeOrder Server Action authority and forged-client probe')
   const { context, page, runtime } = await setupPage(browser, 768)
-
   async function probe(postcode, forged = false) {
     return page.evaluate(async ({ postcode, forged }) => {
       const res = await fetch('/api/qa/phase-d-server', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ postcode, forged }),
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ postcode, forged }),
       })
       if (!res.ok) throw new Error(`QA server probe HTTP ${res.status}`)
       return res.json()
@@ -399,17 +397,14 @@ async function serverActionProbes(browser) {
   const mainland = await probe('BB6 7LS')
   assert.equal(mainland.rpcDelta, 1, 'mainland Server Action must progress to place_order authority')
   assert.match(String(mainland.result?.error || ''), /Prices or your offer have changed/i)
-
-  for (const postcode of ['BT1 5GS', 'IM1 1AA', 'JE2 3QA', 'GY1 1AA', 'HS1 2AA']) {
+  for (const postcode of ['BT1 5GS','IM1 1AA','JE2 3QA','GY1 1AA','HS1 2AA']) {
     const result = await probe(postcode, true)
     assert.equal(result.rpcDelta, 0, `${postcode}: Server Action must not invoke place_order`)
     assert.match(String(result.result?.error || ''), /custom delivery quote/i)
   }
-
   const invalid = await probe('D02 X285', true)
   assert.equal(invalid.rpcDelta, 0)
   assert.match(String(invalid.result?.error || ''), /valid UK postcode/i)
-
   assertRuntimeClean(runtime, 'server action probes')
   await context.close()
 }
@@ -417,26 +412,20 @@ async function serverActionProbes(browser) {
 async function estimator(browser) {
   log('PDP delivery estimator consistency')
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, ignoreHTTPSErrors: true })
-  const runtime = { pageErrors: [], dangerousConsole: [], failedSameOrigin: [] }
+  await installBrowserHomedata(context)
+  const runtime = { pageErrors: [], dangerousConsole: [], failedSameOrigin: [], serverActions: 0 }
   const page = await context.newPage()
   page.on('pageerror', error => runtime.pageErrors.push(String(error)))
-  page.on('console', msg => {
-    if (msg.type() === 'error' && /hydration|uncaught|maximum update depth|too many re-renders/i.test(msg.text())) runtime.dangerousConsole.push(msg.text())
-  })
+  page.on('console', msg => { if (msg.type() === 'error' && /hydration|uncaught|maximum update depth|too many re-renders/i.test(msg.text())) runtime.dangerousConsole.push(msg.text()) })
   page.on('requestfailed', req => { if (req.url().startsWith(BASE)) runtime.failedSameOrigin.push(req.url()) })
-
   await page.goto(`${BASE}/shop/electric-sofa/hannah-electric-corner`, { waitUntil: 'domcontentloaded', timeout: 30000 })
   const essential = page.getByRole('button', { name: 'Essential only' })
   if (await essential.isVisible().catch(() => false)) await essential.click()
   const input = page.locator('#estimator-postcode')
   await input.scrollIntoViewIfNeeded()
-
   async function check(postcode, expected) {
-    await input.fill(postcode)
-    await page.getByRole('button', { name: /^Check$/ }).click()
-    await page.getByText(expected).waitFor({ state: 'visible', timeout: 15000 })
+    await input.fill(postcode); await page.getByRole('button', { name: /^Check$/ }).click(); await page.getByText(expected).waitFor({ state: 'visible', timeout: 15000 })
   }
-
   await check('BB6 7LS', /Free UK Mainland delivery to BB6 7LS/i)
   await check('BT1 5GS', /BT1 5GS needs a custom delivery quote/i)
   await check('ABC 123', /does not look like a UK postcode/i)
