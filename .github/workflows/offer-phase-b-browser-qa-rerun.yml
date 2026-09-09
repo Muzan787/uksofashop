@@ -1,0 +1,47 @@
+name: Offer Phase B exact clean browser QA rerun
+
+on:
+  push:
+    branches: [fix/offer-phase-b-discount-engine-release]
+    paths: [.github/workflows/offer-phase-b-browser-qa-rerun.yml]
+
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/offer-phase-b-discount-engine-release
+          fetch-depth: 0
+      - name: Extract browser test harness from QA-only workflow
+        run: |
+          python <<'PY'
+          from pathlib import Path
+          s=Path('.github/workflows/offer-phase-b-browser-qa.yml').read_text()
+          start="          cat > /tmp/phaseb-browser-qa.cjs <<'JS'\n"
+          end="          JS\n          node /tmp/phaseb-browser-qa.cjs\n"
+          if start not in s or end not in s:
+              raise SystemExit('browser harness anchors missing')
+          body=s.split(start,1)[1].split(end,1)[0]
+          lines=[]
+          for line in body.splitlines():
+              lines.append(line[10:] if line.startswith('          ') else line)
+          Path('/tmp/phaseb-browser-qa.cjs').write_text('\n'.join(lines)+'\n')
+          PY
+      - name: Checkout exact clean recovery candidate and prove app equivalence
+        run: |
+          git fetch origin master fix/offer-phase-b-recovery-release
+          git checkout --detach 3200b9cdd63600bc496bdc1958ed12ce13e8ace0
+          test "$(git rev-parse HEAD)" = "3200b9cdd63600bc496bdc1958ed12ce13e8ace0"
+          test -z "$(git diff --name-only origin/master...HEAD -- src/components/Checkout src/context/CartContext.tsx src/app/actions/checkout.ts src/app/actions/offer.ts src/components/Layout/Mobilenav.tsx src/components/Layout/WhatsAppFab.tsx)"
+      - name: Install Playwright
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Run browser matrix
+        env:
+          PREVIEW_BASE: https://uksofashop-git-fix-offer-phase-b-reco-4c8698-muzan787s-projects.vercel.app
+          LIVE_BASE: https://www.uksofashop.co.uk
+          NODE_PATH: ${{ github.workspace }}/node_modules
+        run: node /tmp/phaseb-browser-qa.cjs
