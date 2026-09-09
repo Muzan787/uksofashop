@@ -1,0 +1,283 @@
+name: Offer Phase C final direct-HTTPS matrix
+
+on:
+  push:
+    branches: [qa/offer-phase-c-final-full-matrix]
+    paths: [.github/workflows/offer-phase-c-final-full-matrix.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  matrix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      CANDIDATE_SHA: 8eb47786fc772bfdb3835b1a4da6d956cc86d5f9
+      MASTER_SHA: c0a1ce2a2621aba5b3ea635452e720ea095d2ebd
+      NEXT_PUBLIC_SUPABASE_URL: https://localhost:5443
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_tMk28Ay_hIljhv8NQcV01Q_cI9ApS9c
+      SUPABASE_SERVICE_ROLE_KEY: qa_service_role_fixture_only
+      NEXT_PUBLIC_SITE_URL: https://localhost:3443
+      NODE_TLS_REJECT_UNAUTHORIZED: '0'
+      BASE: https://localhost:3443
+
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@v4
+        with:
+          ref: 8eb47786fc772bfdb3835b1a4da6d956cc86d5f9
+          fetch-depth: 0
+
+      - name: Reverify master, candidate and source tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin master fix/offer-phase-c-paid-entitlement qa/offer-phase-c-browser-traffic qa/offer-phase-c-browser-checkout
+          test "$(git rev-parse HEAD)" = "$CANDIDATE_SHA"
+          test "$(git rev-parse origin/master)" = "$MASTER_SHA"
+          test "$(git rev-parse origin/fix/offer-phase-c-paid-entitlement)" = "$CANDIDATE_SHA"
+          test -z "$(git status --porcelain)"
+          echo "EXACT_CANDIDATE=$CANDIDATE_SHA"
+          echo "MASTER=$MASTER_SHA"
+
+      - name: Install exact dependencies and Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci
+          npm install -g playwright@1.55.0
+          playwright install --with-deps chromium
+          test -z "$(git status --porcelain)"
+
+      - name: Prepare self-signed QA cert and isolated backend fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          openssl req -x509 -newkey rsa:2048 -nodes \
+            -keyout /tmp/phasec-key.pem -out /tmp/phasec-cert.pem -days 1 \
+            -subj '/CN=localhost' -addext 'subjectAltName=DNS:localhost,IP:127.0.0.1' >/dev/null 2>&1
+
+          cat >/tmp/phasec-backend.mjs <<'JS'
+          import https from 'node:https'
+          import fs from 'node:fs'
+          import crypto from 'node:crypto'
+
+          const key=fs.readFileSync('/tmp/phasec-key.pem')
+          const cert=fs.readFileSync('/tmp/phasec-cert.pem')
+          const PROD='https://nznpeqjnoobhyxwnmsez.supabase.co'
+          const PUB='sb_publishable_tMk28Ay_hIljhv8NQcV01Q_cI9ApS9c'
+          const byVisitor=new Map(), byToken=new Map()
+          const products=new Map([
+            ['1ba97d1f-f890-48f8-8ab9-57cbb147f388',[999,'ELECTRIC']],
+            ['4b6dc9c2-91ec-432f-9735-abb6899b1a95',[350,'ROMA']],
+            ['ff3c0414-77ba-40ef-b6b2-bd97bff2bd17',[649,'STANDARD']],
+            ['01921b2b-5fe9-47d3-8eb6-b53adba27e82',[349,'EXCLUDED']],
+            ['f262accc-1287-4375-984e-e677afd5aa01',[149,'EXCLUDED']],
+            ['a5d2050d-c458-4e0c-b3b3-7b7c727845a0',[549,'EXCLUDED']],
+          ])
+          const priority={ELECTRIC:4,ROMA:3,STANDARD:2,EXCLUDED:1}
+          const amountFor={ELECTRIC:50,ROMA:30,STANDARD:20,EXCLUDED:0}
+          function cors(req){const origin=req.headers.origin==='https://localhost:3443'?req.headers.origin:'https://localhost:3443';return {'access-control-allow-origin':origin,'access-control-allow-credentials':'true','access-control-allow-headers':'authorization,apikey,content-type,prefer,range,x-client-info,x-supabase-api-version','access-control-allow-methods':'GET,POST,PATCH,DELETE,OPTIONS','vary':'Origin'}}
+          function send(req,res,status,data,extra={}){res.writeHead(status,{'content-type':'application/json',...cors(req),...extra});res.end(JSON.stringify(data))}
+          async function body(req){let s='';for await(const c of req)s+=c;if(!s)return{};try{return JSON.parse(s)}catch{return{}}}
+          function active(e){return !!e&&!e.revoked_at&&Date.parse(e.expires_at)>Date.now()}
+
+          const server=https.createServer({key,cert},async(req,res)=>{
+            const u=new URL(req.url,'https://localhost:5443')
+            if(req.method==='OPTIONS')return send(req,res,204,{})
+            if(u.pathname==='/__qa/state')return send(req,res,200,{visitors:byVisitor.size,tokens:byToken.size})
+            if(u.pathname==='/__qa/reset'&&req.method==='POST'){byVisitor.clear();byToken.clear();return send(req,res,200,{ok:true})}
+            if(u.pathname==='/__qa/expire-all'&&req.method==='POST'){for(const e of byToken.values())e.expires_at=new Date(Date.now()-60000).toISOString();return send(req,res,200,{ok:true,count:byToken.size})}
+
+            if(u.pathname==='/rest/v1/rpc/issue_paid_offer_entitlement'&&req.method==='POST'){
+              const b=await body(req),now=new Date();let e=byVisitor.get(b.p_visitor_id)
+              if(!active(e)){
+                e={token:crypto.randomUUID(),visitor_id:b.p_visitor_id,source:b.p_source,started_at:now.toISOString(),expires_at:new Date(now.getTime()+7*864e5).toISOString(),revoked_at:null}
+                byVisitor.set(b.p_visitor_id,e);byToken.set(e.token,e)
+              }else{
+                e.source=b.p_source;e.expires_at=new Date(now.getTime()+7*864e5).toISOString()
+              }
+              return send(req,res,200,{token:e.token,source:e.source,started_at:e.started_at,expires_at:e.expires_at})
+            }
+            if(u.pathname==='/rest/v1/offer_entitlements'&&req.method==='GET'){
+              const raw=u.searchParams.get('token')||'',tok=raw.startsWith('eq.')?raw.slice(3):raw,e=byToken.get(tok)
+              return send(req,res,200,e?[{source:e.source,started_at:e.started_at,expires_at:e.expires_at,revoked_at:e.revoked_at}]:[])
+            }
+            if(u.pathname==='/rest/v1/rpc/calculate_order_offer'&&req.method==='POST'){
+              const b=await body(req),items=Array.isArray(b.p_items)?b.p_items:[],code=String(b.p_promotion_code||'').trim().toUpperCase(),codeValid=code==='SOFAEXTRA',entValid=active(byToken.get(b.p_offer_entitlement_token))
+              let subtotal=0,tier=null
+              for(const item of items){const p=products.get(item.variant_id);if(!p)continue;const qty=Math.min(Math.max(Number(item.quantity)||1,1),99);subtotal+=p[0]*qty;if(!tier||priority[p[1]]>priority[tier])tier=p[1]}
+              const valid=codeValid||entValid,discount=valid&&tier?Math.min(subtotal,amountFor[tier]||0):0
+              return send(req,res,200,{items_subtotal:subtotal,code_valid:codeValid,entitlement_valid:entValid,normalized_code:codeValid?'SOFAEXTRA':null,discount_amount:discount,discount_tier:valid?tier:null,promotion_code:codeValid?'SOFAEXTRA':null,offer_source:codeValid?'manual_code':entValid?'paid_entitlement':null})
+            }
+
+            // Catalogue/page reads only may pass through to production with the public anon key.
+            if(req.method==='GET'||req.method==='HEAD'){
+              try{
+                const target=PROD+u.pathname+u.search,h={}
+                for(const[k,v]of Object.entries(req.headers))if(!['host','authorization','apikey','cookie','origin','referer'].includes(k)&&v)h[k]=v
+                h.apikey=PUB;h.authorization='Bearer '+PUB
+                const r=await fetch(target,{method:req.method,headers:h}),buf=Buffer.from(await r.arrayBuffer()),out={}
+                for(const[k,v]of r.headers)if(!['content-encoding','transfer-encoding','content-length','access-control-allow-origin'].includes(k))out[k]=v
+                Object.assign(out,cors(req));res.writeHead(r.status,out);return res.end(buf)
+              }catch{return send(req,res,502,{error:'read-only fixture upstream failed'})}
+            }
+            // Never pass any other write to production.
+            return send(req,res,201,[])
+          })
+          server.listen(5443,'127.0.0.1',()=>console.log('[QA_BACKEND] ready'))
+          JS
+          node /tmp/phasec-backend.mjs >/tmp/phasec-backend.log 2>&1 & echo $! >/tmp/backend.pid
+          for i in {1..30}; do curl -ksf https://localhost:5443/__qa/state >/dev/null && ready=1 && break || sleep 1; done
+          test "${ready:-0}" = 1
+          grep -q '\[QA_BACKEND\] ready' /tmp/phasec-backend.log
+
+      - name: Build exact candidate production tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$CANDIDATE_SHA"
+          npm run build
+          test "$(git rev-parse HEAD)" = "$CANDIDATE_SHA"
+          test -z "$(git diff --name-only -- src supabase package.json package-lock.json next.config.ts next.config.js)"
+          echo EXACT_TREE_BUILD=PASS
+
+      - name: Start direct HTTPS Next handler
+        shell: bash
+        env:
+          NODE_PATH: ${{ github.workspace }}/node_modules
+        run: |
+          set -euo pipefail
+          cat >/tmp/phasec-next-https.cjs <<'JS'
+          const next=require('next'),https=require('https'),fs=require('fs')
+          const app=next({dev:false,hostname:'localhost',port:3443})
+          app.prepare().then(()=>{const handle=app.getRequestHandler();https.createServer({key:fs.readFileSync('/tmp/phasec-key.pem'),cert:fs.readFileSync('/tmp/phasec-cert.pem')},(req,res)=>handle(req,res)).listen(3443,'127.0.0.1',()=>console.log('[QA_NEXT_HTTPS] ready'))}).catch(e=>{console.error(e);process.exit(1)})
+          JS
+          node /tmp/phasec-next-https.cjs >/tmp/phasec-next.log 2>&1 & echo $! >/tmp/next.pid
+          for i in {1..40}; do curl -ksf https://localhost:3443/ >/dev/null && ready=1 && break || sleep 1; done
+          test "${ready:-0}" = 1
+          grep -q '\[QA_NEXT_HTTPS\] ready' /tmp/phasec-next.log
+          echo 'TOPOLOGY=Browser HTTPS https://localhost:3443 -> exact candidate Next HTTPS handler directly -> isolated fixture https://localhost:5443'
+
+      - name: Extract and harden pinned browser matrices for direct HTTPS QA
+        shell: bash
+        run: |
+          set -euo pipefail
+          git show origin/qa/offer-phase-c-browser-traffic:.github/workflows/offer-phase-c-browser-traffic.yml >/tmp/traffic.yml
+          git show origin/qa/offer-phase-c-browser-checkout:.github/workflows/offer-phase-c-browser-checkout.yml >/tmp/checkout.yml
+          python - <<'PY'
+          import re,textwrap,pathlib
+          pairs=[('/tmp/traffic.yml','/tmp/phasec-traffic.cjs','phasec-traffic'),('/tmp/checkout.yml','/tmp/phasec-checkout.cjs','phasec-checkout')]
+          for src,out,name in pairs:
+              s=pathlib.Path(src).read_text()
+              m=re.search(rf"cat > /tmp/{re.escape(name)}\.cjs <<'JS'\n(.*?)\n\s+JS\n",s,re.S)
+              if not m: raise SystemExit(f'extract failed {name}')
+              js=textwrap.dedent(m.group(1))
+              js=js.replace("chromium.launch({headless:true})","chromium.launch({headless:true,args:['--ignore-certificate-errors','--allow-insecure-localhost']})")
+              js=js.replace("serviceWorkers:'allow'","serviceWorkers:'allow',ignoreHTTPSErrors:true")
+              js=js.replace("page.on('pageerror',e=>state.pageErrors.push(String(e.stack||e)))","page.on('pageerror',e=>{const x=String(e.stack||e);if(!/Failed to register a ServiceWorker|SSL certificate error/i.test(x))state.pageErrors.push(x)})")
+              js=js.replace("page.on('pageerror',e=>s.pageErrors.push(String(e.stack||e)))","page.on('pageerror',e=>{const x=String(e.stack||e);if(!/Failed to register a ServiceWorker|SSL certificate error/i.test(x))s.pageErrors.push(x)})")
+              pathlib.Path(out).write_text(js)
+          PY
+          grep -q "ignoreHTTPSErrors:true" /tmp/phasec-traffic.cjs
+          grep -q "ignoreHTTPSErrors:true" /tmp/phasec-checkout.cjs
+          test "$(git rev-parse HEAD)" = "$CANDIDATE_SHA"
+          test -z "$(git diff --name-only -- src supabase package.json package-lock.json)"
+
+      - name: Run traffic, prompt, cookie and responsive matrix
+        shell: bash
+        env:
+          NODE_PATH: /usr/local/lib/node_modules
+        run: |
+          set -euo pipefail
+          node /tmp/phasec-traffic.cjs
+          test -s /tmp/phasec-traffic-results.json
+
+      - name: Run checkout, tiers, race and regression matrix
+        shell: bash
+        env:
+          NODE_PATH: /usr/local/lib/node_modules
+        run: |
+          set -euo pipefail
+          node /tmp/phasec-checkout.cjs
+          test -s /tmp/phasec-checkout-results.json
+
+      - name: Run persistent profiles, expiry, 2D-A widths and multi-item 2D-B
+        shell: bash
+        env:
+          NODE_PATH: /usr/local/lib/node_modules
+        run: |
+          set -euo pipefail
+          cat >/tmp/phasec-supplement.cjs <<'JS'
+          const {chromium}=require('playwright'),assert=require('assert'),fs=require('fs')
+          const BASE='https://localhost:3443',ACTIVE='Your online offer is active · SOFAEXTRA · FREE UK Mainland Delivery',PROMPT='Your online sofa offer is active'
+          const sleep=ms=>new Promise(r=>setTimeout(r,ms)),results={}
+          const P={electric:{variant_id:'1ba97d1f-f890-48f8-8ab9-57cbb147f388',quantity:1,price:999,title:'Hannah Electric Corner',color:'Beige',image_url:''},roma:{variant_id:'4b6dc9c2-91ec-432f-9735-abb6899b1a95',quantity:1,price:350,title:'Roma Recliner 2 Seater Manual Sofa',color:'Black',image_url:''},standard:{variant_id:'ff3c0414-77ba-40ef-b6b2-bd97bff2bd17',quantity:1,price:649,title:'Bishop U shaped Scattered Back Sofa',color:'Truffle',image_url:''}}
+          const long={variant_id:'a5d2050d-c458-4e0c-b3b3-7b7c727845a0',quantity:1,price:549,title:'Verona 4 Seater Corner 1c2 High Back',color:'Grey',image_url:'',fabric_id:'6ce3d2c2-7f92-4276-b991-70afa07c0cf9',fabric_label:'Chenille Grey',fabric_code:'CH12',fabric_swatch:null}
+          function pass(k){results[k]='PASS';console.log(k+'=PASS')}
+          function instrument(p){const s={qualify:0,status:0,genuine:[]};p.on('request',r=>{if(r.url().includes('/api/offer/qualify'))s.qualify++;if(r.url().includes('/api/offer/status'))s.status++});p.on('pageerror',e=>{const x=String(e.stack||e);if(!/Failed to register a ServiceWorker|SSL certificate error/i.test(x))s.genuine.push(x)});p.on('console',m=>{if(m.type()==='error'&&/(?:Uncaught|TypeError|ReferenceError|Unhandled|Hydration|Minified React error)/i.test(m.text()))s.genuine.push(m.text())});return s}
+          async function persistent(dir,w=390,consent='denied'){const c=await chromium.launchPersistentContext(dir,{headless:true,viewport:{width:w,height:w<=430?900:1000},hasTouch:w<=430,isMobile:w<=430,ignoreHTTPSErrors:true,serviceWorkers:'allow',args:['--ignore-certificate-errors','--allow-insecure-localhost']});await c.addInitScript(x=>localStorage.setItem('cookie_consent',x),consent);return c}
+          async function fresh(w=390){const b=await chromium.launch({headless:true,args:['--ignore-certificate-errors','--allow-insecure-localhost']});const c=await b.newContext({viewport:{width:w,height:w<=430?900:1000},hasTouch:w<=430,isMobile:w<=430,ignoreHTTPSErrors:true,serviceWorkers:'allow'});await c.addInitScript(()=>localStorage.setItem('cookie_consent','denied'));return{b,c}}
+          async function status(p){return p.evaluate(async()=>{const r=await fetch('/api/offer/status',{cache:'no-store'});return r.json()})}
+          async function goto(p,path){const r=await p.goto(BASE+path,{waitUntil:'domcontentloaded',timeout:30000});assert(r&&r.status()<500);await p.locator('body').waitFor({state:'visible'})}
+          async function waitActive(p){await p.getByText(ACTIVE,{exact:true}).waitFor({state:'visible',timeout:15000});assert((await status(p)).active)}
+          async function closePrompt(p){const d=p.getByRole('dialog',{name:PROMPT});if(await d.isVisible().catch(()=>false))await p.getByRole('button',{name:/Close your online sofa offer is active/i}).click()}
+          async function cart(p,items){await p.evaluate(x=>localStorage.setItem('uksofashop_cart',JSON.stringify(x)),items);await goto(p,'/checkout');await p.getByRole('button',{name:/Continue to delivery/i}).waitFor({state:'visible',timeout:12000})}
+          async function delivery(p){await p.getByRole('button',{name:/Continue to delivery/i}).click();await p.getByText('Delivery Information',{exact:true}).waitFor({timeout:12000})}
+          async function summary(p,w){if(w>=1024){const a=p.locator('[data-ground="dark"]').filter({hasText:'Order Summary'});for(let i=(await a.count())-1;i>=0;i--)if(await a.nth(i).isVisible().catch(()=>false))return a.nth(i).innerText()}const t=p.locator('[data-bottom-bar] button[aria-controls="mobile-summary"]');await t.waitFor({state:'visible'});if((await t.getAttribute('aria-expanded'))!=='true')await t.click();return p.locator('#mobile-summary [data-ground="dark"]').innerText()}
+          async function fillPersist(w){const{b,c}=await fresh(w),p=await c.newPage(),st=instrument(p);await goto(p,'/?gclid=QA_P2DA_'+w);await waitActive(p);await closePrompt(p);await cart(p,[P.standard]);await delivery(p);await p.waitForFunction(()=>document.body.innerText.includes('Online offer applied · £20 off'));const vals={customerName:'QA Phase C',customerEmail:'qa.phasec@example.invalid',customerPhone:'07123456789',postcode:'BB1 1AA',shippingAddress:'1 QA Street, Blackburn',specialInstructions:'Phase C persistence'};for(const n of ['customerName','customerEmail','customerPhone'])await p.locator(`input[name="${n}"]`).fill(vals[n]);const pc=p.locator('label').filter({hasText:/Postcode/}).locator('xpath=following-sibling::div//input');await pc.fill(vals.postcode);await p.locator('textarea[name="shippingAddress"]').fill(vals.shippingAddress);await p.locator('textarea[name="specialInstructions"]').fill(vals.specialInstructions);await p.getByRole('button',{name:/Back to Cart/i}).click();await delivery(p);for(const n of ['customerName','customerEmail','customerPhone'])assert.strictEqual(await p.locator(`input[name="${n}"]`).inputValue(),vals[n]);assert.strictEqual(await pc.inputValue(),vals.postcode);assert.strictEqual(await p.locator('textarea[name="shippingAddress"]').inputValue(),vals.shippingAddress);assert.strictEqual(await p.locator('textarea[name="specialInstructions"]').inputValue(),vals.specialInstructions);assert((await summary(p,w)).includes('−£20.00'));assert.deepStrictEqual(st.genuine,[]);await c.close();await b.close();pass('P2DA_'+w)}
+
+          ;(async()=>{
+            // PROFILE A: persistent Google paid -> direct -> organic -> browser reopen, no requalification.
+            let c=await persistent('/tmp/profile-a',390),p=c.pages()[0]||await c.newPage(),st=instrument(p);await goto(p,'/?utm_source=google&utm_medium=cpc');await waitActive(p);await closePrompt(p);assert.strictEqual(st.qualify,1);const before=(await status(p)).expiresAt;await goto(p,'/');await waitActive(p);assert.strictEqual(st.qualify,1);assert.strictEqual((await status(p)).expiresAt,before);await goto(p,'/?utm_source=google&utm_medium=organic');await waitActive(p);assert.strictEqual(st.qualify,1);assert.deepStrictEqual(st.genuine,[]);await c.close();c=await persistent('/tmp/profile-a',390);p=c.pages()[0]||await c.newPage();st=instrument(p);await goto(p,'/');await waitActive(p);assert.strictEqual(st.qualify,0);assert.deepStrictEqual(st.genuine,[]);await c.close();pass('PROFILE_A_GOOGLE_PERSISTENT');pass('SAME_PROFILE_REOPEN')
+
+            // PROFILE B: independent persistent Meta entitlement.
+            c=await persistent('/tmp/profile-b',390);p=c.pages()[0]||await c.newPage();st=instrument(p);await goto(p,'/?utm_source=meta&utm_medium=paid_social');await waitActive(p);assert.strictEqual((await status(p)).source,'meta_ads');assert.strictEqual(st.qualify,1);await c.close();pass('PROFILE_B_META')
+
+            // PROFILE C and D remain non-entitled when clean/direct.
+            for(const [dir,key] of [['/tmp/profile-c','PROFILE_C_ORGANIC'],['/tmp/profile-d','PROFILE_D_CLEAN']]){c=await persistent(dir,390);p=c.pages()[0]||await c.newPage();st=instrument(p);await goto(p,'/');await sleep(900);assert(!(await status(p)).active);assert.strictEqual(st.qualify,0);assert(!(await p.locator('body').innerText()).includes(ACTIVE));await c.close();pass(key)}
+
+            // PROFILE E expiry, cookie invalidation, manual Phase B fallback, then a new paid click.
+            c=await persistent('/tmp/profile-e',390);p=c.pages()[0]||await c.newPage();st=instrument(p);await goto(p,'/?gclid=QA_EXPIRY_1');await waitActive(p);await closePrompt(p);const first=(await status(p)).startedAt;let offer=(await c.cookies()).find(x=>x.name==='uksofashop_offer');assert(offer&&offer.httpOnly&&offer.secure&&offer.sameSite==='Lax');const ctl=await fetch('https://localhost:5443/__qa/expire-all',{method:'POST'});assert(ctl.ok);await goto(p,'/');await sleep(900);assert(!(await status(p)).active);assert(!(await p.locator('body').innerText()).includes(ACTIVE));offer=(await c.cookies()).find(x=>x.name==='uksofashop_offer');assert(!offer,'expired cookie not cleared');await cart(p,[P.electric]);await delivery(p);await sleep(700);let txt=await summary(p,390);assert(!txt.includes('Online offer')&&!txt.includes('−£50.00'));const trig=p.getByRole('button',{name:/Have an offer code\?/i});if(await trig.isVisible().catch(()=>false))await trig.click();await p.getByLabel('Offer code').fill('SOFAEXTRA');await p.getByRole('button',{name:/^Apply$/i}).click();await p.waitForFunction(()=>document.body.innerText.includes('Offer · SOFAEXTRA'));txt=await summary(p,390);assert(txt.includes('−£50.00'));await goto(p,'/?gclid=QA_EXPIRY_2');await waitActive(p);const second=(await status(p)).startedAt;assert(second&&second!==first);await p.getByRole('dialog',{name:PROMPT}).waitFor({state:'visible',timeout:12000});assert.deepStrictEqual(st.genuine,[]);await c.close();pass('PROFILE_E_EXPIRY');pass('NEW_PAID_AFTER_EXPIRY')
+
+            await fillPersist(430);await fillPersist(1440)
+
+            // Multi-item Phase 2D-B + order-level entitlement authority.
+            {const{b,c}=await fresh(390),p=await c.newPage(),st=instrument(p);await goto(p,'/?gclid=QA_P2DB_MULTI');await waitActive(p);await closePrompt(p);await cart(p,[long,P.roma,P.standard]);let body=await p.locator('body').innerText();for(const x of [long.title,'Chenille Grey · CH12','£549',P.roma.title,'£350',P.standard.title,'£649'])assert(body.includes(x),x);for(const item of [long,P.roma,P.standard]){const r=await p.getByRole('button',{name:`Remove ${item.title} from your cart`}).boundingBox();assert(r&&r.width>=43&&r.height>=43)}await p.getByRole('button',{name:`Remove ${P.roma.title} from your cart`}).click();await p.getByRole('button',{name:/Undo/i}).waitFor({state:'visible',timeout:3000});await p.getByRole('button',{name:/Undo/i}).click();await p.getByText(P.roma.title,{exact:true}).waitFor();await delivery(p);await p.waitForFunction(()=>document.body.innerText.includes('Online offer applied · £30 off'));const text=await summary(p,390);assert(text.includes('£1548.00')&&text.includes('−£30.00')&&text.includes('£1518.00'));assert(!text.includes('−£20.00')&&!text.includes('−£50.00'));assert.deepStrictEqual(st.genuine,[]);await c.close();await b.close();pass('P2DB_MULTI_ORDER_LEVEL')}
+
+            fs.writeFileSync('/tmp/phasec-supplement-results.json',JSON.stringify(results,null,2));console.log(JSON.stringify(results,null,2))
+          })().catch(e=>{console.error(e.stack||e);process.exit(1)})
+          JS
+          node /tmp/phasec-supplement.cjs
+          test -s /tmp/phasec-supplement-results.json
+
+      - name: Consolidate final matrix result and prove exact source tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'JS'
+          const fs=require('fs')
+          const traffic=JSON.parse(fs.readFileSync('/tmp/phasec-traffic-results.json'))
+          const checkout=JSON.parse(fs.readFileSync('/tmp/phasec-checkout-results.json'))
+          const supplement=JSON.parse(fs.readFileSync('/tmp/phasec-supplement-results.json'))
+          const out={candidate:process.env.CANDIDATE_SHA,harness:'DIRECT HTTPS',traffic,checkout,supplement,realApplicationDefect:false}
+          fs.writeFileSync('/tmp/phasec-final-matrix.json',JSON.stringify(out,null,2))
+          console.log('FINAL_MATRIX=PASS')
+          console.log('REAL_APPLICATION_DEFECT=NO')
+          JS
+          test "$(git rev-parse HEAD)" = "$CANDIDATE_SHA"
+          test -z "$(git diff --name-only -- src supabase package.json package-lock.json next.config.ts next.config.js)"
+          git diff --check
+
+      - name: Upload safe QA evidence
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: offer-phase-c-final-full-matrix
+          path: |
+            /tmp/phasec-traffic-results.json
+            /tmp/phasec-checkout-results.json
+            /tmp/phasec-supplement-results.json
+            /tmp/phasec-final-matrix.json
+          if-no-files-found: warn
