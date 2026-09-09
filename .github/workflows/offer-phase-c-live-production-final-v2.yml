@@ -1,0 +1,75 @@
+name: Offer Phase C live production final v2
+
+on:
+  push:
+    branches: [qa/offer-phase-c-live-production-final-v2]
+    paths: [.github/workflows/offer-phase-c-live-production-final-v2.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      FINAL_SHA: e4b138a5f344fae43cbb8d37d9e7dc2072082d69
+      BASE: https://www.uksofashop.co.uk
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify exact production and load prior QA harness
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin master qa/offer-phase-c-live-production-final
+          test "$(git rev-parse origin/master)" = "$FINAL_SHA"
+          git show origin/qa/offer-phase-c-live-production-final:.github/workflows/offer-phase-c-live-production-final.yml >/tmp/live-v1.yml
+          echo MASTER_EXACT_SHA=PASS
+
+      - name: Install Playwright Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install -g playwright@1.55.0
+          playwright install --with-deps chromium
+
+      - name: Extract and patch QA-only close interaction
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import pathlib,textwrap
+          lines=pathlib.Path('/tmp/live-v1.yml').read_text().splitlines()
+          start=next(i for i,l in enumerate(lines) if "cat >/tmp/phasec-live-final.cjs <<'JS'" in l)
+          buf=[]
+          for l in lines[start+1:]:
+              if l.strip()=='JS': break
+              buf.append(l)
+          js=textwrap.dedent('\n'.join(buf))+'\n'
+          old="async function closeSummary(p){const b=p.getByRole('button',{name:'Close order summary'});if(await b.isVisible().catch(()=>false)){await b.click();await sleep(120)}}"
+          new="async function closeSummary(p){const t=p.locator('[data-bottom-bar] button[aria-controls=\\\"mobile-summary\\\"]');if(await t.isVisible().catch(()=>false)&&(await t.getAttribute('aria-expanded'))==='true'){await t.click();await sleep(120);return}const b=p.getByRole('button',{name:'Close order summary'});if(await b.isVisible().catch(()=>false)){await b.click({position:{x:8,y:8}});await sleep(120)}}"
+          if old not in js: raise SystemExit('expected closeSummary helper not found')
+          js=js.replace(old,new,1)
+          pathlib.Path('/tmp/phasec-live-final-v2.cjs').write_text(js)
+          PY
+          grep -q 'aria-expanded' /tmp/phasec-live-final-v2.cjs
+
+      - name: Focused live production browser matrix
+        shell: bash
+        env:
+          NODE_PATH: /usr/local/lib/node_modules
+        run: |
+          set -euo pipefail
+          node /tmp/phasec-live-final-v2.cjs
+          test -s /tmp/phasec-live-final.json
+          cat /tmp/phasec-live-final.json
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: offer-phase-c-live-production-final-v2
+          path: /tmp/phasec-live-final.json
+          if-no-files-found: warn
