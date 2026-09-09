@@ -1,0 +1,133 @@
+name: Offer Phase C expiry final v9
+
+on:
+  push:
+    branches: [qa/offer-phase-c-expiry-final-v9]
+    paths: [.github/workflows/offer-phase-c-expiry-final-v9.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  expiry-final:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      CANDIDATE_SHA: 8eb47786fc772bfdb3835b1a4da6d956cc86d5f9
+      MASTER_SHA: c0a1ce2a2621aba5b3ea635452e720ea095d2ebd
+      NEXT_PUBLIC_SUPABASE_URL: https://localhost:5443
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_tMk28Ay_hIljhv8NQcV01Q_cI9ApS9c
+      SUPABASE_SERVICE_ROLE_KEY: qa_service_role_fixture_only
+      NEXT_PUBLIC_SITE_URL: https://localhost:3443
+      NODE_TLS_REJECT_UNAUTHORIZED: '0'
+      BASE: https://localhost:3443
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify exact refs and candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin master fix/offer-phase-c-paid-entitlement
+          test "$(git rev-parse origin/master)" = "$MASTER_SHA"
+          test "$(git rev-parse origin/fix/offer-phase-c-paid-entitlement)" = "$CANDIDATE_SHA"
+          git worktree add --detach /tmp/candidate "$CANDIDATE_SHA"
+          test "$(git -C /tmp/candidate rev-parse HEAD)" = "$CANDIDATE_SHA"
+          test -z "$(git -C /tmp/candidate status --porcelain)"
+
+      - name: Install and build exact candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/candidate
+          npm ci
+          npm install -g playwright@1.55.0
+          playwright install --with-deps chromium
+          npm run build
+          test "$(git rev-parse HEAD)" = "$CANDIDATE_SHA"
+          test -z "$(git diff --name-only -- src supabase package.json package-lock.json next.config.ts next.config.js)"
+
+      - name: Start isolated fixture and direct HTTPS candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          openssl req -x509 -newkey rsa:2048 -nodes -keyout /tmp/phasec-key.pem -out /tmp/phasec-cert.pem -days 1 -subj '/CN=localhost' -addext 'subjectAltName=DNS:localhost,IP:127.0.0.1' >/dev/null 2>&1
+          node .github/qa/phasec-final/backend.mjs >/tmp/phasec-backend.log 2>&1 &
+          for i in {1..30}; do curl -ksf https://localhost:5443/__qa/state >/dev/null && b=1 && break || sleep 1; done
+          test "${b:-0}" = 1
+          node .github/qa/phasec-final/server.cjs >/tmp/phasec-next.log 2>&1 &
+          for i in {1..40}; do curl -ksf https://localhost:3443/ >/dev/null && n=1 && break || sleep 1; done
+          test "${n:-0}" = 1
+          echo HARNESS=DIRECT_HTTPS
+
+      - name: Browser expiry, manual fallback, new paid click
+        shell: bash
+        env:
+          NODE_PATH: /usr/local/lib/node_modules
+        run: |
+          set -euo pipefail
+          cat >/tmp/expiry-final.cjs <<'JS'
+          const {chromium}=require('playwright'),assert=require('assert'),fs=require('fs')
+          const BASE='https://localhost:3443'
+          const ACTIVE='Your online offer is active · SOFAEXTRA · FREE UK Mainland Delivery'
+          const PROMPT='Your online sofa offer is active'
+          const electric={variant_id:'1ba97d1f-f890-48f8-8ab9-57cbb147f388',quantity:1,price:999,title:'Hannah Electric Corner',color:'Beige',image_url:''}
+          const sleep=ms=>new Promise(r=>setTimeout(r,ms))
+          async function status(p){return p.evaluate(async()=>{const r=await fetch('/api/offer/status',{cache:'no-store'});return r.json()})}
+          async function go(p,path){const r=await p.goto(BASE+path,{waitUntil:'domcontentloaded',timeout:30000});assert(r&&r.status()<500);await p.locator('body').waitFor({state:'visible'})}
+          async function closePrompt(p){const d=p.getByRole('dialog',{name:PROMPT});if(await d.isVisible().catch(()=>false))await d.getByRole('button',{name:/Close your online sofa offer is active/i}).click()}
+          async function cartDelivery(p){await p.evaluate(x=>localStorage.setItem('uksofashop_cart',JSON.stringify([x])),electric);await go(p,'/checkout');await p.getByRole('button',{name:/Continue to delivery/i}).click();await p.getByText('Delivery Information',{exact:true}).waitFor({timeout:12000})}
+          async function summaryText(p){const t=p.locator('[data-bottom-bar] button[aria-controls="mobile-summary"]');await t.waitFor({state:'visible',timeout:12000});if((await t.getAttribute('aria-expanded'))!=='true')await t.click();return p.locator('#mobile-summary [data-ground="dark"]').innerText()}
+          async function closeSummary(p){const b=p.getByRole('button',{name:'Close order summary'});if(await b.isVisible().catch(()=>false))await b.click()}
+          ;(async()=>{
+            const c=await chromium.launchPersistentContext('/tmp/phasec-expiry-profile',{headless:true,viewport:{width:390,height:900},hasTouch:true,isMobile:true,ignoreHTTPSErrors:true,serviceWorkers:'allow',args:['--ignore-certificate-errors','--allow-insecure-localhost']})
+            await c.addInitScript(()=>localStorage.setItem('cookie_consent','denied'))
+            const p=c.pages()[0]||await c.newPage();const genuine=[]
+            p.on('pageerror',e=>{const x=String(e.stack||e);if(!/Failed to register a ServiceWorker|SSL certificate error/i.test(x))genuine.push(x)})
+            p.on('console',m=>{if(m.type()==='error'&&/(?:Uncaught|TypeError|ReferenceError|Unhandled|Hydration|Minified React error)/i.test(m.text()))genuine.push(m.text())})
+
+            await go(p,'/?gclid=QA_EXPIRY_FINAL_1')
+            await p.getByText(ACTIVE,{exact:true}).waitFor({state:'visible',timeout:15000})
+            await closePrompt(p)
+            const first=await status(p);assert(first.active&&first.startedAt&&first.expiresAt)
+            await cartDelivery(p);await sleep(700);let txt=await summaryText(p);assert(txt.includes('Online offer')&&txt.includes('−£50.00')&&txt.includes('£949.00'))
+            await closeSummary(p)
+            console.log('BEFORE_EXPIRY_ACTIVE=PASS')
+
+            const ctl=await fetch('https://localhost:5443/__qa/expire-all',{method:'POST'});assert(ctl.ok)
+            await go(p,'/');await sleep(900)
+            const expired=await status(p);assert(!expired.active)
+            assert(!(await p.locator('body').innerText()).includes(ACTIVE))
+            const offerCookie=(await c.cookies()).find(x=>x.name==='uksofashop_offer');assert(!offerCookie,'expired entitlement cookie remained authoritative')
+            await cartDelivery(p);await sleep(700);txt=await summaryText(p);assert(!txt.includes('Online offer')&&!txt.includes('−£50.00'));await closeSummary(p)
+            console.log('EXPIRY_BROWSER=PASS')
+
+            const trig=p.getByRole('button',{name:/Have an offer code\?/i});if(await trig.isVisible().catch(()=>false))await trig.click()
+            await p.getByLabel('Offer code').fill('SOFAEXTRA');await p.getByRole('button',{name:/^Apply$/i}).click();await sleep(900)
+            txt=await summaryText(p);assert(txt.includes('Offer · SOFAEXTRA')&&txt.includes('−£50.00')&&txt.includes('£949.00'));await closeSummary(p)
+            console.log('MANUAL_CODE_AFTER_EXPIRY=PASS')
+
+            await go(p,'/?utm_source=google&utm_medium=cpc&gclid=QA_EXPIRY_FINAL_2')
+            await p.getByText(ACTIVE,{exact:true}).waitFor({state:'visible',timeout:15000})
+            const second=await status(p);assert(second.active&&second.startedAt&&second.startedAt!==first.startedAt)
+            await p.getByRole('dialog',{name:PROMPT}).waitFor({state:'visible',timeout:12000})
+            await closePrompt(p)
+            await cartDelivery(p);await sleep(700);txt=await summaryText(p);assert(txt.includes('Online offer')&&txt.includes('−£50.00')&&txt.includes('£949.00'))
+            assert.deepStrictEqual(genuine,[])
+            console.log('NEW_PAID_AFTER_EXPIRY=PASS')
+            fs.writeFileSync('/tmp/phasec-expiry-final.json',JSON.stringify({candidate:process.env.CANDIDATE_SHA,expiry:'PASS',manualCodeAfterExpiry:'PASS',newPaidAfterExpiry:'PASS',runtime:'PASS'},null,2))
+            await c.close()
+          })().catch(e=>{console.error(e.stack||e);process.exit(1)})
+          JS
+          node /tmp/expiry-final.cjs
+          test -s /tmp/phasec-expiry-final.json
+          cat /tmp/phasec-expiry-final.json
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: offer-phase-c-expiry-final-v9
+          path: /tmp/phasec-expiry-final.json
+          if-no-files-found: warn
