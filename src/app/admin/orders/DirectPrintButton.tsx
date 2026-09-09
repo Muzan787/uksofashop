@@ -3,8 +3,9 @@
 import { Printer } from 'lucide-react'
 import { ADDRESS_LINE, PHONE_DISPLAY } from '@/constants/contact'
 import { ORGANISATION_NAME } from '@/utils/schema'
+import type { AdminOrderDisplay, AdminOrderItemDisplay } from '@/types/adminOrders'
 
-export default function DirectPrintButton({ order }: { order: any }) {
+export default function DirectPrintButton({ order }: { order: AdminOrderDisplay }) {
   
   const handlePrint = () => {
     // TOGGLE THIS: Change `order` to `DUMMY_CUSTOM_ORDER` when you want to use the custom data
@@ -284,7 +285,7 @@ export default function DirectPrintButton({ order }: { order: any }) {
                 </tr>
               </thead>
               <tbody>
-                ${activeOrder.order_items.map((item: any) => `
+                ${activeOrder.order_items.map((item: AdminOrderItemDisplay) => `
                   <tr>
                     <td>
                       <div class="item-title">${item.product_variants?.products?.title}</div>
