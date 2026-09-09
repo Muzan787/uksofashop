@@ -1,0 +1,391 @@
+name: Offer Phase B exact clean browser QA
+
+on:
+  push:
+    branches: [fix/offer-phase-b-discount-engine-release]
+    paths: [.github/workflows/offer-phase-b-browser-qa.yml]
+
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 3200b9cdd63600bc496bdc1958ed12ce13e8ace0
+          fetch-depth: 0
+      - name: Prove checkout/browser surfaces are byte-identical to production master
+        run: |
+          git fetch origin master
+          test "$(git rev-parse HEAD)" = "3200b9cdd63600bc496bdc1958ed12ce13e8ace0"
+          test -z "$(git diff --name-only origin/master...HEAD -- \
+            src/components/Checkout \
+            src/context/CartContext.tsx \
+            src/app/actions/checkout.ts \
+            src/app/actions/offer.ts \
+            src/components/Layout/Mobilenav.tsx \
+            src/components/Layout/WhatsAppFab.tsx)"
+      - name: Install Playwright
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Run exact-candidate offer and regression browser matrix
+        env:
+          PREVIEW_BASE: https://uksofashop-git-fix-offer-phase-b-reco-4c8698-muzan787s-projects.vercel.app
+          LIVE_BASE: https://www.uksofashop.co.uk
+        run: |
+          cat > /tmp/phaseb-browser-qa.cjs <<'JS'
+          const { chromium } = require('playwright')
+          const assert = require('assert')
+
+          const previewBase = process.env.PREVIEW_BASE
+          const liveBase = process.env.LIVE_BASE
+          const widths = [320, 390, 430, 768, 1440]
+
+          const PRODUCTS = {
+            electric: {
+              variant_id: '1ba97d1f-f890-48f8-8ab9-57cbb147f388', quantity: 1, price: 999,
+              title: 'Hannah Electric Corner', color: 'Beige',
+              image_url: 'https://res.cloudinary.com/dmlna04yk/image/upload/v1782248491/Hannah-Electric-Corner-Sofa-Beige_bnq7vl.png'
+            },
+            roma: {
+              variant_id: '4b6dc9c2-91ec-432f-9735-abb6899b1a95', quantity: 1, price: 350,
+              title: 'Roma Recliner 2 Seater Manual Sofa', color: 'Black',
+              image_url: 'https://res.cloudinary.com/dmlna04yk/image/upload/v1782248440/Black-Roma-Recliner-Manual-2-Seater-Fabric-Sofa_rvkrwt.jpg'
+            },
+            standard: {
+              variant_id: 'ff3c0414-77ba-40ef-b6b2-bd97bff2bd17', quantity: 1, price: 649,
+              title: 'Bishop U shaped Scattered Back Sofa', color: '145, 122, 107',
+              image_url: 'https://res.cloudinary.com/dmlna04yk/image/upload/v1788797523/Bishop-Ushaped-scattered-back-truffle-sofa_opejaa.png'
+            },
+            verona: {
+              variant_id: '01921b2b-5fe9-47d3-8eb6-b53adba27e82', quantity: 1, price: 349,
+              title: 'Verona 2 Seater Scattered Back', color: 'Grey',
+              image_url: 'https://res.cloudinary.com/dmlna04yk/image/upload/v1787513318/Verona-2-seater-scattered-back-sofa-grey_uvsjse.jpg'
+            },
+            footstool: {
+              variant_id: 'f262accc-1287-4375-984e-e677afd5aa01', quantity: 1, price: 149,
+              title: 'Lily Footstool', color: 'Grey',
+              image_url: 'https://res.cloudinary.com/dmlna04yk/image/upload/v1788372044/Lily-Footstool-Grey_wg34mb.png'
+            },
+          }
+
+          function clone(x) { return JSON.parse(JSON.stringify(x)) }
+          function money(n) { return `£${Number(n).toFixed(2)}` }
+          function assertText(body, needle, label) {
+            assert(body.includes(needle), `${label}: missing text ${JSON.stringify(needle)}`)
+          }
+          async function bodyText(page) { return await page.locator('body').innerText() }
+          async function noOverflow(page, label) {
+            const r = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, iw: window.innerWidth }))
+            assert(r.sw <= r.iw + 1, `${label}: horizontal overflow ${r.sw} > ${r.iw}`)
+          }
+          async function routeSafe(context) {
+            await context.route('**/connect.facebook.net/**', r => r.abort())
+            await context.route('**/www.facebook.com/**', r => r.abort())
+            await context.route('**/google-analytics.com/**', r => r.abort())
+            await context.route('**/googletagmanager.com/**', r => r.abort())
+            await context.route('**/api/meta/event**', r => r.abort())
+          }
+          async function newSeededPage(browser, base, width, cart) {
+            const context = await browser.newContext({
+              viewport: { width, height: width <= 430 ? 900 : 1000 },
+              serviceWorkers: 'block',
+              hasTouch: width <= 430,
+              isMobile: width <= 430,
+            })
+            await routeSafe(context)
+            await context.addInitScript(({ cart }) => {
+              localStorage.setItem('uksofashop_cart', JSON.stringify(cart))
+            }, { cart })
+            const page = await context.newPage()
+            const pageErrors = []
+            page.on('pageerror', e => pageErrors.push(String(e)))
+            const resp = await page.goto(`${base}/checkout`, { waitUntil: 'domcontentloaded', timeout: 30000 })
+            assert(resp && resp.status() < 500, `checkout HTTP ${resp && resp.status()}`)
+            await page.getByRole('button', { name: /Continue to delivery/i }).waitFor({ timeout: 15000 })
+            await noOverflow(page, `seed ${width}`)
+            return { context, page, pageErrors }
+          }
+          async function goDelivery(page) {
+            await page.getByRole('button', { name: /Continue to delivery/i }).click()
+            await page.getByText('Delivery Information', { exact: true }).waitFor({ timeout: 10000 })
+          }
+          async function applyCode(page, code) {
+            const trigger = page.getByRole('button', { name: /Have an offer code\?/i })
+            if (await trigger.isVisible().catch(() => false)) await trigger.click()
+            const input = page.getByLabel('Offer code')
+            await input.fill(code)
+            const apply = page.getByRole('button', { name: /^Apply$/i })
+            if (!code.trim()) {
+              assert(await apply.isDisabled(), 'empty offer code Apply should be disabled')
+              return
+            }
+            await apply.click()
+            await page.waitForFunction(() => {
+              const t = document.body.innerText
+              return t.includes('applied ·') || t.includes('is recognised.') || t.includes('Offer code not recognised.')
+            }, null, { timeout: 15000 })
+          }
+          async function assertOfferScenario(browser, base, width, name, cart, discount, total, options = {}) {
+            const { context, page, pageErrors } = await newSeededPage(browser, base, width, cart)
+            try {
+              await goDelivery(page)
+              assert(await page.getByRole('button', { name: /Have an offer code\?/i }).isVisible(), `${width}/${name}: compact offer trigger not visible`)
+              await applyCode(page, options.code ?? 'SOFAEXTRA')
+              const body = await bodyText(page)
+              assertText(body, 'Subtotal', `${width}/${name}`)
+              assertText(body, 'Delivery · UK Mainland', `${width}/${name}`)
+              assertText(body, 'FREE', `${width}/${name}`)
+              assertText(body, 'Nothing to pay today', `${width}/${name}`)
+              if (discount > 0) {
+                assertText(body, `−£${discount.toFixed(2)}`, `${width}/${name}`)
+              } else {
+                assertText(body, 'SOFAEXTRA is recognised. No extra cash discount applies to this basket.', `${width}/${name}`)
+                assertText(body, '£0.00', `${width}/${name}`)
+              }
+              assertText(body, money(total), `${width}/${name}`)
+              if (options.normalized) {
+                assert.strictEqual(await page.getByLabel('Offer code').inputValue(), 'SOFAEXTRA', `${width}/${name}: code not normalized`)
+              }
+              await noOverflow(page, `${width}/${name}`)
+              assert.strictEqual(pageErrors.length, 0, `${width}/${name}: page errors ${pageErrors.join(' | ')}`)
+            } finally { await context.close() }
+          }
+          async function invalidEmptyNoCode(browser, base, width) {
+            // Invalid code: clear error and no discount authority.
+            let s = await newSeededPage(browser, base, width, [clone(PRODUCTS.standard)])
+            try {
+              await goDelivery(s.page)
+              await applyCode(s.page, 'NOTREAL')
+              let body = await bodyText(s.page)
+              assertText(body, 'Offer code not recognised.', `${width}/invalid`)
+              assertText(body, money(649), `${width}/invalid`)
+              assert(!body.includes('−£20.00'), `${width}/invalid: unauthorized discount shown`)
+              await noOverflow(s.page, `${width}/invalid`)
+            } finally { await s.context.close() }
+
+            // Empty code: Apply disabled.
+            s = await newSeededPage(browser, base, width, [clone(PRODUCTS.standard)])
+            try {
+              await goDelivery(s.page)
+              await applyCode(s.page, '')
+              const body = await bodyText(s.page)
+              assertText(body, money(649), `${width}/empty`)
+              assert(!body.includes('−£20.00'), `${width}/empty: unauthorized discount shown`)
+              await noOverflow(s.page, `${width}/empty`)
+            } finally { await s.context.close() }
+
+            // No code: compact default remains and ordinary price/COD delivery facts remain.
+            s = await newSeededPage(browser, base, width, [clone(PRODUCTS.standard)])
+            try {
+              await goDelivery(s.page)
+              const body = await bodyText(s.page)
+              assert(await s.page.getByRole('button', { name: /Have an offer code\?/i }).isVisible(), `${width}/no-code: control not collapsed`)
+              assertText(body, money(649), `${width}/no-code`)
+              assertText(body, 'Delivery · UK Mainland', `${width}/no-code`)
+              assertText(body, 'FREE', `${width}/no-code`)
+              assertText(body, 'Nothing to pay today', `${width}/no-code`)
+              assert(!body.includes('Offer · SOFAEXTRA'), `${width}/no-code: unexpected offer summary`)
+              await noOverflow(s.page, `${width}/no-code`)
+            } finally { await s.context.close() }
+          }
+          function overlap(a, b) {
+            if (!a || !b) return false
+            return !(a.x + a.width <= b.x || b.x + b.width <= a.x || a.y + a.height <= b.y || b.y + b.height <= a.y)
+          }
+          async function mobileFixedUi(browser, base, width, offerOpen) {
+            const s = await newSeededPage(browser, base, width, [clone(PRODUCTS.electric)])
+            try {
+              await goDelivery(s.page)
+              if (offerOpen) await s.page.getByRole('button', { name: /Have an offer code\?/i }).click()
+              const total = s.page.locator('[data-bottom-bar]').filter({ visible: true }).first()
+              const nav = s.page.locator('nav[aria-label="Primary"]')
+              const wa = s.page.getByRole('link', { name: 'Chat with us on WhatsApp' })
+              await total.waitFor({ state: 'visible' })
+              await nav.waitFor({ state: 'visible' })
+              await wa.waitFor({ state: 'visible' })
+              const [tb, nb, wb] = await Promise.all([total.boundingBox(), nav.boundingBox(), wa.boundingBox()])
+              assert(!overlap(tb, nb), `${width}/fixed ${offerOpen}: total bar overlaps nav`)
+              assert(!overlap(wb, tb), `${width}/fixed ${offerOpen}: WhatsApp overlaps total bar`)
+              assert(!overlap(wb, nb), `${width}/fixed ${offerOpen}: WhatsApp overlaps nav`)
+              if (offerOpen) {
+                const input = s.page.getByLabel('Offer code')
+                await input.scrollIntoViewIfNeeded()
+                const ib = await input.boundingBox()
+                assert(ib && ib.y >= 0 && ib.y + ib.height <= 900, `${width}/fixed: offer input unusable`)
+              }
+              await noOverflow(s.page, `${width}/fixed-${offerOpen}`)
+            } finally { await s.context.close() }
+          }
+          async function phase2dA(browser, base, width) {
+            const s = await newSeededPage(browser, base, width, [clone(PRODUCTS.electric)])
+            try {
+              await goDelivery(s.page)
+              await applyCode(s.page, 'SOFAEXTRA')
+              await s.page.getByLabel('Full Name').fill('QA State Test Name')
+              await s.page.getByLabel('Email Address').fill('qa-state@example.com')
+              await s.page.getByLabel('Mobile Number').fill('07700900123')
+              await s.page.locator('input.uppercase').first().fill('SW1A 1AA')
+              await s.page.getByLabel('Full Address').fill('QA Test Address 123')
+              await s.page.getByLabel('Special Instructions').fill('QA persistence marker Phase B')
+              await s.page.getByRole('button', { name: /Back to Cart/i }).click()
+              await s.page.getByRole('button', { name: /Continue to delivery/i }).waitFor({ timeout: 10000 })
+              await s.page.getByRole('button', { name: /Continue to delivery/i }).click()
+              await s.page.getByText('Delivery Information', { exact: true }).waitFor({ timeout: 10000 })
+              assert.strictEqual(await s.page.getByLabel('Full Name').inputValue(), 'QA State Test Name')
+              assert.strictEqual(await s.page.getByLabel('Email Address').inputValue(), 'qa-state@example.com')
+              assert.strictEqual(await s.page.getByLabel('Mobile Number').inputValue(), '07700900123')
+              assert.strictEqual(await s.page.locator('input.uppercase').first().inputValue(), 'SW1A 1AA')
+              assert.strictEqual(await s.page.getByLabel('Full Address').inputValue(), 'QA Test Address 123')
+              assert.strictEqual(await s.page.getByLabel('Special Instructions').inputValue(), 'QA persistence marker Phase B')
+              const body = await bodyText(s.page)
+              assertText(body, '−£50.00', `${width}/2DA offer`)
+              assertText(body, '£949.00', `${width}/2DA total`)
+              await noOverflow(s.page, `${width}/2DA`)
+            } finally { await s.context.close() }
+          }
+          async function quantityTests(browser, base) {
+            for (const [name, product, qty, discount, total] of [
+              ['electric-1', PRODUCTS.electric, 1, 50, 949],
+              ['electric-2', PRODUCTS.electric, 2, 50, 1948],
+              ['standard-2', PRODUCTS.standard, 2, 20, 1278],
+            ]) {
+              const item = clone(product); item.quantity = qty
+              await assertOfferScenario(browser, base, 390, name, [item], discount, total)
+            }
+          }
+          async function extrasMath(browser, base) {
+            const s = await newSeededPage(browser, base, 390, [clone(PRODUCTS.electric)])
+            try {
+              await goDelivery(s.page)
+              await applyCode(s.page, 'SOFAEXTRA')
+              await s.page.getByLabel('Assembly').check()
+              let body = await bodyText(s.page)
+              assertText(body, '£969.00', 'extras assembly 999-50+20')
+              await s.page.getByLabel('Upstairs delivery').check()
+              body = await bodyText(s.page)
+              assertText(body, '£989.00', 'extras + first floor')
+              await s.page.getByText("There's a lift", { exact: true }).locator('..').getByRole('checkbox').check()
+              body = await bodyText(s.page)
+              assertText(body, '£989.00', 'extras lift first floor stable')
+              await s.page.getByLabel('Old sofa removal').check()
+              body = await bodyText(s.page)
+              assertText(body, '£1019.00', 'extras + removal')
+              await noOverflow(s.page, 'extras math')
+            } finally { await s.context.close() }
+          }
+          async function basketRecalc(browser, base) {
+            const cart = [clone(PRODUCTS.electric), clone(PRODUCTS.standard), clone(PRODUCTS.verona)]
+            const s = await newSeededPage(browser, base, 390, cart)
+            try {
+              await goDelivery(s.page)
+              await applyCode(s.page, 'SOFAEXTRA')
+              let body = await bodyText(s.page)
+              assertText(body, '−£50.00', 'recalc initial electric authority')
+
+              await s.page.getByRole('button', { name: /Back to Cart/i }).click()
+              await s.page.getByRole('button', { name: /Remove Hannah Electric Corner from your cart/i }).click()
+              await s.page.waitForTimeout(500)
+              await s.page.getByRole('button', { name: /Continue to delivery/i }).click()
+              await s.page.getByText('Delivery Information', { exact: true }).waitFor()
+              await s.page.waitForFunction(() => document.body.innerText.includes('−£20.00'), null, { timeout: 15000 })
+              body = await bodyText(s.page)
+              assert(!body.includes('−£50.00'), 'recalc stale £50 remained after electric removal')
+              assertText(body, '−£20.00', 'recalc standard authority')
+
+              await s.page.getByRole('button', { name: /Back to Cart/i }).click()
+              await s.page.getByRole('button', { name: /Remove Bishop U shaped Scattered Back Sofa from your cart/i }).click()
+              await s.page.waitForTimeout(500)
+              await s.page.getByRole('button', { name: /Continue to delivery/i }).click()
+              await s.page.getByText('Delivery Information', { exact: true }).waitFor()
+              await s.page.waitForFunction(() => document.body.innerText.includes('No extra cash discount applies to this basket.'), null, { timeout: 15000 })
+              body = await bodyText(s.page)
+              assert(!body.includes('−£20.00') && !body.includes('−£50.00'), 'recalc stale eligible discount remained on Verona-only basket')
+              assertText(body, '£0.00', 'recalc Verona zero')
+
+              // Add Electric again through the real PDP/cart path, preserving the same checkout tab state as much as browser navigation allows.
+              await s.page.goto(`${base}/products/hannah-electric-corner`, { waitUntil: 'domcontentloaded' })
+              const add = s.page.getByRole('button', { name: /Add to basket/i }).first()
+              await add.waitFor({ timeout: 15000 })
+              await add.click()
+              await s.page.goto(`${base}/checkout`, { waitUntil: 'domcontentloaded' })
+              await s.page.getByRole('button', { name: /Continue to delivery/i }).waitFor({ timeout: 15000 })
+              await s.page.getByRole('button', { name: /Continue to delivery/i }).click()
+              // Full navigation resets memory offer state, so reapply the same manual code before asserting the now-current basket.
+              await applyCode(s.page, 'SOFAEXTRA')
+              body = await bodyText(s.page)
+              assertText(body, '−£50.00', 'recalc electric re-added')
+              assertText(body, '£1298.00', 'recalc Verona+Electric final total')
+              await noOverflow(s.page, 'basket recalc')
+            } finally { await s.context.close() }
+          }
+          async function cartReadability(browser, base) {
+            const custom = {
+              variant_id: 'a5d2050d-c458-4e0c-b3b3-7b7c727845a0', quantity: 1, price: 549,
+              title: 'Verona 4 Seater Corner 1c2 High Back', color: 'Grey',
+              image_url: '', fabric_id: '6ce3d2c2-7f92-4276-b991-70afa07c0cf9',
+              fabric_label: 'Chenille Grey', fabric_code: 'CH12', fabric_swatch: null,
+            }
+            const s = await newSeededPage(browser, base, 320, [custom])
+            try {
+              const body = await bodyText(s.page)
+              assertText(body, custom.title, '2DB long title')
+              assertText(body, 'Chenille Grey', '2DB fabric label')
+              assertText(body, 'CH12', '2DB fabric code')
+              assertText(body, '£549', '2DB item price')
+              assert(await s.page.getByRole('button', { name: /One more Verona 4 Seater/i }).isVisible(), '2DB quantity control missing')
+              const remove = s.page.getByRole('button', { name: /Remove Verona 4 Seater Corner 1c2 High Back from your cart/i })
+              assert(await remove.isVisible(), '2DB Remove missing')
+              await remove.click(); await s.page.waitForTimeout(500)
+              assert(await s.page.getByRole('button', { name: 'Undo' }).isVisible(), '2DB Undo missing')
+              await s.page.getByRole('button', { name: 'Undo' }).click()
+              await s.page.getByText(custom.title, { exact: true }).waitFor()
+              await noOverflow(s.page, '2DB 320')
+            } finally { await s.context.close() }
+          }
+
+          ;(async () => {
+            const browser = await chromium.launch({ headless: true })
+            try {
+              // Probe exact Vercel preview. If Vercel auth blocks automation, fall back to live only because checkout/app surfaces were proven byte-identical above.
+              const probeContext = await browser.newContext({ serviceWorkers: 'block' })
+              const probe = await probeContext.newPage()
+              let base = previewBase
+              try {
+                await probe.goto(`${previewBase}/checkout`, { waitUntil: 'domcontentloaded', timeout: 20000 })
+                if (probe.url().includes('vercel.com/login') || /Login\s*[–-]\s*Vercel/i.test(await probe.title())) base = liveBase
+              } catch { base = liveBase }
+              await probeContext.close()
+              console.log(JSON.stringify({ candidateSha: '3200b9cdd63600bc496bdc1958ed12ce13e8ace0', requestedPreview: previewBase, browserBase: base, previewAuthBlocked: base === liveBase }))
+
+              const scenarios = [
+                ['electric', [clone(PRODUCTS.electric)], 50, 949],
+                ['roma', [clone(PRODUCTS.roma)], 30, 320],
+                ['standard', [clone(PRODUCTS.standard)], 20, 629],
+                ['verona', [clone(PRODUCTS.verona)], 0, 349],
+                ['footstool', [clone(PRODUCTS.footstool)], 0, 149],
+                ['mixed-electric-roma', [clone(PRODUCTS.electric), clone(PRODUCTS.roma)], 50, 1299],
+              ]
+              for (const width of widths) {
+                for (const [name, cart, discount, total] of scenarios) {
+                  await assertOfferScenario(browser, base, width, name, cart, discount, total, { code: name === 'electric' ? '  sOfAeXtRa  ' : 'SOFAEXTRA', normalized: name === 'electric' })
+                }
+                await invalidEmptyNoCode(browser, base, width)
+                console.log(`WIDTH_${width}_PASS`)
+              }
+              await basketRecalc(browser, base); console.log('BASKET_RECALC_PASS')
+              await quantityTests(browser, base); console.log('QUANTITY_NON_MULTIPLICATION_PASS')
+              await extrasMath(browser, base); console.log('EXTRAS_MATH_PASS')
+              for (const width of [390, 430, 1440]) { await phase2dA(browser, base, width); console.log(`PHASE_2DA_${width}_PASS`) }
+              await cartReadability(browser, base); console.log('PHASE_2DB_PASS')
+              for (const width of [320, 390, 430]) {
+                await mobileFixedUi(browser, base, width, false)
+                await mobileFixedUi(browser, base, width, true)
+                console.log(`MOBILE_FIXED_${width}_PASS`)
+              }
+              console.log('OFFER_PHASE_B_BROWSER_MATRIX_PASS')
+            } finally { await browser.close() }
+          })().catch(err => { console.error(err); process.exit(1) })
+          JS
+          node /tmp/phaseb-browser-qa.cjs
