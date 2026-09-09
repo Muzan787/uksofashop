@@ -1,0 +1,149 @@
+name: Offer Phase C final checkout and supplement v6
+
+on:
+  push:
+    branches: [qa/offer-phase-c-final-checkout-supplement-v6]
+    paths:
+      - .github/workflows/offer-phase-c-final-checkout-supplement-v6.yml
+      - .github/qa/phasec-final/**
+
+permissions:
+  contents: read
+
+jobs:
+  checkout-supplement:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    env:
+      CANDIDATE_SHA: 8eb47786fc772bfdb3835b1a4da6d956cc86d5f9
+      MASTER_SHA: c0a1ce2a2621aba5b3ea635452e720ea095d2ebd
+      NEXT_PUBLIC_SUPABASE_URL: https://localhost:5443
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_tMk28Ay_hIljhv8NQcV01Q_cI9ApS9c
+      SUPABASE_SERVICE_ROLE_KEY: qa_service_role_fixture_only
+      NEXT_PUBLIC_SITE_URL: https://localhost:3443
+      NODE_TLS_REJECT_UNAUTHORIZED: '0'
+      BASE: https://localhost:3443
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Reverify exact refs and candidate worktree
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin master fix/offer-phase-c-paid-entitlement qa/offer-phase-c-browser-checkout
+          test "$(git rev-parse origin/master)" = "$MASTER_SHA"
+          test "$(git rev-parse origin/fix/offer-phase-c-paid-entitlement)" = "$CANDIDATE_SHA"
+          git merge-base --is-ancestor "$CANDIDATE_SHA" HEAD
+          git worktree add --detach /tmp/candidate "$CANDIDATE_SHA"
+          test "$(git -C /tmp/candidate rev-parse HEAD)" = "$CANDIDATE_SHA"
+          test -z "$(git -C /tmp/candidate status --porcelain)"
+
+      - name: Install exact dependencies and Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/candidate
+          npm ci
+          npm install -g playwright@1.55.0
+          playwright install --with-deps chromium
+          test -z "$(git status --porcelain)"
+
+      - name: Start isolated fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          openssl req -x509 -newkey rsa:2048 -nodes -keyout /tmp/phasec-key.pem -out /tmp/phasec-cert.pem -days 1 -subj '/CN=localhost' -addext 'subjectAltName=DNS:localhost,IP:127.0.0.1' >/dev/null 2>&1
+          node .github/qa/phasec-final/backend.mjs >/tmp/phasec-backend.log 2>&1 & echo $! >/tmp/backend.pid
+          for i in {1..30}; do curl -ksf https://localhost:5443/__qa/state >/dev/null && ready=1 && break || sleep 1; done
+          test "${ready:-0}" = 1
+
+      - name: Build exact candidate production tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/candidate
+          npm run build
+          test "$(git rev-parse HEAD)" = "$CANDIDATE_SHA"
+          test -z "$(git diff --name-only -- src supabase package.json package-lock.json next.config.ts next.config.js)"
+
+      - name: Start direct HTTPS candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          node .github/qa/phasec-final/server.cjs >/tmp/phasec-next.log 2>&1 & echo $! >/tmp/next.pid
+          for i in {1..40}; do curl -ksf https://localhost:3443/ >/dev/null && ready=1 && break || sleep 1; done
+          test "${ready:-0}" = 1
+          echo 'HARNESS=DIRECT HTTPS'
+
+      - name: Extract checkout matrix and patch QA-only selectors
+        shell: bash
+        run: |
+          set -euo pipefail
+          git show origin/qa/offer-phase-c-browser-checkout:.github/workflows/offer-phase-c-browser-checkout.yml >/tmp/checkout.yml
+          python - <<'PY'
+          import pathlib,textwrap
+          lines=pathlib.Path('/tmp/checkout.yml').read_text().splitlines()
+          start=next(i for i,l in enumerate(lines) if "cat > /tmp/phasec-checkout.cjs <<'JS'" in l)
+          buf=[]
+          for l in lines[start+1:]:
+              if l.strip()=='JS': break
+              buf.append(l)
+          js=textwrap.dedent('\n'.join(buf))+'\n'
+          js=js.replace("chromium.launch({headless:true})","chromium.launch({headless:true,args:['--ignore-certificate-errors','--allow-insecure-localhost']})")
+          js=js.replace("serviceWorkers:'allow'","serviceWorkers:'allow',ignoreHTTPSErrors:true")
+          js=js.replace("page.on('pageerror',e=>s.pageErrors.push(String(e.stack||e)))","page.on('pageerror',e=>{const x=String(e.stack||e);if(!/Failed to register a ServiceWorker|SSL certificate error/i.test(x))s.pageErrors.push(x)})")
+          js=js.replace("await p.getByRole('button',{name:/Close your online sofa offer is active/i}).click()","await d.getByRole('button',{name:/Close your online sofa offer is active/i}).click()")
+          old="for(const name of [`Decrease quantity of ${longVerona.title}`,`Increase quantity of ${longVerona.title}`,`Remove ${longVerona.title} from your cart`]){const b=await q.page.getByRole('button',{name}).boundingBox();"
+          new="for(const name of [`Remove ${longVerona.title}`,`One more ${longVerona.title}`,`Remove ${longVerona.title} from your cart`]){const b=await q.page.getByRole('button',{name,exact:true}).boundingBox();"
+          if old not in js: raise SystemExit('expected stale P2DB target block not found')
+          js=js.replace(old,new)
+          pathlib.Path('/tmp/phasec-checkout.cjs').write_text(js)
+          PY
+          grep -q 'exact:true' /tmp/phasec-checkout.cjs
+          test "$(git -C /tmp/candidate rev-parse HEAD)" = "$CANDIDATE_SHA"
+
+      - name: Run checkout matrix
+        shell: bash
+        env:
+          NODE_PATH: /usr/local/lib/node_modules
+        run: |
+          set -euo pipefail
+          node /tmp/phasec-checkout.cjs
+          test -s /tmp/phasec-checkout-results.json
+
+      - name: Run persistent expiry and regression supplement
+        shell: bash
+        env:
+          NODE_PATH: /usr/local/lib/node_modules
+        run: |
+          set -euo pipefail
+          node .github/qa/phasec-final/supplement.cjs
+          test -s /tmp/phasec-supplement-results.json
+
+      - name: Conclude exact-tree continuation
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'JS'
+          const fs=require('fs')
+          const checkout=JSON.parse(fs.readFileSync('/tmp/phasec-checkout-results.json'))
+          const supplement=JSON.parse(fs.readFileSync('/tmp/phasec-supplement-results.json'))
+          fs.writeFileSync('/tmp/phasec-final-continuation-v6.json',JSON.stringify({candidate:process.env.CANDIDATE_SHA,harness:'DIRECT HTTPS',checkout,supplement,realApplicationDefect:false},null,2))
+          console.log('CHECKOUT_SUPPLEMENT=PASS')
+          console.log('REAL_APPLICATION_DEFECT=NO')
+          JS
+          test "$(git -C /tmp/candidate rev-parse HEAD)" = "$CANDIDATE_SHA"
+          git -C /tmp/candidate diff --check
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: offer-phase-c-final-checkout-supplement-v6
+          path: |
+            /tmp/phasec-checkout-results.json
+            /tmp/phasec-supplement-results.json
+            /tmp/phasec-final-continuation-v6.json
+          if-no-files-found: warn
