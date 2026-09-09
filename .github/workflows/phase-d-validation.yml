@@ -10,8 +10,10 @@ on:
       - 'src/constants/delivery.ts'
       - 'src/utils/postcode.ts'
       - 'src/app/api/qa/phase-d-server/route.ts'
+      - 'src/app/qa/phase-d-estimator/page.tsx'
       - 'scripts/phase-d-postcode-policy.test.mjs'
       - 'scripts/phase-d-local-browser-qa.mjs'
+      - 'scripts/phase-d-final-browser-qa.mjs'
       - 'scripts/phase-d-fetch-fixture.mjs'
       - 'scripts/phase-d-https-server.mjs'
       - 'supabase/migrations/20260909110000_offer_phase_d_mainland_delivery_rpc_lock.sql'
@@ -70,7 +72,7 @@ jobs:
 
       - name: Generate QA-only TLS certificate
         run: |
-          mkdir -p .qa
+          mkdir -p .qa/screenshots
           openssl req -x509 -newkey rsa:2048 -nodes \
             -keyout .qa/key.pem -out .qa/cert.pem -days 1 \
             -subj '/CN=127.0.0.1' \
@@ -93,18 +95,22 @@ jobs:
           cat .qa/server.log
           exit 1
 
-      - name: Exact-tree Phase D browser and server-action matrix
+      - name: Exact-tree consolidated Phase D browser and server-action matrix
         env:
           PHASE_D_LOCAL_URL: https://127.0.0.1:3100
-        run: |
-          # QA-only deterministic consent state: prevents the consent sheet and
-          # deliberately keeps analytics/pixels off during controlled tests.
-          sed -i "s/const page = await context.newPage()/const page = await context.newPage(); await page.addInitScript(() => localStorage.setItem('cookie_consent', 'denied'))/g" scripts/phase-d-local-browser-qa.mjs
-          node scripts/phase-d-local-browser-qa.mjs
+        run: node scripts/phase-d-final-browser-qa.mjs
 
-      - name: Server log on failure
-        if: failure()
-        run: cat .qa/server.log || true
+      - name: Preserve consolidated QA evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase-d-final-qa-${{ github.run_id }}
+          path: |
+            .qa/phase-d-results.json
+            .qa/screenshots/*.png
+            .qa/server.log
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Stop QA HTTPS server
         if: always()
