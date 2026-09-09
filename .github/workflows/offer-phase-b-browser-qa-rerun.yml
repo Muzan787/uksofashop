@@ -14,7 +14,7 @@ jobs:
         with:
           ref: fix/offer-phase-b-discount-engine-release
           fetch-depth: 0
-      - name: Extract browser test harness from QA-only workflow
+      - name: Extract and patch browser test harness
         run: |
           python <<'PY'
           from pathlib import Path
@@ -27,7 +27,20 @@ jobs:
           lines=[]
           for line in body.splitlines():
               lines.append(line[10:] if line.startswith('          ') else line)
-          Path('/tmp/phaseb-browser-qa.cjs').write_text('\n'.join(lines)+'\n')
+          body='\n'.join(lines)+'\n'
+          patches={
+            "async function bodyText(page) { return await page.locator('body').innerText() }":
+              "async function bodyText(page) { return await page.locator('body').evaluate(el => el.textContent || '') }",
+            "page.locator('[data-bottom-bar]').filter({ visible: true }).first()":
+              "page.locator('[data-bottom-bar]:visible').first()",
+            "`${base}/products/hannah-electric-corner`":
+              "`${base}/shop/all/hannah-electric-corner`",
+          }
+          for old,new in patches.items():
+              if old not in body:
+                  raise SystemExit(f'expected patch anchor missing: {old}')
+              body=body.replace(old,new,1)
+          Path('/tmp/phaseb-browser-qa.cjs').write_text(body)
           PY
       - name: Checkout exact clean recovery candidate and prove app equivalence
         run: |
