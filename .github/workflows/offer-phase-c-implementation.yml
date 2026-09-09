@@ -1,0 +1,222 @@
+name: Offer Phase C implementation
+
+on:
+  push:
+    branches: [qa/offer-phase-c-implementation]
+
+permissions:
+  contents: write
+
+jobs:
+  implement:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/offer-phase-c-paid-entitlement
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Apply narrow Phase C source changes
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path, old, new):
+              p = Path(path)
+              text = p.read_text()
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'{path}: expected exactly one match, got {count}')
+              p.write_text(text.replace(old, new, 1))
+
+          # Public quote contract: distinguish a valid manual code from a valid
+          # paid entitlement so an invalid typed code cannot destroy the latter.
+          replace_once(
+              'src/types/offers.ts',
+              'export interface OfferQuote {\n  valid: boolean\n',
+              'export interface OfferQuote {\n  valid: boolean\n  codeValid: boolean\n',
+          )
+
+          # Server-only quote authority: the browser never supplies the bearer.
+          Path('src/app/actions/offer.ts').write_text("""'use server'\n\nimport { cookies } from 'next/headers'\nimport { z } from 'zod'\nimport { createAdminClient } from '@/utils/supabase/admin'\nimport type { CartItem } from '@/app/actions/checkout'\nimport type { OfferQuote, OfferQuoteResult, OfferTier, OfferSource } from '@/types/offers'\nimport { OFFER_ENTITLEMENT_COOKIE } from '@/utils/offers/constants'\n\nconst itemsSchema = z.array(z.object({\n  variant_id: z.string().uuid(),\n  quantity: z.number().int().min(1).max(99),\n  fabric_id: z.string().uuid().nullish(),\n})).min(1, 'Your cart is empty.')\n\nconst tokenSchema = z.string().uuid()\n\nfunction asTier(value: unknown): OfferTier | null {\n  return value === 'ELECTRIC' || value === 'ROMA' || value === 'STANDARD' || value === 'EXCLUDED'\n    ? value\n    : null\n}\n\nfunction asSource(value: unknown): OfferSource | null {\n  return value === 'manual_code' || value === 'paid_entitlement' ? value : null\n}\n\n/**\n * Ask the database for the current authoritative basket offer. The caller may\n * supply a shareable customer-facing code, but never a paid entitlement token,\n * tier or amount. The opaque Phase C bearer is read only from the HttpOnly\n * first-party cookie on this server action and is revalidated by PostgreSQL.\n */\nexport async function quoteOffer(\n  cartItems: CartItem[],\n  promotionCode: string | null = null,\n): Promise<OfferQuoteResult> {\n  const validatedItems = itemsSchema.safeParse(cartItems)\n  if (!validatedItems.success) {\n    return { error: validatedItems.error.issues[0]?.message ?? 'Your cart is not valid.' }\n  }\n\n  const jar = await cookies()\n  const parsedToken = tokenSchema.safeParse(jar.get(OFFER_ENTITLEMENT_COOKIE)?.value)\n  const admin = createAdminClient()\n  const { data, error } = await admin.rpc('calculate_order_offer', {\n    p_items: validatedItems.data.map(item => ({\n      variant_id: item.variant_id,\n      quantity: item.quantity,\n      fabric_id: item.fabric_id ?? null,\n    })),\n    p_promotion_code: promotionCode,\n    p_offer_entitlement_token: parsedToken.success ? parsedToken.data : null,\n  })\n\n  if (error || !data || typeof data !== 'object' || Array.isArray(data)) {\n    console.error('Offer quote failed:', error)\n    const message = error?.message ?? ''\n    if (message.includes('UNAVAILABLE_ITEMS')) {\n      return { error: 'One of the items in your basket is no longer available.' }\n    }\n    if (message.includes('EMPTY_CART')) {\n      return { error: 'Your cart is empty.' }\n    }\n    return { error: 'We could not check that offer. Please try again.' }\n  }\n\n  const raw = data as Record<string, unknown>\n  const codeValid = raw.code_valid === true\n  const entitlementValid = raw.entitlement_valid === true\n  const normalizedCode = codeValid && typeof raw.normalized_code === 'string' ? raw.normalized_code : null\n  const discountAmount = Number(raw.discount_amount ?? 0)\n  const discountTier = asTier(raw.discount_tier)\n  const offerSource = asSource(raw.offer_source)\n  const itemsSubtotal = Number(raw.items_subtotal ?? 0)\n  const valid = codeValid || entitlementValid\n\n  let message = ''\n  if (promotionCode?.trim() && !codeValid) {\n    message = 'Offer code not recognised.'\n  } else if (!valid) {\n    message = ''\n  } else if (discountAmount > 0) {\n    message = offerSource === 'paid_entitlement'\n      ? `Online offer applied · £${discountAmount.toFixed(0)} off`\n      : `${normalizedCode ?? 'Offer'} applied · £${discountAmount.toFixed(0)} off`\n  } else {\n    message = offerSource === 'paid_entitlement'\n      ? 'Your online offer is active. No extra cash discount applies to this basket.'\n      : `${normalizedCode ?? 'Offer'} is recognised. No extra cash discount applies to this basket.`\n  }\n\n  const quote: OfferQuote = {\n    valid,\n    codeValid,\n    normalizedCode,\n    discountAmount: Number.isFinite(discountAmount) ? Math.max(0, discountAmount) : 0,\n    discountTier,\n    offerSource,\n    itemsSubtotal: Number.isFinite(itemsSubtotal) ? Math.max(0, itemsSubtotal) : 0,\n    message,\n  }\n\n  return { success: true, quote }\n}\n""")
+
+          # Final order action: same rule as quoteOffer. The only entitlement
+          # passed into the SECURITY DEFINER DB boundary comes from HttpOnly
+          # request cookies, never a React argument.
+          replace_once(
+              'src/app/actions/checkout.ts',
+              "import { z } from 'zod'\nimport { cookies, headers } from 'next/headers'\n",
+              "import { z } from 'zod'\nimport { cookies, headers } from 'next/headers'\nimport { OFFER_ENTITLEMENT_COOKIE } from '@/utils/offers/constants'\n",
+          )
+          replace_once(
+              'src/app/actions/checkout.ts',
+              "const entitlementSchema = z.string().uuid().nullish()\n\n",
+              '',
+          )
+          replace_once(
+              'src/app/actions/checkout.ts',
+              "  extras: DeliveryOptions = NO_EXTRAS,\n  promotionCode: string | null = null,\n  offerEntitlementToken: string | null = null,\n): Promise<PlaceOrderResult> {",
+              "  extras: DeliveryOptions = NO_EXTRAS,\n  promotionCode: string | null = null,\n): Promise<PlaceOrderResult> {",
+          )
+          replace_once(
+              'src/app/actions/checkout.ts',
+              "  const supabase = await createClient()\n\n  const validatedData = checkoutSchema.safeParse({",
+              "  const supabase = await createClient()\n  const jar = await cookies()\n  const entitlementCookie = z.string().uuid().safeParse(jar.get(OFFER_ENTITLEMENT_COOKIE)?.value)\n\n  const validatedData = checkoutSchema.safeParse({",
+          )
+          replace_once(
+              'src/app/actions/checkout.ts',
+              "  const validatedEntitlement = entitlementSchema.safeParse(offerEntitlementToken)\n  if (!validatedEntitlement.success) {\n    return { error: 'That offer entitlement is not valid.' }\n  }\n\n",
+              '',
+          )
+          replace_once(
+              'src/app/actions/checkout.ts',
+              "    p_offer_entitlement_token: validatedEntitlement.data ?? null,",
+              "    p_offer_entitlement_token: entitlementCookie.success ? entitlementCookie.data : null,",
+          )
+          replace_once(
+              'src/app/actions/checkout.ts',
+              "  const jar = await cookies()\n  const hdrs = await headers()",
+              "  const hdrs = await headers()",
+          )
+
+          # Checkout auto-application stays within Phase B's stale-basket quote
+          # model. Catalogue line prices remain untouched.
+          replace_once(
+              'src/components/Checkout/CheckoutClient.tsx',
+              "import OfferCode from './OfferCode'\n",
+              "import OfferCode from './OfferCode'\nimport { useOffer } from '@/components/Offer/OfferProvider'\n",
+          )
+          replace_once(
+              'src/components/Checkout/CheckoutClient.tsx',
+              "            <span className=\"min-w-0\">Offer{offer.normalizedCode ? ` · ${offer.normalizedCode}` : ''}</span>",
+              "            <span className=\"min-w-0\">\n              {offer.offerSource === 'paid_entitlement'\n                ? 'Online offer'\n                : `Offer${offer.normalizedCode ? ` · ${offer.normalizedCode}` : ''}`}\n            </span>",
+          )
+          replace_once(
+              'src/components/Checkout/CheckoutClient.tsx',
+              "  const handleSubmit = async (e: React.FormEvent) => {\n    e.preventDefault()\n    if (!validate()) return",
+              "  const handleSubmit = async (e: React.FormEvent) => {\n    e.preventDefault()\n    if (offerPending || !validate()) return",
+          )
+          replace_once(
+              'src/components/Checkout/CheckoutClient.tsx',
+              "        disabled={pending}\n        className={`flex h-14 w-full",
+              "        disabled={pending || offerPending}\n        className={`flex h-14 w-full",
+          )
+          replace_once(
+              'src/components/Checkout/CheckoutClient.tsx',
+              "  const { cartItems, totalAmount } = useCart()\n  const currentBasketKey = basketOfferKey(cartItems)",
+              "  const { cartItems, totalAmount } = useCart()\n  const { active: automaticOfferActive } = useOffer()\n  const currentBasketKey = basketOfferKey(cartItems)",
+          )
+          replace_once(
+              'src/components/Checkout/CheckoutClient.tsx',
+              "  const effectiveOffer = quotedBasketKey === currentBasketKey ? offerQuote : null\n  const effectiveDiscount = effectiveOffer?.valid ? effectiveOffer.discountAmount : 0",
+              "  const offerAuthorityActive = Boolean(appliedPromotionCode) || automaticOfferActive\n  const effectiveOffer = quotedBasketKey === currentBasketKey && offerAuthorityActive ? offerQuote : null\n  const effectiveDiscount = effectiveOffer?.valid ? effectiveOffer.discountAmount : 0",
+          )
+          replace_once(
+              'src/components/Checkout/CheckoutClient.tsx',
+              "    if (!res.success || !res.quote.valid) {\n      setOfferError(res.success ? (res.quote.message || 'Offer code not recognised.') : 'Offer code not recognised.')\n      return\n    }\n\n    // Only a valid server response changes the applied authority. Typing an\n    // invalid code later therefore cannot remove a valid offer already held by\n    // this checkout flow (and the same rule will protect Phase C entitlement).\n    setAppliedPromotionCode(res.quote.normalizedCode)\n    setOfferCodeInput(res.quote.normalizedCode ?? code.trim().toUpperCase())\n    setOfferQuote(res.quote)\n    setQuotedBasketKey(snapshotKey)",
+              "    if (!res.success) {\n      setOfferError('Offer code not recognised.')\n      return\n    }\n\n    // An invalid typed code is allowed to report its own error without\n    // destroying a paid entitlement that the server still validated. The\n    // automatic quote remains the financial state; the invalid string never\n    // becomes appliedPromotionCode.\n    if (!res.quote.codeValid) {\n      setOfferError('Offer code not recognised.')\n      if (res.quote.valid && res.quote.offerSource === 'paid_entitlement') {\n        setOfferQuote(res.quote)\n        setQuotedBasketKey(snapshotKey)\n      }\n      return\n    }\n\n    if (!res.quote.valid) {\n      setOfferError(res.quote.message || 'Offer code not recognised.')\n      return\n    }\n\n    setAppliedPromotionCode(res.quote.normalizedCode)\n    setOfferCodeInput(res.quote.normalizedCode ?? code.trim().toUpperCase())\n    setOfferQuote(res.quote)\n    setQuotedBasketKey(snapshotKey)",
+          )
+          old_effect = """  // Re-quote an already applied code whenever identities/quantities change.\n  // All setState calls are in the async completion, not synchronously in the\n  // effect; the stale quote is already excluded by currentBasketKey above.\n  useEffect(() => {\n    if (!appliedPromotionCode || cartItems.length === 0) return\n\n    let cancelled = false\n    const snapshotKey = currentBasketKey\n    const items = toOfferItems(cartItems)\n\n    void quoteOffer(items, appliedPromotionCode).then(res => {\n      if (cancelled) return\n      if (res?.success) {\n        setOfferQuote(res.quote)\n        setQuotedBasketKey(snapshotKey)\n        setOfferError('')\n      } else if (res?.error) {\n        setOfferError(res.error)\n      }\n    })\n\n    return () => { cancelled = true }\n  }, [appliedPromotionCode, cartItems, currentBasketKey])\n"""
+          new_effect = """  // Re-quote whenever the current basket changes under either legitimate\n  // authority route: shareable SOFAEXTRA or the server-only paid entitlement.\n  // The basket key still fails closed immediately while the async quote is in\n  // flight, so an old £50 can never keep reducing a newer Standard/Verona cart.\n  useEffect(() => {\n    if ((!appliedPromotionCode && !automaticOfferActive) || cartItems.length === 0) return\n\n    let cancelled = false\n    const snapshotKey = currentBasketKey\n    const items = toOfferItems(cartItems)\n    setOfferPending(true)\n\n    void quoteOffer(items, appliedPromotionCode).then(res => {\n      if (cancelled) return\n      setOfferPending(false)\n      if (res?.success) {\n        setOfferQuote(res.quote)\n        setQuotedBasketKey(snapshotKey)\n        if (!offerCodeInput.trim() || res.quote.codeValid) setOfferError('')\n      } else if (res?.error) {\n        setOfferError(res.error)\n      }\n    })\n\n    return () => { cancelled = true }\n  }, [appliedPromotionCode, automaticOfferActive, cartItems, currentBasketKey])\n"""
+          replace_once('src/components/Checkout/CheckoutClient.tsx', old_effect, new_effect)
+
+          # Existing one-line announcement, conditional only for active paid
+          # entitlement. No carousel or new motion primitive.
+          replace_once(
+              'src/components/Layout/Header.tsx',
+              "import SearchOverlay from './SearchOverlay';\n",
+              "import SearchOverlay from './SearchOverlay';\nimport { useOffer } from '@/components/Offer/OfferProvider';\n",
+          )
+          replace_once(
+              'src/components/Layout/Header.tsx',
+              "  const pathname = usePathname();\n\n  const [scrolled, setScrolled] = useState(false);",
+              "  const pathname = usePathname();\n  const { active: offerActive } = useOffer();\n  const announcement = offerActive\n    ? 'Your online offer is active · SOFAEXTRA · FREE UK Mainland Delivery'\n    : ANNOUNCEMENT;\n\n  const [scrolled, setScrolled] = useState(false);",
+          )
+          replace_once(
+              'src/components/Layout/Header.tsx',
+              "            {ANNOUNCEMENT}\n",
+              "            {announcement}\n",
+          )
+
+          # Mount the new offer system alongside, not inside, AttributionBoot.
+          replace_once(
+              'src/app/layout.tsx',
+              "import type { Metadata, Viewport } from 'next'\n",
+              "import type { Metadata, Viewport } from 'next'\nimport { Suspense } from 'react'\n",
+          )
+          replace_once(
+              'src/app/layout.tsx',
+              "import { PALETTE } from '@/constants/palette';\n",
+              "import { PALETTE } from '@/constants/palette';\nimport { OfferProvider } from '@/components/Offer/OfferProvider';\nimport OfferBoot from '@/components/Offer/OfferBoot';\nimport OfferPrompt from '@/components/Offer/OfferPrompt';\n",
+          )
+          replace_once(
+              'src/app/layout.tsx',
+              "        <CartProvider>\n",
+              "        <CartProvider>\n          <OfferProvider>\n",
+          )
+          replace_once(
+              'src/app/layout.tsx',
+              "          <AttributionBoot />\n\n          <CookieConsent />",
+              "          <AttributionBoot />\n          <Suspense fallback={null}>\n            <OfferBoot />\n          </Suspense>\n          <OfferPrompt />\n\n          <CookieConsent />",
+          )
+          replace_once(
+              'src/app/layout.tsx',
+              "          \n        </CartProvider>\n",
+              "          \n          </OfferProvider>\n        </CartProvider>\n",
+          )
+
+          # Generated DB contract additions for the one new table/RPC.
+          table_block = """      offer_entitlements: {\n        Row: {\n          id: string\n          token: string\n          visitor_id: string\n          source: string\n          qualifying_arrival_id: string | null\n          started_at: string\n          expires_at: string\n          revoked_at: string | null\n          created_at: string\n          updated_at: string\n        }\n        Insert: {\n          id?: string\n          token?: string\n          visitor_id: string\n          source: string\n          qualifying_arrival_id?: string | null\n          started_at?: string\n          expires_at: string\n          revoked_at?: string | null\n          created_at?: string\n          updated_at?: string\n        }\n        Update: {\n          id?: string\n          token?: string\n          visitor_id?: string\n          source?: string\n          qualifying_arrival_id?: string | null\n          started_at?: string\n          expires_at?: string\n          revoked_at?: string | null\n          created_at?: string\n          updated_at?: string\n        }\n        Relationships: []\n      }\n"""
+          replace_once(
+              'src/types/supabase.ts',
+              "      offer_product_tiers: {\n",
+              table_block + "      offer_product_tiers: {\n",
+          )
+          function_block = """      issue_paid_offer_entitlement: {\n        Args: {\n          p_visitor_id: string\n          p_source: string\n          p_arrival_id?: string | null\n        }\n        Returns: Json\n      }\n"""
+          replace_once(
+              'src/types/supabase.ts',
+              "    Functions: {\n      calculate_order_offer: {\n",
+              "    Functions: {\n" + function_block + "      calculate_order_offer: {\n",
+          )
+          PY
+
+      - name: Static gates
+        run: |
+          npm ci
+          npx eslint \
+            src/types/offers.ts \
+            src/types/offerEntitlement.ts \
+            src/types/supabase.ts \
+            src/utils/offers/constants.ts \
+            src/utils/offers/paidTraffic.ts \
+            src/app/api/offer/qualify/route.ts \
+            src/app/api/offer/status/route.ts \
+            src/components/Offer/OfferProvider.tsx \
+            src/components/Offer/OfferBoot.tsx \
+            src/components/Offer/OfferPrompt.tsx \
+            src/app/actions/offer.ts \
+            src/app/actions/checkout.ts \
+            src/components/Checkout/CheckoutClient.tsx \
+            src/components/Layout/Header.tsx \
+            src/app/layout.tsx
+          npx tsc --noEmit
+          npm run build
+          git diff --check
+
+      - name: Commit implementation to isolated feature branch
+        run: |
+          git config user.name "Muzan787"
+          git config user.email "109960574+Muzan787@users.noreply.github.com"
+          git add \
+            src/types/offers.ts \
+            src/types/supabase.ts \
+            src/app/actions/offer.ts \
+            src/app/actions/checkout.ts \
+            src/components/Checkout/CheckoutClient.tsx \
+            src/components/Layout/Header.tsx \
+            src/app/layout.tsx
+          git diff --cached --quiet && exit 0
+          git commit -m "Offer Phase C: wire paid entitlement through storefront"
+          git push origin HEAD:fix/offer-phase-c-paid-entitlement
