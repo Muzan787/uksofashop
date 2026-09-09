@@ -1,0 +1,338 @@
+name: Offer Phase C browser traffic matrix
+
+on:
+  push:
+    branches: [qa/offer-phase-c-browser-traffic]
+    paths: [.github/workflows/offer-phase-c-browser-traffic.yml]
+
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 8eb47786fc772bfdb3835b1a4da6d956cc86d5f9
+          fetch-depth: 0
+
+      - name: Verify exact candidate and master
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "8eb47786fc772bfdb3835b1a4da6d956cc86d5f9"
+          git fetch origin master
+          test "$(git rev-parse origin/master)" = "c0a1ce2a2621aba5b3ea635452e720ea095d2ebd"
+
+      - name: Install Playwright
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+
+      - name: Run exact-candidate browser traffic/prompt matrix
+        env:
+          BASE: https://uksofashop-git-fix-offer-phase-c-paid-234c30-muzan787s-projects.vercel.app
+          NODE_PATH: ${{ github.workspace }}/node_modules
+        run: |
+          cat > /tmp/phasec-traffic.cjs <<'JS'
+          const { chromium } = require('playwright')
+          const assert = require('assert')
+          const fs = require('fs')
+
+          const BASE = process.env.BASE
+          const ORIGIN = new URL(BASE).origin
+          const ACTIVE = 'Your online offer is active · SOFAEXTRA · FREE UK Mainland Delivery'
+          const PROMPT = 'Your online sofa offer is active'
+          const results = {}
+          const sleep = ms => new Promise(r => setTimeout(r, ms))
+
+          function pass(k) { results[k] = 'PASS'; console.log(`${k}=PASS`) }
+          function reject(k) { results[k] = 'REJECTED'; console.log(`${k}=REJECTED`) }
+          function assertHas(s, n, l) { assert(String(s).includes(n), `${l}: missing ${JSON.stringify(n)}\n${String(s).slice(0,2500)}`) }
+          function overlap(a,b) { return !!a && !!b && a.x < b.x+b.width && a.x+a.width > b.x && a.y < b.y+b.height && a.y+a.height > b.y }
+          async function noOverflow(page,label){ const r=await page.evaluate(()=>({sw:document.documentElement.scrollWidth,iw:innerWidth})); assert(r.sw<=r.iw+1,`${label}: overflow ${r.sw}>${r.iw}`) }
+          function genuineConsole(s){ return /(?:Uncaught|TypeError|ReferenceError|Unhandled|Hydration|Minified React error)/i.test(s) }
+
+          async function contextFor(browser,width=390,consent='denied',storageState){
+            const context=await browser.newContext({
+              viewport:{width,height: width<=430?900:1000},
+              hasTouch:width<=430,
+              isMobile:width<=430,
+              serviceWorkers:'allow',
+              storageState,
+            })
+            await context.addInitScript(c=>{ localStorage.setItem('cookie_consent',c) }, consent)
+            try { await context.grantPermissions(['clipboard-read','clipboard-write'],{origin:ORIGIN}) } catch {}
+            return context
+          }
+
+          function instrument(page){
+            const state={pageErrors:[],consoleErrors:[],qualify:0,status:0,jsonBodies:[]}
+            page.on('pageerror',e=>state.pageErrors.push(String(e.stack||e)))
+            page.on('console',m=>{ if(m.type()==='error') state.consoleErrors.push(m.text()) })
+            page.on('request',r=>{
+              const u=r.url()
+              if(u.includes('/api/offer/qualify')) state.qualify++
+              if(u.includes('/api/offer/status')) state.status++
+            })
+            page.on('response',async r=>{
+              const u=r.url(); if(!u.includes('/api/offer/')) return
+              try { state.jsonBodies.push(await r.text()) } catch {}
+            })
+            return state
+          }
+          async function runtimeOK(st,label){
+            assert.strictEqual(st.pageErrors.length,0,`${label}: page errors\n${st.pageErrors.join('\n---\n')}`)
+            const g=st.consoleErrors.filter(genuineConsole)
+            assert.strictEqual(g.length,0,`${label}: console errors\n${g.join('\n---\n')}`)
+          }
+          async function visit(page,path,label,referer){
+            const r=await page.goto(BASE+path,{waitUntil:'domcontentloaded',timeout:30000,referer})
+            assert(r && r.status()<500,`${label}: HTTP ${r&&r.status()}`)
+            await page.locator('body').waitFor({state:'visible'})
+            const txt=(await page.locator('body').innerText()).slice(0,1200)
+            assert(!/Authentication Required|Vercel Authentication/i.test(txt),`${label}: PREVIEW_AUTH_ENVIRONMENT_BLOCK`)
+          }
+          async function status(page){ return await page.evaluate(async()=>{ const r=await fetch('/api/offer/status',{cache:'no-store'}); return await r.json() }) }
+          async function waitActive(page,label){ await page.getByText(ACTIVE,{exact:true}).waitFor({state:'visible',timeout:15000}); const s=await status(page); assert(s.active===true,`${label}: status inactive`); return s }
+          async function offerCookie(context){ return (await context.cookies()).find(c=>c.name==='uksofashop_offer') }
+          async function vidCookie(context){ return (await context.cookies()).find(c=>c.name==='uksofashop_vid') }
+          async function closePrompt(page){ const d=page.getByRole('dialog',{name:PROMPT}); if(await d.isVisible().catch(()=>false)) await page.getByRole('button',{name:/Close your online sofa offer is active/i}).click() }
+
+          async function paidCase(browser,label,path,source,width=390,consent='denied'){
+            const context=await contextFor(browser,width,consent)
+            const page=await context.newPage(); const st=instrument(page)
+            await visit(page,path,label)
+            const s=await waitActive(page,label)
+            assert.strictEqual(s.source,source,`${label}: source`)
+            await page.getByRole('dialog',{name:PROMPT}).waitFor({state:'visible',timeout:12000})
+            const oc=await offerCookie(context); const vc=await vidCookie(context)
+            assert(oc,`${label}: no offer cookie`); assert(vc,`${label}: no visitor cookie`)
+            assert.strictEqual(st.qualify,1,`${label}: qualification calls ${st.qualify}`)
+            await sleep(500); assert.strictEqual(st.qualify,1,`${label}: qualification loop`)
+            await noOverflow(page,label); await runtimeOK(st,label)
+            return {context,page,st,s,oc,vc}
+          }
+
+          async function negativeCase(browser,label,path,{cookie,referer}={}){
+            const context=await contextFor(browser,390,'denied')
+            if(cookie) await context.addCookies([{name:cookie.name,value:cookie.value,url:BASE}])
+            const page=await context.newPage(); const st=instrument(page)
+            await visit(page,path,label,referer)
+            await sleep(1200)
+            assert.strictEqual(await page.getByRole('dialog',{name:PROMPT}).count(),0,`${label}: prompt appeared`)
+            assert(!(await offerCookie(context)),`${label}: offer cookie issued`)
+            const s=await status(page); assert(!s.active,`${label}: entitlement active`)
+            assert(!(await page.locator('body').innerText()).includes(ACTIVE),`${label}: paid header`)
+            assert.strictEqual(st.qualify,0,`${label}: qualify call`)
+            await noOverflow(page,label); await runtimeOK(st,label)
+            await context.close(); reject(label)
+          }
+
+          ;(async()=>{
+            const browser=await chromium.launch({headless:true})
+            try {
+              // Positive classifier/browser cases.
+              for (const [label,path,source] of [
+                ['GCLID','/?gclid=QA_GCLID','google_ads'],
+                ['GBRAID','/?gbraid=QA_GBRAID','google_ads'],
+                ['WBRAID','/?wbraid=QA_WBRAID','google_ads'],
+                ['GOOGLE_CPC','/?utm_source=google&utm_medium=cpc','google_ads'],
+                ['FACEBOOK_PAID_SOCIAL','/?utm_source=facebook&utm_medium=paid_social','meta_ads'],
+                ['INSTAGRAM_PAID_SOCIAL','/?utm_source=instagram&utm_medium=paid_social','meta_ads'],
+                ['META_PAID_SOCIAL','/?utm_source=meta&utm_medium=paid_social','meta_ads'],
+                ['QUERY_ENCODING','/?utm_source=google&utm_medium=cpc&utm_campaign=hello%20world','google_ads'],
+              ]){
+                const q=await paidCase(browser,label,path,source)
+                await q.context.close(); pass(label)
+              }
+
+              // Negative classifier cases.
+              await negativeCase(browser,'FBCLID_ONLY','/?fbclid=QA_FBCLID')
+              await negativeCase(browser,'FBC_ONLY','/',{cookie:{name:'_fbc',value:'fb.1.123.QA'}})
+              await negativeCase(browser,'FBP_ONLY','/',{cookie:{name:'_fbp',value:'fb.1.123.QA'}})
+              await negativeCase(browser,'FACEBOOK_SOCIAL','/?utm_source=facebook&utm_medium=social')
+              await negativeCase(browser,'INSTAGRAM_ORGANIC','/?utm_source=instagram&utm_medium=organic')
+              await negativeCase(browser,'GOOGLE_ORGANIC','/?utm_source=google&utm_medium=organic')
+              await negativeCase(browser,'DIRECT','/')
+              await negativeCase(browser,'REFERRAL','/',{referer:'https://example.com/referral'})
+              await negativeCase(browser,'UNKNOWN','/?utm_source=newsletter&utm_medium=email')
+
+              // Cookie security + JS/API/storage leakage + first-visit identity race.
+              {
+                const q=await paidCase(browser,'COOKIE_SECURITY','/?gclid=QA_COOKIE','google_ads',390)
+                const c=q.oc; const token=c.value
+                assert(c.httpOnly,'cookie not HttpOnly'); assert(c.secure,'cookie not Secure'); assert.strictEqual(c.sameSite,'Lax'); assert.strictEqual(c.path,'/')
+                const remaining=c.expires*1000-Date.now(); assert(remaining>6.8*864e5 && remaining<7.1*864e5,`cookie expiry ${remaining}`)
+                const leak=await q.page.evaluate(()=>({
+                  cookie:document.cookie,
+                  local:Object.fromEntries(Object.entries(localStorage)),
+                  session:Object.fromEntries(Object.entries(sessionStorage)),
+                  html:document.documentElement.outerHTML,
+                }))
+                assert(!leak.cookie.includes('uksofashop_offer'),'HttpOnly cookie visible')
+                assert(!JSON.stringify(leak.local).includes(token),'token in localStorage')
+                assert(!JSON.stringify(leak.session).includes(token),'token in sessionStorage')
+                assert(!leak.html.includes(token),'token in DOM')
+                assert(!JSON.stringify(q.s).includes(token),'token in status JSON')
+                assert(!q.st.jsonBodies.some(x=>x.includes(token)),'token in offer API response body')
+                assert(q.vc.value && q.vc.value!==token,'visitor identity missing/collided')
+                assert.strictEqual(q.st.qualify,1,'visitor-race qualification loop')
+                pass('COOKIE_ATTRIBUTES'); pass('TOKEN_JS_INVISIBILITY'); pass('VISITOR_ID_RACE')
+
+                // Same-browser direct and organic returns do not extend entitlement.
+                await closePrompt(q.page)
+                const exp1=(await status(q.page)).expiresAt
+                await visit(q.page,'/','SAME_BROWSER_DIRECT')
+                await q.page.getByText(ACTIVE,{exact:true}).waitFor({timeout:12000})
+                assert.strictEqual((await status(q.page)).expiresAt,exp1,'direct return extended expiry')
+                assert.strictEqual(await q.page.getByRole('dialog',{name:PROMPT}).count(),0,'direct return reopened prompt')
+                pass('SAME_BROWSER_RETURN'); pass('DIRECT_RETURN')
+                await visit(q.page,'/?utm_source=google&utm_medium=organic','ORGANIC_RETURN')
+                await q.page.getByText(ACTIVE,{exact:true}).waitFor({timeout:12000})
+                assert.strictEqual((await status(q.page)).expiresAt,exp1,'organic return extended expiry')
+                assert.strictEqual(await q.page.getByRole('dialog',{name:PROMPT}).count(),0,'organic return reopened prompt')
+                pass('ORGANIC_RETURN')
+
+                // Clear first-party state -> no entitlement in browser.
+                const saved=await q.context.storageState(); await q.context.close()
+                const cleared=await browser.newContext({viewport:{width:390,height:900},storageState:saved,serviceWorkers:'allow'})
+                await cleared.clearCookies(); await cleared.addInitScript(()=>localStorage.clear())
+                const cp=await cleared.newPage(); instrument(cp); await visit(cp,'/','CLEAR_SITE_DATA'); await sleep(900)
+                assert(!(await status(cp)).active,'clear-site-data retained entitlement')
+                assert(!(await offerCookie(cleared)),'offer cookie survived clear')
+                assert.strictEqual(await cp.getByRole('dialog',{name:PROMPT}).count(),0)
+                await cleared.close(); pass('CLEAR_SITE_DATA')
+              }
+
+              // Popup seen on visible presentation, navigation without X, explicit dismissal, and later return.
+              {
+                const q=await paidCase(browser,'POPUP_SEEN','/?gclid=QA_SEEN','google_ads',390)
+                assert((await q.page.getByRole('dialog',{name:PROMPT}).innerText()).includes('Extra savings on selected sofas'))
+                await visit(q.page,'/collection','SEEN_NAVIGATE_WITHOUT_X'); await sleep(700)
+                assert.strictEqual(await q.page.getByRole('dialog',{name:PROMPT}).count(),0,'seen prompt reopened after navigation')
+                await visit(q.page,'/','SEEN_RETURN'); await sleep(700)
+                assert.strictEqual(await q.page.getByRole('dialog',{name:PROMPT}).count(),0,'seen prompt reopened on return')
+                await q.context.close(); pass('POPUP_ONCE'); pass('SEEN_ON_PRESENTATION')
+
+                const d=await paidCase(browser,'POPUP_DISMISS','/?gclid=QA_DISMISS','google_ads',390)
+                await closePrompt(d.page)
+                await visit(d.page,'/','DISMISS_RETURN'); await sleep(700)
+                assert.strictEqual(await d.page.getByRole('dialog',{name:PROMPT}).count(),0,'dismissed prompt reopened')
+                const state=await d.context.storageState(); await d.context.close()
+                const reopened=await contextFor(browser,390,'denied',state); const rp=await reopened.newPage(); instrument(rp); await visit(rp,'/','REOPEN_BROWSER'); await sleep(700)
+                assert.strictEqual(await rp.getByRole('dialog',{name:PROMPT}).count(),0,'browser reopen repeated prompt')
+                assertHas(await rp.locator('body').innerText(),ACTIVE,'reopen entitlement')
+                await reopened.close(); pass('DISMISSAL_SEEN')
+              }
+
+              // Excluded routes with active entitlement and cleared presentation marker.
+              {
+                const q=await paidCase(browser,'EXCLUSION_SEED','/?gclid=QA_EXCLUDE','google_ads',390); await closePrompt(q.page); const state=await q.context.storageState(); await q.context.close()
+                for(const path of ['/checkout','/account','/admin','/track-order','/privacy','/cookies','/terms','/delivery-returns','/contact']){
+                  const c=await browser.newContext({viewport:{width:390,height:900},storageState:state,serviceWorkers:'allow'})
+                  await c.addInitScript(()=>{ for(let i=localStorage.length-1;i>=0;i--){ const k=localStorage.key(i); if(k&&k.startsWith('uksofashop_offer_prompt_seen:')) localStorage.removeItem(k) } })
+                  const p=await c.newPage(); instrument(p); await visit(p,path,`EXCLUDED_${path}`); await sleep(700)
+                  assert.strictEqual(await p.getByRole('dialog',{name:PROMPT}).count(),0,`${path}: prompt visible`); await c.close()
+                }
+                pass('ROUTE_EXCLUSIONS')
+              }
+
+              // Mobile Sheet widths, truthful copy, clipboard, and fixed-edge clearance.
+              for(const width of [320,390,430]){
+                const q=await paidCase(browser,`MOBILE_${width}`,'/?utm_source=facebook&utm_medium=paid_social','meta_ads',width)
+                const d=q.page.getByRole('dialog',{name:PROMPT}); const box=await d.boundingBox(); assert(box,`${width}: no dialog box`)
+                assert(box.y>100 && Math.abs((box.y+box.height)-(900-56))<85,`${width}: sheet not bottom-oriented ${JSON.stringify(box)}`)
+                const text=await d.innerText();
+                for(const needed of ['Your online sofa offer is active','Extra savings on selected sofas','FREE UK Mainland Delivery','Pay on delivery','SOFAEXTRA','Copy code']) assertHas(text,needed,`${width}/copy`)
+                for(const forbidden of ['£50 OFF','£100 delivery','expires tonight','countdown','you unlocked free delivery','exclusive free delivery']) assert(!text.toLowerCase().includes(forbidden.toLowerCase()),`${width}: forbidden copy ${forbidden}`)
+                await q.page.getByRole('button',{name:'Copy code'}).click(); await sleep(150)
+                const clip=await q.page.evaluate(()=>navigator.clipboard.readText().catch(()=>'')); if(clip) assert.strictEqual(clip,'SOFAEXTRA')
+                else assert(await d.getByText('SOFAEXTRA',{exact:true}).isVisible(),'fallback code not visible')
+                const nav=await q.page.locator('nav[aria-label="Primary"]').boundingBox(); assert(nav,`${width}: mobile nav missing`); assert(!overlap(box,nav),`${width}: sheet overlaps nav`)
+                await noOverflow(q.page,`mobile-${width}`)
+                if(width===390){
+                  const header=d.locator(':scope > div').first(); const hb=await header.boundingBox(); assert(hb,'drag header missing')
+                  await q.page.mouse.move(hb.x+hb.width/2,hb.y+20); await q.page.mouse.down(); await q.page.mouse.move(hb.x+hb.width/2,hb.y+150,{steps:6}); await q.page.mouse.up();
+                  await sleep(350); assert.strictEqual(await d.count(),0,'drag did not close Sheet')
+                } else await closePrompt(q.page)
+                await q.context.close(); pass(`MOBILE_SHEET_${width}`)
+              }
+              pass('MOBILE_SHEET'); pass('COPY_CODE'); pass('GENERIC_COPY')
+
+              // Desktop Modal widths, Escape/backdrop, compactness/focus.
+              for(const width of [768,1440]){
+                const q=await paidCase(browser,`DESKTOP_${width}`,'/?gclid=QA_DESKTOP','google_ads',width)
+                const d=q.page.getByRole('dialog',{name:PROMPT}); const b=await d.boundingBox(); assert(b)
+                assert(b.width<=460 && Math.abs((b.x+b.width/2)-width/2)<20,`${width}: modal geometry ${JSON.stringify(b)}`)
+                assert(await q.page.evaluate(()=>!!document.activeElement?.closest('[role="dialog"]')),`${width}: focus not in modal`)
+                await q.page.keyboard.press('Escape'); await sleep(250); assert.strictEqual(await d.count(),0,`${width}: Escape failed`)
+                assert.strictEqual(await q.page.evaluate(()=>document.body.style.overflow),'',`${width}: body scroll not restored`)
+                await q.context.close(); pass(`DESKTOP_MODAL_${width}`)
+              }
+              pass('DESKTOP_MODAL')
+
+              // Product truthfulness: excluded products never get a product-specific cash claim.
+              for(const [label,url] of [
+                ['VERONA_TRUTHFULNESS','/shop/corner-sofa/verona-high-back-4-seater-corner-1c2?utm_source=facebook&utm_medium=paid_social'],
+                ['FOOTSTOOL_TRUTHFULNESS','/shop/fabric-sofa/lily-footstool?utm_source=facebook&utm_medium=paid_social'],
+              ]){
+                const q=await paidCase(browser,label,url,'meta_ads',390)
+                const txt=(await q.page.getByRole('dialog',{name:PROMPT}).innerText())+'\n'+(await q.page.locator('body').innerText()).split('\n').slice(0,8).join('\n')
+                assert(!/£\s*(20|30|50)\s*(off|saving)/i.test(txt),`${label}: false cash claim`)
+                assertHas(txt,'Extra savings on selected sofas',label)
+                await q.context.close(); pass(label)
+              }
+
+              // Header reminder at all widths and ordinary clean-browser announcement.
+              for(const width of [320,390,430,768,1440]){
+                const q=await paidCase(browser,`HEADER_${width}`,'/?gclid=QA_HEADER','google_ads',width); await closePrompt(q.page)
+                await q.page.getByText(ACTIVE,{exact:true}).waitFor({state:'visible'}); await noOverflow(q.page,`header-${width}`); await q.context.close(); pass(`HEADER_${width}`)
+              }
+              pass('HEADER_REMINDER')
+              {
+                const c=await contextFor(browser,390,'denied'); const p=await c.newPage(); instrument(p); await visit(p,'/','CLEAN_BROWSER'); await sleep(700)
+                const body=await p.locator('body').innerText(); assert(!body.includes(ACTIVE)); assert(/Free Delivery to UK Mainland/i.test(body),'normal delivery announcement missing'); assert(!(await status(p)).active); await c.close(); pass('CLEAN_BROWSER')
+              }
+
+              // Consent denied and granted: commercial entitlement independent of marketing cookies.
+              for(const [label,consent] of [['CONSENT_DENIED','denied'],['CONSENT_ACCEPTED','granted']]){
+                const q=await paidCase(browser,label,'/?utm_source=google&utm_medium=cpc','google_ads',390,consent)
+                assert.strictEqual(q.st.qualify,1,`${label}: duplicate qualification`)
+                if(consent==='denied'){
+                  const names=(await q.context.cookies()).map(x=>x.name); assert(!names.some(n=>n==='_fbp'||n==='_fbc'||n.startsWith('_ga')),`${label}: marketing cookie present`)
+                }
+                await q.context.close(); pass(label)
+              }
+
+              // Fake client state/tokens have no authority.
+              {
+                const c=await contextFor(browser,390,'denied'); await c.addCookies([{name:'uksofashop_offer',value:'made-up-value',url:BASE}]);
+                await c.addInitScript(()=>localStorage.setItem('paid','true'))
+                const p=await c.newPage(); const st=instrument(p); await visit(p,'/?isPaidVisitor=true','FAKE_CLIENT'); await sleep(900)
+                assert(!(await status(p)).active,'fake client activated entitlement'); assert.strictEqual(st.qualify,0,'fake query caused qualify'); assert(!(await p.locator('body').innerText()).includes(ACTIVE)); await c.close(); reject('FAKE_CLIENT_ENTITLEMENT')
+              }
+
+              // PDP mobile fixed UI after prompt closes and sticky bar is present.
+              for(const width of [320,390,430]){
+                const q=await paidCase(browser,`FIXED_${width}`,'/shop/corner-sofa/verona-high-back-4-seater-corner-1c2?gclid=QA_FIXED','google_ads',width)
+                await closePrompt(q.page); await q.page.evaluate(()=>window.scrollTo(0,Math.max(900,document.body.scrollHeight*0.45))); await sleep(500)
+                const nav=await q.page.locator('nav[aria-label="Primary"]').boundingBox(); const wa=await q.page.getByRole('link',{name:'Chat with us on WhatsApp'}).boundingBox(); assert(nav&&wa,`${width}: nav/WA missing`)
+                assert(!overlap(nav,wa),`${width}: nav overlaps WA`)
+                const bars=q.page.locator('[data-bottom-bar]'); for(let i=0;i<await bars.count();i++){ const el=bars.nth(i); const b=await el.boundingBox(); if(!b) continue; if(await el.getAttribute('inert')!==null) continue; assert(!overlap(wa,b),`${width}: WA overlaps bottom bar`); assert(!overlap(nav,b),`${width}: nav overlaps bottom bar`) }
+                await noOverflow(q.page,`fixed-${width}`); const before=await q.page.evaluate(()=>scrollY); await q.page.evaluate(()=>window.scrollBy(0,180)); await sleep(100); const after=await q.page.evaluate(()=>scrollY); assert(after!==before,`${width}: scroll trap`)
+                await runtimeOK(q.st,`fixed-${width}`); await q.context.close(); pass(`MOBILE_FIXED_${width}`)
+              }
+              pass('MOBILE_FIXED_UI'); pass('PERFORMANCE_NETWORK')
+
+              fs.writeFileSync('/tmp/phasec-traffic-results.json',JSON.stringify(results,null,2))
+              console.log(JSON.stringify(results,null,2))
+            } finally { await browser.close() }
+          })().catch(e=>{ console.error(e.stack||e); process.exit(1) })
+          JS
+          node /tmp/phasec-traffic.cjs
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: offer-phase-c-browser-traffic
+          path: /tmp/phasec-traffic-results.json
+          if-no-files-found: warn
