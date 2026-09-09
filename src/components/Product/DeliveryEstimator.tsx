@@ -2,9 +2,13 @@
 // src/components/Product/DeliveryEstimator.tsx
 
 import { useState } from 'react';
-import { AlertTriangle, Check, Loader2, Truck } from 'lucide-react';
+import { Check, Loader2, Truck } from 'lucide-react';
 import { PROMISES } from '@/constants/promises';
-import { isMainland, isValidUkPostcode, lookupAddresses, normalisePostcode } from '@/utils/postcode';
+import {
+  classifyDeliveryPostcode,
+  lookupAddresses,
+  normalisePostcode,
+} from '@/utils/postcode';
 
 type Result =
   | { kind: 'free'; postcode: string }
@@ -14,18 +18,10 @@ type Result =
 /**
  * "When will it get here, and does it cost anything?"
  *
- * The postcode can safely answer whether the free UK Mainland service applies.
- * It cannot safely assign a delivery band inside the mainland, so this component
- * deliberately keeps the timing qualified instead of fabricating regional
- * precision from the postcode string.
- *
- * The postcode does most of the work locally: the pattern check and the
- * mainland ranges are the two things the answer actually depends on. The
- * Homedata lookup — the same one the checkout uses — is asked one question on
- * top of that, which is whether the postcode exists at all. A "not found" is
- * worth telling someone about. Any other failure (the key, the network, the
- * service) is swallowed, because none of them are a reason to withhold a date
- * the shop can already promise.
+ * Phase D uses the same canonical delivery classification as checkout. Most
+ * postcodes are deterministic from the postcode itself; the genuinely mixed
+ * IV40 and PA34 districts are resolved from trusted postcode-lookup address
+ * evidence rather than a crude district-wide block.
  */
 export default function DeliveryEstimator() {
   const [value, setValue] = useState('');
@@ -35,13 +31,14 @@ export default function DeliveryEstimator() {
   async function check(e: React.FormEvent) {
     e.preventDefault();
     const postcode = normalisePostcode(value);
+    const initial = classifyDeliveryPostcode(postcode);
 
-    if (!isValidUkPostcode(postcode)) {
+    if (initial.kind === 'invalid') {
       setResult({ kind: 'error', message: 'That does not look like a UK postcode. Try again?' });
       return;
     }
 
-    if (!isMainland(postcode)) {
+    if (initial.kind === 'classified' && initial.zone === 'CUSTOM_QUOTE') {
       setResult({ kind: 'offMainland', postcode });
       return;
     }
@@ -50,19 +47,30 @@ export default function DeliveryEstimator() {
     setResult(null);
 
     try {
-      await lookupAddresses(postcode);
+      const addresses = await lookupAddresses(postcode);
+      const resolved = classifyDeliveryPostcode(postcode, addresses);
+      if (resolved.kind === 'classified' && resolved.zone === 'CUSTOM_QUOTE') {
+        setResult({ kind: 'offMainland', postcode });
+      } else {
+        setResult({ kind: 'free', postcode });
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : '';
-      if (/not found/i.test(message)) {
+      if (/not found|no addresses found/i.test(message)) {
         setResult({ kind: 'error', message: 'We could not find that postcode. Could you check it?' });
-        setPending(false);
-        return;
+      } else if (initial.kind === 'ambiguous') {
+        // Mixed mainland/island districts must fail toward a quote when the
+        // trusted lookup cannot resolve them.
+        setResult({ kind: 'offMainland', postcode });
+      } else {
+        // For an otherwise deterministic mainland postcode, an outage in the
+        // address helper is our problem, not a reason to withdraw the existing
+        // mainland delivery promise.
+        setResult({ kind: 'free', postcode });
       }
-      // Anything else is our problem, not the customer's. See the doc above.
+    } finally {
+      setPending(false);
     }
-
-    setResult({ kind: 'free', postcode });
-    setPending(false);
   }
 
   return (
@@ -80,9 +88,6 @@ export default function DeliveryEstimator() {
 
       <form onSubmit={check} className="mt-4 flex flex-col gap-2 sm:flex-row">
         <label htmlFor="estimator-postcode" className="sr-only">Your postcode</label>
-        {/* sm:flex-1, not flex-1. Below sm the form is a COLUMN, and flex-1
-            there sets a vertical flex-basis of 0 — which beat h-12 and
-            collapsed the field to the height of its own text. */}
         <input
           id="estimator-postcode"
           name="postcode"
@@ -104,14 +109,12 @@ export default function DeliveryEstimator() {
         </button>
       </form>
 
-      {/* Announced, because the answer replaces nothing on screen — a sighted
-          customer sees it appear, and this is the equivalent. */}
       <div aria-live="polite" className="empty:hidden">
         {result?.kind === 'free' && (
           <div className="mt-4 rounded-sm border border-sage-300 bg-sage-50 p-4">
             <p className="m-0 flex items-center gap-2 text-body-sm font-semibold text-sage-700">
               <Check aria-hidden="true" className="h-4 w-4 shrink-0" />
-              Free delivery to {result.postcode}
+              Free UK Mainland delivery to {result.postcode}
             </p>
             <p className="m-0 mt-2 text-body font-semibold text-ink-900">
               {PROMISES.delivery.timingLong}
@@ -125,11 +128,11 @@ export default function DeliveryEstimator() {
         {result?.kind === 'offMainland' && (
           <div className="mt-4 rounded-sm border border-calico-300 bg-calico-50 p-4">
             <p className="m-0 flex items-start gap-2 text-body-sm text-ink-700">
-              <AlertTriangle aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-ember-700" />
+              <Truck aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-ember-700" />
               <span>
-                <strong className="text-ink-900">{result.postcode} is outside UK Mainland.</strong>{' '}
-                We can usually still deliver, but not on the free mainland service — message us and
-                we will price it for you before you order.
+                <strong className="text-ink-900">{result.postcode} needs a custom delivery quote.</strong>{' '}
+                We may still be able to deliver there. Standard online checkout covers UK Mainland,
+                so message us and we&apos;ll confirm availability and the delivery charge before you order.
               </span>
             </p>
           </div>
