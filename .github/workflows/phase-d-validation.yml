@@ -22,7 +22,7 @@ permissions:
 
 env:
   NEXT_PUBLIC_SUPABASE_URL: https://nznpeqjnoobhyxwnmsez.supabase.co
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_tMk28Ay_hIljhv8NQcV01Q_cI9ApS9c
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im56bnBlcWpub29iaHl4d25tc2V6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE2NjU4MDAsImV4cCI6MjA4NzI0MTgwMH0.iDLleSh0WTovhhCvG0re19vltaNurUgJRKCCyYpQMA0
   SUPABASE_SERVICE_ROLE_KEY: phase-d-qa-service-role-not-a-production-secret
   NEXT_PUBLIC_HOMEDATA_API_KEY: phase-d-qa-homedata
   NEXT_PUBLIC_SITE_URL: https://127.0.0.1:3100
