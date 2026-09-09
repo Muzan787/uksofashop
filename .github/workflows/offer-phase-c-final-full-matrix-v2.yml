@@ -1,0 +1,123 @@
+name: Offer Phase C final direct-HTTPS matrix v2
+
+on:
+  push:
+    branches: [qa/offer-phase-c-final-full-matrix-v2]
+    paths: [.github/workflows/offer-phase-c-final-full-matrix-v2.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  matrix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      CANDIDATE_SHA: 8eb47786fc772bfdb3835b1a4da6d956cc86d5f9
+      MASTER_SHA: c0a1ce2a2621aba5b3ea635452e720ea095d2ebd
+      NEXT_PUBLIC_SUPABASE_URL: https://localhost:5443
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_tMk28Ay_hIljhv8NQcV01Q_cI9ApS9c
+      SUPABASE_SERVICE_ROLE_KEY: qa_service_role_fixture_only
+      NEXT_PUBLIC_SITE_URL: https://localhost:3443
+      NODE_TLS_REJECT_UNAUTHORIZED: '0'
+      BASE: https://localhost:3443
+      NODE_PATH: /usr/local/lib/node_modules:${{ github.workspace }}/node_modules
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 8eb47786fc772bfdb3835b1a4da6d956cc86d5f9
+          fetch-depth: 0
+
+      - name: Verify exact refs and retrieve pinned v1 harness source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin master fix/offer-phase-c-paid-entitlement qa/offer-phase-c-final-full-matrix
+          test "$(git rev-parse HEAD)" = "$CANDIDATE_SHA"
+          test "$(git rev-parse origin/master)" = "$MASTER_SHA"
+          test "$(git rev-parse origin/fix/offer-phase-c-paid-entitlement)" = "$CANDIDATE_SHA"
+          git show 49142be2319b2126750baa8d8c3d692f10832b29:.github/workflows/offer-phase-c-final-full-matrix.yml >/tmp/v1.yml
+          test -s /tmp/v1.yml
+
+      - name: Extract v1 run blocks
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import pathlib,re,textwrap
+          s=pathlib.Path('/tmp/v1.yml').read_text()
+          names=[
+            'Install exact dependencies and Chromium',
+            'Prepare self-signed QA cert and isolated backend fixture',
+            'Build exact candidate production tree',
+            'Start direct HTTPS Next handler',
+            'Extract and harden pinned browser matrices for direct HTTPS QA',
+            'Run traffic, prompt, cookie and responsive matrix',
+            'Run checkout, tiers, race and regression matrix',
+            'Run persistent profiles, expiry, 2D-A widths and multi-item 2D-B',
+            'Consolidate final matrix result and prove exact source tree',
+          ]
+          for i,name in enumerate(names):
+            pat=rf"      - name: {re.escape(name)}\n(?:.*\n)*?        run: \|\n(.*?)(?=\n      - (?:name:|uses:))"
+            m=re.search(pat,s,re.S)
+            if not m: raise SystemExit('missing '+name)
+            body=textwrap.dedent(m.group(1))
+            pathlib.Path(f'/tmp/block{i}.sh').write_text(body)
+          PY
+
+      - name: Install dependencies and browser
+        run: bash /tmp/block0.sh
+
+      - name: Prepare fixture
+        run: bash /tmp/block1.sh
+
+      - name: Build exact candidate
+        run: bash /tmp/block2.sh
+
+      - name: Start direct HTTPS Next
+        run: bash /tmp/block3.sh
+
+      - name: Extract and patch QA-only matrices
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash /tmp/block4.sh
+          python - <<'PY'
+          import pathlib
+          for f in ['/tmp/phasec-traffic.cjs','/tmp/phasec-checkout.cjs']:
+              p=pathlib.Path(f);s=p.read_text()
+              s=s.replace("await page.getByRole('button',{name:/Close your online sofa offer is active/i}).click()","await d.getByRole('button',{name:/Close your online sofa offer is active/i}).click()")
+              s=s.replace("await p.getByRole('button',{name:/Close your online sofa offer is active/i}).click()","await d.getByRole('button',{name:/Close your online sofa offer is active/i}).click()")
+              p.write_text(s)
+          # Patch the supplemental shell heredoc before it creates/runs its JS.
+          p=pathlib.Path('/tmp/block7.sh');s=p.read_text()
+          s=s.replace("await p.getByRole('button',{name:/Close your online sofa offer is active/i}).click()","await d.getByRole('button',{name:/Close your online sofa offer is active/i}).click()")
+          p.write_text(s)
+          PY
+          grep -q "await d.getByRole('button'" /tmp/phasec-traffic.cjs
+          grep -q "await d.getByRole('button'" /tmp/phasec-checkout.cjs
+
+      - name: Traffic prompt cookie responsive matrix
+        run: bash /tmp/block5.sh
+
+      - name: Checkout tier race regression matrix
+        run: bash /tmp/block6.sh
+
+      - name: Persistent profiles expiry and regressions
+        run: bash /tmp/block7.sh
+
+      - name: Consolidate exact-tree proof
+        run: bash /tmp/block8.sh
+
+      - name: Upload safe evidence
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: offer-phase-c-final-full-matrix-v2
+          path: |
+            /tmp/phasec-traffic-results.json
+            /tmp/phasec-checkout-results.json
+            /tmp/phasec-supplement-results.json
+            /tmp/phasec-final-matrix.json
+          if-no-files-found: warn
