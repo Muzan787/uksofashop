@@ -341,7 +341,7 @@ export default function DirectPrintButton({ order }: { order: any }) {
             <div class="footer">
                <div class="thank-you">Thank you for your business.</div>
                <div class="company-details">
-                 ${ORGANISATION_NAME} &nbsp;&bull;&nbsp; ${ADDRESS_LINE} &nbsp;&bull;&nbsp; ${PHONE_DISPLAY}
+                 {ORGANISATION_NAME} &nbsp;&bull;&nbsp; {ADDRESS_LINE} &nbsp;&bull;&nbsp; {PHONE_DISPLAY}
                </div>
                <div class="guarantee-badge">1-year Frame Guarantee</div>
             </div>
