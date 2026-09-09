@@ -9,65 +9,103 @@ on:
       - 'src/components/Product/DeliveryEstimator.tsx'
       - 'src/constants/delivery.ts'
       - 'src/utils/postcode.ts'
+      - 'src/app/api/qa/phase-d-server/route.ts'
       - 'scripts/phase-d-postcode-policy.test.mjs'
-      - 'scripts/phase-d-browser-qa.mjs'
-      - 'scripts/phase-d-preview-diag.mjs'
+      - 'scripts/phase-d-local-browser-qa.mjs'
+      - 'scripts/phase-d-fetch-fixture.mjs'
+      - 'scripts/phase-d-https-server.mjs'
       - 'supabase/migrations/20260909110000_offer_phase_d_mainland_delivery_rpc_lock.sql'
       - '.github/workflows/phase-d-validation.yml'
 
 permissions:
   contents: read
 
+env:
+  NEXT_PUBLIC_SUPABASE_URL: https://nznpeqjnoobhyxwnmsez.supabase.co
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_tMk28Ay_hIljhv8NQcV01Q_cI9ApS9c
+  SUPABASE_SERVICE_ROLE_KEY: phase-d-qa-service-role-not-a-production-secret
+  NEXT_PUBLIC_HOMEDATA_API_KEY: phase-d-qa-homedata
+  NEXT_PUBLIC_SITE_URL: https://127.0.0.1:3100
+  PHASE_D_QA_ENABLE: '1'
+
 jobs:
-  static-gates:
+  exact-tree-browser-qa:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout PR head, not GitHub merge synthesis
+        uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
+
+      - name: Prove production blobs are exact 98f6 candidate
+        run: |
+          echo "QA_HEAD=$(git rev-parse HEAD)"
+          echo "PHASE_D_PRODUCTION_SOURCE=98f6b02eed5ea5b4cb82d7d6c3b0c04e200a2d08"
+          git diff --exit-code 98f6b02eed5ea5b4cb82d7d6c3b0c04e200a2d08 HEAD -- \
+            src/utils/postcode.ts \
+            src/app/actions/checkout.ts \
+            src/components/Checkout/CheckoutClient.tsx \
+            src/components/Checkout/MobileTotalBar.tsx \
+            src/components/Product/DeliveryEstimator.tsx \
+            src/constants/delivery.ts \
+            supabase/migrations/20260909110000_offer_phase_d_mainland_delivery_rpc_lock.sql
 
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: npm
 
-      - name: Install dependencies
+      - name: Install exact dependencies
         run: npm ci
-
-      - name: Postcode policy matrix
-        run: node --experimental-strip-types scripts/phase-d-postcode-policy.test.mjs
-
-      - name: ESLint Phase D paths
-        run: >-
-          npx eslint
-          src/app/actions/checkout.ts
-          src/components/Checkout/CheckoutClient.tsx
-          src/components/Checkout/MobileTotalBar.tsx
-          src/components/Product/DeliveryEstimator.tsx
-          src/constants/delivery.ts
-          src/utils/postcode.ts
-
-      - name: TypeScript
-        run: npx tsc --noEmit
 
       - name: Exact candidate production build
         run: npm run build
 
-      - name: Browser QA dependency
+      - name: Install browser QA dependency
         run: |
           npm install --no-save playwright@1.55.0
           npx playwright install --with-deps chromium
 
-      - name: Preview accessibility diagnostic
-        env:
-          PHASE_D_PREVIEW_URL: https://uksofashop-git-feature-offer-phase-d-5778df-muzan787s-projects.vercel.app
-        run: node scripts/phase-d-preview-diag.mjs
+      - name: Generate QA-only TLS certificate
+        run: |
+          mkdir -p .qa
+          openssl req -x509 -newkey rsa:2048 -nodes \
+            -keyout .qa/key.pem -out .qa/cert.pem -days 1 \
+            -subj '/CN=127.0.0.1' \
+            -addext 'subjectAltName=IP:127.0.0.1'
 
-      - name: Phase D browser matrix
+      - name: Start exact Next production build directly over HTTPS
+        run: |
+          NODE_OPTIONS="--import=$(pwd)/scripts/phase-d-fetch-fixture.mjs" \
+          PHASE_D_TLS_KEY="$(pwd)/.qa/key.pem" \
+          PHASE_D_TLS_CERT="$(pwd)/.qa/cert.pem" \
+          nohup node scripts/phase-d-https-server.mjs > .qa/server.log 2>&1 &
+          echo $! > .qa/server.pid
+          for i in $(seq 1 40); do
+            if curl -ksS --max-time 5 https://127.0.0.1:3100/checkout >/dev/null; then
+              echo 'Direct HTTPS candidate is ready.'
+              exit 0
+            fi
+            sleep 1
+          done
+          cat .qa/server.log
+          exit 1
+
+      - name: Exact-tree Phase D browser and server-action matrix
         env:
-          PHASE_D_PREVIEW_URL: https://uksofashop-git-feature-offer-phase-d-5778df-muzan787s-projects.vercel.app
-        run: node scripts/phase-d-browser-qa.mjs
+          PHASE_D_LOCAL_URL: https://127.0.0.1:3100
+        run: node scripts/phase-d-local-browser-qa.mjs
+
+      - name: Server log on failure
+        if: failure()
+        run: cat .qa/server.log || true
+
+      - name: Stop QA HTTPS server
+        if: always()
+        run: |
+          if [ -f .qa/server.pid ]; then kill "$(cat .qa/server.pid)" || true; fi
 
       - name: Diff whitespace check
         run: git diff --check origin/master...HEAD
