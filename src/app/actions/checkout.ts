@@ -1,11 +1,11 @@
 'use server'
 
 import { after } from 'next/server'
-import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { sendOrderConfirmation, sendAdminOrderNotification } from '@/utils/email'
 import { deliveryBreakdown, NO_EXTRAS, type DeliveryOptions } from '@/constants/delivery'
 import { isValidUkMobile, UK_MOBILE_ERROR } from '@/utils/phone'
+import { resolveDeliveryPostcode } from '@/utils/postcode'
 import { z } from 'zod'
 import { cookies, headers } from 'next/headers'
 import { OFFER_ENTITLEMENT_COOKIE } from '@/utils/offers/constants'
@@ -32,6 +32,7 @@ const checkoutSchema = z.object({
   // A UK mobile specifically: the driver calls before delivery, and the admin
   // WhatsApp link can only be built from a mobile.
   customerPhone: z.string().refine(isValidUkMobile, UK_MOBILE_ERROR),
+  postcode: z.string().trim().min(5, 'Please provide a valid UK postcode.').max(12, 'Please provide a valid UK postcode.'),
   shippingAddress: z.string().min(10, 'Please provide a complete shipping address.'),
   specialInstructions: z.string().optional(),
 })
@@ -60,6 +61,34 @@ interface PlacedOrder {
   total_amount: number
 }
 
+export type DeliveryCheckResult =
+  | { status: 'invalid'; postcode: string; message: string }
+  | { status: 'mainland'; postcode: string }
+  | { status: 'custom_quote'; postcode: string }
+
+/**
+ * Client-facing delivery decision. This is presentation only: placeOrder runs
+ * the resolver again and never trusts this response back from the browser.
+ */
+export async function checkDeliveryPostcode(rawPostcode: string): Promise<DeliveryCheckResult> {
+  const result = await resolveDeliveryPostcode(rawPostcode)
+  if (result.kind === 'invalid') {
+    return {
+      status: 'invalid',
+      postcode: result.postcode,
+      message: 'Please enter a valid UK postcode.',
+    }
+  }
+  if (result.kind === 'ambiguous') {
+    // resolveDeliveryPostcode normally closes this state itself. Keep the
+    // fallback conservative in case a future classifier adds another mixed area.
+    return { status: 'custom_quote', postcode: result.postcode }
+  }
+  return result.zone === 'MAINLAND_STANDARD'
+    ? { status: 'mainland', postcode: result.postcode }
+    : { status: 'custom_quote', postcode: result.postcode }
+}
+
 /**
  * What the browser gets back.
  *
@@ -85,15 +114,14 @@ export async function placeOrder(
   extras: DeliveryOptions = NO_EXTRAS,
   promotionCode: string | null = null,
 ): Promise<PlaceOrderResult> {
-  // place_order is anon-callable and sends two emails per successful call,
-  // through the same mailbox that has a daily cap. Ten orders per hour from
-  // one address is well beyond any real customer and far below the cap.
+  // The Server Action remains a public boundary even though the database RPC
+  // is service-role-only in Phase D. Ten attempts per hour from one address is
+  // well beyond normal customer behaviour and protects both order/email load.
   const limit = rateLimit(callerKey(await headers(), 'order'), 10, 60 * 60 * 1000)
   if (!limit.ok) {
     return { error: 'Too many orders from this connection. Please call us on 07476 616022 and we will take it over the phone.' }
   }
 
-  const supabase = await createClient()
   const jar = await cookies()
   const entitlementCookie = z.string().uuid().safeParse(jar.get(OFFER_ENTITLEMENT_COOKIE)?.value)
 
@@ -101,6 +129,7 @@ export async function placeOrder(
     customerName: formData.get('customerName'),
     customerEmail: formData.get('customerEmail'),
     customerPhone: formData.get('customerPhone'),
+    postcode: formData.get('postcode'),
     shippingAddress: formData.get('shippingAddress'),
     specialInstructions: formData.get('specialInstructions'),
   })
@@ -118,14 +147,50 @@ export async function placeOrder(
     return { error: 'Those delivery options are not valid. Please review them and try again.' }
   }
 
-  const { customerName, customerEmail, customerPhone, shippingAddress, specialInstructions } = validatedData.data
+  const {
+    customerName,
+    customerEmail,
+    customerPhone,
+    postcode,
+    shippingAddress,
+    specialInstructions,
+  } = validatedData.data
   const opts = validatedExtras.data
 
-  const { data, error: orderError } = await supabase.rpc('place_order', {
+  // CRITICAL PHASE D AUTHORITY. The browser supplies only the actual postcode.
+  // It never supplies mainland=true, a delivery zone or a delivery price. This
+  // resolver is run again here even if the client already rendered a decision.
+  const deliveryDecision = await resolveDeliveryPostcode(postcode)
+  if (deliveryDecision.kind === 'invalid') {
+    return { error: 'Please enter a valid UK postcode.' }
+  }
+  if (
+    deliveryDecision.kind === 'ambiguous' ||
+    deliveryDecision.zone !== 'MAINLAND_STANDARD'
+  ) {
+    return {
+      error: 'Standard online checkout covers UK Mainland. This postcode needs a custom delivery quote on WhatsApp.',
+    }
+  }
+
+  // Store exactly one normalized postcode at the end of the address. The
+  // public browser is not allowed to smuggle a different trailing postcode into
+  // the value used later by order tracking and conversion matching.
+  const escapedPostcode = deliveryDecision.postcode.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const addressWithoutTrailingPostcode = shippingAddress
+    .replace(new RegExp(`[,\\s]*${escapedPostcode.replace(' ', '\\s*')}$`, 'i'), '')
+    .trim()
+  const authoritativeShippingAddress = `${addressWithoutTrailingPostcode}, ${deliveryDecision.postcode}`
+
+  // Phase D removes execute permission for anon/authenticated on place_order.
+  // The service-role client is used only after all public-input validation and
+  // the server-authoritative mainland decision above have passed.
+  const orderDb = createAdminClient()
+  const { data, error: orderError } = await orderDb.rpc('place_order', {
     p_customer_name: customerName,
     p_customer_email: customerEmail,
     p_customer_phone: customerPhone,
-    p_shipping_address: shippingAddress,
+    p_shipping_address: authoritativeShippingAddress,
     p_special_instructions: specialInstructions || '',
     // Ids and quantities only. Prices are looked up in the database.
     p_items: validatedItems.data.map(item => ({
@@ -260,7 +325,6 @@ export async function placeOrder(
   }
 
   let linkedWhatsAppReference: string | null = null
-
 
   const retireWhatsAppReferenceCookie = () => {
     try {
