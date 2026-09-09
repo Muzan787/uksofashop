@@ -1,0 +1,66 @@
+name: Offer Phase B final regression gates
+
+on:
+  push:
+    branches: [qa/offer-phase-b-final-browser-signoff]
+    paths: [.github/workflows/offer-phase-b-final-regressions.yml]
+
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: qa/offer-phase-b-final-browser-signoff
+          fetch-depth: 0
+      - name: Reverify release baseline
+        run: |
+          git fetch origin master fix/offer-phase-b-recovery-release
+          test "$(git rev-parse origin/master)" = "1fc9a94b95499d009677433fa187b7fda65d99ec"
+          test "$(git rev-parse origin/fix/offer-phase-b-recovery-release)" = "3200b9cdd63600bc496bdc1958ed12ce13e8ace0"
+          git diff --quiet origin/master 3200b9cdd63600bc496bdc1958ed12ce13e8ace0 -- \
+            src/components/Checkout/CheckoutClient.tsx \
+            src/components/Checkout/OfferCode.tsx \
+            src/components/Checkout/CartStep.tsx \
+            src/components/Checkout/MobileTotalBar.tsx \
+            src/app/actions/offer.ts \
+            src/app/actions/checkout.ts \
+            src/context/CartContext.tsx \
+            src/components/Layout/Mobilenav.tsx \
+            src/components/Layout/WhatsAppFab.tsx
+      - name: Install Playwright
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Run 2D-A 2D-B fixed UI and ordinary checkout gates
+        env:
+          LIVE_BASE: https://www.uksofashop.co.uk
+          NODE_PATH: ${{ github.workspace }}/node_modules
+        run: |
+          cat > /tmp/final-regressions.cjs <<'JS'
+          const { chromium } = require('playwright')
+          const assert = require('assert')
+          const BASE=process.env.LIVE_BASE
+          const E={variant_id:'1ba97d1f-f890-48f8-8ab9-57cbb147f388',quantity:1,price:999,title:'Hannah Electric Corner',color:'Beige',image_url:''}
+          const S={variant_id:'ff3c0414-77ba-40ef-b6b2-bd97bff2bd17',quantity:1,price:649,title:'Bishop U shaped Scattered Back Sofa',color:'Truffle',image_url:''}
+          const C={variant_id:'a5d2050d-c458-4e0c-b3b3-7b7c727845a0',quantity:1,price:549,title:'Verona 4 Seater Corner 1c2 High Back',color:'Grey',image_url:'',fabric_id:'6ce3d2c2-7f92-4276-b991-70afa07c0cf9',fabric_label:'Chenille Grey',fabric_code:'CH12',fabric_swatch:null}
+          const clone=x=>JSON.parse(JSON.stringify(x)), sleep=ms=>new Promise(r=>setTimeout(r,ms)), money=n=>`£${Number(n).toFixed(2)}`
+          const has=(t,n,l)=>assert(t.includes(n),`${l}: missing ${JSON.stringify(n)}\n${t.slice(0,2500)}`)
+          async function seeded(browser,width,cart){const context=await browser.newContext({viewport:{width,height:width<=430?900:1000},hasTouch:width<=430,isMobile:width<=430,serviceWorkers:'allow'});await context.addInitScript(({cart})=>{localStorage.setItem('uksofashop_cart',JSON.stringify(cart));localStorage.setItem('cookie_consent','denied')},{cart});const page=await context.newPage(),pageErrors=[],consoleErrors=[];page.on('pageerror',e=>pageErrors.push(String(e.stack||e)));page.on('console',m=>{if(m.type()==='error')consoleErrors.push(m.text())});const r=await page.goto(`${BASE}/checkout`,{waitUntil:'domcontentloaded',timeout:30000});assert(r&&r.status()<500);await page.getByRole('button',{name:/Continue to delivery/i}).waitFor({timeout:15000});return{context,page,pageErrors,consoleErrors}}
+          async function runtime(s,l){assert.strictEqual(s.pageErrors.length,0,`${l}: page errors ${s.pageErrors.join(' | ')}`);const g=s.consoleErrors.filter(x=>!(/Failed to load resource|favicon/i.test(x))&&/(Uncaught|TypeError|ReferenceError|Unhandled|Hydration|Minified React error)/i.test(x));assert.strictEqual(g.length,0,`${l}: genuine console errors ${g.join(' | ')}`)}
+          async function overflow(p,l){const x=await p.evaluate(()=>[document.documentElement.scrollWidth,innerWidth]);assert(x[0]<=x[1]+1,`${l}: overflow ${x}`)}
+          async function delivery(p){await p.getByRole('button',{name:/Continue to delivery/i}).click();await p.getByText('Delivery Information',{exact:true}).waitFor({timeout:10000})}
+          async function cart(p){await p.getByRole('button',{name:/Back to Cart/i}).click();await p.getByRole('button',{name:/Continue to delivery/i}).waitFor({timeout:10000})}
+          async function apply(p){const b=p.getByRole('button',{name:/Have an offer code\?/i});if(await b.isVisible().catch(()=>false))await b.click();await p.getByLabel('Offer code').fill('SOFAEXTRA');await p.getByRole('button',{name:/^Apply$/i}).click();await p.waitForFunction(()=>(document.body.textContent||'').includes('Offer · SOFAEXTRA'),null,{timeout:15000})}
+          async function summary(p,width){if(width>=1024){const q=p.locator('[data-ground="dark"]').filter({hasText:'Order Summary'});for(let i=(await q.count())-1;i>=0;i--)if(await q.nth(i).isVisible().catch(()=>false))return await q.nth(i).innerText();throw Error('desktop summary missing')}const b=p.locator('[data-bottom-bar] button[aria-controls="mobile-summary"]');await b.waitFor({state:'visible'});const was=(await b.getAttribute('aria-expanded'))==='true';if(!was){await b.click();await sleep(230)}const q=p.locator('#mobile-summary [data-ground="dark"]');await q.waitFor({state:'visible'});const t=await q.innerText();if(!was){await b.click();await sleep(150)}return t}
+          async function financial(p,width,sub,disc,total,label,valid=true){const t=await summary(p,width);has(t,'Subtotal',label);has(t,money(sub),label);has(t,'Delivery · UK Mainland',label);has(t,'FREE',label);has(t,'Nothing to pay today',label);has(t,'Total due on delivery',label);has(t,money(total),label);if(valid){has(t,'Offer · SOFAEXTRA',label);has(t,`−£${disc.toFixed(2)}`,label)}else assert(!t.includes('Offer · SOFAEXTRA'),`${label}: unexpected offer`);if(width<=430){const b=p.locator('[data-bottom-bar] button[aria-controls="mobile-summary"]');has(await b.innerText(),money(total),`${label}/mobile`)}await overflow(p,label)}
+          function field(p,name){return p.getByRole('textbox',{name,exact:true})}
+          async function phaseA(browser,width){const s=await seeded(browser,width,[clone(E)]);try{await delivery(s.page);await apply(s.page);await field(s.page,'Full Name').fill('QA Browser State');await field(s.page,'Email Address').fill('qa-browser@example.com');await field(s.page,'Mobile Number').fill('07700900123');await s.page.locator('input.uppercase').first().fill('SW1A 1AA');await field(s.page,'Full Address').fill('123 QA Browser Street');await field(s.page,'Special Instructions').fill('Phase B persistence marker');await cart(s.page);await delivery(s.page);assert.strictEqual(await field(s.page,'Full Name').inputValue(),'QA Browser State');assert.strictEqual(await field(s.page,'Email Address').inputValue(),'qa-browser@example.com');assert.strictEqual(await field(s.page,'Mobile Number').inputValue(),'07700900123');assert.strictEqual(await s.page.locator('input.uppercase').first().inputValue(),'SW1A 1AA');assert.strictEqual(await field(s.page,'Full Address').inputValue(),'123 QA Browser Street');assert.strictEqual(await field(s.page,'Special Instructions').inputValue(),'Phase B persistence marker');await financial(s.page,width,999,50,949,`2DA/${width}`);await runtime(s,`2DA/${width}`)}finally{await s.context.close()}}
+          async function phaseB(browser){const s=await seeded(browser,390,[clone(E),clone(S),clone(C)]);try{let t=await s.page.locator('body').innerText();for(const x of [C.title,'Chenille Grey','CH12','£549'])has(t,x,'2DB/cart');assert(await s.page.getByRole('button',{name:/One more Verona 4 Seater Corner/i}).isVisible(),'2DB quantity missing');const rm=s.page.getByRole('button',{name:`Remove ${C.title} from your cart`});await rm.click();await sleep(410);const toast=s.page.locator('[data-ground="dark"]').filter({hasText:`Removed ${C.title}`});const u=toast.getByRole('button',{name:'Undo'});await u.waitFor({state:'visible'});await u.click({force:true});await s.page.getByText(C.title,{exact:true}).waitFor();await overflow(s.page,'2DB/cart');await delivery(s.page);await apply(s.page);await financial(s.page,390,2197,50,2147,'2DB/offer');await runtime(s,'2DB')}finally{await s.context.close()}}
+          function ov(a,b){return!!(a&&b)&&!(a.x+a.width<=b.x||b.x+b.width<=a.x||a.y+a.height<=b.y||b.y+b.height<=a.y)}
+          async function fixed(browser,width,open){const s=await seeded(browser,width,[clone(E)]);try{await delivery(s.page);if(open)await s.page.getByRole('button',{name:/Have an offer code\?/i}).click();const total=s.page.locator('[data-bottom-bar]').filter({visible:true}).first(),nav=s.page.locator('nav[aria-label="Primary"]'),wa=s.page.getByRole('link',{name:'Chat with us on WhatsApp'});await Promise.all([total.waitFor({state:'visible'}),nav.waitFor({state:'visible'}),wa.waitFor({state:'visible'})]);const[tb,nb,wb]=await Promise.all([total.boundingBox(),nav.boundingBox(),wa.boundingBox()]);assert(!ov(tb,nb),`${width}/${open}: total-nav overlap`);assert(!ov(wb,tb),`${width}/${open}: WA-total overlap`);assert(!ov(wb,nb),`${width}/${open}: WA-nav overlap`);if(open){const i=s.page.getByLabel('Offer code'),a=s.page.getByRole('button',{name:/^Apply$/i});await i.fill('SOFAEXTRA');await i.scrollIntoViewIfNeeded();await sleep(120);const[ib,ab,t2]=await Promise.all([i.boundingBox(),a.boundingBox(),total.boundingBox()]);assert(ib&&ab&&t2&&!ov(ib,t2)&&!ov(ab,t2),`${width}: promo covered`);assert(await a.isVisible(),`${width}: Apply not reachable`)}const y0=await s.page.evaluate(()=>scrollY);await s.page.evaluate(()=>scrollTo(0,document.documentElement.scrollHeight));await sleep(150);assert((await s.page.evaluate(()=>scrollY))>y0,`${width}: scroll trap`);const c=s.page.getByRole('button',{name:/Place Order/i});await c.scrollIntoViewIfNeeded();await sleep(100);const[cb,t3]=await Promise.all([c.boundingBox(),total.boundingBox()]);assert(cb&&t3&&cb.y<t3.y,`${width}: Place Order blocked`);await overflow(s.page,`fixed/${width}/${open}`);await runtime(s,`fixed/${width}/${open}`)}finally{await s.context.close()}}
+          async function ordinary(browser,width){const s=await seeded(browser,width,[clone(S)]);try{await delivery(s.page);assert(await s.page.getByRole('button',{name:/Have an offer code\?/i}).isVisible(),'ordinary promo not optional');assert.strictEqual(await s.page.getByLabel('Offer code').count(),0,'ordinary promo unexpectedly expanded');await financial(s.page,width,649,0,649,`ordinary/${width}`,false);const t=await s.page.locator('body').innerText();has(t,'Cash','ordinary');has(t,'Bank transfer','ordinary');has(t,'Delivered free to UK Mainland','ordinary');await runtime(s,`ordinary/${width}`)}finally{await s.context.close()}}
+          ;(async()=>{const browser=await chromium.launch({headless:true});try{for(const w of[390,430,1440]){await phaseA(browser,w);console.log(`PHASE_2DA_${w}_PASS`)}await phaseB(browser);console.log('PHASE_2DB_PASS');for(const w of[320,390,430]){await fixed(browser,w,false);await fixed(browser,w,true);console.log(`MOBILE_FIXED_${w}_PASS`)}for(const w of[320,390,430,768,1440])await ordinary(browser,w);console.log('ORDINARY_NO_OFFER_PASS');console.log('HORIZONTAL_OVERFLOW_NONE');console.log('RUNTIME_ERRORS_NONE');console.log('OFFER_PHASE_B_FINAL_REGRESSIONS_PASS')}finally{await browser.close()}})().catch(e=>{console.error(e);process.exit(1)})
+          JS
+          node /tmp/final-regressions.cjs
