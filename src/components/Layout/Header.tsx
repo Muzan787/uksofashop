@@ -10,6 +10,7 @@ import type { NavCategory } from '@/utils/navigation';
 import MegaMenu from './MegaMenu';
 import MobileMenu from './MobileMenu';
 import SearchOverlay from './SearchOverlay';
+import { useOffer } from '@/components/Offer/OfferProvider';
 
 /** One message. This bar used to cycle four of them every four seconds. */
 const ANNOUNCEMENT = ANNOUNCEMENTS[0];
@@ -65,6 +66,10 @@ function Wordmark({ light, className = '' }: { light: boolean; className?: strin
 export default function Header({ categories }: { categories: NavCategory[] }) {
   const { itemCount } = useCart();
   const pathname = usePathname();
+  const { active: offerActive } = useOffer();
+  const announcement = offerActive
+    ? 'Your online offer is active · SOFAEXTRA · FREE UK Mainland Delivery'
+    : ANNOUNCEMENT;
 
   const [scrolled, setScrolled] = useState(false);
   const [scrollDir, setScrollDir] = useState<'up' | 'down'>('up');
@@ -182,7 +187,7 @@ export default function Header({ categories }: { categories: NavCategory[] }) {
           className="grad-ink relative flex min-h-9 items-center justify-center bg-ink-900 px-12 py-2"
         >
           <p aria-live="polite" className="eyebrow m-0 text-center text-calico-300">
-            {ANNOUNCEMENT}
+            {announcement}
           </p>
 
           {/* The fading ember hairline along the bottom edge, so the bar hands

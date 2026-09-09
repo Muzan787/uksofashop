@@ -8,6 +8,7 @@ import { deliveryBreakdown, NO_EXTRAS, type DeliveryOptions } from '@/constants/
 import { isValidUkMobile, UK_MOBILE_ERROR } from '@/utils/phone'
 import { z } from 'zod'
 import { cookies, headers } from 'next/headers'
+import { OFFER_ENTITLEMENT_COOKIE } from '@/utils/offers/constants'
 import { rateLimit, callerKey } from '@/utils/rateLimit'
 import { metaFbcFromTouch } from '@/utils/attribution/fbc'
 import {
@@ -48,8 +49,6 @@ const itemsSchema = z.array(z.object({
   fabric_id: z.string().uuid().nullish(),
 })).min(1, 'Your cart is empty.')
 
-const entitlementSchema = z.string().uuid().nullish()
-
 interface PlacedOrder {
   id: string
   items_subtotal: number
@@ -85,7 +84,6 @@ export async function placeOrder(
   expectedTotal: number,
   extras: DeliveryOptions = NO_EXTRAS,
   promotionCode: string | null = null,
-  offerEntitlementToken: string | null = null,
 ): Promise<PlaceOrderResult> {
   // place_order is anon-callable and sends two emails per successful call,
   // through the same mailbox that has a daily cap. Ten orders per hour from
@@ -96,6 +94,8 @@ export async function placeOrder(
   }
 
   const supabase = await createClient()
+  const jar = await cookies()
+  const entitlementCookie = z.string().uuid().safeParse(jar.get(OFFER_ENTITLEMENT_COOKIE)?.value)
 
   const validatedData = checkoutSchema.safeParse({
     customerName: formData.get('customerName'),
@@ -116,11 +116,6 @@ export async function placeOrder(
   const validatedExtras = extrasSchema.safeParse(extras)
   if (!validatedExtras.success) {
     return { error: 'Those delivery options are not valid. Please review them and try again.' }
-  }
-
-  const validatedEntitlement = entitlementSchema.safeParse(offerEntitlementToken)
-  if (!validatedEntitlement.success) {
-    return { error: 'That offer entitlement is not valid.' }
   }
 
   const { customerName, customerEmail, customerPhone, shippingAddress, specialInstructions } = validatedData.data
@@ -148,7 +143,7 @@ export async function placeOrder(
     // The code/token are authorisation inputs only. The database decides the
     // tier, discount and final total; the browser never supplies those values.
     p_promotion_code: promotionCode,
-    p_offer_entitlement_token: validatedEntitlement.data ?? null,
+    p_offer_entitlement_token: entitlementCookie.success ? entitlementCookie.data : null,
   })
 
   if (orderError || !data) {
@@ -209,7 +204,6 @@ export async function placeOrder(
   //
   // Only present when the visitor accepted cookies; the tags that write these
   // do not run otherwise.
-  const jar = await cookies()
   const hdrs = await headers()
 
   // First-party visitor/session/arrival ids and last-touch click ids/UTMs -
