@@ -257,7 +257,7 @@ export default function DirectPrintButton({ order }: { order: AdminOrderDisplay 
               <div class="invoice-details">
                 <div class="invoice-label">Invoice No.</div>
                 <div class="invoice-number">#${activeOrder.id.split('-')[0].toUpperCase()}</div>
-                <div class="invoice-date">${new Date(activeOrder.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
+                <div class="invoice-date">${new Date(activeOrder.created_at ?? '').toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
               </div>
             </div>
 
