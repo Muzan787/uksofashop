@@ -7,7 +7,9 @@
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
-    "social": "node --env-file-if-exists=.env --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/social/render.ts"
+    "social": "node --env-file-if-exists=.env --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/social/render.ts",
+    "social:lut": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/social/ember-lut.ts",
+    "social:outro": "node --env-file-if-exists=.env --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/social/render-outro.ts"
   },
   "dependencies": {
     "@ducanh2912/next-pwa": "^10.2.9",
@@ -34,6 +36,7 @@
     "babel-plugin-react-compiler": "1.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
+    "ffmpeg-static": "^5.3.0",
     "playwright": "^1.63.0",
     "tailwindcss": "^4",
     "typescript": "^5"

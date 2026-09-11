@@ -83,3 +83,52 @@ Playwright is a dev dependency. The bundled Chromium is preferred
 (`npx playwright install chromium`); when it is not installed the renderer
 falls back to Google Chrome, then Microsoft Edge. Fonts need
 `fonts.googleapis.com`; images need `res.cloudinary.com`.
+
+## Grading video onto ember
+
+The Verona reel's outro is an AI-generated animation whose amber was sampled
+afterwards as `#C7713F`, and its title cards use a copper from the same
+family. Neither can be regenerated with a different hex, so `ember-lut.ts`
+builds a 3D LUT that carries copper to ember-500 and leaves everything else
+(wood, fabric, the WhatsApp green) alone:
+
+```bash
+npm run social:lut
+```
+
+writes `out/social/ember.cube`. Apply it with ffmpeg (copy the `.cube` next to
+the video first — a `C:` in a filter path breaks ffmpeg's parser):
+
+```bash
+ffmpeg -i reel.mp4 -vf "lut3d=file=ember.cube:interp=tetrahedral" -c:v libx264 -preset slow -crf 17 -pix_fmt yuv420p -c:a copy out.mp4
+```
+
+Add `:enable='gte(t,13.2083)'` to the filter to grade only the outro of the
+Verona reel, which starts at that second.
+
+## The reel outro
+
+`render-outro.ts` renders an animated 1080×1920 end card from
+`templates/outro.html` — the lockup rising in, the ember rule drawing, the
+product line, the WhatsApp button, the number and site, and the three
+promises — one screenshot per frame, encoded by ffmpeg (`ffmpeg-static` is a
+dev dependency, nothing to install).
+
+```bash
+npm run social:outro -- --product verona-scattered-back-5-seater-corner-2c2
+```
+
+writes `out/social/outro--<slug>.mp4` (8s, 24fps). To replace the end of an
+existing reel and keep its music:
+
+```bash
+npm run social:outro -- --product verona-scattered-back-5-seater-corner-2c2 --reel "C:\path\verona-corner-sofa-reel.mp4" --at 13.2083 --grade
+```
+
+`--at` is the second the old outro started; `--grade` also runs the ember
+LUT over the reel's own title cards so the whole thing is on one amber. The
+result lands beside the reel as `<name>-mill-and-velvet.mp4`.
+
+The animation is Web Animations API, scrubbed with `window.seek(ms)`, so
+every frame is rendered at its exact instant rather than recorded off a
+screen; the ease is `--ease-out-expo` and nothing springs.

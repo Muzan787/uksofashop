@@ -25,7 +25,8 @@ import path from 'node:path'
 
 import { launchBrowser } from './lib/browser.ts'
 import { cloudinaryFill } from './lib/cloudinary.ts'
-import { escapeHtml, renderTemplate, richText, type TemplateData } from './lib/template.ts'
+import { OUT_DIR, SOCIAL_DIR, openPage, wrapDocument, type Canvas } from './lib/page.ts'
+import { renderTemplate, richText, type TemplateData } from './lib/template.ts'
 import {
   fetchProduct,
   formatPrice,
@@ -37,11 +38,6 @@ import {
 import { PROMISES } from '../../src/constants/promises.ts'
 import { SITE_URL } from '../../src/constants/site.ts'
 
-const ROOT = path.resolve(import.meta.dirname, '../..')
-const SOCIAL_DIR = import.meta.dirname
-const TOKENS_PATH = path.join(ROOT, 'src/styles/tokens.css')
-const OUT_DIR = path.join(ROOT, 'out/social')
-
 const FORMATS = ['full-bleed', 'quote', 'spec', 'carousel-cover', 'split'] as const
 type Format = (typeof FORMATS)[number]
 
@@ -51,16 +47,6 @@ const SIZES = {
   story: { width: 1080, height: 1920 },
 } as const
 type SizeName = keyof typeof SIZES
-
-// Fraunces with its optical-size axis and Geist, from the same foundry files
-// next/font/google downloads for the site. display=block: the screenshot must
-// never be taken with a fallback face on screen.
-const FONTS_HREF =
-  'https://fonts.googleapis.com/css2' +
-  '?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700' +
-  '&family=Geist:wght@400..600' +
-  '&family=Geist+Mono:wght@400..500' +
-  '&display=block'
 
 const HELP = `
 Mill & Velvet social renderer
@@ -247,7 +233,7 @@ function siteHost(): string {
 async function buildData(
   opts: Options,
   product: Product | null,
-  canvas: { width: number; height: number },
+  canvas: Canvas,
   lockup: string,
 ): Promise<TemplateData> {
   const need = (): Product => {
@@ -342,87 +328,15 @@ async function buildData(
 
 /* ── Document assembly ───────────────────────────────────────────────────── */
 
-async function loadTokens(): Promise<string> {
-  // tokens.css is written for Tailwind, whose @theme block both generates
-  // utilities and emits every variable to :root. Chromium alone would ignore
-  // an @theme block, so it becomes :root here; the @utility blocks at the
-  // foot are unknown at-rules to a browser and are skipped harmlessly.
-  const css = await readFile(TOKENS_PATH, 'utf8')
-  return css.replace(/@theme\s+static\s*\{/, ':root {')
+async function buildDocument(format: Format, data: TemplateData, canvas: Canvas): Promise<string> {
+  const template = await readFile(path.join(SOCIAL_DIR, 'templates', `${format}.html`), 'utf8')
+  return wrapDocument(format, renderTemplate(template, data), canvas)
 }
 
-async function buildDocument(
-  format: Format,
-  data: TemplateData,
-  canvas: { width: number; height: number },
-): Promise<string> {
-  const [tokens, social, template] = await Promise.all([
-    loadTokens(),
-    readFile(path.join(SOCIAL_DIR, 'social.css'), 'utf8'),
-    readFile(path.join(SOCIAL_DIR, 'templates', `${format}.html`), 'utf8'),
-  ])
-
-  return `<!doctype html>
-<html lang="en-GB" style="--canvas-w: ${canvas.width}px; --canvas-h: ${canvas.height}px">
-<head>
-<meta charset="utf-8">
-<title>${escapeHtml(format)}</title>
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="${FONTS_HREF}">
-<style>
-${tokens}
-</style>
-<style>
-${social}
-</style>
-</head>
-<body>
-${renderTemplate(template, data)}
-</body>
-</html>`
-}
-
-async function screenshot(html: string, canvas: { width: number; height: number }, out: string) {
+async function screenshot(html: string, canvas: Canvas, out: string) {
   const browser = await launchBrowser()
   try {
-    const page = await browser.newPage({
-      viewport: canvas,
-      deviceScaleFactor: 1,
-      colorScheme: 'light',
-    })
-    await page.setContent(html, { waitUntil: 'networkidle' })
-
-    // The fonts arrive from Google; nothing is captured until the browser
-    // says every declared face has loaded, and the run stops rather than
-    // ship a post set in Georgia.
-    const fontsReady = await page.evaluate(async () => {
-      // A face the page has not used yet is still "unloaded", so each is
-      // asked for explicitly before it is checked.
-      const faces = {
-        fraunces: '500 96px Fraunces',
-        geist: '400 40px Geist',
-        mono: '400 36px "Geist Mono"',
-      }
-      await Promise.all(Object.values(faces).map(face => document.fonts.load(face)))
-      await document.fonts.ready
-      return Object.fromEntries(
-        Object.entries(faces).map(([name, face]) => [name, document.fonts.check(face)]),
-      )
-    })
-    const missing = Object.entries(fontsReady).filter(([, ok]) => !ok).map(([name]) => name)
-    if (missing.length) {
-      throw new Error(`Fonts did not load (${missing.join(', ')}). Is fonts.googleapis.com reachable?`)
-    }
-
-    const broken = await page.evaluate(() =>
-      Array.from(document.images)
-        .filter(img => !img.complete || img.naturalWidth === 0)
-        .map(img => img.src),
-    )
-    if (broken.length) {
-      throw new Error(`Image did not load:\n  ${broken.join('\n  ')}`)
-    }
-
+    const page = await openPage(browser, html, canvas)
     await page.screenshot({ path: out, type: 'png', fullPage: false })
   } finally {
     await browser.close()
