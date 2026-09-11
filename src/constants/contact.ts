@@ -82,7 +82,7 @@ export const SOCIAL_PROFILES: SocialProfile[] = [
   // created and cannot be changed now. Confirmed by the owner; do NOT "fix" it
   // to uksofashop89, which is a different (or non-existent) Page.
   { platform: 'facebook', url: 'https://www.facebook.com/ussofashop89' },
-  { platform: 'instagram', url: 'https://www.instagram.com/uk_sofashop' },
+  { platform: 'instagram', url: 'https://www.instagram.com/uksofashop.co.uk' },
   // Placeholder until the real profile URL is known. Replace the URL with
   // https://www.tiktok.com/@yourhandle and delete the placeholder flag - it
   // then starts appearing in sameAs automatically.
