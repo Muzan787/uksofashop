@@ -68,7 +68,7 @@ export async function POST(request: Request) {
       product_id: event.productId ?? null,
       variant_id: event.variantId ?? null,
       metadata: {
-        data_class: /(?:^|[?&/_-])(qa|test|debug|probe)(?:[=&/_-]|$)/i.test(event.path)
+        data_class: /(?:^|[?&=/_-])(qa|test|debug|probe)(?:[=&/_-]|$)/i.test(event.path)
           ? 'qa_test'
           : 'unclassified',
       },
