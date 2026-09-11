@@ -8,7 +8,9 @@
     display: flex; align-items: center; justify-content: space-between; gap: 32px;
     margin-bottom: 32px;
   }
-  .sp-photo { height: 440px; flex: none; }
+  .sp-photo { height: calc(var(--canvas-h) * 0.36); flex: none; }
+  .sp-eyebrow { margin-top: 40px; }
+  .sp-eyebrow + .sp-title { margin-top: 20px; }
   .sp-title { margin-top: 36px; }
   .sp-rows {
     margin-top: 36px;
@@ -23,7 +25,7 @@
     border-bottom: 2px solid var(--g-line);
   }
   .sp-row dt { color: var(--g-muted); }
-  .sp-row dd { font-size: 32px; }
+  .sp-row dd { font-size: 30px; }
   .sp-foot {
     margin-top: auto;
     display: flex; align-items: flex-end; justify-content: space-between; gap: 32px;
@@ -35,13 +37,11 @@
 </style>
 
 <div class="post {{groundClass}}">
-  <div class="sp-head">
-    {{{lockup}}}
-    {{#if eyebrow}}<div class="eyebrow">{{eyebrow}}</div>{{/if}}
-  </div>
+  <div class="sp-head">{{{lockup}}}</div>
 
   <div class="well sp-photo"><img src="{{image}}" alt=""></div>
 
+  {{#if eyebrow}}<div class="eyebrow sp-eyebrow">{{eyebrow}}</div>{{/if}}
   <h1 class="title sp-title">{{{headline}}}</h1>
 
   <dl class="sp-rows">

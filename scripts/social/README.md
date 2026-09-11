@@ -27,6 +27,7 @@ PNGs land in `out/social/` (git-ignored). `--out` puts one somewhere else,
 | `spec`           | calico-100        | photo in a well, product name, specifications in Geist Mono, price + delivery promise |
 | `carousel-cover` | calico-100        | display headline over a photo well, `1 / N` counter, swipe cue             |
 | `split`          | ink foot          | two photos stacked with an ember rule between; label pills; optional line  |
+| `panorama`       | calico-100        | the pinned row — welcome, photograph, get in touch — as three tiles from one 3240×1440 page |
 
 `--ground ink` puts `quote`, `spec` and `carousel-cover` on ink-900 for grid
 rhythm (every third or fourth post). `full-bleed` and `split` are always on
@@ -44,6 +45,8 @@ Every line has a default drawn from the product and can be overridden:
 - Headlines step down in size with length rather than clipping, so a long one
   still fits; the top step is the brand size (120px display, 96px headline).
 - `--cta ""` hides the button on `full-bleed`.
+- `--count 5 --index 2` puts a `2 / 5` pill on a `full-bleed` slide; the cover
+  gets `1 / 5` from `--count` alone.
 
 ## Images
 

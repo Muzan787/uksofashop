@@ -1,0 +1,90 @@
+[
+  {
+    "_": "Pinned row — three tiles rendered as one. Post right, middle, left; pin in that order.",
+    "format": "panorama",
+    "product": "hannah-electric-corner",
+    "variant": "Beige",
+    "caption": "Hannah Electric Corner · £999"
+  },
+  {
+    "_": "Grid, posting order. Instagram fills newest-first from the top-left, so these run bottom-right to top-left: 02 lands bottom-right, 07 lands top-left.",
+    "format": "split",
+    "product": "roma-recliner-corner",
+    "before": "Brown",
+    "after": "Grey",
+    "headline": "Roma recliner,|two colours"
+  },
+  {
+    "format": "full-bleed",
+    "product": "malibu-high-back-3and2-seater",
+    "headline": "Malibu Sofa",
+    "eyebrow": "High Back · 3+2 Seater · Oatmeal"
+  },
+  {
+    "format": "carousel-cover",
+    "product": "lily-high-back-5-seater-corner-2c2",
+    "variant": "Beige",
+    "headline": "One corner.|*Four* fabrics.",
+    "body": "Grey, black, navy and beige — swipe to see the Lily in all four",
+    "count": "5"
+  },
+  {
+    "format": "spec",
+    "product": "lily-high-back-armed-u-shape",
+    "variant": "Beige",
+    "headline": "Lily U-Shape",
+    "eyebrow": "High Back · Armed U-Shape"
+  },
+  {
+    "format": "quote",
+    "quote": "Any colour.|Any fabric.|*Made to order.*",
+    "attribution": "Every sofa we make",
+    "body": "Free UK Mainland delivery. Pay when it arrives."
+  },
+  {
+    "format": "full-bleed",
+    "product": "verona-scattered-back-5-seater-corner-2c2",
+    "headline": "Verona Sofa",
+    "eyebrow": "Scattered Back · 5 Seater Corner"
+  },
+  {
+    "_": "The Lily carousel's inner slides, 2-5, one per fabric.",
+    "format": "full-bleed",
+    "product": "lily-high-back-5-seater-corner-2c2",
+    "variant": "Grey",
+    "headline": "Lily Sofa",
+    "eyebrow": "Grey",
+    "count": "5",
+    "index": "2",
+    "cta": ""
+  },
+  {
+    "format": "full-bleed",
+    "product": "lily-high-back-5-seater-corner-2c2",
+    "variant": "Black",
+    "headline": "Lily Sofa",
+    "eyebrow": "Black",
+    "count": "5",
+    "index": "3",
+    "cta": ""
+  },
+  {
+    "format": "full-bleed",
+    "product": "lily-high-back-5-seater-corner-2c2",
+    "variant": "Navy Blue",
+    "headline": "Lily Sofa",
+    "eyebrow": "Navy Blue",
+    "count": "5",
+    "index": "4",
+    "cta": ""
+  },
+  {
+    "format": "full-bleed",
+    "product": "lily-high-back-5-seater-corner-2c2",
+    "variant": "Beige",
+    "headline": "Lily Sofa",
+    "eyebrow": "Beige",
+    "count": "5",
+    "index": "5"
+  }
+]

@@ -1,0 +1,102 @@
+<!-- panorama
+     The pinned row: one 3240x1440 composition sliced into three 3:4 tiles
+     that sit side by side at the top of the profile. Left tile is the
+     welcome, middle tile is the photograph edge to edge, right tile is how to
+     get in touch. One ember rule runs through all three at the same height so
+     the row reads as a single piece even with Instagram's gutters between.
+
+     Post the RIGHT tile first, then the middle, then the left; pin them in the
+     same order. Instagram places the newest (and most recently pinned) at the
+     top-left. -->
+<style>
+  .pn { padding: 0; flex-direction: row; }
+  .pn-tile { position: relative; width: 1080px; height: 100%; flex: none; display: flex; flex-direction: column; padding: var(--pad); }
+
+  /* The rule that ties the three tiles together. */
+  .pn-rule {
+    position: absolute; left: 0; right: 0; top: 268px; height: 6px;
+    background: var(--color-ember-500);
+    pointer-events: none;
+  }
+  .pn-tile .lockup { position: relative; z-index: 1; }
+
+  /* ── left: welcome ─────────────────────────────────────────────────── */
+  /* Lockup at the head, the words centred in the space, the button at the
+     foot — the same three-part rhythm as the right tile, so the two frame
+     the photograph symmetrically. */
+  .pn-mid { margin: auto 0; padding: 80px 0; }
+  .pn-left .eyebrow { margin-bottom: 40px; }
+  .pn-left .display { font-size: 120px; }
+  .pn-left .body { margin-top: 48px; max-width: 900px; font-size: 42px; }
+  .pn-left .cta { align-self: flex-start; }
+
+  /* ── middle: the photograph ────────────────────────────────────────── */
+  .pn-photo { padding: 0; }
+  .pn-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .pn-photo .pn-rule { display: none; }
+  .pn-photo .pill { position: absolute; left: var(--pad); bottom: var(--pad); }
+
+  /* ── right: get in touch ───────────────────────────────────────────── */
+  .pn-right .eyebrow { margin-bottom: 40px; }
+  .pn-right .title { font-size: 88px; }
+  .pn-contact { display: flex; flex-direction: column; gap: 44px; margin-top: 72px; }
+  .pn-row { display: flex; align-items: center; gap: 30px; }
+  .pn-row .pn-icon {
+    width: 84px; height: 84px; flex: none;
+    display: grid; place-items: center;
+    border-radius: var(--radius-sm);
+    background: var(--grad-ember);
+    box-shadow: var(--shadow-e2);
+  }
+  .pn-row .pn-icon svg { width: 44px; height: 44px; fill: none; stroke: var(--color-ink-900); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .pn-row .pn-icon svg.fill { fill: var(--color-ink-900); stroke: none; }
+  .pn-row .data { font-size: 36px; letter-spacing: 0; }
+  .pn-row .caption { display: block; margin-top: 6px; }
+  .pn-foot { display: flex; flex-direction: column; gap: 20px; }
+  .pn-foot .promise { display: flex; align-items: center; gap: 20px; font-size: 30px; line-height: 1.3; color: var(--g-body); }
+  .pn-foot .promise::before { content: ''; width: 14px; height: 14px; border-radius: var(--radius-pill); background: var(--color-ember-500); flex: none; }
+</style>
+
+<div class="post ground-light pn">
+  <section class="pn-tile pn-left">
+    <div class="pn-rule"></div>
+    {{{lockup}}}
+    <div class="pn-mid">
+      {{#if eyebrow}}<div class="eyebrow">{{eyebrow}}</div>{{/if}}
+      <h1 class="display">{{{headline}}}</h1>
+      {{#if body}}<p class="body">{{{body}}}</p>{{/if}}
+    </div>
+    {{#if cta}}<div class="cta">{{cta}}</div>{{/if}}
+  </section>
+
+  <section class="pn-tile pn-photo">
+    <img src="{{image}}" alt="">
+    {{#if caption}}<div class="pill">{{caption}}</div>{{/if}}
+  </section>
+
+  <section class="pn-tile pn-right">
+    <div class="pn-rule"></div>
+    {{{lockup}}}
+    <div class="pn-mid">
+    <div class="eyebrow">{{contactEyebrow}}</div>
+    <h2 class="title">{{{contactHeadline}}}</h2>
+    <div class="pn-contact">
+      <div class="pn-row">
+        <span class="pn-icon"><svg viewBox="0 0 24 24" class="fill"><path {{{whatsappPath}}}/></svg></span>
+        <div><span class="data">{{phone}}</span><span class="caption">WhatsApp or call</span></div>
+      </div>
+      <div class="pn-row">
+        <span class="pn-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg></span>
+        <div><span class="data">{{site}}</span><span class="caption">Every sofa, every fabric</span></div>
+      </div>
+      <div class="pn-row">
+        <span class="pn-icon"><svg viewBox="0 0 24 24"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg></span>
+        <div><span class="data">{{email}}</span><span class="caption">Email</span></div>
+      </div>
+    </div>
+    </div>
+    <div class="pn-foot">
+      {{#each promises}}<div class="promise">{{label}}</div>{{/each}}
+    </div>
+  </section>
+</div>

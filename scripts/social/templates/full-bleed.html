@@ -16,7 +16,7 @@
       linear-gradient(180deg, rgba(25, 28, 27, 0) 38%, rgba(25, 28, 27, 0.58) 66%, rgba(25, 28, 27, 0.90) 100%);
   }
 
-  .fb-head { position: relative; }
+  .fb-head { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 32px; }
   .fb-foot {
     position: relative;
     margin-top: auto;
@@ -33,7 +33,10 @@
   <div class="fb-photo"><img src="{{image}}" alt=""></div>
   <div class="fb-scrim"></div>
 
-  <div class="fb-head">{{{lockup}}}</div>
+  <div class="fb-head">
+    {{{lockup}}}
+    {{#if counter}}<div class="pill">{{counter}}</div>{{/if}}
+  </div>
 
   <div class="fb-foot">
     {{#if eyebrow}}<div class="eyebrow">{{eyebrow}}</div>{{/if}}

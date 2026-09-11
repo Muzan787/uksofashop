@@ -1,13 +1,16 @@
 // scripts/social/render.ts
 //
 // The Instagram renderer. One HTML template per post format, styled by the
-// real src/styles/tokens.css, screenshotted headlessly at 1080x1350.
+// real src/styles/tokens.css, screenshotted headlessly at 1080x1440 (3:4, the
+// shape Instagram's grid shows since 2025).
 //
 //   npm run social -- --product verona-high-back-3and2-seater
 //   npm run social -- --product verona-high-back-3and2-seater --format spec
 //   npm run social -- --format quote --quote "Built to be *sat on*." --attribution "Our workshop"
 //   npm run social -- --product lily-high-back-u-shape --format carousel-cover --headline "Five ways to|fill a corner" --count 6
 //   npm run social -- --product roma-recliner-corner --format split --before Grey --after Teal
+//   npm run social -- --product hannah-electric-corner --format panorama      # the pinned row, three tiles
+//   npm run social -- --set scripts/social/sets/launch-grid.json             # a whole grid at once
 //   npm run social -- --list
 //
 // Everything about a product (its photograph, price, specifications, family)
@@ -26,6 +29,7 @@ import path from 'node:path'
 import { launchBrowser } from './lib/browser.ts'
 import { cloudinaryFill } from './lib/cloudinary.ts'
 import { OUT_DIR, SOCIAL_DIR, openPage, wrapDocument, type Canvas } from './lib/page.ts'
+import { WHATSAPP_PATH } from './lib/icons.ts'
 import { renderTemplate, richText, type TemplateData } from './lib/template.ts'
 import {
   fetchProduct,
@@ -36,22 +40,31 @@ import {
   type Product,
 } from './lib/products.ts'
 import { PROMISES } from '../../src/constants/promises.ts'
+import { PHONE_DISPLAY, SUPPORT_EMAIL } from '../../src/constants/contact.ts'
 import { SITE_URL } from '../../src/constants/site.ts'
 
-const FORMATS = ['full-bleed', 'quote', 'spec', 'carousel-cover', 'split'] as const
+const FORMATS = ['full-bleed', 'quote', 'spec', 'carousel-cover', 'split', 'panorama'] as const
 type Format = (typeof FORMATS)[number]
 
+// Instagram crops every grid thumbnail to 3:4, so 3:4 is the post. A 4:5
+// upload shows whole in the feed but loses its top and bottom in the grid,
+// which is where a set of posts is designed to be seen together.
 const SIZES = {
-  portrait: { width: 1080, height: 1350 },
+  portrait: { width: 1080, height: 1440 },
+  feed: { width: 1080, height: 1350 },
   square: { width: 1080, height: 1080 },
   story: { width: 1080, height: 1920 },
 } as const
 type SizeName = keyof typeof SIZES
 
+/** The panorama is three portrait tiles rendered as one wide page. */
+const PANORAMA_TILES = 3
+
 const HELP = `
 Mill & Velvet social renderer
 
   npm run social -- --product <slug> [--format <format>] [copy options] [--out file.png]
+  npm run social -- --set <file.json>
   npm run social -- --list
 
 Formats
@@ -60,27 +73,30 @@ Formats
   spec             photograph in a well, then the product's specifications in Geist Mono, price at the foot
   carousel-cover   display headline over a photograph well, with a slide counter and swipe cue
   split            two photographs stacked with an ember rule between — needs --before
+  panorama         the pinned row: welcome | photograph | get in touch, as three tiles to post right-to-left
 
 Options
   --product, -p    product slug (required for every format except quote)
   --format, -f     one of the formats above                    default: full-bleed
   --ground         light | ink                                  default: light (quote: ink)
-  --size           portrait | square | story                    default: portrait (1080x1350)
+  --size           portrait (3:4) | feed (4:5) | square | story default: portrait, 1080x1440
   --variant        which colour's photograph to use             default: the lead variant
   --image          any image URL instead of the product's       (a generated room scene, say)
   --headline       *word* for an ember accent, | or \\n for a line break
   --eyebrow        the small uppercase line above the headline
   --body           a supporting line
-  --caption        the small line at the foot
-  --cta            the button label on full-bleed              default: Order on WhatsApp ("" to hide)
+  --caption        the small line at the foot (panorama: the pill on the photograph)
+  --cta            the button label                             default: Order on WhatsApp ("" to hide)
   --quote          the quote (quote format)
   --attribution    who said it (quote format)
-  --count          slides in the carousel, shown as "1 / N"    (carousel-cover)
+  --count          slides in a carousel; with --index shows "n / count" on full-bleed and carousel-cover
+  --index          this slide's number in the carousel          default: 1
   --before         URL or variant colour for the top pane       (split)
   --after          URL or variant colour for the bottom pane    (split)  default: the lead variant
   --before-label   label on the top pane                        default: the colour, else Before
   --after-label    label on the bottom pane                     default: the colour, else After
   --json           a JSON file holding any of the options above, by their long names
+  --set            a JSON array of such objects; renders every one into out/social/<set name>/
   --out            where to write the PNG                       default: out/social/<format>--<slug>.png
   --html           also write the rendered HTML next to the PNG
   --list           print every active product slug and exit
@@ -101,6 +117,7 @@ type Options = {
   quote?: string
   attribution?: string
   count?: string
+  index?: string
   before?: string
   after?: string
   beforeLabel?: string
@@ -109,83 +126,52 @@ type Options = {
   html: boolean
 }
 
-async function readOptions(): Promise<Options | 'list' | 'help'> {
-  const { values } = parseArgs({
-    options: {
-      product: { type: 'string', short: 'p' },
-      format: { type: 'string', short: 'f' },
-      ground: { type: 'string' },
-      size: { type: 'string' },
-      variant: { type: 'string' },
-      image: { type: 'string' },
-      headline: { type: 'string' },
-      eyebrow: { type: 'string' },
-      body: { type: 'string' },
-      caption: { type: 'string' },
-      cta: { type: 'string' },
-      quote: { type: 'string' },
-      attribution: { type: 'string' },
-      count: { type: 'string' },
-      before: { type: 'string' },
-      after: { type: 'string' },
-      'before-label': { type: 'string' },
-      'after-label': { type: 'string' },
-      json: { type: 'string' },
-      out: { type: 'string' },
-      html: { type: 'boolean', default: false },
-      list: { type: 'boolean', default: false },
-      help: { type: 'boolean', short: 'h', default: false },
-    },
-    strict: true,
-  })
+type Flags = Record<string, string | boolean | undefined>
 
-  if (values.help) return 'help'
-  if (values.list) return 'list'
-
-  // A JSON file is the same options by their long names; flags win over it.
-  const fromJson: Record<string, unknown> = values.json
-    ? JSON.parse(await readFile(path.resolve(values.json), 'utf8'))
-    : {}
-  const pick = (flag: string | undefined, key: string): string | undefined => {
-    if (flag !== undefined) return flag
-    const v = fromJson[key]
+/** Flags plus the same keys from a JSON object; a flag wins over the file. */
+function resolveOptions(flags: Flags, fromJson: Record<string, unknown>): Options {
+  const pick = (key: string, jsonKey = key): string | undefined => {
+    const flag = flags[key]
+    if (typeof flag === 'string') return flag
+    const v = fromJson[jsonKey]
     return v === undefined || v === null ? undefined : String(v)
   }
 
-  const format = pick(values.format, 'format') ?? 'full-bleed'
+  const format = pick('format') ?? 'full-bleed'
   if (!FORMATS.includes(format as Format)) {
     throw new Error(`Unknown format "${format}". One of: ${FORMATS.join(', ')}.`)
   }
-  const ground = pick(values.ground, 'ground') ?? (format === 'quote' ? 'ink' : 'light')
+  const ground = pick('ground') ?? (format === 'quote' ? 'ink' : 'light')
   if (ground !== 'light' && ground !== 'ink') {
     throw new Error(`--ground must be light or ink, not "${ground}".`)
   }
-  const size = pick(values.size, 'size') ?? 'portrait'
+  const size = pick('size') ?? 'portrait'
   if (!(size in SIZES)) {
     throw new Error(`--size must be one of ${Object.keys(SIZES).join(', ')}, not "${size}".`)
   }
 
   return {
-    product: pick(values.product, 'product'),
+    product: pick('product'),
     format: format as Format,
     ground,
     size: size as SizeName,
-    variant: pick(values.variant, 'variant'),
-    image: pick(values.image, 'image'),
-    headline: pick(values.headline, 'headline'),
-    eyebrow: pick(values.eyebrow, 'eyebrow'),
-    body: pick(values.body, 'body'),
-    caption: pick(values.caption, 'caption'),
-    cta: pick(values.cta, 'cta'),
-    quote: pick(values.quote, 'quote'),
-    attribution: pick(values.attribution, 'attribution'),
-    count: pick(values.count, 'count'),
-    before: pick(values.before, 'before'),
-    after: pick(values.after, 'after'),
-    beforeLabel: pick(values['before-label'], 'beforeLabel'),
-    afterLabel: pick(values['after-label'], 'afterLabel'),
-    out: pick(values.out, 'out'),
-    html: values.html || fromJson.html === true,
+    variant: pick('variant'),
+    image: pick('image'),
+    headline: pick('headline'),
+    eyebrow: pick('eyebrow'),
+    body: pick('body'),
+    caption: pick('caption'),
+    cta: pick('cta'),
+    quote: pick('quote'),
+    attribution: pick('attribution'),
+    count: pick('count'),
+    index: pick('index'),
+    before: pick('before'),
+    after: pick('after'),
+    beforeLabel: pick('before-label', 'beforeLabel'),
+    afterLabel: pick('after-label', 'afterLabel'),
+    out: pick('out'),
+    html: flags.html === true || fromJson.html === true,
   }
 }
 
@@ -230,6 +216,13 @@ function siteHost(): string {
   return new URL(SITE_URL).host.replace(/^www\./, '')
 }
 
+/** "2 / 5" when the post is one slide of a carousel. */
+function slideCounter(opts: Options, defaultIndex?: number): string | undefined {
+  if (!opts.count) return undefined
+  const index = opts.index ?? (defaultIndex !== undefined ? String(defaultIndex) : undefined)
+  return index ? `${index} / ${opts.count}` : undefined
+}
+
 async function buildData(
   opts: Options,
   product: Product | null,
@@ -256,6 +249,7 @@ async function buildData(
         body: richText(opts.body),
         price: formatPrice(p),
         cta: opts.cta ?? 'Order on WhatsApp',
+        counter: slideCounter(opts),
       }
     }
 
@@ -281,7 +275,7 @@ async function buildData(
       return {
         lockup,
         groundClass: `ground-${opts.ground}`,
-        image: cloudinaryFill(url, inner, 440),
+        image: cloudinaryFill(url, inner, Math.round(canvas.height * 0.36)),
         eyebrow: opts.eyebrow ?? defaultEyebrow(p),
         headline: richText(breaks(opts.headline ?? defaultHeadline(p))),
         specs: rows,
@@ -298,11 +292,11 @@ async function buildData(
       return {
         lockup,
         groundClass: `ground-${opts.ground}`,
-        image: cloudinaryFill(url, inner, 560),
+        image: cloudinaryFill(url, inner, Math.round(canvas.height * 0.41)),
         eyebrow: opts.eyebrow ?? defaultEyebrow(p),
         headline: richText(headline),
         headlineSize: displaySize(headline),
-        counter: opts.count ? `1 / ${opts.count}` : undefined,
+        counter: slideCounter(opts, 1),
         body: richText(opts.body),
         swipe: 'Swipe',
       }
@@ -323,6 +317,32 @@ async function buildData(
         headline: richText(opts.headline ? breaks(opts.headline) : undefined),
       }
     }
+
+    case 'panorama': {
+      const p = need()
+      const { url } = resolveImage(p, opts.image ?? opts.variant)
+      const tile = { width: canvas.width / PANORAMA_TILES, height: canvas.height }
+      const promises = [PROMISES.delivery.short, PROMISES.payment.short, PROMISES.guarantee.short, PROMISES.returns.short]
+      return {
+        lockup,
+        eyebrow: opts.eyebrow ?? 'Sofas made to order',
+        headline: richText(breaks(opts.headline ?? 'Welcome to|UK Sofa Shop')),
+        body: richText(
+          opts.body ??
+            'Choose the shape, the fabric and the colour. We make it, deliver it free across mainland UK, and you pay when it arrives.',
+        ),
+        cta: opts.cta ?? 'Message us on WhatsApp',
+        image: cloudinaryFill(url, tile.width, tile.height),
+        caption: opts.caption ?? `${defaultHeadline(p)} · ${formatPrice(p)}`,
+        contactEyebrow: 'Get in touch',
+        contactHeadline: richText('Talk to a *person*.'),
+        whatsappPath: WHATSAPP_PATH,
+        phone: PHONE_DISPLAY,
+        site: siteHost(),
+        email: SUPPORT_EMAIL,
+        promises: promises.map(label => ({ label })),
+      }
+    }
   }
 }
 
@@ -333,44 +353,128 @@ async function buildDocument(format: Format, data: TemplateData, canvas: Canvas)
   return wrapDocument(format, renderTemplate(template, data), canvas)
 }
 
-async function screenshot(html: string, canvas: Canvas, out: string) {
+/**
+ * Capture the page. A panorama is one page cut into tiles, numbered in the
+ * order they should be posted: Instagram fills the grid newest-first from
+ * the top-left, so the right-hand tile goes up first.
+ */
+async function screenshot(html: string, canvas: Canvas, out: string, tiles: number): Promise<string[]> {
   const browser = await launchBrowser()
   try {
     const page = await openPage(browser, html, canvas)
-    await page.screenshot({ path: out, type: 'png', fullPage: false })
+    if (tiles === 1) {
+      await page.screenshot({ path: out, type: 'png', fullPage: false })
+      return [out]
+    }
+    const width = canvas.width / tiles
+    const names = ['left', 'middle', 'right']
+    const written: string[] = []
+    for (let i = 0; i < tiles; i++) {
+      const postOrder = tiles - i
+      const file = out.replace(/\.png$/i, '') + `--post-${postOrder}-${names[i] ?? i + 1}.png`
+      await page.screenshot({
+        path: file,
+        type: 'png',
+        clip: { x: i * width, y: 0, width, height: canvas.height },
+      })
+      written.push(file)
+    }
+    return written
   } finally {
     await browser.close()
   }
 }
 
-/* ── Main ────────────────────────────────────────────────────────────────── */
+/* ── One post ────────────────────────────────────────────────────────────── */
 
-async function main() {
-  const opts = await readOptions()
+async function renderOne(opts: Options, defaultOut?: string): Promise<string[]> {
+  const tiles = opts.format === 'panorama' ? PANORAMA_TILES : 1
+  const base = SIZES[opts.size]
+  const canvas = { width: base.width * tiles, height: base.height }
 
-  if (opts === 'help') {
-    console.log(HELP)
-    return
-  }
-  if (opts === 'list') {
-    for (const { slug, title } of await listProductSlugs()) console.log(`${slug.padEnd(48)} ${title}`)
-    return
-  }
-
-  const canvas = SIZES[opts.size]
   const product = opts.product ? await fetchProduct(opts.product) : null
   const lockup = await readFile(path.join(SOCIAL_DIR, 'partials', 'lockup.html'), 'utf8')
 
   const data = await buildData(opts, product, canvas, lockup)
   const html = await buildDocument(opts.format, data, canvas)
 
-  const out = path.resolve(opts.out ?? path.join(OUT_DIR, `${opts.format}--${product?.slug ?? 'brand'}.png`))
+  const out = path.resolve(
+    opts.out ?? defaultOut ?? path.join(OUT_DIR, `${opts.format}--${product?.slug ?? 'brand'}.png`),
+  )
   await mkdir(path.dirname(out), { recursive: true })
 
   if (opts.html) await writeFile(out.replace(/\.png$/i, '') + '.html', html, 'utf8')
-  await screenshot(html, canvas, out)
+  return screenshot(html, canvas, out, tiles)
+}
 
-  console.log(path.relative(process.cwd(), out))
+/* ── Main ────────────────────────────────────────────────────────────────── */
+
+async function main() {
+  const { values } = parseArgs({
+    options: {
+      product: { type: 'string', short: 'p' },
+      format: { type: 'string', short: 'f' },
+      ground: { type: 'string' },
+      size: { type: 'string' },
+      variant: { type: 'string' },
+      image: { type: 'string' },
+      headline: { type: 'string' },
+      eyebrow: { type: 'string' },
+      body: { type: 'string' },
+      caption: { type: 'string' },
+      cta: { type: 'string' },
+      quote: { type: 'string' },
+      attribution: { type: 'string' },
+      count: { type: 'string' },
+      index: { type: 'string' },
+      before: { type: 'string' },
+      after: { type: 'string' },
+      'before-label': { type: 'string' },
+      'after-label': { type: 'string' },
+      json: { type: 'string' },
+      set: { type: 'string' },
+      out: { type: 'string' },
+      html: { type: 'boolean', default: false },
+      list: { type: 'boolean', default: false },
+      help: { type: 'boolean', short: 'h', default: false },
+    },
+    strict: true,
+  })
+
+  if (values.help) {
+    console.log(HELP)
+    return
+  }
+  if (values.list) {
+    for (const { slug, title } of await listProductSlugs()) console.log(`${slug.padEnd(48)} ${title}`)
+    return
+  }
+
+  // A set is a JSON array of posts. Each renders into a folder named after
+  // the file, numbered in the order they appear — which is the order to post
+  // them in: bottom-right of the grid first, top-left last.
+  if (values.set) {
+    const setPath = path.resolve(values.set)
+    const posts = JSON.parse(await readFile(setPath, 'utf8')) as Record<string, unknown>[]
+    if (!Array.isArray(posts)) throw new Error('--set must be a JSON array of post objects.')
+    const setDir = path.join(OUT_DIR, path.basename(setPath, '.json'))
+    let n = 0
+    for (const post of posts) {
+      const opts = resolveOptions({ html: values.html }, post)
+      n += 1
+      const name = `${String(n).padStart(2, '0')}-${opts.format}--${opts.product ?? 'brand'}.png`
+      for (const file of await renderOne(opts, path.join(setDir, name))) {
+        console.log(path.relative(process.cwd(), file))
+      }
+    }
+    return
+  }
+
+  const fromJson: Record<string, unknown> = values.json
+    ? JSON.parse(await readFile(path.resolve(values.json), 'utf8'))
+    : {}
+  const opts = resolveOptions(values as Flags, fromJson)
+  for (const file of await renderOne(opts)) console.log(path.relative(process.cwd(), file))
 }
 
 main().catch((error: unknown) => {
