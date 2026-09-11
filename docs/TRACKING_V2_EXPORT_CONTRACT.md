@@ -13,7 +13,7 @@ from the storefront's perspective from here on.
 
 ## Consent and what's marketing vs. operational
 
-- **Not gated on cookie consent**: `attribution_sessions`, `attribution_actions`,
+- **Not gated on advertising-cookie consent**: `attribution_sessions`, `attribution_actions`,
   `whatsapp_enquiries` and the `visitor_id`/`session_id`/`arrival_id` cookies
   themselves. These are first-party, non-advertising identifiers — closer to
   a session id or a shopping-cart cookie than an ad tracker — the same
@@ -38,8 +38,11 @@ from the storefront's perspective from here on.
 
 ## 1. Attribution Ledger
 
-Source: `attribution_sessions` (one row per `session_id`), joined to
-`attribution_actions` for action counts.
+Source: `reporting.attribution_ledger`, a private service-role-only view over
+`attribution_sessions` (one row per `session_id`) joined to
+`attribution_actions` for action counts. Product/cart/checkout/call actions
+are written through `/api/attribution/action`, independently of the
+consent-gated Meta CAPI mirror.
 
 | Sheet column | Source field | Meaning | Nullable | Dedup key |
 |---|---|---|---|---|
@@ -62,7 +65,8 @@ Source: `attribution_sessions` (one row per `session_id`), joined to
 
 ## 2. WhatsApp Enquiries
 
-Source: `whatsapp_enquiries`.
+Source: `reporting.whatsapp_enquiries`, a private non-PII export view over
+`whatsapp_enquiries`.
 
 | Sheet column | Source field | Meaning | Nullable | Dedup key |
 |---|---|---|---|---|
@@ -77,7 +81,8 @@ Source: `whatsapp_enquiries`.
 
 ## 3. Orders & Profit
 
-Source: `orders` (joined `order_items` for line items). This sheet is where
+Source: `reporting.orders_profit`, a private non-PII view over `orders`.
+Join `order_items` only for a separately authorised line-level export. This sheet is where
 a manual profit model belongs — nothing here or in the app computes margin
 or ad spend.
 
@@ -90,8 +95,7 @@ or ad spend.
 | Delivered | `delivered_at` | First time status reached `delivered` | Yes | — |
 | Cancelled | `cancelled_at`, `cancellation_reason` | First time status reached `cancelled` | Yes | — |
 | Status | `status` | Current status | Yes | — |
-| Customer | `customer_name`, `customer_email`, `customer_phone` | | Varies | — |
-| Address / postcode | `shipping_address` (postcode is the trailing token) | | No | — |
+| Customer / address | **Not exported** | Operational PII stays in Supabase | — | — |
 | Revenue | `total_amount` | Delivery-inclusive | No | — |
 | Source | `source` | `website` or `whatsapp` | No | — |
 | WhatsApp reference | `whatsapp_reference` | Links to WhatsApp Enquiries | Yes | — |
@@ -120,8 +124,9 @@ does not resubmit them. This table does not do that itself.
 
 ## 5. Meta Outcome Ledger
 
-Source: `conversion_events` filtered to `platform = 'meta'`, joined to
-`orders` for revenue/status.
+Source: `reporting.meta_outcome_ledger`, a private non-PII view over
+`conversion_events` filtered to `platform = 'meta'`, joined to orders for
+revenue/status.
 
 | Sheet column | Source field | Meaning | Nullable | Dedup key |
 |---|---|---|---|---|
@@ -133,7 +138,9 @@ Source: `conversion_events` filtered to `platform = 'meta'`, joined to
 
 ## 6. Daily Performance
 
-A rollup, not a single source table — computed by grouping:
+Source: `reporting.daily_performance`, a private daily rollup that excludes
+known `qa_test` rows and excludes `legacy_uncertain` orders from outcome
+totals. The underlying grouping is:
 
 - **Sessions/arrivals**: `attribution_sessions` by day (`created_at`), by
   `last_touch_source`/`last_touch_medium`/`last_touch_campaign`.
@@ -153,6 +160,7 @@ A rollup, not a single source table — computed by grouping:
 5. `20260906140000_google_offline_conversions.sql`
 6. `20260906150000_conversion_events_audit.sql`
 7. `20260906160000_manual_order_whatsapp_reference.sql`
+8. `20260911100000_phase3_reporting_views.sql`
 
 ## Testing sequence (for reference)
 

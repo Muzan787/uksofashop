@@ -207,8 +207,8 @@ export default function ProductPageClient({
   useEffect(() => {
     if (!selVariant || lastViewed.current === selVariant.id) return;
     lastViewed.current = selVariant.id;
-    trackViewContent({ variantId: selVariant.id, title: product.title, price, quantity: 1 });
-  }, [selVariant, price, product.title]);
+    trackViewContent({ productId: product.id, variantId: selVariant.id, title: product.title, price, quantity: 1 });
+  }, [selVariant, price, product.id, product.title]);
 
   // ── Fabric, on made-to-order frames ──────────────────────────────────────
   //
@@ -248,11 +248,11 @@ export default function ProductPageClient({
     });
     // Fired here rather than inside the cart reducer: the reducer runs inside a
     // setState updater, which React may invoke more than once.
-    trackAddToCart({ variantId: selVariant.id, title: product.title, price, quantity: 1 });
+    trackAddToCart({ productId: product.id, variantId: selVariant.id, title: product.title, price, quantity: 1 });
     setAdded(true);
     toast.success(`${product.title} added to cart`, { icon: '🛋️', position: 'top-center' });
     setTimeout(() => setAdded(false), 2000);
-  }, [selVariant, price, product.title, images, addToCart, madeToOrder, fabric]);
+  }, [selVariant, price, product.id, product.title, images, addToCart, madeToOrder, fabric]);
 
   // ── Wishlist ─────────────────────────────────────────────────────────────
   const [inWishlist, setInWishlist] = useState(initialWishlistState);
