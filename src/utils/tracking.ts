@@ -316,8 +316,43 @@ function newEventId(): string {
  * Pixel already has; no customer should ever see a console error or a slower
  * page because an advertising endpoint was unhappy.
  */
-/** attribution_actions.action_type values this module can write, via the same request as the Meta mirror. */
+/** attribution_actions.action_type values written to the first-party ledger. */
 type LedgerAction = 'product_view' | 'add_to_cart' | 'checkout_start' | 'call_click'
+
+/**
+ * Write an operational action independently of advertising consent.
+ *
+ * These rows contain only first-party visitor/session/arrival cookies, a safe
+ * same-site path and product identifiers. They deliberately do not carry Meta
+ * cookies, click IDs or customer data. Keeping this request separate from the
+ * consent-gated CAPI mirror means declining advertising cookies no longer
+ * removes the storefront's own funnel evidence.
+ */
+function ledger(
+  action: LedgerAction,
+  actionId: string,
+  context: { variantId?: string; productId?: string } = {},
+): void {
+  if (typeof window === 'undefined') return
+  if (!isBrowserTrackingEnabled()) return
+
+  try {
+    void fetch('/api/attribution/action', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      keepalive: true,
+      body: JSON.stringify({
+        action,
+        actionId,
+        path: window.location.pathname + window.location.search,
+        productId: context.productId,
+        variantId: context.variantId,
+      }),
+    }).catch(() => {})
+  } catch {
+    // Operational telemetry must never interrupt the customer journey.
+  }
+}
 
 function mirror(
   event: MirroredEvent,
@@ -325,13 +360,6 @@ function mirror(
   body: {
     value: number
     contents: ReturnType<typeof contentsOf>
-    /**
-     * Piggybacks one attribution_actions row onto this same request, rather
-     * than firing a second one - see the note on /api/meta/event/route.ts.
-     * Only set for events that do not already have their own ledger writer
-     * (utils/attribution/whatsapp.ts covers whatsapp_click itself).
-     */
-    ledgerAction?: LedgerAction
   },
 ): void {
   if (typeof window === 'undefined') return
@@ -359,7 +387,6 @@ function mirror(
         value: body.value,
         currency: CURRENCY,
         contents: body.contents,
-        ledgerAction: body.ledgerAction,
         user: identity
           ? {
               email: identity.email?.trim().toLowerCase() || undefined,
@@ -390,7 +417,8 @@ export function trackViewContent(item: TrackedItem): void {
   const value = Number((item.price * item.quantity).toFixed(2))
 
   fbq('track', 'ViewContent', metaPayload([item]), { eventID: eventId })
-  mirror('ViewContent', eventId, { value, contents: contentsOf([item]), ledgerAction: 'product_view' })
+  mirror('ViewContent', eventId, { value, contents: contentsOf([item]) })
+  ledger('product_view', eventId, { variantId: item.variantId })
   ga('view_item', {
     currency: CURRENCY,
     value,
@@ -403,7 +431,8 @@ export function trackAddToCart(item: TrackedItem): void {
   const value = Number((item.price * item.quantity).toFixed(2))
 
   fbq('track', 'AddToCart', metaPayload([item]), { eventID: eventId })
-  mirror('AddToCart', eventId, { value, contents: contentsOf([item]), ledgerAction: 'add_to_cart' })
+  mirror('AddToCart', eventId, { value, contents: contentsOf([item]) })
+  ledger('add_to_cart', eventId, { variantId: item.variantId })
   ga('add_to_cart', {
     currency: CURRENCY,
     value,
@@ -422,8 +451,8 @@ export function trackInitiateCheckout(items: TrackedItem[], value: number): void
   mirror('InitiateCheckout', eventId, {
     value: Number(value.toFixed(2)),
     contents: contentsOf(items),
-    ledgerAction: 'checkout_start',
   })
+  ledger('checkout_start', eventId, { variantId: items[0]?.variantId })
   ga('begin_checkout', {
     currency: CURRENCY,
     value: Number(value.toFixed(2)),
@@ -503,8 +532,10 @@ export function trackContactEvent(ctx: ContactContext): void {
   mirror('Contact', eventId, {
     value: 0,
     contents: [],
-    ledgerAction: ctx.channel === 'phone' ? 'call_click' : undefined,
   })
+  if (ctx.channel === 'phone') {
+    ledger('call_click', eventId, { productId: ctx.productId, variantId: ctx.variantId })
+  }
 
   ga(ctx.channel === 'whatsapp' ? 'whatsapp_click' : 'phone_click', {
     link_url: ctx.path,

@@ -35,16 +35,9 @@
 // Purchase - the one number that has to be right - is still read from the
 // database in utils/orderConversions.ts and never from a request body.
 //
-// LEDGERACTION. Piggybacks one attribution_actions row onto this same
-// request when the browser supplies one (utils/tracking.ts sets it for
-// ViewContent/AddToCart/InitiateCheckout and for a phone Contact click) -
-// deliberately not a second fetch, since the Meta mirror already made one for
-// the same user action. A WhatsApp Contact click never sets this: it has its
-// own, richer writer in utils/attribution/whatsapp.ts (reference + enquiry
-// linkage this route cannot attach), and writing a second, poorer row here
-// would duplicate it rather than complete it. Visitor/session/arrival ids are
-// read from cookies, never trusted from the body, the same way every other
-// attribution route in this codebase does it.
+// FIRST-PARTY LEDGER. Operational actions are written through
+// /api/attribution/action, not here. That separation keeps the ledger working
+// without advertising consent while this endpoint remains consent-gated.
 
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
@@ -52,10 +45,9 @@ import { cookies, headers } from 'next/headers'
 import { rateLimit, callerKey } from '@/utils/rateLimit'
 import { sendCapiEvent } from '@/utils/metaCapi'
 import { createClient } from '@/utils/supabase/server'
-import { createAdminClient } from '@/utils/supabase/admin'
 import { isSensitiveUrl } from '@/utils/redactUrl'
 import { SITE_URL } from '@/constants/site'
-import { isServerTrackingEnabled } from '@/utils/trackingEnv'
+import { isProductionRequestHost, isServerTrackingEnabled } from '@/utils/trackingEnv'
 import { metaFbcFromTouch } from '@/utils/attribution/fbc'
 
 export const dynamic = 'force-dynamic'
@@ -84,7 +76,6 @@ const schema = z.object({
     lastName: z.string().max(100).optional(),
     postcode: z.string().max(16).optional(),
   }).optional(),
-  ledgerAction: z.enum(['product_view', 'add_to_cart', 'checkout_start', 'call_click']).optional(),
 })
 
 /** Accepted, ignored, or rejected - the browser is told nothing either way. */
@@ -98,6 +89,7 @@ export async function POST(request: Request) {
   if (!isServerTrackingEnabled()) return noContent(204)
 
   const hdrs = await headers()
+  if (!isProductionRequestHost(hdrs.get('host'))) return noContent(204)
 
   // Generous, because a real session legitimately fires several of these per
   // page. Low enough that a loop cannot use this endpoint to pump junk into
@@ -186,24 +178,6 @@ export async function POST(request: Request) {
     value: event.value,
     currency: event.currency ?? 'GBP',
   })
-
-  if (event.ledgerAction) {
-    try {
-      const admin = createAdminClient()
-      await admin.from('attribution_actions').insert({
-        visitor_id: jar.get('uksofashop_vid')?.value ?? null,
-        session_id: jar.get('uksofashop_sid')?.value ?? null,
-        arrival_id: jar.get('uksofashop_aid')?.value ?? null,
-        action_type: event.ledgerAction,
-        page_url: event.path,
-        // The first content line's id is the variant id for these events -
-        // see contentsOf() in utils/tracking.ts. Absent for a phone click.
-        variant_id: event.contents?.[0]?.id ?? null,
-      })
-    } catch (err) {
-      console.error(`Failed to write attribution_actions row for ${event.ledgerAction}`, err)
-    }
-  }
 
   return noContent(204)
 }
