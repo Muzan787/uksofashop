@@ -58,7 +58,7 @@ export async function POST(request: Request) {
 
   try {
     const admin = createAdminClient()
-    await admin.from('attribution_actions').upsert({
+    const { error } = await admin.from('attribution_actions').upsert({
       id: event.actionId,
       visitor_id: visitorId,
       session_id: sessionId,
@@ -73,6 +73,9 @@ export async function POST(request: Request) {
           : 'unclassified',
       },
     }, { onConflict: 'id', ignoreDuplicates: true })
+    if (error) {
+      console.error(`Failed to write attribution action ${event.action}: ${error.message}`)
+    }
   } catch (err) {
     console.error(`Failed to write attribution action ${event.action}`, err)
   }

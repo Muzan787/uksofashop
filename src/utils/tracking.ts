@@ -229,6 +229,8 @@ function ga(event: string, params: Record<string, unknown>): void {
  * Merchant feed publishes as <g:id>.
  */
 export interface TrackedItem {
+  /** Product row id when the caller has it (PDP events do; cart-only events may not). */
+  productId?: string
   variantId: string
   title: string
   price: number
@@ -297,7 +299,20 @@ type MirroredEvent = 'ViewContent' | 'AddToCart' | 'InitiateCheckout' | 'Contact
 function newEventId(): string {
   const c = globalThis.crypto
   if (c && typeof c.randomUUID === 'function') return c.randomUUID()
-  return Date.now().toString(36) + Math.random().toString(36).slice(1, 12)
+
+  // The first-party endpoint validates UUIDs so the compatibility fallback
+  // must honour the same contract. Older browsers may expose crypto without
+  // randomUUID; getRandomValues still gives us a standards-shaped v4 UUID.
+  const bytes = new Uint8Array(16)
+  if (c && typeof c.getRandomValues === 'function') {
+    c.getRandomValues(bytes)
+  } else {
+    for (let i = 0; i < bytes.length; i += 1) bytes[i] = Math.floor(Math.random() * 256)
+  }
+  bytes[6] = (bytes[6] & 0x0f) | 0x40
+  bytes[8] = (bytes[8] & 0x3f) | 0x80
+  const hex = Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('')
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`
 }
 
 /**
@@ -418,7 +433,7 @@ export function trackViewContent(item: TrackedItem): void {
 
   fbq('track', 'ViewContent', metaPayload([item]), { eventID: eventId })
   mirror('ViewContent', eventId, { value, contents: contentsOf([item]) })
-  ledger('product_view', eventId, { variantId: item.variantId })
+  ledger('product_view', eventId, { productId: item.productId, variantId: item.variantId })
   ga('view_item', {
     currency: CURRENCY,
     value,
@@ -432,7 +447,7 @@ export function trackAddToCart(item: TrackedItem): void {
 
   fbq('track', 'AddToCart', metaPayload([item]), { eventID: eventId })
   mirror('AddToCart', eventId, { value, contents: contentsOf([item]) })
-  ledger('add_to_cart', eventId, { variantId: item.variantId })
+  ledger('add_to_cart', eventId, { productId: item.productId, variantId: item.variantId })
   ga('add_to_cart', {
     currency: CURRENCY,
     value,
