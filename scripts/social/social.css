@@ -1,0 +1,237 @@
+/* scripts/social/social.css
+ *
+ * The Instagram layer of Mill & Velvet.
+ *
+ * Every colour, radius, shadow, gradient, easing and typeface below comes from
+ * src/styles/tokens.css, which the renderer inlines ahead of this file. This
+ * file adds only what a 1080px canvas needs that a browser viewport does not:
+ *
+ *   1. Sizes. The site's type scale is fluid with a 12px floor; a 1080px post
+ *      is viewed at roughly 400px wide, so the floor here is 28px and the
+ *      headline runs 96-120px. These are the only numbers in the system that
+ *      exist for Instagram alone, so they live here and nowhere else.
+ *
+ *   2. Grounds. Calico-50 vanishes against Instagram's white feed, so the
+ *      default post ground is calico-100, and ink-900 is the alternate for
+ *      grid rhythm. Each ground sets the semantic --g-* colours the templates
+ *      read, so a template never has to know which ground it is on.
+ *
+ *   3. The three brand primitives every template shares: the wordmark lockup,
+ *      the eyebrow and the ember rule.
+ *
+ * The font-family variables at the top are the same names next/font/google
+ * registers on the site, so the token stacks in tokens.css resolve unchanged.
+ */
+
+:root {
+  --font-fraunces:   "Fraunces";
+  --font-geist-sans: "Geist";
+  --font-geist-mono: "Geist Mono";
+
+  /* The renderer sets --canvas-w / --canvas-h inline on <html>. */
+  --pad: 72px;
+
+  --ig-eyebrow:  30px;   /* weight 500, 0.2em tracking, uppercase */
+  --ig-display: 120px;   /* Fraunces, -0.035em — carousel covers, big claims */
+  --ig-headline: 96px;   /* Fraunces, -0.025em — the everyday headline */
+  --ig-title:    64px;   /* Fraunces — product names on spec cards */
+  --ig-body:     40px;   /* Geist */
+  --ig-data:     36px;   /* Geist Mono — prices, dimensions */
+  --ig-caption:  30px;   /* Geist — the floor. Nothing goes below this. */
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: var(--canvas-w);
+  height: var(--canvas-h);
+  overflow: hidden;
+}
+
+body {
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
+}
+
+img { display: block; }
+
+/* ── Grounds ───────────────────────────────────────────────────────────── */
+
+.post {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  padding: var(--pad);
+  display: flex;
+  flex-direction: column;
+  color: var(--g-body);
+  background: var(--g-ground);
+}
+
+.ground-light {
+  --g-ground: var(--color-calico-100);
+  --g-fg:     var(--color-ink-900);
+  --g-body:   var(--color-ink-700);
+  --g-muted:  var(--color-ink-500);
+  --g-accent: var(--color-ember-700);   /* ember as text on light: 700 */
+  --g-line:   var(--color-calico-300);
+  --g-well:   var(--color-calico-200);
+}
+
+.ground-ink {
+  --g-ground: var(--grad-ink);
+  --g-fg:     var(--color-calico-50);
+  --g-body:   var(--color-calico-100);
+  --g-muted:  var(--color-calico-300);
+  --g-accent: var(--color-ember-300);   /* ember as text on dark: 300 */
+  --g-line:   rgba(251, 250, 247, 0.18);
+  --g-well:   var(--ink-lift);
+}
+
+/* ── Type ──────────────────────────────────────────────────────────────── */
+
+.eyebrow {
+  font-family: var(--font-body);
+  font-size: var(--ig-eyebrow);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--g-accent);
+}
+
+.display,
+.headline,
+.title {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  font-weight: 500;
+  color: var(--g-fg);
+  text-wrap: balance;
+}
+
+.display  { font-size: var(--ig-display);  line-height: 0.92; letter-spacing: -0.035em; }
+.headline { font-size: var(--ig-headline); line-height: 1.0;  letter-spacing: -0.025em; }
+.title    { font-size: var(--ig-title);    line-height: 1.05; letter-spacing: -0.02em; }
+
+.body {
+  font-size: var(--ig-body);
+  line-height: 1.4;
+  color: var(--g-body);
+  text-wrap: pretty;
+}
+
+.caption {
+  font-size: var(--ig-caption);
+  line-height: 1.4;
+  color: var(--g-muted);
+}
+
+.data {
+  font-family: var(--font-data);
+  font-size: var(--ig-data);
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--g-fg);
+}
+
+/* *word* in any headline, quote or body becomes an ember accent. */
+.accent { color: var(--g-accent); }
+
+/* ── Primitives ────────────────────────────────────────────────────────── */
+
+.rule {
+  width: 120px;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--color-ember-500);
+}
+
+/* The header wordmark, at post scale: the ember square with the sofa mark,
+   then "UK SofaShop" in Fraunces with "Shop" in ember-500 — the one place ember
+   is a fill used as letterform colour, because it is the mark, not copy. */
+.lockup {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  color: var(--g-fg);
+}
+.lockup-mark {
+  width: 72px;
+  height: 72px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-sm);
+  background: var(--grad-ember);
+  box-shadow: var(--shadow-e2);
+}
+.lockup-mark svg {
+  width: 44px;
+  height: 44px;
+  fill: none;
+  stroke: var(--color-ink-900);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.lockup-name {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  font-size: 46px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.025em;
+  white-space: nowrap;
+}
+.lockup-name .accent { color: var(--color-ember-500); }
+
+/* A label that has to read on top of a photograph. Ink-900 with ember-300
+   text, the same pairing as ember-on-dark everywhere else on the site. */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 18px 30px;
+  border-radius: var(--radius-pill);
+  background: var(--color-ink-900);
+  color: var(--color-ember-300);
+  font-size: var(--ig-eyebrow);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* The primary button, at post scale. Ink-900 on the ember gradient, never
+   white on ember — white on ember is 2.9:1 and fails AA. */
+.cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 18px;
+  padding: 26px 44px;
+  border-radius: var(--radius-sm);
+  background: var(--grad-ember);
+  box-shadow: var(--shadow-ember);
+  color: var(--color-ink-900);
+  font-size: var(--ig-caption);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+/* An image well: the rounded frame every non-full-bleed photo sits in. */
+.well {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  background: var(--g-well);
+}
+.well img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}

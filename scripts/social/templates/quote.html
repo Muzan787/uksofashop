@@ -1,0 +1,53 @@
+<!-- quote
+     A quote card. Defaults to the ink ground: this is the format that gives
+     the grid its dark beat every third or fourth post. No photograph, the
+     Fraunces letterforms are the image. -->
+<style>
+  /* The quote block floats in the space between the head and the foot, so a
+     short quote sits in the middle of the card rather than at the top. */
+  .q-block { margin: auto 0; padding: 40px 0; }
+  .q-mark {
+    font-family: var(--font-display);
+    font-optical-sizing: auto;
+    font-size: 280px;
+    font-weight: 500;
+    line-height: 1;
+    letter-spacing: -0.035em;
+    color: var(--color-ember-500);
+    height: 170px;                 /* the glyph sits at the top of its line box */
+  }
+  .q-text {
+    font-family: var(--font-display);
+    font-optical-sizing: auto;
+    font-weight: 400;
+    line-height: 1.12;
+    letter-spacing: -0.02em;
+    color: var(--g-fg);
+    text-wrap: balance;
+  }
+  .q-text .accent { font-style: italic; }
+  .q-after { display: flex; flex-direction: column; gap: 32px; margin-top: 56px; }
+  .q-foot {
+    margin-top: auto;
+    display: flex; align-items: flex-end; justify-content: space-between; gap: 32px;
+  }
+  .q-foot .caption { text-align: right; max-width: 46%; }
+</style>
+
+<div class="post {{groundClass}}">
+  <div class="q-block">
+    <div class="q-mark" aria-hidden="true">&ldquo;</div>
+    <blockquote class="q-text" style="font-size: {{quoteSize}}px">{{{quote}}}</blockquote>
+
+    <div class="q-after">
+      <div class="rule"></div>
+      {{#if attribution}}<div class="eyebrow">{{attribution}}</div>{{/if}}
+      {{#if body}}<p class="body">{{{body}}}</p>{{/if}}
+    </div>
+  </div>
+
+  <div class="q-foot">
+    {{{lockup}}}
+    {{#if caption}}<div class="caption">{{caption}}</div>{{/if}}
+  </div>
+</div>

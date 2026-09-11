@@ -1,0 +1,63 @@
+<!-- spec
+     A specification card: the photograph in a well, then the product name and
+     its specifications set in Geist Mono so the dimensions read as measurement
+     rather than marketing. Price and the delivery promise at the foot. Light
+     ground by default. -->
+<style>
+  .sp-head {
+    display: flex; align-items: center; justify-content: space-between; gap: 32px;
+    margin-bottom: 32px;
+  }
+  .sp-photo { height: 440px; flex: none; }
+  .sp-title { margin-top: 36px; }
+  .sp-rows {
+    margin-top: 36px;
+    border-top: 2px solid var(--g-line);
+  }
+  .sp-row {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    align-items: baseline;
+    gap: 32px;
+    padding: 16px 0;
+    border-bottom: 2px solid var(--g-line);
+  }
+  .sp-row dt { color: var(--g-muted); }
+  .sp-row dd { font-size: 32px; }
+  .sp-foot {
+    margin-top: auto;
+    display: flex; align-items: flex-end; justify-content: space-between; gap: 32px;
+    padding-top: 32px;
+  }
+  .sp-price { font-size: 52px; color: var(--g-accent); margin-top: 10px; }
+  .sp-foot > div:first-child { flex: none; white-space: nowrap; }
+  .sp-foot > .caption { flex: 1; text-align: right; }
+</style>
+
+<div class="post {{groundClass}}">
+  <div class="sp-head">
+    {{{lockup}}}
+    {{#if eyebrow}}<div class="eyebrow">{{eyebrow}}</div>{{/if}}
+  </div>
+
+  <div class="well sp-photo"><img src="{{image}}" alt=""></div>
+
+  <h1 class="title sp-title">{{{headline}}}</h1>
+
+  <dl class="sp-rows">
+    {{#each specs}}
+    <div class="sp-row">
+      <dt class="caption">{{key}}</dt>
+      <dd class="data">{{value}}</dd>
+    </div>
+    {{/each}}
+  </dl>
+
+  <div class="sp-foot">
+    <div>
+      {{#if priceLabel}}<div class="caption">{{priceLabel}}</div>{{/if}}
+      {{#if price}}<div class="data sp-price">{{price}}</div>{{/if}}
+    </div>
+    {{#if caption}}<div class="caption">{{caption}}</div>{{/if}}
+  </div>
+</div>

@@ -1,0 +1,39 @@
+<!-- carousel-cover
+     The first slide of a carousel: the claim in display Fraunces across the
+     top half, the photograph in a well below, a slide counter and a swipe cue.
+     Light ground by default; pass --ground ink for the dark beat. -->
+<style>
+  .cc-head {
+    display: flex; align-items: center; justify-content: space-between; gap: 32px;
+  }
+  .cc-body {
+    display: flex; flex-direction: column; gap: 36px;
+    margin-top: 72px;
+  }
+  .cc-photo { height: 560px; flex: none; margin-top: auto; }
+  .cc-foot {
+    display: flex; align-items: center; justify-content: space-between; gap: 32px;
+    margin-top: 40px;
+  }
+  .cc-foot .caption { max-width: 62%; }
+  .cc-swipe { display: inline-flex; align-items: center; gap: 14px; white-space: nowrap; margin-left: auto; }
+</style>
+
+<div class="post {{groundClass}}">
+  <div class="cc-head">
+    {{{lockup}}}
+    {{#if counter}}<div class="pill">{{counter}}</div>{{/if}}
+  </div>
+
+  <div class="cc-body">
+    {{#if eyebrow}}<div class="eyebrow">{{eyebrow}}</div>{{/if}}
+    <h1 class="display" style="font-size: {{headlineSize}}px">{{{headline}}}</h1>
+  </div>
+
+  <div class="well cc-photo"><img src="{{image}}" alt=""></div>
+
+  <div class="cc-foot">
+    {{#if body}}<div class="caption">{{{body}}}</div>{{/if}}
+    <div class="eyebrow cc-swipe">{{swipe}} &rarr;</div>
+  </div>
+</div>
