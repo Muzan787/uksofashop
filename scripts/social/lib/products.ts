@@ -107,10 +107,17 @@ export function resolveImage(
   const variants = photographedVariants(product)
 
   if (wanted) {
-    const match = variants.find(v => v.color?.toLowerCase() === wanted.toLowerCase())
+    // "Grey" matches by colour; "Grey Fabric" or "Fabric Grey" matches colour
+    // and material, for families that offer the same colour in two cloths.
+    const norm = (v: string | null | undefined) => (v ?? '').trim().toLowerCase()
+    const want = norm(wanted)
+    const match =
+      variants.find(v => norm(v.color) === want) ??
+      variants.find(v => `${norm(v.color)} ${norm(v.material)}` === want) ??
+      variants.find(v => `${norm(v.material)} ${norm(v.color)}` === want)
     if (!match) {
-      const have = variants.map(v => v.color).filter(Boolean).join(', ') || 'none'
-      throw new Error(`"${product.slug}" has no photographed "${wanted}" variant. Colours with photos: ${have}.`)
+      const have = variants.map(v => [v.color, v.material].filter(Boolean).join(' ')).join(', ') || 'none'
+      throw new Error(`"${product.slug}" has no photographed "${wanted}" variant. Variants with photos: ${have}.`)
     }
     return { url: match.image_url!, label: match.color ?? undefined }
   }
@@ -144,9 +151,14 @@ export function specRows(product: Product, limit = 4): { key: string; value: str
   const rows: { key: string; value: string }[] = []
   const specs = product.specifications ?? {}
 
-  for (const [key, raw] of Object.entries(specs)) {
+  // The admin panel stores keys as typed, so "dimensions" and "Dimensions"
+  // both occur; tabs and doubled spaces do too.
+  const tidy = (text: string) => text.replace(/\s+/g, ' ').trim()
+
+  for (const [rawKey, raw] of Object.entries(specs)) {
     if (raw === null || raw === undefined || raw === '') continue
-    const value = typeof raw === 'string' ? raw.trim() : String(raw)
+    const key = tidy(rawKey).replace(/^./, c => c.toUpperCase())
+    const value = typeof raw === 'string' ? tidy(raw) : String(raw)
 
     if (value === '✓' || value.toLowerCase() === 'true') {
       rows.push({ key, value: 'Yes' })
@@ -155,14 +167,11 @@ export function specRows(product: Product, limit = 4): { key: string; value: str
 
     if (value.includes('|')) {
       for (const part of value.split('|')) {
-        const piece = part.trim()
-        const colon = piece.indexOf(':')
-        const looksLabelled = colon > 0 && !/^[LHWD]:/i.test(piece)
-        rows.push(
-          looksLabelled
-            ? { key: piece.slice(0, colon).trim(), value: piece.slice(colon + 1).trim() }
-            : { key, value: piece },
-        )
+        const piece = tidy(part)
+        // "3 Seater: L:198cm ..." or "3-Seater  L:198 cm ..." — the piece
+        // name is whatever precedes the first L:/H:/W:/D: measurement.
+        const labelled = piece.match(/^(.+?)\s*:?\s+((?:[LHWD]\s*:).*)$/i)
+        rows.push(labelled ? { key: labelled[1].trim(), value: labelled[2] } : { key, value: piece })
       }
       continue
     }

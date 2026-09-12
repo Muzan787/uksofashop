@@ -1,0 +1,32 @@
+[
+  {
+    "_": "Three posts, in posting order: quote, spec, then the six-slide carousel. This row sits above the High Back row (calico | ink | calico), so the cover and quote are on ink and the spec on calico.",
+    "format": "quote",
+    "quote": "Real leather or soft fabric.|Five finishes.|*Reclines in all of them.*",
+    "attribution": "Roma Recliner · from £280",
+    "body": "Armchair to five-seater corner. Free UK Mainland delivery."
+  },
+  {
+    "format": "spec",
+    "product": "roma-recliner-manual-3-and-2",
+    "variant": "Brown Leather",
+    "headline": "Roma Recliner",
+    "eyebrow": "3+2 Seater Set · Manual"
+  },
+  {
+    "_": "The carousel: cover, then every colour and material the Roma comes in, on the 3+2 set. Six slides.",
+    "format": "carousel-cover",
+    "ground": "ink",
+    "product": "roma-recliner-manual-3-and-2",
+    "variant": "Brown Leather",
+    "headline": "Roma|Recliner",
+    "eyebrow": "Five finishes · From £280",
+    "body": "Real leather in four colours, grey fabric too — swipe through them all",
+    "count": "6"
+  },
+  { "format": "full-bleed", "product": "roma-recliner-manual-3-and-2", "variant": "Black Leather", "headline": "Black",  "eyebrow": "Roma Recliner · Real leather", "count": "6", "index": "2", "cta": "" },
+  { "format": "full-bleed", "product": "roma-recliner-manual-3-and-2", "variant": "Brown Leather", "headline": "Brown",  "eyebrow": "Roma Recliner · Real leather", "count": "6", "index": "3", "cta": "" },
+  { "format": "full-bleed", "product": "roma-recliner-manual-3-and-2", "variant": "Cream Leather", "headline": "Cream",  "eyebrow": "Roma Recliner · Real leather", "count": "6", "index": "4", "cta": "" },
+  { "format": "full-bleed", "product": "roma-recliner-manual-3-and-2", "variant": "Grey Leather",  "headline": "Grey",   "eyebrow": "Roma Recliner · Real leather", "count": "6", "index": "5", "cta": "" },
+  { "format": "full-bleed", "product": "roma-recliner-manual-3-and-2", "variant": "Grey Fabric",   "headline": "Grey",   "eyebrow": "Roma Recliner · Fabric",       "count": "6", "index": "6" }
+]
