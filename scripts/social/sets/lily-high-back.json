@@ -1,0 +1,32 @@
+[
+  {
+    "_": "Three posts, in posting order: quote, spec, then the five-slide carousel. This row sits above the Roma row (ink | calico | ink), so the cover and quote are on calico and the spec on ink.",
+    "format": "quote",
+    "ground": "light",
+    "quote": "Plush velvet.|A back you can *lean* on.",
+    "attribution": "Lily High Back · from £749",
+    "body": "Four shapes, made to order. Free UK Mainland delivery."
+  },
+  {
+    "format": "spec",
+    "ground": "ink",
+    "product": "lily-high-back-3and2-seater",
+    "variant": "Grey",
+    "headline": "Lily High Back",
+    "eyebrow": "3+2 Seater Set · Plush velvet"
+  },
+  {
+    "_": "The carousel: cover, then the four shapes, each in a different velvet so the colours show too. Five slides.",
+    "format": "carousel-cover",
+    "product": "lily-high-back-3and2-seater",
+    "variant": "Grey",
+    "headline": "Lily|High Back",
+    "eyebrow": "Four shapes · From £749",
+    "body": "3+2 set, corner, U-shape and armed U-shape — swipe through them all",
+    "count": "5"
+  },
+  { "format": "full-bleed", "product": "lily-high-back-3and2-seater",        "variant": "Grey",      "headline": "3+2 Seater Set",  "eyebrow": "Lily High Back · Grey velvet",  "count": "5", "index": "2", "cta": "" },
+  { "format": "full-bleed", "product": "lily-high-back-5-seater-corner-2c2", "variant": "Navy Blue", "headline": "5 Seater Corner", "eyebrow": "Lily High Back · Navy velvet",  "count": "5", "index": "3", "cta": "" },
+  { "format": "full-bleed", "product": "lily-high-back-u-shape",             "variant": "Black",     "headline": "U-Shape",         "eyebrow": "Lily High Back · Black velvet", "count": "5", "index": "4", "cta": "" },
+  { "format": "full-bleed", "product": "lily-high-back-armed-u-shape",       "variant": "Beige",     "headline": "Armed U-Shape",   "eyebrow": "Lily High Back · Beige velvet", "count": "5", "index": "5" }
+]
