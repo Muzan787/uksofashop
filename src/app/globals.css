@@ -71,6 +71,20 @@
     overscroll-behavior-y: none;
   }
 
+  /* Photographs cannot be dragged off the page, selected, or long-pressed into
+     the phone's save sheet. `-webkit-touch-callout` is the one that matters on
+     iOS, which never fires contextmenu for a long-press, so nothing in script
+     could catch it. The right-click menu and Firefox's drag are handled by
+     components/UI/ImageGuard.tsx, storefront only. Layout, hover scaling and
+     the carousels are untouched: none of them depend on the image itself
+     receiving a drag. */
+  img {
+    -webkit-user-drag: none;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+
   /* Headings default to Fraunces. Small headings — card titles, list labels —
      carry `font-body` to override this, because Fraunces below 20px loses the
      optical-size advantage it was chosen for and reads worse than the sans.

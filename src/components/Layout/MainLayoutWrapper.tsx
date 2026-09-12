@@ -5,6 +5,7 @@ import Header from "./Header"
 import Footer from "./Footer"
 import MobileNav from "./Mobilenav"
 import PWAPromptManager from "@/components/Admin/PWAPromptManager"
+import ImageGuard from "@/components/UI/ImageGuard"
 import SmoothScroll from "@/components/Motion/SmoothScroll"
 import ScrollProgress from "@/components/Motion/ScrollProgress"
 import ViewTransitions from "@/components/Motion/ViewTransitions"
@@ -51,6 +52,9 @@ export default function MainLayoutWrapper({
           owner could never be offered the admin app either. */}
       <BrandEntrance />
       <PWAPromptManager />
+      {/* Storefront only, on purpose: the owner saving his own product shots
+          out of the admin panel is not the thing this exists to stop. */}
+      <ImageGuard />
       <ScrollProgress />
       <ViewTransitions />
       <Cursor />
