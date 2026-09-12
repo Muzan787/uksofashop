@@ -1,0 +1,29 @@
+[
+  {
+    "_": "Three posts, in posting order: quote, spec, then the three-slide carousel. This row sits above the Orlando row (calico | ink | calico), so the cover and quote are on ink and the spec on calico.",
+    "format": "quote",
+    "quote": "The corner|that *reclines*.",
+    "attribution": "Oxford Electric Corner · £999",
+    "body": "Black or grey leather, with USB ports, cup holders and LED lights built in. Free UK Mainland delivery."
+  },
+  {
+    "format": "spec",
+    "product": "oxford-electric-corner",
+    "variant": "Grey",
+    "headline": "Oxford Electric Corner",
+    "eyebrow": "Corner · Leather"
+  },
+  {
+    "_": "The carousel: cover, then the two leathers. Three slides — the Oxford is photographed in black and grey only.",
+    "format": "carousel-cover",
+    "ground": "ink",
+    "product": "oxford-electric-corner",
+    "variant": "Black",
+    "headline": "Oxford|Electric Corner",
+    "eyebrow": "Two leathers · £999",
+    "body": "The reclining corner in black and grey leather — swipe to see both",
+    "count": "3"
+  },
+  { "format": "full-bleed", "product": "oxford-electric-corner", "variant": "Black", "headline": "Black", "eyebrow": "Oxford Electric Corner · Leather", "count": "3", "index": "2", "cta": "" },
+  { "format": "full-bleed", "product": "oxford-electric-corner", "variant": "Grey",  "headline": "Grey",  "eyebrow": "Oxford Electric Corner · Leather", "count": "3", "index": "3" }
+]
