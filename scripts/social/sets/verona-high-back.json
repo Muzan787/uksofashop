@@ -1,0 +1,33 @@
+[
+  {
+    "_": "Three posts, in posting order: quote, spec, then the eight-slide carousel. This row sits above the Scattered Back row (ink | calico | ink), so here the cover and quote are on calico and the spec on ink to keep the checkerboard.",
+    "format": "quote",
+    "ground": "light",
+    "quote": "Tall backs. Deep seats.|*Every* cushion included.",
+    "attribution": "Verona High Back · from £279",
+    "body": "Seven shapes, made to order. Free UK Mainland delivery."
+  },
+  {
+    "format": "spec",
+    "ground": "ink",
+    "product": "verona-high-back-3and2-seater",
+    "headline": "Verona High Back",
+    "eyebrow": "3+2 Seater Set"
+  },
+  {
+    "_": "The carousel: cover, then every shape in the family from the armchair up. Eight slides.",
+    "format": "carousel-cover",
+    "product": "verona-high-back-3and2-seater",
+    "headline": "Verona|High Back",
+    "eyebrow": "Seven shapes · From £279",
+    "body": "Armchair to five-seater corner — swipe through the whole set",
+    "count": "8"
+  },
+  { "format": "full-bleed", "product": "verona-high-back-arm-chair",            "headline": "Armchair",        "eyebrow": "Verona High Back",       "count": "8", "index": "2", "cta": "" },
+  { "format": "full-bleed", "product": "verona-high-back-2-seater",             "headline": "2 Seater",        "eyebrow": "Verona High Back",       "count": "8", "index": "3", "cta": "" },
+  { "format": "full-bleed", "product": "verona-high-back-3-seater",             "headline": "3 Seater",        "eyebrow": "Verona High Back",       "count": "8", "index": "4", "cta": "" },
+  { "format": "full-bleed", "product": "verona-high-back-3and2-seater",         "headline": "3+2 Seater Set",  "eyebrow": "Verona High Back",       "count": "8", "index": "5", "cta": "" },
+  { "format": "full-bleed", "product": "verona-high-back-4-seater-corner-1c2",  "headline": "4 Seater Corner", "eyebrow": "Verona High Back · 1c2", "count": "8", "index": "6", "cta": "" },
+  { "format": "full-bleed", "product": "verona-high-back-4-seater-corner-2c1",  "headline": "4 Seater Corner", "eyebrow": "Verona High Back · 2c1", "count": "8", "index": "7", "cta": "" },
+  { "format": "full-bleed", "product": "verona-high-back-5-seater-corner-2c2",  "headline": "5 Seater Corner", "eyebrow": "Verona High Back",       "count": "8", "index": "8" }
+]
