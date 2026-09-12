@@ -147,7 +147,7 @@ export function formatPrice(product: Product): string {
  *     one row per piece, keyed by the piece ("3 Seater", "2 Seater")
  *   - everything else is shown as typed, capped at `limit` rows
  */
-export function specRows(product: Product, limit = 4): { key: string; value: string }[] {
+export function specRows(product: Product, limit = 5): { key: string; value: string }[] {
   const rows: { key: string; value: string }[] = []
   const specs = product.specifications ?? {}
 
@@ -166,8 +166,17 @@ export function specRows(product: Product, limit = 4): { key: string; value: str
     }
 
     if (value.includes('|')) {
-      for (const part of value.split('|')) {
-        const piece = tidy(part)
+      const pieces = value.split('|').map(tidy).filter(Boolean)
+
+      // "Length:169 | Width:94 | Height:94" — one measurement per piece, so
+      // they read better as one row than as three rows all keyed Dimensions.
+      const labelledNumbers = pieces.map(piece => piece.match(/^([A-Za-z][A-Za-z ]*?)\s*:\s*(\d\S*)$/))
+      if (labelledNumbers.every(Boolean)) {
+        rows.push({ key, value: labelledNumbers.map(m => `${m![1].trim()} ${m![2]}`).join(' · ') })
+        continue
+      }
+
+      for (const piece of pieces) {
         // "3 Seater: L:198cm ..." or "3-Seater  L:198 cm ..." — the piece
         // name is whatever precedes the first L:/H:/W:/D: measurement.
         const labelled = piece.match(/^(.+?)\s*:?\s+((?:[LHWD]\s*:).*)$/i)

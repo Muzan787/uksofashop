@@ -275,7 +275,7 @@ async function buildData(
       return {
         lockup,
         groundClass: `ground-${opts.ground}`,
-        image: cloudinaryFill(url, inner, Math.round(canvas.height * 0.36)),
+        image: cloudinaryFill(url, inner, Math.round(canvas.height * 0.33)),
         eyebrow: opts.eyebrow ?? defaultEyebrow(p),
         headline: richText(breaks(opts.headline ?? defaultHeadline(p))),
         specs: rows,

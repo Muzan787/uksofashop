@@ -1,0 +1,29 @@
+[
+  {
+    "_": "Three posts, in posting order: quote, spec, then the five-slide carousel. This row sits above the Malibu row (calico | ink | calico), so the cover and quote are on ink and the spec on calico.",
+    "format": "quote",
+    "quote": "Sit back.|*Press a button.*|USB ports and cup holders built in.",
+    "attribution": "Nova Electric Recliner · from £550",
+    "body": "Four shapes in elephant grey tech leather. Free UK Mainland delivery."
+  },
+  {
+    "format": "spec",
+    "product": "nova-electric-recliner-3-seater",
+    "headline": "Nova Electric Recliner",
+    "eyebrow": "3 Seater · Elephant grey tech leather"
+  },
+  {
+    "_": "The carousel: cover, then the four shapes. Five slides.",
+    "format": "carousel-cover",
+    "ground": "ink",
+    "product": "nova-electric-recliner-3and2-seater",
+    "headline": "Nova|Electric Recliner",
+    "eyebrow": "Four shapes · From £550",
+    "body": "2 seater, 3 seater, 3+2 set and corner, all in elephant grey tech leather — swipe through them all",
+    "count": "5"
+  },
+  { "format": "full-bleed", "product": "nova-electric-recliner-2-seater",     "headline": "2 Seater",       "eyebrow": "Nova Electric Recliner · Tech leather", "count": "5", "index": "2", "cta": "" },
+  { "format": "full-bleed", "product": "nova-electric-recliner-3-seater",     "headline": "3 Seater",       "eyebrow": "Nova Electric Recliner · Tech leather", "count": "5", "index": "3", "cta": "" },
+  { "format": "full-bleed", "product": "nova-electric-recliner-3and2-seater", "headline": "3+2 Seater Set", "eyebrow": "Nova Electric Recliner · Tech leather", "count": "5", "index": "4", "cta": "" },
+  { "format": "full-bleed", "product": "nova-electric-recliner-corner",       "headline": "Corner",         "eyebrow": "Nova Electric Recliner · Tech leather", "count": "5", "index": "5" }
+]
