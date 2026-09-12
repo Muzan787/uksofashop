@@ -155,6 +155,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // src/utils/navigation.ts for what that was costing.
   const navCategories = await getNavCategories();
 
+  // The assistant only exists when there is a key to answer with. Decided
+  // here, on the server, so a deploy without the key simply has no "Ask us"
+  // pill rather than a pill that opens onto an error.
+  const chatEnabled = Boolean(process.env.ANTHROPIC_API_KEY);
+
   return (
     // The three next/font variables go on <html>, not <body>.
     //
@@ -223,7 +228,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           />
           
           {/* Use the wrapper here instead of hardcoding Header/Footer */}
-          <MainLayoutWrapper categories={navCategories}>
+          <MainLayoutWrapper categories={navCategories} chatEnabled={chatEnabled}>
             {children}
           </MainLayoutWrapper>
 

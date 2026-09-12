@@ -69,8 +69,9 @@ function coveringBarHeight(): number {
  * safe-area inset on mobile, and drops to a plain 24px edge inset at the `lg`
  * breakpoint where there is no bottom navigation to clear - both as a single
  * CSS rule, because the mobile figure is a calc() no Tailwind utility can
- * express. `--fab-extra`, set below, adds the height of any covering bar on
- * top of that.
+ * express. `--fab-extra`, published on <html> below, adds the height of any
+ * covering bar on top of that - for this button and for the assistant's
+ * "Ask us" pill stacked above it.
  *
  * STACKING. z-sticky-bar (30): below the bottom navigation (40, so this never
  * sits over the primary nav), below the cookie-consent banner (60, so a
@@ -173,6 +174,19 @@ export default function WhatsAppFab() {
     };
   }, [pathname]);
 
+  // Published on <html> rather than set on this element, because the
+  // assistant's pill (components/Chat/ChatWidget.tsx) stands directly above
+  // this one and has to clear the same bar. One measurement, two consumers -
+  // see .fab-offset and .fab-offset-2 in globals.css.
+  useEffect(() => {
+    const root = document.documentElement;
+    if (extra > 0) root.style.setProperty('--fab-extra', `${extra + 12}px`);
+    else root.style.removeProperty('--fab-extra');
+    return () => {
+      root.style.removeProperty('--fab-extra');
+    };
+  }, [extra]);
+
   return (
     <a
       ref={ref}
@@ -181,7 +195,6 @@ export default function WhatsAppFab() {
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Chat with us on WhatsApp"
-      style={extra > 0 ? ({ '--fab-extra': `${extra + 12}px` } as React.CSSProperties) : undefined}
       className="hover-btn btn-whatsapp shadow-whatsapp fab-offset fixed right-4 z-sticky-bar flex h-12 items-center gap-2 rounded-pill bg-whatsapp px-4 text-ink-900 no-underline transition-[bottom] duration-base ease-out-expo focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-900"
     >
       <svg viewBox="0 0 24 24" aria-hidden="true" className="h-6 w-6 shrink-0 fill-current">

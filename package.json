@@ -12,6 +12,7 @@
     "social:outro": "node --env-file-if-exists=.env --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/social/render-outro.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.125.0",
     "@ducanh2912/next-pwa": "^10.2.9",
     "@next/third-parties": "^16.3.1",
     "@supabase/ssr": "^0.8.0",

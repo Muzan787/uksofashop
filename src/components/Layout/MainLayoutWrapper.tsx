@@ -13,15 +13,19 @@ import PageFade from "@/components/Motion/PageFade"
 import Cursor from "@/components/Motion/Cursor"
 import BrandEntrance from "@/components/Motion/BrandEntrance"
 import WhatsAppFab from "./WhatsAppFab"
+import ChatWidget from "@/components/Chat/ChatWidget"
 import type { NavCategory } from '@/utils/navigation'
 
 export default function MainLayoutWrapper({
   children,
   categories,
+  chatEnabled,
 }: {
   children: React.ReactNode
   /** Fetched once in the root layout. Was a client query in both consumers. */
   categories: NavCategory[]
+  /** Whether the server has an API key for the assistant. The root layout decides. */
+  chatEnabled?: boolean
 }) {
   const pathname = usePathname()
   const isAdmin = pathname?.startsWith('/admin')
@@ -74,6 +78,9 @@ export default function MainLayoutWrapper({
           scroll position, repositions above pinned bottom bars, and switches
           to support-only semantics in known existing-order contexts. */}
       <WhatsAppFab />
+      {/* The "Ask us" pill, stacked above WhatsApp. Storefront only, like the
+          button it stands on, and only when there is a key to answer with. */}
+      {chatEnabled && <ChatWidget />}
       <MobileNav />
     </SmoothScroll>
   )
