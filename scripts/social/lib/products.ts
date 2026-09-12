@@ -142,31 +142,53 @@ export function formatPrice(product: Product): string {
  * The specifications JSON as rows for the spec card. The admin panel stores
  * free-form keys, so this only tidies what it finds:
  *
- *   - a "✓" value reads as "Yes"
- *   - a Dimensions string that lists several pieces separated by "|" becomes
- *     one row per piece, keyed by the piece ("3 Seater", "2 Seater")
+ *   - every "✓" row is gathered into one row keyed "Included", so a recliner's
+ *     USB port, LED lights and cup holders take one line rather than three
+ *   - a Dimensions string that lists several pieces (separated by "|" or by
+ *     line breaks) becomes one row per piece, keyed by the piece ("3 Seater",
+ *     "2 Seater")
+ *   - a string of "Label: number" pieces ("Length:169 | Width:94") becomes one
+ *     row reading "Length 169 · Width 94"
+ *   - a "Style" row goes last: it is the least informative line on the card,
+ *     so it is the one to lose when there are more rows than fit
  *   - everything else is shown as typed, capped at `limit` rows
  */
 export function specRows(product: Product, limit = 5): { key: string; value: string }[] {
   const rows: { key: string; value: string }[] = []
+  const included: string[] = []
+  const styleRows: { key: string; value: string }[] = []
   const specs = product.specifications ?? {}
 
   // The admin panel stores keys as typed, so "dimensions" and "Dimensions"
   // both occur; tabs and doubled spaces do too.
   const tidy = (text: string) => text.replace(/\s+/g, ' ').trim()
+  const isMeasure = (text: string) => /(^|\s)[LHWD]\s*:/i.test(text)
 
   for (const [rawKey, raw] of Object.entries(specs)) {
     if (raw === null || raw === undefined || raw === '') continue
     const key = tidy(rawKey).replace(/^./, c => c.toUpperCase())
-    const value = typeof raw === 'string' ? tidy(raw) : String(raw)
+    const source = typeof raw === 'string' ? raw : String(raw)
+    const value = tidy(source)
 
     if (value === '✓' || value.toLowerCase() === 'true') {
-      rows.push({ key, value: 'Yes' })
+      included.push(key.replace(/\s*included$/i, ''))
       continue
     }
 
-    if (value.includes('|')) {
-      const pieces = value.split('|').map(tidy).filter(Boolean)
+    if (/[|\n]/.test(source)) {
+      // Pieces are separated by "|" or by line breaks. A label on a line of
+      // its own ("3-Seater") belongs to the measurement on the next line.
+      const parts = source.split(/\||\r?\n/).map(tidy).filter(Boolean)
+      const pieces: string[] = []
+      for (let i = 0; i < parts.length; i++) {
+        const next = parts[i + 1]
+        if (!isMeasure(parts[i]) && next && /^[LHWD]\s*:/i.test(next)) {
+          pieces.push(`${parts[i]} ${next}`)
+          i++
+        } else {
+          pieces.push(parts[i])
+        }
+      }
 
       // "Length:169 | Width:94 | Height:94" — one measurement per piece, so
       // they read better as one row than as three rows all keyed Dimensions.
@@ -185,8 +207,14 @@ export function specRows(product: Product, limit = 5): { key: string; value: str
       continue
     }
 
+    if (key.toLowerCase() === 'style') {
+      styleRows.push({ key, value })
+      continue
+    }
+
     rows.push({ key, value })
   }
 
-  return rows.slice(0, limit)
+  if (included.length) rows.push({ key: 'Included', value: included.join(' · ') })
+  return [...rows, ...styleRows].slice(0, limit)
 }

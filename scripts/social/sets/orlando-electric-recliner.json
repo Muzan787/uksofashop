@@ -1,0 +1,32 @@
+[
+  {
+    "_": "Three posts, in posting order: quote, spec, then the five-slide carousel. This row sits above the Nova row (ink | calico | ink), so the cover and quote are on calico and the spec on ink.",
+    "format": "quote",
+    "ground": "light",
+    "quote": "Real leather.|Electric recline.|*And it lights up.*",
+    "attribution": "Orlando Electric Recliner · £999",
+    "body": "A 3+2 set in four leathers, with USB ports, cup holders and LED lights built in. Free UK Mainland delivery."
+  },
+  {
+    "format": "spec",
+    "ground": "ink",
+    "product": "orlando-electric-recliner",
+    "variant": "Brown",
+    "headline": "Orlando Electric Recliner",
+    "eyebrow": "3+2 Seater Set · Real leather"
+  },
+  {
+    "_": "The carousel: cover, then the four leathers. Five slides.",
+    "format": "carousel-cover",
+    "product": "orlando-electric-recliner",
+    "variant": "Brown",
+    "headline": "Orlando|Electric Recliner",
+    "eyebrow": "Four leathers · £999",
+    "body": "The 3+2 set in black, brown, cream and grey real leather — swipe through them all",
+    "count": "5"
+  },
+  { "format": "full-bleed", "product": "orlando-electric-recliner", "variant": "Black", "headline": "Black", "eyebrow": "Orlando Electric Recliner · Real leather", "count": "5", "index": "2", "cta": "" },
+  { "format": "full-bleed", "product": "orlando-electric-recliner", "variant": "Brown", "headline": "Brown", "eyebrow": "Orlando Electric Recliner · Real leather", "count": "5", "index": "3", "cta": "" },
+  { "format": "full-bleed", "product": "orlando-electric-recliner", "variant": "Cream", "headline": "Cream", "eyebrow": "Orlando Electric Recliner · Real leather", "count": "5", "index": "4", "cta": "" },
+  { "format": "full-bleed", "product": "orlando-electric-recliner", "variant": "Grey",  "headline": "Grey",  "eyebrow": "Orlando Electric Recliner · Real leather", "count": "5", "index": "5" }
+]
