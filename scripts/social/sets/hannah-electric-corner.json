@@ -1,0 +1,30 @@
+[
+  {
+    "_": "Three posts, in posting order: quote, spec, then the three-slide carousel. This row sits above the Oxford row (ink | calico | ink), so the cover and quote are on calico and the spec on ink.",
+    "format": "quote",
+    "ground": "light",
+    "quote": "Soft micro fabric.|Electric recline.|*Room for everyone.*",
+    "attribution": "Hannah Electric Corner · £999",
+    "body": "Grey or beige, 290cm each way, with USB ports and cup holders built in. Free UK Mainland delivery."
+  },
+  {
+    "format": "spec",
+    "ground": "ink",
+    "product": "hannah-electric-corner",
+    "variant": "Grey",
+    "headline": "Hannah Electric Corner",
+    "eyebrow": "Corner · Micro fabric"
+  },
+  {
+    "_": "The carousel: cover, then the two fabrics. Three slides — the Hannah is photographed in grey and beige only.",
+    "format": "carousel-cover",
+    "product": "hannah-electric-corner",
+    "variant": "Beige",
+    "headline": "Hannah|Electric Corner",
+    "eyebrow": "Two fabrics · £999",
+    "body": "The reclining corner in grey and beige micro fabric — swipe to see both",
+    "count": "3"
+  },
+  { "format": "full-bleed", "product": "hannah-electric-corner", "variant": "Grey",  "headline": "Grey",  "eyebrow": "Hannah Electric Corner · Micro fabric", "count": "3", "index": "2", "cta": "" },
+  { "format": "full-bleed", "product": "hannah-electric-corner", "variant": "Beige", "headline": "Beige", "eyebrow": "Hannah Electric Corner · Micro fabric", "count": "3", "index": "3" }
+]
