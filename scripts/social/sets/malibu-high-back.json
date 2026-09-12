@@ -1,0 +1,31 @@
+[
+  {
+    "_": "Three posts, in posting order: quote, spec, then the six-slide carousel. This row sits above the Lily Scattered Back row (ink | calico | ink), so the cover and quote are on calico and the spec on ink.",
+    "format": "quote",
+    "ground": "light",
+    "quote": "Oatmeal marble fabric.|A tall, buttoned back.|*The light one.*",
+    "attribution": "Malibu High Back · from £399",
+    "body": "Four shapes, made to order. Free UK Mainland delivery."
+  },
+  {
+    "format": "spec",
+    "ground": "ink",
+    "product": "malibu-high-back-3and2-seater",
+    "headline": "Malibu High Back",
+    "eyebrow": "3+2 Seater Set · Oatmeal marble"
+  },
+  {
+    "_": "The carousel: cover, then the four shapes in oatmeal, and the corner in pebble velvet. Six slides.",
+    "format": "carousel-cover",
+    "product": "malibu-high-back-3and2-seater",
+    "headline": "Malibu|High Back",
+    "eyebrow": "Four shapes · From £399",
+    "body": "2 seater to five-seater corner in oatmeal marble, and the corner in pebble velvet — swipe through them all",
+    "count": "6"
+  },
+  { "format": "full-bleed", "product": "malibu-high-back-2-seater",             "headline": "2 Seater",        "eyebrow": "Malibu High Back · Oatmeal marble", "count": "6", "index": "2", "cta": "" },
+  { "format": "full-bleed", "product": "malibu-high-back-3-seater",             "headline": "3 Seater",        "eyebrow": "Malibu High Back · Oatmeal marble", "count": "6", "index": "3", "cta": "" },
+  { "format": "full-bleed", "product": "malibu-high-back-3and2-seater",         "headline": "3+2 Seater Set",  "eyebrow": "Malibu High Back · Oatmeal marble", "count": "6", "index": "4", "cta": "" },
+  { "format": "full-bleed", "product": "malibu-high-back-5-seater-corner-2c2",  "variant": "Oatmeal", "headline": "5 Seater Corner", "eyebrow": "Malibu High Back · Oatmeal marble", "count": "6", "index": "5", "cta": "" },
+  { "format": "full-bleed", "product": "malibu-high-back-5-seater-corner-2c2",  "variant": "Pebble",  "headline": "5 Seater Corner", "eyebrow": "Malibu High Back · Pebble velvet",  "count": "6", "index": "6" }
+]
