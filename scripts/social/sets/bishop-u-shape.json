@@ -1,0 +1,26 @@
+[
+  {
+    "_": "Three posts, in posting order: quote, spec, then the two-slide carousel. This row sits above the Hannah row (calico | ink | calico), so the cover and quote are on ink and the spec on calico.",
+    "format": "quote",
+    "quote": "Three sides of *sofa*.|Scattered back,|made to order.",
+    "attribution": "Bishop U-Shape · £649",
+    "body": "190 × 320 × 190cm in Tokyo fabric. Free UK Mainland delivery."
+  },
+  {
+    "format": "spec",
+    "product": "bishop-u-shaped-scattered-back-sofa",
+    "headline": "Bishop U-Shape",
+    "eyebrow": "Scattered Back · Tokyo fabric"
+  },
+  {
+    "_": "The carousel: cover, then the sofa. Two slides — the Bishop is photographed once, in truffle.",
+    "format": "carousel-cover",
+    "ground": "ink",
+    "product": "bishop-u-shaped-scattered-back-sofa",
+    "headline": "Bishop|U-Shape",
+    "eyebrow": "Scattered Back · £649",
+    "body": "A U-shape in truffle Tokyo fabric, made to order — swipe to see it whole",
+    "count": "2"
+  },
+  { "format": "full-bleed", "product": "bishop-u-shaped-scattered-back-sofa", "headline": "Truffle", "eyebrow": "Bishop U-Shape · Tokyo fabric", "count": "2", "index": "2" }
+]
