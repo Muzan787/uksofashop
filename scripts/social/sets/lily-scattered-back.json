@@ -1,0 +1,35 @@
+[
+  {
+    "_": "Three posts, in posting order: quote, spec, then the nine-slide carousel. This row sits above the Lily High Back row (calico | ink | calico), so the cover and quote are on ink and the spec on calico.",
+    "format": "quote",
+    "quote": "Loose cushions|in plush velvet.|*Sink in.*",
+    "attribution": "Lily Scattered Back · from £699",
+    "body": "Two shapes, four velvets, made to order. Free UK Mainland delivery."
+  },
+  {
+    "format": "spec",
+    "product": "lily-scattered-back-3and2-seater",
+    "variant": "Grey",
+    "headline": "Lily Scattered Back",
+    "eyebrow": "3+2 Seater Set · Plush velvet"
+  },
+  {
+    "_": "The carousel: cover, then both shapes in each of the four velvets, paired by colour. Nine slides.",
+    "format": "carousel-cover",
+    "ground": "ink",
+    "product": "lily-scattered-back-5-seater-corner-2c2",
+    "variant": "Beige",
+    "headline": "Lily|Scattered Back",
+    "eyebrow": "Two shapes · Four velvets · From £699",
+    "body": "3+2 set and five-seater corner, in grey, black, navy and beige — swipe through them all",
+    "count": "9"
+  },
+  { "format": "full-bleed", "product": "lily-scattered-back-3and2-seater",        "variant": "Grey",      "headline": "3+2 Seater Set",  "eyebrow": "Lily Scattered Back · Grey velvet",  "count": "9", "index": "2", "cta": "" },
+  { "format": "full-bleed", "product": "lily-scattered-back-5-seater-corner-2c2", "variant": "Grey",      "headline": "5 Seater Corner", "eyebrow": "Lily Scattered Back · Grey velvet",  "count": "9", "index": "3", "cta": "" },
+  { "format": "full-bleed", "product": "lily-scattered-back-3and2-seater",        "variant": "Black",     "headline": "3+2 Seater Set",  "eyebrow": "Lily Scattered Back · Black velvet", "count": "9", "index": "4", "cta": "" },
+  { "format": "full-bleed", "product": "lily-scattered-back-5-seater-corner-2c2", "variant": "Black",     "headline": "5 Seater Corner", "eyebrow": "Lily Scattered Back · Black velvet", "count": "9", "index": "5", "cta": "" },
+  { "format": "full-bleed", "product": "lily-scattered-back-3and2-seater",        "variant": "Navy Blue", "headline": "3+2 Seater Set",  "eyebrow": "Lily Scattered Back · Navy velvet",  "count": "9", "index": "6", "cta": "" },
+  { "format": "full-bleed", "product": "lily-scattered-back-5-seater-corner-2c2", "variant": "Navy Blue", "headline": "5 Seater Corner", "eyebrow": "Lily Scattered Back · Navy velvet",  "count": "9", "index": "7", "cta": "" },
+  { "format": "full-bleed", "product": "lily-scattered-back-3and2-seater",        "variant": "Beige",     "headline": "3+2 Seater Set",  "eyebrow": "Lily Scattered Back · Beige velvet", "count": "9", "index": "8", "cta": "" },
+  { "format": "full-bleed", "product": "lily-scattered-back-5-seater-corner-2c2", "variant": "Beige",     "headline": "5 Seater Corner", "eyebrow": "Lily Scattered Back · Beige velvet", "count": "9", "index": "9" }
+]
