@@ -1,0 +1,32 @@
+[
+  {
+    "_": "Three posts, in posting order: quote, spec, then the eight-slide carousel — so the carousel lands top-left, the spec beside it, the quote on the right. The cover and the quote sit on ink and the spec on calico so the new row keeps the checkerboard against the launch grid beneath it.",
+    "format": "quote",
+    "quote": "Loose cushions to *sink into*.|A frame we guarantee.",
+    "attribution": "Verona Scattered Back · from £249",
+    "body": "Seven shapes, made to order. Free UK Mainland delivery."
+  },
+  {
+    "format": "spec",
+    "product": "verona-scattered-back-3and2-seater",
+    "headline": "Verona Scattered Back",
+    "eyebrow": "3+2 Seater Set"
+  },
+  {
+    "_": "The carousel: cover, then every shape in the family from the armchair up. Eight slides.",
+    "format": "carousel-cover",
+    "ground": "ink",
+    "product": "verona-scattered-back-3and2-seater",
+    "headline": "Verona|Scattered Back",
+    "eyebrow": "Seven shapes · From £249",
+    "body": "Armchair to five-seater corner — swipe through the whole set",
+    "count": "8"
+  },
+  { "format": "full-bleed", "product": "verona-scattered-back-arm-chair",            "headline": "Armchair",        "eyebrow": "Verona Scattered Back",       "count": "8", "index": "2", "cta": "" },
+  { "format": "full-bleed", "product": "verona-scattered-back-2-seater",             "headline": "2 Seater",        "eyebrow": "Verona Scattered Back",       "count": "8", "index": "3", "cta": "" },
+  { "format": "full-bleed", "product": "verona-scattered-back-3-seater",             "headline": "3 Seater",        "eyebrow": "Verona Scattered Back",       "count": "8", "index": "4", "cta": "" },
+  { "format": "full-bleed", "product": "verona-scattered-back-3and2-seater",         "headline": "3+2 Seater Set",  "eyebrow": "Verona Scattered Back",       "count": "8", "index": "5", "cta": "" },
+  { "format": "full-bleed", "product": "verona-scattered-back-4-seater-corner-1c2",  "headline": "4 Seater Corner", "eyebrow": "Verona Scattered Back · 1c2", "count": "8", "index": "6", "cta": "" },
+  { "format": "full-bleed", "product": "verona-scattered-back-4-seater-corner-2c1",  "headline": "4 Seater Corner", "eyebrow": "Verona Scattered Back · 2c1", "count": "8", "index": "7", "cta": "" },
+  { "format": "full-bleed", "product": "verona-scattered-back-5-seater-corner-2c2",  "headline": "5 Seater Corner", "eyebrow": "Verona Scattered Back",       "count": "8", "index": "8" }
+]
