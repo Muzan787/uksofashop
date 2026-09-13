@@ -3,18 +3,15 @@
 
 import Image from 'next/image';
 import { ChevronRight, Palette } from 'lucide-react';
-import FabricDialog from './FabricDialog';
 import { blurDataURL } from '@/utils/cloudinary';
 import type { Fabric, FabricCollection } from './types';
 
 interface Props {
   collections: FabricCollection[];
   selected: Fabric | null;
-  onSelect: (fabric: Fabric | null) => void;
-  /** Controlled from the page, so 'Add to basket' can open it when no fabric
-   *  has been chosen yet - nagging is worse than just showing the choice. */
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  /** Opens the picker. The dialog itself is rendered by the page, because
+   *  choosing a fabric there puts the sofa in the cart - see FabricDialog. */
+  onOpen: () => void;
 }
 
 /**
@@ -36,7 +33,7 @@ interface Props {
  * belongs behind a deliberate tap - the same reasoning as "See Dimensions"
  * three lines below it.
  */
-export default function FabricChoice({ collections, selected, onSelect, open, onOpenChange }: Props) {
+export default function FabricChoice({ collections, selected, onOpen }: Props) {
   if (collections.length === 0) return null;
 
   const total = collections.reduce((n, c) => n + c.fabrics.length, 0);
@@ -57,7 +54,7 @@ export default function FabricChoice({ collections, selected, onSelect, open, on
 
       <button
         type="button"
-        onClick={() => onOpenChange(true)}
+        onClick={onOpen}
         className="hover-btn flex w-full cursor-pointer items-center gap-3 rounded-md border border-calico-300 bg-calico-50 p-2.5 text-left shadow-e1"
       >
         {selected ? (
@@ -100,15 +97,6 @@ export default function FabricChoice({ collections, selected, onSelect, open, on
 
         <ChevronRight aria-hidden="true" className="h-4 w-4 shrink-0 text-ink-500" />
       </button>
-
-      {open && (
-        <FabricDialog
-          collections={collections}
-          selectedId={selected?.id ?? null}
-          onChoose={onSelect}
-          onClose={() => onOpenChange(false)}
-        />
-      )}
     </div>
   );
 }

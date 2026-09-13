@@ -214,9 +214,9 @@
    *
    * Flush, rather than the 68px of breathing room .pb-bottom-nav leaves: two
    * stacked bars with a strip of page showing between them reads as a mistake,
-   * and the product page's add-to-cart bar has always sat directly on the
-   * navigation. It is the same expression StickyBar writes inline, lifted here
-   * because a second bar now needs it and a third will.
+   * and the product page's add-to-cart bar, while it existed, always sat
+   * directly on the navigation. It is the same expression that bar wrote
+   * inline, lifted here because a second bar needed it and a third did.
    *
    * The media query is built in for exactly the reason it is built into
    * .pb-bottom-nav: the navigation is lg:hidden, so above the breakpoint there
@@ -1527,7 +1527,8 @@ html.entrance .brand-entrance__rule {
   28%, 60% { translate: 0 3px; }
 }
 
-/* Where the floating button sits.
+/* Where the floating buttons sit - WhatsApp and "Ask us" on the left, the
+ * product page's "Add to cart" on the right. Same rules, both corners.
  *
  * In CSS rather than on the element, because the two rules it needs cannot
  * both be expressed there. The mobile offset has to be a calc() against
@@ -1541,13 +1542,15 @@ html.entrance .brand-entrance__rule {
  */
 /*
  * --fab-extra is set from JS (components/Layout/WhatsAppFab.tsx) on <html>, to
- * the measured height of whatever full-width bar - the product add-to-cart
- * bar, the checkout total bar - is currently pinned to the same edge, so the
- * button is pushed up clear of it rather than hidden. Defaults to 0px, so a
- * page with no such bar (and every desktop width, where none of them render)
- * is unaffected. It lives on the root rather than on the button so that the
- * assistant's pill (components/Chat/ChatWidget.tsx), which stands one
- * pill-height above, is lifted by the same amount without measuring twice.
+ * the measured height of whatever full-width bar - the checkout total bar,
+ * the sample basket on /swatches - is currently pinned to the same edge, so
+ * the buttons are pushed up clear of it rather than hidden. Defaults to 0px,
+ * so a page with no such bar is unaffected. It lives on the root rather than
+ * on any one button so that the assistant's pill (components/Chat/
+ * ChatWidget.tsx), which stands one pill-height above WhatsApp, and the
+ * add-to-cart pill in the opposite corner (components/Product/
+ * AddToCartFab.tsx) are all lifted by the same amount without measuring
+ * three times.
  */
 .fab-offset {
   bottom: calc(var(--bottom-nav) + env(safe-area-inset-bottom) + 16px + var(--fab-extra, 0px));

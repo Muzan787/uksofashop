@@ -7,16 +7,21 @@
 //
 //   Gallery      the photographs and the colour swatches
 //   BuyBox       title, price, delivery dates, the choices, add to cart
-//   StickyBar    the phone's add-to-cart bar
+//   AddToCartFab the floating add-to-cart pill, bottom right, every width
 //   Details      description, specifications, delivery, dimensions
 //   Reviews      the reviews and the form
 //   Similar      more from the same category, and Recently viewed under it
+//
+// On made-to-order frames it also renders the fabric picker (FabricDialog),
+// because "Build mine in this" puts the sofa in the cart and the cart is held
+// here.
 //
 // This file was 1,361 lines with all six of them inlined, roughly two hundred
 // inline style objects, and one <h1> rendered twice.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ChevronRight, Phone, Sparkles } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { toggleWishlist } from '@/app/actions/wishlist';
@@ -27,14 +32,15 @@ import { useWhatsAppCTA } from '@/utils/attribution/useWhatsAppCTA';
 import { usePhoneClick } from '@/utils/attribution/usePhoneClick';
 import type { DeliveryWindow } from '@/utils/delivery';
 import { accentVars } from './accent';
+import AddToCartFab from './AddToCartFab';
 import BuyBox from './BuyBox';
 import Details from './Details';
+import FabricDialog from './FabricDialog';
 import Gallery from './Gallery';
 import RecentlyViewed from './RecentlyViewed';
 import Reviews from './Reviews';
 import SecondaryActions from './SecondaryActions';
 import Similar from './Similar';
-import StickyBar from './StickyBar';
 import WhatsAppIcon from './WhatsAppIcon';
 import Modal from '@/components/UI/Modal';
 import type { Fabric, FabricCollection, GalleryImage, Product, Review, SimilarProduct, SizeVariant, Swatch, Variant } from './types';
@@ -81,6 +87,7 @@ export default function ProductPageClient({
   fabrics = [],
 }: Props) {
   const { addToCart } = useCart();
+  const router = useRouter();
 
   // ── Variant selection ────────────────────────────────────────────────────
   const materials = useMemo(
@@ -213,7 +220,7 @@ export default function ProductPageClient({
   // ── Fabric, on made-to-order frames ──────────────────────────────────────
   //
   // Held here rather than inside the picker because two things need it: the
-  // basket line, and "Add to basket" itself, which opens the dialog rather than
+  // basket line, and "Add to cart" itself, which opens the dialog rather than
   // complaining when nothing has been chosen yet.
   const madeToOrder = Boolean(product.custom_made) && fabrics.length > 0;
   const [fabric, setFabric] = useState<Fabric | null>(null);
@@ -221,30 +228,28 @@ export default function ProductPageClient({
 
   // ── Cart ─────────────────────────────────────────────────────────────────
   const [added, setAdded] = useState(false);
-  const handleAdd = useCallback(() => {
-    if (!selVariant) return;
 
-    // You cannot build a sofa without knowing what to build it in. Rather than
-    // refusing, this puts the choice in front of them - one tap, instead of an
-    // error they then have to go and resolve for themselves.
-    if (madeToOrder && !fabric) {
-      setFabricOpen(true);
-      return;
-    }
+  // The one place a line goes into the cart. Both add-to-cart buttons and the
+  // fabric picker's "Build mine in this" come through here, so the line, the
+  // toast and the AddToCart event are the same whichever was pressed. Takes
+  // the fabric as an argument rather than reading state because the picker
+  // has just chosen it, and the state will not have caught up yet.
+  const addLine = useCallback((inFabric: Fabric | null) => {
+    if (!selVariant) return false;
 
     addToCart({
       variant_id: selVariant.id,
       quantity: 1,
       price,
       title: product.title,
-      color: fabric
-        ? `${fabric.collectionName} ${fabric.name}`
+      color: inFabric
+        ? `${inFabric.collectionName} ${inFabric.name}`
         : `${selVariant.color ?? ''} ${selVariant.material ?? ''}`.trim(),
       image_url: images[0]?.src || '/placeholder.svg',
-      fabric_id: fabric?.id ?? null,
-      fabric_label: fabric ? `${fabric.collectionName} ${fabric.name}` : null,
-      fabric_code: fabric?.code ?? null,
-      fabric_swatch: fabric?.image ?? null,
+      fabric_id: inFabric?.id ?? null,
+      fabric_label: inFabric ? `${inFabric.collectionName} ${inFabric.name}` : null,
+      fabric_code: inFabric?.code ?? null,
+      fabric_swatch: inFabric?.image ?? null,
     });
     // Fired here rather than inside the cart reducer: the reducer runs inside a
     // setState updater, which React may invoke more than once.
@@ -252,7 +257,30 @@ export default function ProductPageClient({
     setAdded(true);
     toast.success(`${product.title} added to cart`, { icon: '🛋️', position: 'top-center' });
     setTimeout(() => setAdded(false), 2000);
-  }, [selVariant, price, product.id, product.title, images, addToCart, madeToOrder, fabric]);
+    return true;
+  }, [selVariant, price, product.id, product.title, images, addToCart]);
+
+  // The buy box's button and the floating pill.
+  const handleAdd = useCallback(() => {
+    // You cannot build a sofa without knowing what to build it in. Rather than
+    // refusing, this puts the choice in front of them - one tap, instead of an
+    // error they then have to go and resolve for themselves.
+    if (madeToOrder && !fabric) {
+      setFabricOpen(true);
+      return;
+    }
+    addLine(fabric);
+  }, [madeToOrder, fabric, addLine]);
+
+  // "Build mine in this", from inside the picker: the sofa goes into the cart
+  // in that fabric and the customer goes with it. Nothing is left to decide on
+  // this page once the fabric is chosen, so there is no reason to close the
+  // dialog and leave them looking for the next button.
+  const handleBuild = useCallback((chosen: Fabric) => {
+    setFabric(chosen);
+    setFabricOpen(false);
+    if (addLine(chosen)) router.push('/checkout');
+  }, [addLine, router]);
 
   // ── Wishlist ─────────────────────────────────────────────────────────────
   const [inWishlist, setInWishlist] = useState(initialWishlistState);
@@ -292,23 +320,6 @@ export default function ProductPageClient({
   });
 
   const [showCustomSize, setShowCustomSize] = useState(false);
-
-  // ── When the bar comes up ────────────────────────────────────────────────
-  // Once the real add-to-cart button has left the top of the viewport, and not
-  // before: a toolbar over the first screenful of a product page is covering
-  // the product.
-  const ctaRef = useRef<HTMLDivElement>(null);
-  const [pastCta, setPastCta] = useState(false);
-  useEffect(() => {
-    const el = ctaRef.current;
-    if (!el) return;
-    const io = new IntersectionObserver(
-      ([entry]) => setPastCta(!entry.isIntersecting && entry.boundingClientRect.top < 0),
-      { threshold: 0 },
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
 
   const crumbCategory = titleCase(categoryName || categorySlug);
 
@@ -389,9 +400,7 @@ export default function ProductPageClient({
               material={selMat === 'Standard' ? '' : selMat}
               fabrics={fabrics}
               selectedFabric={fabric}
-              onSelectFabric={madeToOrder ? setFabric : undefined}
-              fabricDialogOpen={fabricOpen}
-              onFabricDialogChange={madeToOrder ? setFabricOpen : undefined}
+              onOpenFabrics={madeToOrder ? () => setFabricOpen(true) : undefined}
             />
           </div>
 
@@ -430,7 +439,6 @@ export default function ProductPageClient({
                 inWishlist={inWishlist}
                 wishlistBusy={wishlistBusy}
                 onWishlist={handleWishlist}
-                ctaRef={ctaRef}
               />
             </div>
           </div>
@@ -476,19 +484,22 @@ export default function ProductPageClient({
           image={images[0]?.src ?? null}
           price={price}
         />
-
-        {/* Clears the sticky bar, which is fixed and out of the flow. */}
-        <div aria-hidden="true" className="h-[76px] md:hidden" />
       </div>
 
-      <StickyBar
-        image={images[0]?.src ?? null}
-        title={product.title}
-        price={price}
-        visible={pastCta}
-        added={added}
-        onAdd={handleAdd}
-      />
+      {/* Bottom right, opposite the WhatsApp pill, from the moment the page
+          loads. The same handler as the buy box's button, so a made-to-order
+          frame with no fabric chosen opens the picker from here too. */}
+      <AddToCartFab price={price} added={added} onAdd={handleAdd} />
+
+      {madeToOrder && fabricOpen && (
+        <FabricDialog
+          collections={fabrics}
+          selectedId={fabric?.id ?? null}
+          productSlug={product.slug}
+          onBuild={handleBuild}
+          onClose={() => setFabricOpen(false)}
+        />
+      )}
 
       {showCustomSize && (
         <CustomSizeModal

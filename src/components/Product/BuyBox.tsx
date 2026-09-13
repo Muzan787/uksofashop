@@ -37,9 +37,6 @@ interface Props {
   inWishlist: boolean;
   wishlistBusy: boolean;
   onWishlist: () => void;
-
-  /** The sticky bar watches this block to know when it has scrolled away. */
-  ctaRef?: React.Ref<HTMLDivElement>;
 }
 
 /**
@@ -88,9 +85,10 @@ function readableDimensions(specifications: Product['specifications']): string {
  * doorstep decides in that sequence — what is it, do people rate it, what does
  * it cost, when does it turn up.
  *
- * One DOM order serves both widths, including the add-to-cart block, which now
- * renders at every size. The phone's sticky bar is a reminder of that button
- * rather than a replacement for it.
+ * One DOM order serves both widths, including the add-to-cart block, which
+ * renders at every size. The floating pill in the bottom-right corner
+ * (AddToCartFab) is the same button within reach at every scroll position,
+ * not a replacement for this one.
  */
 export default function BuyBox({
   product, price, reviewCount, averageRating, estimate, categorySlug,
@@ -98,7 +96,6 @@ export default function BuyBox({
   sizes, onCustomSize,
   materials, selectedMaterial, onSelectMaterial,
   added, onAdd, inWishlist, wishlistBusy, onWishlist,
-  ctaRef,
 }: Props) {
   // A style with no product behind it is dropped rather than rendered as a
   // pill that goes nowhere.
@@ -241,7 +238,7 @@ export default function BuyBox({
       )}
 
       {/* ── Add to cart ────────────────────────────────────────────────── */}
-      <div ref={ctaRef}>
+      <div>
         <AddToCart
           price={price}
           added={added}

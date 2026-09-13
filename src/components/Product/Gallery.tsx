@@ -27,9 +27,8 @@ interface Props {
   /** Made-to-order products only. Empty elsewhere, and the block is not drawn. */
   fabrics?: FabricCollection[];
   selectedFabric?: Fabric | null;
-  onSelectFabric?: (fabric: Fabric | null) => void;
-  fabricDialogOpen?: boolean;
-  onFabricDialogChange?: (open: boolean) => void;
+  /** Opens the fabric picker, which the page renders - see FabricDialog. */
+  onOpenFabrics?: () => void;
 }
 
 /**
@@ -103,8 +102,7 @@ const MAGNIFY_WIDTH = 1120;
  */
 export default function Gallery({
   productId, title, images, swatches, selectedColor, onSelectColor, material,
-  fabrics = [], selectedFabric = null, onSelectFabric,
-  fabricDialogOpen = false, onFabricDialogChange,
+  fabrics = [], selectedFabric = null, onOpenFabrics,
 }: Props) {
   const fine = usePointerFine();
   const reduced = Boolean(useReducedMotionSafe());
@@ -387,13 +385,11 @@ export default function Gallery({
       {/* The fabric the sofa gets BUILT in, which on a made-to-order frame is a
           different question from which colourway we happen to have photographed
           - see the note in FabricChoice. */}
-      {onSelectFabric && onFabricDialogChange && (
+      {onOpenFabrics && (
         <FabricChoice
           collections={fabrics}
           selected={selectedFabric}
-          onSelect={onSelectFabric}
-          open={fabricDialogOpen}
-          onOpenChange={onFabricDialogChange}
+          onOpen={onOpenFabrics}
         />
       )}
 

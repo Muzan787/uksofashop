@@ -3,11 +3,13 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { BookOpen, ChevronRight, MessageCircle, Package, PhoneCall, Truck } from 'lucide-react'
 import EditorialSchema from '@/components/Editorial/EditorialSchema'
-import { SamplesProvider, SampleBar } from '@/components/Product/FabricSamples'
+import { SamplesProvider, SampleBar, type SampleBarSofa } from '@/components/Product/FabricSamples'
 import { getFabricLibrary } from '@/utils/fabrics'
 import { MAX_SAMPLES } from '@/constants/swatches'
 import WhatsAppLink from '@/components/UI/WhatsAppLink'
-import { ogImage } from '@/utils/socialImage'
+import { leadVariantImage, ogImage } from '@/utils/socialImage'
+import { canonicalProductPath } from '@/utils/productUrl'
+import { createClient } from '@/utils/supabase/server'
 import SwatchBrowser from './SwatchBrowser'
 
 /**
@@ -53,6 +55,22 @@ import SwatchBrowser from './SwatchBrowser'
  *
  * The Open Graph block is not decoration either. This URL's whole life is
  * being pasted into WhatsApp, and WhatsApp renders the card, not the page.
+ *
+ * TWO THINGS THE URL CAN CARRY, both optional, both from the product page's
+ * fabric picker and its "Order samples" button:
+ *
+ *   ?sofa=<product slug>   The sofa the customer left to come here. It is
+ *                          looked up and pinned to the bottom of the screen
+ *                          with the way back, so ordering samples reads as a
+ *                          detour from an order rather than the end of one.
+ *                          Also a link worth sending by hand: /swatches?sofa=
+ *                          verona-... shows somebody the range AND the sofa.
+ *
+ *   ?pick=<fabric code>    The swatch they were looking at when they asked,
+ *                          already in the basket as the first of their three.
+ *
+ * Neither changes what the page is, and an unknown slug or code is simply
+ * ignored - the canonical stays /swatches.
  */
 
 const DESCRIPTION =
@@ -106,9 +124,43 @@ const PROMISES = [
   { icon: PhoneCall, label: 'A quick call', detail: 'Before anything goes in the post' },
 ]
 
-export default async function SwatchesPage() {
-  const collections = await getFabricLibrary()
+type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>
+
+/** The sofa named in ?sofa=, as the bar needs it. Null for anything unknown. */
+async function sofaFromSlug(slug: string | undefined): Promise<SampleBarSofa | null> {
+  if (!slug) return null
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('products')
+    .select('title, slug, base_price, is_active, categories!products_category_id_fkey(slug), product_categories(categories(slug)), product_variants(image_url, priority)')
+    .eq('slug', slug)
+    .maybeSingle()
+
+  if (!data || data.is_active === false) return null
+  return {
+    title: data.title,
+    href: canonicalProductPath(data),
+    image: leadVariantImage(data.product_variants) ?? null,
+    price: Number(data.base_price) || 0,
+  }
+}
+
+export default async function SwatchesPage(props: { searchParams: SearchParams }) {
+  const params = await props.searchParams
+  const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v)
+
+  const [collections, sofa] = await Promise.all([
+    getFabricLibrary(),
+    sofaFromSlug(one(params.sofa)),
+  ])
   const total = collections.reduce((n, c) => n + c.fabrics.length, 0)
+
+  // Codes are matched case-insensitively: they are typed by hand in chats
+  // as often as they arrive from a button.
+  const pick = one(params.pick)?.trim().toLowerCase()
+  const picked = pick
+    ? collections.flatMap(c => c.fabrics).find(f => f.swatchable && f.code.toLowerCase() === pick)
+    : undefined
 
   return (
     <div className="min-h-screen bg-calico-50">
@@ -124,7 +176,7 @@ export default async function SwatchesPage() {
         description={DESCRIPTION}
       />
 
-      <SamplesProvider collections={collections}>
+      <SamplesProvider collections={collections} initialSamples={picked ? [picked] : []}>
         {/* ── Hero ───────────────────────────────────────────────────────────
             Deliberately not EditorialHero. That one is 44vh of dark ground
             before a word of content, which is right at the top of a guide
@@ -241,7 +293,7 @@ export default async function SwatchesPage() {
           </div>
         </section>
 
-        <SampleBar />
+        <SampleBar sofa={sofa} />
       </SamplesProvider>
     </div>
   )

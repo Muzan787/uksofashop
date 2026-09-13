@@ -3,7 +3,8 @@
 
 import { createContext, useContext, useState } from 'react'
 import Image from 'next/image'
-import { Check, Package, Plus } from 'lucide-react'
+import Link from 'next/link'
+import { ArrowLeft, Check, Package, Plus } from 'lucide-react'
 import Modal from '@/components/UI/Modal'
 import SwatchRequestForm from '@/components/Product/SwatchRequestForm'
 import { blurDataURL } from '@/utils/cloudinary'
@@ -48,11 +49,14 @@ export function useSamples() {
   return ctx
 }
 
-export function SamplesProvider({ collections, children }: {
+export function SamplesProvider({ collections, initialSamples = [], children }: {
   collections: FabricCollection[]
+  /** Already in the basket when the page opens - the swatch somebody was
+   *  looking at on a product page when they asked for samples. */
+  initialSamples?: Fabric[]
   children: React.ReactNode
 }) {
-  const [samples, setSamples] = useState<Fabric[]>([])
+  const [samples, setSamples] = useState<Fabric[]>(initialSamples.slice(0, MAX_SAMPLES))
 
   const holding = (id: string) => samples.some(s => s.id === id)
 
@@ -171,31 +175,85 @@ export function CollectionSwatches({ slug }: { slug: string }) {
   )
 }
 
+/** The sofa somebody left to come here, so the bar can send them back to it. */
+export interface SampleBarSofa {
+  title: string
+  href: string
+  image: string | null
+  price: number
+}
+
 /**
  * The basket, pinned to the bottom of the window once there is something in it.
  *
  * Absent until the first swatch is picked. A bar that sits there empty from the
  * moment the page loads is a permanent instruction to do something the reader
  * has not decided to do yet, on a page whose first job is to be read.
+ *
+ * THE SOFA ROW is the exception, and it is there from the first paint. When
+ * /swatches is reached from a product page's "Order samples" button, the sofa
+ * the customer was about to buy is named in the URL, and it stays on screen
+ * here - photograph, name, price and the way back - for as long as they are
+ * on the page. The samples are a detour from an order, and the bar is what
+ * keeps the order in view while they take it. It survives the request being
+ * sent, because that is exactly when they want to go back.
+ *
+ * One bar, two rows, rather than two bars: stacked on a phone above the
+ * bottom navigation, two separate bars with a strip of page between them read
+ * as a mistake, and the WhatsApp pill would have to measure both.
  */
-export function SampleBar() {
+export function SampleBar({ sofa }: { sofa?: SampleBarSofa | null }) {
   const { samples, remove } = useSamples()
   const [asking, setAsking] = useState(false)
   const [sent, setSent] = useState(false)
 
-  if (samples.length === 0 && !sent) return null
+  const picking = samples.length > 0 && !sent
+
+  if (!picking && !sent && !sofa) return null
 
   return (
     <>
-      {!sent && (
-        <div
-          // Tells the floating WhatsApp button to stand down while this is up,
-          // which it was not doing: the green pill sits at the bottom right on
-          // exactly the spot this bar puts its one button.
-          // See bottomBarShowing() in src/components/Layout/WhatsAppFab.tsx.
-          data-bottom-bar=""
-          className="sticky above-bottom-nav z-sticky-bar border-t border-calico-300 bg-calico-50/95 backdrop-blur-sm"
-        >
+      <div
+        // Tells the floating pills to stand clear while this is up - the
+        // WhatsApp one on the left and, on the product page, "Add to cart"
+        // on the right both read this. See coveringBarHeight() in
+        // src/components/Layout/WhatsAppFab.tsx.
+        data-bottom-bar=""
+        className="sticky above-bottom-nav z-sticky-bar border-t border-calico-300 bg-calico-50/95 backdrop-blur-sm"
+      >
+        {sofa && (
+          <div
+            className={`mx-auto flex max-w-shell items-center gap-3 px-4 py-2.5 sm:px-6 lg:px-8 ${
+              picking || sent ? 'border-b border-calico-300' : ''
+            }`}
+          >
+            <span className="relative h-11 w-11 shrink-0 overflow-hidden rounded-sm bg-calico-200">
+              {sofa.image && (
+                <Image src={sofa.image} alt="" fill sizes="44px" className="object-cover" />
+              )}
+            </span>
+
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-body-sm font-semibold leading-tight text-ink-900">
+                {sofa.title}
+              </span>
+              <span className="mt-0.5 block truncate font-data text-caption tabular-nums leading-tight text-ink-500">
+                £{sofa.price.toFixed(0)}
+                <span className="hidden sm:inline"> · built in any fabric on this page</span>
+              </span>
+            </span>
+
+            <Link
+              href={sofa.href}
+              className="hover-btn flex h-10 shrink-0 items-center gap-2 rounded-pill border border-calico-300 bg-calico-50 px-4 text-body-sm font-semibold text-ink-900 no-underline"
+            >
+              <ArrowLeft aria-hidden="true" className="h-4 w-4" />
+              Back to <span className="hidden sm:inline">the </span>sofa
+            </Link>
+          </div>
+        )}
+
+        {picking && (
           <div className="mx-auto flex max-w-shell flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
             <div className="flex min-w-0 items-center gap-3">
               <span className="shrink-0 font-data text-caption uppercase tracking-widest text-ink-500">
@@ -236,8 +294,26 @@ export function SampleBar() {
               Post {samples.length === 1 ? 'it' : 'them'} to me, free
             </button>
           </div>
-        </div>
-      )}
+        )}
+
+        {sent && (
+          <div className="bg-sage-50">
+            <div className="mx-auto flex max-w-shell items-center gap-3 px-4 py-4 sm:px-6 lg:px-8">
+              <span
+                aria-hidden="true"
+                className="grid h-9 w-9 shrink-0 place-items-center rounded-pill bg-sage-700"
+              >
+                <Check className="h-4 w-4 text-calico-50" strokeWidth={3} />
+              </span>
+              <p className="m-0 text-body-sm leading-relaxed text-ink-700">
+                <strong className="font-semibold text-ink-900">That&apos;s gone through.</strong>{' '}
+                We&apos;ll give you a ring to check we&apos;ve understood what you&apos;re after,
+                then post them. Nothing to pay, nothing to send back.
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
 
       {asking && !sent && (
         <Modal
@@ -252,27 +328,6 @@ export function SampleBar() {
             onSent={() => { setSent(true); setAsking(false) }}
           />
         </Modal>
-      )}
-
-      {sent && (
-        <div
-          data-bottom-bar=""
-          className="sticky above-bottom-nav z-sticky-bar border-t border-sage-700/30 bg-sage-50"
-        >
-          <div className="mx-auto flex max-w-shell items-center gap-3 px-4 py-4 sm:px-6 lg:px-8">
-            <span
-              aria-hidden="true"
-              className="grid h-9 w-9 shrink-0 place-items-center rounded-pill bg-sage-700"
-            >
-              <Check className="h-4 w-4 text-calico-50" strokeWidth={3} />
-            </span>
-            <p className="m-0 text-body-sm leading-relaxed text-ink-700">
-              <strong className="font-semibold text-ink-900">That&apos;s gone through.</strong>{' '}
-              We&apos;ll give you a ring to check we&apos;ve understood what you&apos;re after,
-              then post them. Nothing to pay, nothing to send back.
-            </p>
-          </div>
-        </div>
       )}
     </>
   )
