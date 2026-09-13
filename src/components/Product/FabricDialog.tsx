@@ -52,6 +52,14 @@ interface Props {
  * customer straight back to it - and with this fabric already in their basket
  * there, so the one they were looking at is the first of their three.
  *
+ * BOTH BUTTONS LIVE IN THE DIALOG'S FOOTER, not under the description. On a
+ * phone the zoomed swatch is a 343px square, and by the time the name, the
+ * code and the paragraph have followed it the buttons were 40px below the
+ * bottom of the panel - the one control the dialog exists for, reachable only
+ * by scrolling a dialog nobody expects to scroll. The footer is pinned below
+ * the scrolling body at every width, so "Build mine in this" is on screen
+ * from the moment a swatch opens, whatever the phone's height.
+ *
  * THE ZOOM. Tapping a tile does not open a second dialog on top of this one; it
  * is the same element, grown. `layoutId` hands framer the tile's rectangle and
  * the panel's rectangle and it animates the difference, so the swatch you
@@ -87,6 +95,36 @@ export default function FabricDialog({ collections, selectedId, productSlug, onB
       onClose={onClose}
       size="full"
       icon={<Palette aria-hidden="true" className="h-4 w-4 text-ember-700" />}
+      footer={zoomed ? (
+        <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-end">
+          {/* The order is the phone's: the ember button first, so it is the
+              first thing under the swatch, then samples, then the one line of
+              explanation. On a desktop the same three lay out left to right as
+              caption, samples, build - the primary at the far right where a
+              dialog's confirming action always is. */}
+          <button
+            type="button"
+            onClick={() => onBuild(zoomed)}
+            className="hover-btn btn-ember sheen shadow-ember flex h-12 cursor-pointer items-center justify-center gap-2 rounded-pill border-0 bg-ember-500 px-6 text-body-sm font-semibold text-ink-900 sm:order-last"
+          >
+            <ShoppingBag aria-hidden="true" className="h-4 w-4" />
+            Build mine in this
+          </button>
+
+          <Link
+            href={samplesHref(zoomed)}
+            className="hover-btn flex h-12 items-center justify-center gap-2 rounded-pill border border-calico-300 bg-calico-50 px-6 text-body-sm font-semibold text-ink-900 no-underline"
+          >
+            <Package aria-hidden="true" className="h-4 w-4" />
+            Order samples
+          </Link>
+
+          <p className="m-0 text-center text-caption leading-relaxed text-ink-500 sm:order-first sm:flex-1 sm:text-left">
+            Build mine puts the sofa in your cart in this fabric and takes you there.
+            Samples are free, up to {MAX_SAMPLES}.
+          </p>
+        </div>
+      ) : undefined}
     >
       {zoomed ? (
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
@@ -111,10 +149,12 @@ export default function FabricDialog({ collections, selectedId, productSlug, onB
           </motion.div>
 
           <div className="min-w-0 flex-1">
+            {/* min-h-11: a thumb-sized target for a line of caption text,
+                which is the only way back to the grid. */}
             <button
               type="button"
               onClick={() => setZoomedId(null)}
-              className="mb-5 inline-flex cursor-pointer items-center gap-1.5 border-0 bg-transparent p-0 text-caption font-semibold text-ink-500"
+              className="mb-2 inline-flex min-h-11 cursor-pointer items-center gap-1.5 border-0 bg-transparent p-0 text-caption font-semibold text-ink-500"
             >
               <ArrowLeft aria-hidden="true" className="h-3.5 w-3.5" />
               All {zoomed.collectionName.toLowerCase()} colours
@@ -132,30 +172,6 @@ export default function FabricDialog({ collections, selectedId, productSlug, onB
               Every sofa in this range is built to order, so this fabric costs exactly the same
               as any other. What a screen shows you is never quite the colour — order it as a
               free sample and hold it against your own room before you decide.
-            </p>
-
-            <div className="mt-7 flex flex-col gap-2.5 sm:flex-row">
-              <button
-                type="button"
-                onClick={() => onBuild(zoomed)}
-                className="hover-btn btn-ember sheen shadow-ember flex h-12 flex-1 cursor-pointer items-center justify-center gap-2 rounded-pill border-0 bg-ember-500 text-body-sm font-semibold text-ink-900"
-              >
-                <ShoppingBag aria-hidden="true" className="h-4 w-4" />
-                Build mine in this
-              </button>
-
-              <Link
-                href={samplesHref(zoomed)}
-                className="hover-btn flex h-12 flex-1 items-center justify-center gap-2 rounded-pill border border-calico-300 bg-calico-50 text-body-sm font-semibold text-ink-900 no-underline"
-              >
-                <Package aria-hidden="true" className="h-4 w-4" />
-                Order samples
-              </Link>
-            </div>
-
-            <p className="m-0 mt-3 text-caption leading-relaxed text-ink-500">
-              Build mine puts the sofa in your cart in this fabric and takes you there. Samples
-              are free — up to {MAX_SAMPLES}, posted anywhere on the UK mainland.
             </p>
           </div>
         </div>

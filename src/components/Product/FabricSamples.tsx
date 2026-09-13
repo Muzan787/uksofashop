@@ -14,11 +14,12 @@ import type { Fabric, FabricCollection } from '@/components/Product/types'
 /**
  * Picking fabrics to be posted.
  *
- * The product page has a dialog that does two jobs — choose what the sofa is
- * built in, and choose what goes through the letterbox — and has to work hard
- * to keep them apart. Everything in this file only has the second job. A tap
- * on a swatch means one thing, and a page can say so in a sentence and then be
- * quiet about it.
+ * The product page's fabric dialog used to do two jobs — choose what the sofa
+ * is built in, and choose what goes through the letterbox — and had to work
+ * hard to keep them apart. It only does the first now; its "Order samples"
+ * button sends people here. Everything in this file only has the second job.
+ * A tap on a swatch means one thing, and a page can say so in a sentence and
+ * then be quiet about it.
  *
  * State lives in a context rather than in each grid because the limit is three
  * across the whole page, not three per collection — somebody comparing a
@@ -245,7 +246,7 @@ export function SampleBar({ sofa }: { sofa?: SampleBarSofa | null }) {
 
             <Link
               href={sofa.href}
-              className="hover-btn flex h-10 shrink-0 items-center gap-2 rounded-pill border border-calico-300 bg-calico-50 px-4 text-body-sm font-semibold text-ink-900 no-underline"
+              className="hover-btn flex h-11 shrink-0 items-center gap-2 rounded-pill border border-calico-300 bg-calico-50 px-4 text-body-sm font-semibold text-ink-900 no-underline"
             >
               <ArrowLeft aria-hidden="true" className="h-4 w-4" />
               Back to <span className="hidden sm:inline">the </span>sofa
