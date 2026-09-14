@@ -29,6 +29,27 @@ const schema = z.object({
 const noContent = (status: number) => new NextResponse(null, { status })
 const joinKey = z.string().uuid()
 
+/**
+ * Remove the public catalogue variant selector before the path is stored.
+ *
+ * The general analytics guard correctly rejects UUIDs because several routes
+ * use one as an access credential. Product variant UUIDs are different: they
+ * are public catalogue retailer_ids and the dedicated variant_id column is
+ * their reporting home. Removing only a valid `variant` parameter lets a
+ * signed catalogue PDP retain first-party offer events without weakening the
+ * guard for confirmation paths, review tokens or any other query parameter.
+ */
+function safeLedgerPath(raw: string): string | null {
+  const url = new URL(raw, 'https://uksofashop.invalid')
+  if (url.searchParams.has('variant')) {
+    const variant = joinKey.safeParse(url.searchParams.get('variant'))
+    if (!variant.success) return null
+    url.searchParams.delete('variant')
+  }
+  const clean = `${url.pathname}${url.search}`
+  return isSensitiveUrl(clean) ? null : clean
+}
+
 export async function POST(request: Request) {
   if (!isServerTrackingEnabled()) return noContent(204)
 
@@ -49,7 +70,8 @@ export async function POST(request: Request) {
   if (!parsed.success) return noContent(400)
   const event = parsed.data
   if (!event.path.startsWith('/') || event.path.startsWith('//')) return noContent(400)
-  if (isSensitiveUrl(event.path)) return noContent(204)
+  const pageUrl = safeLedgerPath(event.path)
+  if (!pageUrl) return noContent(204)
 
   const jar = await cookies()
   const visitorId = joinKey.safeParse(jar.get('uksofashop_vid')?.value)
@@ -65,8 +87,8 @@ export async function POST(request: Request) {
 
     // AttributionBoot persists the full arrival and action components fire in
     // parallel. On a first landing the action request can therefore reach the
-    // database a few milliseconds before the arrival row and lose the foreign
-    // key race. Establish only the three anonymous join keys here, without
+    // database a few milliseconds before the arrival row, leaving a temporary
+    // reporting orphan. Establish only the three anonymous join keys here, without
     // overwriting an existing arrival. The arrival writer then enriches this
     // same row with touch, landing and platform identifiers. This is not a
     // second tracking path: it is the minimum parent row required by the one
@@ -88,7 +110,7 @@ export async function POST(request: Request) {
       session_id: sessionId.data,
       arrival_id: arrivalId.data,
       action_type: event.action,
-      page_url: event.path,
+      page_url: pageUrl,
       product_id: event.productId ?? null,
       variant_id: event.variantId ?? null,
       metadata: {
