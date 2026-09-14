@@ -86,7 +86,7 @@ function readableDimensions(specifications: Product['specifications']): string {
  * it cost, when does it turn up.
  *
  * One DOM order serves both widths, including the add-to-cart block, which
- * renders at every size. The floating pill in the bottom-right corner
+ * renders at every size. The floating pill in the bottom-left corner
  * (AddToCartFab) is the same button within reach at every scroll position,
  * not a replacement for this one.
  */

@@ -216,8 +216,8 @@ export function SampleBar({ sofa }: { sofa?: SampleBarSofa | null }) {
     <>
       <div
         // Tells the floating pills to stand clear while this is up - the
-        // WhatsApp one on the left and, on the product page, "Add to cart"
-        // on the right both read this. See coveringBarHeight() in
+        // WhatsApp one on the right and, on the product page, "Add to cart"
+        // on the left both read this. See coveringBarHeight() in
         // src/components/Layout/WhatsAppFab.tsx.
         data-bottom-bar=""
         className="sticky above-bottom-nav z-sticky-bar border-t border-calico-300 bg-calico-50/95 backdrop-blur-sm"

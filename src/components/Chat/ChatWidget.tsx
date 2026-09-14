@@ -231,10 +231,10 @@ export default function ChatWidget() {
 
   return (
     <>
-      {/* The launcher. Stacked above the WhatsApp pill in the bottom-left
+      {/* The launcher. Stacked above the WhatsApp pill in the bottom-right
           corner: same edge inset, same clearance, one pill-height higher. Ink
           rather than a second colour so the green stays the one thing that
-          means "talk to a person". The right-hand corner is the product
+          means "talk to a person". The left-hand corner is the product
           page's "Add to cart" pill - see components/Layout/WhatsAppFab.tsx. */}
       <button
         ref={launcher}
@@ -243,7 +243,7 @@ export default function ChatWidget() {
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-controls="site-assistant"
-        className={`hover-btn fab-offset-2 fixed left-4 z-sticky-bar flex h-12 items-center gap-2 rounded-pill bg-ink-900 px-4 text-calico-50 shadow-e2 transition-[bottom,opacity,transform] duration-base ease-out-expo focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-900 ${
+        className={`hover-btn fab-offset-2 fixed right-4 z-sticky-bar flex h-12 items-center gap-2 rounded-pill bg-ink-900 px-4 text-calico-50 shadow-e2 transition-[bottom,opacity,transform] duration-base ease-out-expo focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-900 ${
           open ? 'pointer-events-none translate-y-2 opacity-0' : 'translate-y-0 opacity-100'
         }`}
       >
@@ -257,7 +257,7 @@ export default function ChatWidget() {
           role="dialog"
           aria-modal={narrow || undefined}
           aria-label="Ask us"
-          className="fixed inset-0 z-drawer flex flex-col overflow-hidden bg-calico-50 lg:inset-auto lg:left-4 lg:bottom-6 lg:h-[min(640px,calc(100dvh-48px))] lg:w-[380px] lg:rounded-lg lg:border lg:border-calico-300 lg:shadow-e3"
+          className="fixed inset-0 z-drawer flex flex-col overflow-hidden bg-calico-50 lg:inset-auto lg:right-4 lg:bottom-6 lg:h-[min(640px,calc(100dvh-48px))] lg:w-[380px] lg:rounded-lg lg:border lg:border-calico-300 lg:shadow-e3"
           style={{ animation: 'fadeUp var(--dur-base) var(--ease-out-expo)' }}
         >
           {/* Header, on the same ink as the mobile menu and the footer. */}

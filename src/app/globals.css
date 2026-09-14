@@ -1527,8 +1527,8 @@ html.entrance .brand-entrance__rule {
   28%, 60% { translate: 0 3px; }
 }
 
-/* Where the floating buttons sit - WhatsApp and "Ask us" on the left, the
- * product page's "Add to cart" on the right. Same rules, both corners.
+/* Where the floating buttons sit - WhatsApp and "Ask us" on the right, the
+ * product page's "Add to cart" on the left. Same rules, both corners.
  *
  * In CSS rather than on the element, because the two rules it needs cannot
  * both be expressed there. The mobile offset has to be a calc() against

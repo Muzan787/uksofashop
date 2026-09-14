@@ -16,9 +16,9 @@ interface Props {
  * title, price and an "Add" button - that slid up once the real button had
  * scrolled away, and nothing at all on desktop, where the buy box pins but is
  * taller than most viewports, so its button was often off the bottom of the
- * screen anyway. This replaces both with one pill in the bottom-right corner,
+ * screen anyway. This replaces both with one pill in the bottom-left corner,
  * on every width, visible from the moment the page loads: the mirror image of
- * the WhatsApp pill on the left. Ask on one side, buy on the other.
+ * the WhatsApp pill on the right. Buy on one side, ask on the other.
  *
  * SAME BUTTON, SMALLER. It is the buy box's button in every respect that
  * matters - the same ember pill, the same sheen, the same uppercase data face,
@@ -44,7 +44,7 @@ interface Props {
  */
 export default function AddToCartFab({ price, added, onAdd }: Props) {
   return (
-    <div className="fab-offset fixed right-4 z-sticky-bar transition-[bottom] duration-base ease-out-expo">
+    <div className="fab-offset fixed left-4 z-sticky-bar transition-[bottom] duration-base ease-out-expo">
       <button
         type="button"
         onClick={onAdd}

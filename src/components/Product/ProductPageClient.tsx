@@ -7,7 +7,7 @@
 //
 //   Gallery      the photographs and the colour swatches
 //   BuyBox       title, price, delivery dates, the choices, add to cart
-//   AddToCartFab the floating add-to-cart pill, bottom right, every width
+//   AddToCartFab the floating add-to-cart pill, bottom left, every width
 //   Details      description, specifications, delivery, dimensions
 //   Reviews      the reviews and the form
 //   Similar      more from the same category, and Recently viewed under it
@@ -486,7 +486,7 @@ export default function ProductPageClient({
         />
       </div>
 
-      {/* Bottom right, opposite the WhatsApp pill, from the moment the page
+      {/* Bottom left, opposite the WhatsApp pill, from the moment the page
           loads. The same handler as the buy box's button, so a made-to-order
           frame with no fabric chosen opens the picker from here too. */}
       <AddToCartFab price={price} added={added} onAdd={handleAdd} />
