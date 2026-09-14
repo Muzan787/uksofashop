@@ -56,7 +56,9 @@ export async function GET(request: Request) {
 
   return json({
     active: true,
-    source: data.source === 'google_ads' || data.source === 'meta_ads' ? data.source : null,
+    source: data.source === 'google_ads' || data.source === 'meta_ads' || data.source === 'meta_catalog'
+      ? data.source
+      : null,
     startedAt: data.started_at,
     expiresAt: data.expires_at,
     offerAvailable: true,

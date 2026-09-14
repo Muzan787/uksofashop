@@ -151,6 +151,25 @@ totals. The underlying grouping is:
   vs. total confirmed, as a sanity check that Meta/GA4 are actually receiving
   what the business thinks they are.
 
+## 7. Daily Acquisition + Offer Funnel
+
+Source: `reporting.daily_acquisition_funnel`, a private service-role-only
+rollup added in Phase 4C. It keeps `distinct visitor_id`, `distinct
+session_id`, and one-row-per-`arrival_id` counts separate, then groups them by
+honest source plus the available UTM, campaign/ad IDs, placement, and source
+platform dimensions.
+
+The same bounded first-party action ledger now includes
+`offer_qualified`, `offer_prompt_shown`, `offer_prompt_dismissed`, and
+`offer_code_copied`. None is mirrored to Meta. Qualification is validated
+server-side against the HttpOnly entitlement and uses the entitlement token
+as its stable action UUID. Prompt events use one stable UUID per entitlement
+version and interaction type, so navigation/remounts cannot inflate them.
+
+Signed catalogue entries are reported as `meta_catalog` when genuine paid
+campaign signals are absent; the reporting layer never invents a campaign or
+ad identity for an untagged catalogue exit.
+
 ## Migration sequence (for reference)
 
 1. `20260906100000_attribution_sessions.sql`
@@ -161,6 +180,7 @@ totals. The underlying grouping is:
 6. `20260906150000_conversion_events_audit.sql`
 7. `20260906160000_manual_order_whatsapp_reference.sql`
 8. `20260911100000_phase3_reporting_views.sql`
+9. `20260914130000_phase4c_offer_entry_reporting.sql`
 
 ## Testing sequence (for reference)
 

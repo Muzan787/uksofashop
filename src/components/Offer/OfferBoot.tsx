@@ -31,6 +31,7 @@ export default function OfferBoot() {
     if (!pathname || pathname.startsWith('/admin')) return
 
     let cancelled = false
+    let qualificationRetryTimer: ReturnType<typeof setTimeout> | null = null
     const landingPath = `${pathname}${searchParams.toString() ? `?${searchParams.toString()}` : ''}`
     const paidSource = classifyPaidLanding(landingPath)
 
@@ -47,6 +48,22 @@ export default function OfferBoot() {
       expiryTimer.current = null
 
       if (!state.active || !state.expiresAt) return
+
+      // Server validates the HttpOnly entitlement before writing the event;
+      // the client merely prompts that check after attribution cookies have
+      // been created on the landing page. A short retry closes the first-load
+      // effect-order race without creating duplicates (the entitlement token
+      // is the database action id).
+      const recordQualification = () => {
+        void fetch('/api/offer/qualified-event', {
+          method: 'POST',
+          cache: 'no-store',
+          keepalive: true,
+        }).catch(() => {})
+      }
+      recordQualification()
+      qualificationRetryTimer = setTimeout(recordQualification, 300)
+
       const remaining = Date.parse(state.expiresAt) - Date.now()
       if (!Number.isFinite(remaining) || remaining <= 0) {
         setEntitlement(INACTIVE_OFFER_ENTITLEMENT)
@@ -95,7 +112,10 @@ export default function OfferBoot() {
         .catch(() => installState(INACTIVE_OFFER_ENTITLEMENT))
     }
 
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+      if (qualificationRetryTimer) clearTimeout(qualificationRetryTimer)
+    }
   }, [pathname, searchParams, setEntitlement])
 
   return null

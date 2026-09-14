@@ -332,7 +332,14 @@ function newEventId(): string {
  * page because an advertising endpoint was unhappy.
  */
 /** attribution_actions.action_type values written to the first-party ledger. */
-type LedgerAction = 'product_view' | 'add_to_cart' | 'checkout_start' | 'call_click'
+type LedgerAction =
+  | 'product_view'
+  | 'add_to_cart'
+  | 'checkout_start'
+  | 'call_click'
+  | 'offer_prompt_shown'
+  | 'offer_prompt_dismissed'
+  | 'offer_code_copied'
 
 /**
  * Write an operational action independently of advertising consent.
@@ -367,6 +374,31 @@ function ledger(
   } catch {
     // Operational telemetry must never interrupt the customer journey.
   }
+}
+
+export type OfferLedgerAction =
+  | 'offer_prompt_shown'
+  | 'offer_prompt_dismissed'
+  | 'offer_code_copied'
+
+/**
+ * Record an explicit offer interaction in the first-party ledger only.
+ *
+ * The UUID is stored against the entitlement version, so the same visible
+ * prompt or interaction cannot inflate counts after a React remount or route
+ * navigation. Nothing here calls Pixel/CAPI.
+ */
+export function trackOfferAction(action: OfferLedgerAction, entitlementVersion: string): void {
+  if (typeof window === 'undefined') return
+  const key = `uksofashop_offer_event:${action}:${entitlementVersion}`
+  let actionId: string
+  try {
+    actionId = localStorage.getItem(key) ?? newEventId()
+    localStorage.setItem(key, actionId)
+  } catch {
+    actionId = newEventId()
+  }
+  ledger(action, actionId)
 }
 
 function mirror(

@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation'
 import Modal from '@/components/UI/Modal'
 import Sheet from '@/components/UI/Sheet'
 import { OFFER_PUBLIC_CODE } from '@/utils/offers/constants'
+import { trackOfferAction } from '@/utils/tracking'
 import { useOffer } from './OfferProvider'
 
 const EXCLUDED_PREFIXES = [
@@ -28,12 +29,13 @@ function promptAllowed(pathname: string): boolean {
   return !EXCLUDED_PREFIXES.some(prefix => pathname === prefix || pathname.startsWith(`${prefix}/`))
 }
 
-function OfferContent() {
+function OfferContent({ onCopied }: { onCopied: () => void }) {
   const [copied, setCopied] = useState(false)
 
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(OFFER_PUBLIC_CODE)
+      onCopied()
       setCopied(true)
       setTimeout(() => setCopied(false), 1800)
     } catch {
@@ -90,6 +92,7 @@ export default function OfferPrompt() {
   const [open, setOpen] = useState(false)
   const [mobile, setMobile] = useState<boolean | null>(null)
   const shownThisMount = useRef(new Set<string>())
+  const shownEventThisMount = useRef(new Set<string>())
 
   useEffect(() => {
     const media = window.matchMedia('(max-width: 767px)')
@@ -119,22 +122,34 @@ export default function OfferPrompt() {
     queueMicrotask(() => setOpen(true))
   }, [active, startedAt, mobile, pathname])
 
+  useEffect(() => {
+    if (!open || !startedAt || shownEventThisMount.current.has(startedAt)) return
+    shownEventThisMount.current.add(startedAt)
+    trackOfferAction('offer_prompt_shown', startedAt)
+  }, [open, startedAt])
+
   if (!open || mobile === null) return null
 
   const title = 'Your online sofa offer is active'
-  const close = () => setOpen(false)
+  const close = () => {
+    if (startedAt) trackOfferAction('offer_prompt_dismissed', startedAt)
+    setOpen(false)
+  }
+  const copied = () => {
+    if (startedAt) trackOfferAction('offer_code_copied', startedAt)
+  }
 
   if (mobile) {
     return (
       <Sheet title={title} onClose={close} clearsBottomNav>
-        <OfferContent />
+        <OfferContent onCopied={copied} />
       </Sheet>
     )
   }
 
   return (
     <Modal title={title} onClose={close} size="sm" hideTitle>
-      <OfferContent />
+      <OfferContent onCopied={copied} />
     </Modal>
   )
 }

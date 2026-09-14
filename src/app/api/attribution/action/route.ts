@@ -16,7 +16,10 @@ import { isProductionRequestHost, isServerTrackingEnabled } from '@/utils/tracki
 export const dynamic = 'force-dynamic'
 
 const schema = z.object({
-  action: z.enum(['product_view', 'add_to_cart', 'checkout_start', 'call_click']),
+  action: z.enum([
+    'product_view', 'add_to_cart', 'checkout_start', 'call_click',
+    'offer_prompt_shown', 'offer_prompt_dismissed', 'offer_code_copied',
+  ]),
   actionId: z.string().uuid(),
   path: z.string().max(1024),
   productId: z.string().uuid().optional(),
