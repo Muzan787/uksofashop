@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { cookies, headers } from 'next/headers'
-import { createAdminClient } from '@/utils/supabase/admin'
 import { rateLimit, callerKey } from '@/utils/rateLimit'
 import { classifyPaidLanding } from '@/utils/offers/paidTraffic'
+import { issueOfferEntitlement } from '@/utils/offers/issueEntitlement'
 import {
   OFFER_ENTITLEMENT_COOKIE,
   OFFER_ENTITLEMENT_MAX_AGE_S,
@@ -16,12 +16,6 @@ const bodySchema = z.object({
   landingPath: z.string().min(1).max(2048),
 })
 const uuidSchema = z.string().uuid()
-const issueSchema = z.object({
-  token: z.string().uuid(),
-  source: z.enum(['google_ads', 'meta_ads']),
-  started_at: z.string(),
-  expires_at: z.string(),
-})
 
 function json(state: PublicOfferEntitlement, status = 200) {
   const response = NextResponse.json(state, { status })
@@ -80,28 +74,27 @@ export async function POST(request: Request) {
   if (!visitor.success) return json(INACTIVE_OFFER_ENTITLEMENT, 409)
 
   const arrival = uuidSchema.safeParse(jar.get('uksofashop_aid')?.value)
-  const admin = createAdminClient()
-  const { data, error } = await admin.rpc('issue_paid_offer_entitlement', {
-    p_visitor_id: visitor.data,
-    p_source: paidSource,
-    p_arrival_id: arrival.success ? arrival.data : null,
-  })
-
-  const issued = issueSchema.safeParse(data)
-  if (error || !issued.success) {
-    console.error('Paid offer entitlement issuance failed:', error ?? issued.error)
+  let issued
+  try {
+    issued = await issueOfferEntitlement(
+      visitor.data,
+      paidSource,
+      arrival.success ? arrival.data : null,
+    )
+  } catch (error) {
+    console.error('Paid offer entitlement issuance failed:', error)
     return json(INACTIVE_OFFER_ENTITLEMENT, 503)
   }
 
   const response = json({
     active: true,
     source: paidSource,
-    startedAt: issued.data.started_at,
-    expiresAt: issued.data.expires_at,
+    startedAt: issued.started_at,
+    expiresAt: issued.expires_at,
     offerAvailable: true,
   })
 
-  response.cookies.set(OFFER_ENTITLEMENT_COOKIE, issued.data.token, {
+  response.cookies.set(OFFER_ENTITLEMENT_COOKIE, issued.token, {
     httpOnly: true,
     secure: requestUrl.protocol === 'https:',
     sameSite: 'lax',
