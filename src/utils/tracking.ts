@@ -398,7 +398,13 @@ export function trackOfferAction(action: OfferLedgerAction, entitlementVersion: 
   } catch {
     actionId = newEventId()
   }
+  // On a first-ever landing the prompt can become interactive a fraction
+  // before AttributionBoot has installed the session/arrival cookies. The
+  // endpoint correctly rejects that orphan, so retry the same UUID once after
+  // initialisation. If the first send landed, database idempotency makes the
+  // retry a no-op.
   ledger(action, actionId)
+  window.setTimeout(() => ledger(action, actionId), 750)
 }
 
 function mirror(
