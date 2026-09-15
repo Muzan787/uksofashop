@@ -40,6 +40,7 @@ import MobileTotalBar from './MobileTotalBar'
 import SuccessStep from './SuccessStep'
 import AdsPurchaseConversion from './AdsPurchaseConversion'
 import OfferCode from './OfferCode'
+import OrderOnWhatsApp from './OrderOnWhatsApp'
 import { useOffer } from '@/components/Offer/OfferProvider'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -549,6 +550,21 @@ function DetailsStep({
         <ArrowLeft aria-hidden="true" className="h-3 w-3" /> Back to Cart
       </button>
 
+      {/* Offered before the first field, not after the last. Whoever this
+          form loses, it loses at the top — a phone shows the heading, three
+          inputs and no way out. Everything typed so far rides along in the
+          message, so choosing this is never a step backwards. */}
+      <OrderOnWhatsApp
+        variant="panel"
+        className="mb-6"
+        items={cartItems}
+        total={Math.max(0, totalAmount - offerDiscount)}
+        discounted={offerDiscount > 0}
+        postcode={form.postcode}
+        extras={extras}
+        pageContext="checkout_details_whatsapp_order"
+      />
+
       <div className="mb-1 font-data text-eyebrow font-bold uppercase tracking-[0.2em] text-ember-700">
         Delivery Information
       </div>
@@ -878,6 +894,20 @@ function DetailsStep({
           <p className="mt-3 text-center text-caption leading-relaxed text-ink-500">
             By placing this order you agree to pay on delivery. We&apos;ll send a confirmation email with a tracking link.
           </p>
+
+          {/* For whoever scrolled the whole form and is now looking at a
+              grey button that will not press. */}
+          <div className="mt-4">
+            <OrderOnWhatsApp
+              variant="link"
+              items={cartItems}
+              total={Math.max(0, totalAmount - offerDiscount)}
+              discounted={offerDiscount > 0}
+              postcode={form.postcode}
+              extras={extras}
+              pageContext="checkout_details_whatsapp_order"
+            />
+          </div>
         </>
       )}
     </form>
@@ -1045,7 +1075,7 @@ export default function CheckoutClient() {
                 : direction === 'forward' ? 'translate-x-10 opacity-0' : '-translate-x-10 opacity-0'
             }`}
           >
-            {step === 'cart' && <CartStep onNext={goNext} />}
+            {step === 'cart' && <CartStep onNext={goNext} discount={effectiveDiscount} />}
             {step === 'details' && (
               <DetailsStep
                 onBack={goBack}

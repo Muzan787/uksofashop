@@ -4,7 +4,8 @@
 // One hook behind every customer-facing WhatsApp button on the site
 // (components/Layout/WhatsAppFab.tsx, components/Product/SecondaryActions.tsx
 // and its ProductPageClient callers, app/contact, app/showroom,
-// app/swatches, components/Checkout/SuccessStep.tsx). It exists so the
+// app/swatches, components/Checkout/SuccessStep.tsx and the checkout's
+// components/Checkout/OrderOnWhatsApp.tsx). It exists so the
 // reference-minting, the enquiry beacon and the Contact event are written
 // once rather than five times, and so every entry point behaves identically.
 //

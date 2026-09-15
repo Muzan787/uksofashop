@@ -12,14 +12,19 @@ import { PROMISES } from '@/constants/promises';
 import { useCart, lineKey, type DisplayCartItem } from '@/context/CartContext';
 import { blurDataURL } from '@/utils/cloudinary';
 import { useReducedMotionSafe } from '@/components/Motion/useReducedMotionSafe';
+import OrderOnWhatsApp from './OrderOnWhatsApp';
 
 
 /** How long the row takes to collapse, and how long undo stays up. */
 const COLLAPSE = 380;
 const UNDO_MS = 5000;
 
-export default function CartStep({ onNext }: { onNext: () => void }) {
-  const { cartItems, addToCart, removeFromCart, updateQuantity } = useCart();
+export default function CartStep({ onNext, discount = 0 }: {
+  onNext: () => void;
+  /** Any online offer already taken off the basket, so the WhatsApp message quotes the price on screen. */
+  discount?: number;
+}) {
+  const { cartItems, totalAmount, addToCart, removeFromCart, updateQuantity } = useCart();
   const [collapsing, setCollapsing] = useState<string | null>(null);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
@@ -97,6 +102,29 @@ export default function CartStep({ onNext }: { onNext: () => void }) {
         Continue to delivery
         <ArrowRight aria-hidden="true" className="h-4 w-4" />
       </button>
+
+      {/* The same door at the same weight. Most of this shop's orders are
+          agreed in a chat, so the chat is not a footnote under the form —
+          it is the other way to do the same thing. */}
+      <div
+        aria-hidden="true"
+        className="my-4 flex items-center gap-3 font-data text-caption font-semibold uppercase tracking-[0.1em] text-ink-500"
+      >
+        <span className="h-px flex-1 bg-calico-300" />
+        or
+        <span className="h-px flex-1 bg-calico-300" />
+      </div>
+
+      <OrderOnWhatsApp
+        variant="button"
+        items={cartItems}
+        total={Math.max(0, totalAmount - discount)}
+        discounted={discount > 0}
+        pageContext="checkout_cart_whatsapp_order"
+      />
+      <p className="m-0 mt-3 text-center text-caption leading-relaxed text-ink-500">
+        Your basket goes in the first message. We confirm everything in the chat — nothing to pay until it arrives.
+      </p>
 
       <div className="mt-4 text-center">
         <Link href="/shop/all" className="hover-link inline-flex items-center gap-1.5 text-caption text-ink-500 no-underline">
