@@ -31,7 +31,22 @@ export function whatsAppHref(message?: string): string {
   return message ? `${base}?text=${encodeURIComponent(message)}` : base
 }
 
-export const SUPPORT_EMAIL = 'uksofashop.co.uk@gmail.com'
+/**
+ * Where a customer writes to us, and where every automated email tells them to
+ * reply. A real mailbox on our own domain (Hostinger Mail). It replaced the
+ * old @gmail.com address on 2026-09-16: mail branded as uksofashop.co.uk but
+ * sent from a free Gmail account fails sender authentication and was landing
+ * in spam.
+ */
+export const SUPPORT_EMAIL = 'enquiries@uksofashop.co.uk'
+
+/**
+ * The address automated emails are sent FROM - order confirmations, status
+ * updates, review requests. An alias of the mailbox above, so a reply to it
+ * still reaches the same inbox. Kept separate so a customer can tell at a
+ * glance which messages are from a person and which are from the shop.
+ */
+export const ORDERS_EMAIL = 'orders@uksofashop.co.uk'
 
 export const ADDRESS = {
   street: 'Unit 02, Waverledge Street',

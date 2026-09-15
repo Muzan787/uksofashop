@@ -5,6 +5,7 @@ import { Briefcase } from 'lucide-react'
 import EditorialHero from '@/components/Editorial/EditorialHero'
 import EditorialLayout, { Note } from '@/components/Editorial/EditorialLayout'
 import EmptyState from '@/components/UI/EmptyState'
+import { SUPPORT_EMAIL } from '@/constants/contact'
 
 export const metadata: Metadata = {
   alternates: { canonical: '/careers' },
@@ -14,8 +15,6 @@ export const metadata: Metadata = {
   // No roles listed, so there is nothing here for a jobs crawler to index.
   robots: { index: false, follow: true },
 }
-
-const SUPPORT_EMAIL = 'uksofashop.co.uk@gmail.com'
 
 export default function CareersPage() {
   return (

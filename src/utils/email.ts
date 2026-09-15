@@ -1,7 +1,7 @@
 import nodemailer from 'nodemailer';
 import type { DeliveryBreakdown } from '@/constants/delivery';
 import { whatsAppLink } from '@/utils/phone';
-import { PHONE_DISPLAY } from '@/constants/contact';
+import { PHONE_DISPLAY, SUPPORT_EMAIL, ORDERS_EMAIL } from '@/constants/contact';
 
 /**
  * Escapes a value before it goes into an email's HTML.
@@ -66,35 +66,41 @@ const totalsTable = (
     </table>`;
 };
 
-// 1. Initialize the Gmail Transporter
+// 1. Transport
 /**
- * Transport.
+ * Sends through the shop's own mailbox on Hostinger Mail: authenticated as
+ * the enquiries@ mailbox, shown to the customer as the orders@ alias.
  *
- * Prefers a proper SMTP provider on our own domain, and falls back to the
- * original Gmail app-password setup when one is not configured, so nothing
- * breaks before the move is finished.
+ * Why not Gmail any more: mail branded uksofashop.co.uk but sent from a
+ * @gmail.com account cannot pass SPF or DKIM for our domain, and since 2024
+ * Gmail, Yahoo and Outlook file unauthenticated senders as spam. The domain
+ * now carries Hostinger's MX, SPF and DKIM records, so mail sent this way is
+ * authenticated and DMARC-aligned. Gmail's ~500/day cap also went away.
  *
- * Why move: mail sent from a @gmail.com address cannot be authenticated as
- * coming from uksofashop.co.uk. Receiving servers increasingly treat that as a
- * spoofing signal, so order confirmations land in spam - and Gmail's ~500/day
- * cap is shared with everything else on the account, which means a burst of
- * traffic can take order confirmations down entirely.
- *
- * Set SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD and MAIL_FROM to switch.
- * Works with Resend, Postmark, SES or any other SMTP relay.
+ * SMTP_PASSWORD is the one variable that switches the site over: it is the
+ * password of the SUPPORT_EMAIL mailbox. Host, port and user default to
+ * Hostinger and can be overridden (SMTP_HOST, SMTP_PORT, SMTP_USER) to move to
+ * Resend, Postmark or any other relay without touching this file. Until the
+ * password is set the old Gmail app-password transport is used, so nothing
+ * breaks between the deploy and the configuration.
  */
-const usingDomainSender = Boolean(process.env.SMTP_HOST && process.env.SMTP_USER)
+const SMTP_PASSWORD = process.env.SMTP_PASSWORD
+const usingDomainSender = Boolean(SMTP_PASSWORD)
+const SMTP_HOST = process.env.SMTP_HOST || 'smtp.hostinger.com'
+const SMTP_PORT = Number(process.env.SMTP_PORT ?? 465)
+/** The mailbox we log in as. Also the envelope sender - see deliver(). */
+const SMTP_USER = process.env.SMTP_USER || SUPPORT_EMAIL
 
 const transporter = nodemailer.createTransport(
   usingDomainSender
     ? {
-        host: process.env.SMTP_HOST,
-        port: Number(process.env.SMTP_PORT ?? 587),
-        // 587 uses STARTTLS, 465 is implicit TLS.
-        secure: Number(process.env.SMTP_PORT ?? 587) === 465,
+        host: SMTP_HOST,
+        port: SMTP_PORT,
+        // 465 is implicit TLS, 587 upgrades with STARTTLS.
+        secure: SMTP_PORT === 465,
         auth: {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASSWORD,
+          user: SMTP_USER,
+          pass: SMTP_PASSWORD,
         },
       }
     : {
@@ -107,20 +113,72 @@ const transporter = nodemailer.createTransport(
 )
 
 /**
- * The envelope sender. Every template uses this rather than reaching for
- * EMAIL_USER, so switching providers is one environment variable and not a
- * find-and-replace across seven templates.
+ * The address in the From header. orders@ on the domain sender. On the Gmail
+ * fallback it has to be the Gmail account itself: Gmail rewrites any other
+ * From to the authenticated address regardless.
  */
 export const MAIL_FROM_ADDRESS =
-  process.env.MAIL_FROM || process.env.EMAIL_USER || 'uksofashop.co.uk@gmail.com'
+  process.env.MAIL_FROM || (usingDomainSender ? ORDERS_EMAIL : process.env.EMAIL_USER || SUPPORT_EMAIL)
+
+/** Where a customer's reply to an automated email lands. */
+export const MAIL_REPLY_TO = process.env.MAIL_REPLY_TO || SUPPORT_EMAIL
 
 /** Where admin notifications land. */
-export const MAIL_TO_ADMIN =
-  process.env.ADMIN_EMAIL || process.env.EMAIL_USER || MAIL_FROM_ADDRESS
+export const MAIL_TO_ADMIN = process.env.ADMIN_EMAIL || SUPPORT_EMAIL
 
 /** Builds `"UK Sofa Shop" <orders@uksofashop.co.uk>`. */
 function sender(label = 'UK Sofa Shop'): string {
   return `"${label}" <${MAIL_FROM_ADDRESS}>`
+}
+
+type Mail = Omit<nodemailer.SendMailOptions, 'from' | 'to'> & { from?: string; to: string }
+
+/**
+ * Every template sends through here rather than calling the transport, so the
+ * rules below hold for all of them.
+ *
+ * - The From header is the orders@ alias, but the SMTP envelope sender is the
+ *   mailbox we logged in as. Relays check the envelope against the login and
+ *   reject a mismatch ("sender address rejected: not owned by user"); the
+ *   header is what the customer sees. Both are on our domain, so SPF and DKIM
+ *   stay aligned with the From domain and DMARC passes either way. Bounces go
+ *   to the envelope address, which puts them in the inbox someone reads.
+ * - Customer-facing mail gets Reply-To enquiries@ unless the template chose
+ *   its own (contact-form and swatch notifications reply to the customer).
+ * - If the relay refuses the alias outright, the message is sent again from
+ *   the mailbox address itself and the fact is logged. A confirmation from
+ *   enquiries@ is better than no confirmation.
+ */
+async function deliver(mail: Mail) {
+  const message: nodemailer.SendMailOptions = {
+    from: sender(),
+    replyTo: MAIL_REPLY_TO,
+    ...mail,
+    ...(usingDomainSender ? { envelope: { from: SMTP_USER, to: mail.to } } : {}),
+  }
+  try {
+    return await transporter.sendMail(message)
+  } catch (err) {
+    const from = String(message.from)
+    if (!usingDomainSender || !from.includes(MAIL_FROM_ADDRESS) || MAIL_FROM_ADDRESS === SMTP_USER || !isSenderRejected(err)) {
+      throw err
+    }
+    console.warn(`[email] relay rejected From <${MAIL_FROM_ADDRESS}>, re-sending from <${SMTP_USER}>:`, (err as Error).message)
+    return transporter.sendMail({ ...message, from: from.replace(MAIL_FROM_ADDRESS, SMTP_USER) })
+  }
+}
+
+/**
+ * True when the relay turned the message away because of who it was from,
+ * as opposed to a bad recipient, a full mailbox or a connection failure. The
+ * envelope sender is already the mailbox itself, so the only sender check
+ * that can still fail is the one on the From header, which relays report as
+ * a permanent 5xx that names the sender.
+ */
+function isSenderRejected(err: unknown): boolean {
+  const e = err as { responseCode?: number; response?: string; message?: string }
+  const permanent = typeof e.responseCode === 'number' && e.responseCode >= 500
+  return permanent && /sender|from address|not owned|not allowed|not authori[sz]ed/i.test(`${e.response ?? ''} ${e.message ?? ''}`)
 }
 
 // 2. Base HTML Wrapper for Brand Consistency
@@ -145,7 +203,7 @@ const generateEmailHTML = (content: string) => `
     </div>
     
     <div style="background-color: #fafaf9; padding: 24px; text-align: center; border-top: 1px solid #e7e5e4;">
-      <p style="margin: 0; color: #78716c; font-size: 12px;">Need help? Reply to this email directly.</p>
+      <p style="margin: 0; color: #78716c; font-size: 12px;">Need help? Reply to this email or write to <a href="mailto:${SUPPORT_EMAIL}" style="color: #78716c;">${SUPPORT_EMAIL}</a>.</p>
       <p style="margin: 8px 0 0 0; color: #a8a29e; font-size: 11px;">© ${new Date().getFullYear()} UK Sofa Shop. All rights reserved.</p>
     </div>
   </div>
@@ -194,7 +252,7 @@ export async function sendOrderConfirmation(
     </div>
   `;
 
-  await transporter.sendMail({
+  await deliver({
     from: sender(),
     to: email,
     subject: `Action Required: Confirm Your Order - (#${shortCode})`,
@@ -261,7 +319,7 @@ export async function sendAdminOrderNotification(
     </div>
   `;
 
-  await transporter.sendMail({
+  await deliver({
     from: sender(),
     to: adminEmail,
     subject: `Action Required: New Order Received (#${shortCode})`,
@@ -305,7 +363,7 @@ export async function sendAdminReviewNotification(
     </div>
   `;
 
-  await transporter.sendMail({
+  await deliver({
     from: sender(),
     to: adminEmail,
     subject: `New Review Requires Approval (${rating} Stars)`,
@@ -337,7 +395,7 @@ export async function sendContactNotification(
     </div>
   `;
 
-  await transporter.sendMail({
+  await deliver({
     from: sender('UK Sofa Shop Contact Form'),
     to: MAIL_TO_ADMIN,
     replyTo: email,
@@ -394,7 +452,7 @@ export async function sendOrderStatusUpdate(
     </div>
   `;
 
-  await transporter.sendMail({
+  await deliver({
     from: sender(),
     to: email,
     subject: `Update: ${esc(currentConfig.title)} (#${shortCode})`,
@@ -465,7 +523,7 @@ export async function sendAdminOrderStatusNotification(
     </div>
   `;
 
-  await transporter.sendMail({
+  await deliver({
     from: sender(),
     to: adminEmail,
     subject: `Notify Customer: Order ${title} (#${shortCode})`,
@@ -506,7 +564,7 @@ export async function sendNewsletterConfirmation(email: string, confirmToken: st
     </div>
   `;
 
-  await transporter.sendMail({
+  await deliver({
     from: sender(),
     to: email,
     subject: 'Please confirm your subscription',
@@ -599,7 +657,7 @@ export async function sendReviewRequest(
     </div>
   `
 
-  await transporter.sendMail({
+  await deliver({
     from: sender(),
     to: email,
     subject: `How is your new sofa, ${firstName}?`,
@@ -662,7 +720,7 @@ export async function sendSwatchConfirmation(
     </div>
   `
 
-  await transporter.sendMail({
+  await deliver({
     from: sender(),
     to: email,
     subject: 'Your free fabric samples',
@@ -701,7 +759,7 @@ export async function sendAdminSwatchNotification(
     </div>
   `
 
-  await transporter.sendMail({
+  await deliver({
     from: sender('UK Sofa Shop Swatches'),
     to: MAIL_TO_ADMIN,
     replyTo: email,

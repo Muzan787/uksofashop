@@ -7,7 +7,7 @@ import EditorialHero from '@/components/Editorial/EditorialHero'
 import EditorialSchema from '@/components/Editorial/EditorialSchema'
 import EditorialLayout, { Note, PullQuote } from '@/components/Editorial/EditorialLayout'
 import { blurDataURL } from '@/utils/cloudinary'
-import { PHONE_DISPLAY, PHONE_HREF } from '@/constants/contact'
+import { PHONE_DISPLAY, PHONE_HREF, SUPPORT_EMAIL } from '@/constants/contact'
 import WhatsAppLink from '@/components/UI/WhatsAppLink'
 import PhoneLink from '@/components/UI/PhoneLink'
 
@@ -24,8 +24,6 @@ export const metadata: Metadata = {
   title: 'Sofa Showroom in Blackburn',
   description: DESCRIPTION,
 }
-
-const SUPPORT_EMAIL = 'uksofashop.co.uk@gmail.com'
 
 /** The address, in one place, so the map link and the schema cannot disagree. */
 const ADDRESS = {

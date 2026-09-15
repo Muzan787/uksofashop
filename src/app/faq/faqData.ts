@@ -6,8 +6,7 @@
 
 import { ASSEMBLY_FEE, SOFA_REMOVAL_FEE, UPSTAIRS_FIRST_FLOOR } from '@/constants/delivery'
 import { PROMISES } from '@/constants/promises'
-
-export const SUPPORT_EMAIL = 'uksofashop.co.uk@gmail.com'
+import { SUPPORT_EMAIL } from '@/constants/contact'
 
 export interface Faq { q: string; a: string }
 export interface FaqGroup { group: string; items: Faq[] }

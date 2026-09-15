@@ -4,6 +4,7 @@ import Link from 'next/link'
 import EditorialHero from '@/components/Editorial/EditorialHero'
 import EditorialLayout, { LastUpdated } from '@/components/Editorial/EditorialLayout'
 import CookiePreferences from '@/components/UI/CookiePreferences'
+import { SUPPORT_EMAIL } from '@/constants/contact'
 
 export const metadata: Metadata = {
   title: 'Cookies',
@@ -14,8 +15,6 @@ export const metadata: Metadata = {
 
 /** Set by hand. See the note in src/app/terms/page.tsx. */
 const LAST_UPDATED = '2026-08-27'
-
-const SUPPORT_EMAIL = 'uksofashop.co.uk@gmail.com'
 
 interface Entry {
   name: string

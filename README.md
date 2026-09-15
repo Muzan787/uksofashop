@@ -47,15 +47,21 @@ first when something silently does nothing.
 
 ### Email (transactional)
 
+Automated mail (order confirmations, status updates, review requests, admin
+notifications) goes out through the shop's own mailbox on Hostinger Mail,
+authenticated as `enquiries@uksofashop.co.uk` and shown to customers as
+`orders@uksofashop.co.uk`, with replies directed to `enquiries@`. The domain
+carries Hostinger's MX, SPF, DKIM and DMARC records, so the mail is
+authenticated. The addresses live in `src/constants/contact.ts`; the transport
+is `src/utils/email.ts`.
+
 | Variable | What it does |
 | --- | --- |
-| `EMAIL_USER` | Gmail address used as the sender |
-| `EMAIL_APP_PASSWORD` | Gmail app password, not the account password |
-| `ADMIN_EMAIL` | Where new-order and contact notifications go |
-
-Order confirmations currently send through Gmail SMTP. Moving to a dedicated
-sender on the `uksofashop.co.uk` domain (Resend or Postmark, with SPF, DKIM and
-DMARC) is outstanding and will improve deliverability.
+| `SMTP_PASSWORD` | Password of the `enquiries@` mailbox. **The one variable that switches the site onto the domain sender.** Unset, it falls back to Gmail below. |
+| `ADMIN_EMAIL` | Where new-order, contact and swatch notifications go. Defaults to `enquiries@`. |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER` | Only to move to a different relay (Resend, Postmark, SES). Default to Hostinger and the `enquiries@` mailbox. |
+| `MAIL_FROM`, `MAIL_REPLY_TO` | Override the From and Reply-To addresses. Default to `orders@` and `enquiries@`. |
+| `EMAIL_USER`, `EMAIL_APP_PASSWORD` | Legacy Gmail fallback, used only while `SMTP_PASSWORD` is unset. Mail sent this way is not authenticated for the domain and lands in spam. |
 
 ### Advertising and analytics — optional
 
