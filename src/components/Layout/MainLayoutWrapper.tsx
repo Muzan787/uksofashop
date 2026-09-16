@@ -69,10 +69,14 @@ export default function MainLayoutWrapper({
       </main>
       <Footer categories={categories} />
 
-      {/* Checkout already has two deliberate WhatsApp handoffs inside the form.
-          Hiding the global floating support/AI controls there removes competing
-          exits without removing WhatsApp as an ordering option. */}
-      {!isCheckout && <WhatsAppFab />}
+      {/* WhatsApp is a permanent support escape hatch on every customer-facing
+          route, including checkout. The dedicated checkout WhatsApp handoffs
+          remain too; this button is for somebody who simply wants to ask us a
+          question without hunting for the right form control. */}
+      <WhatsAppFab />
+      {/* Keep the AI assistant out of checkout for now. WhatsApp is the human
+          contact route we explicitly want present there; chat can stay focused
+          on browsing/product questions elsewhere. */}
       {!isCheckout && chatEnabled && <ChatWidget />}
       <MobileNav />
     </SmoothScroll>
