@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { Check, Copy, Landmark, Phone, Star, Truck, Wallet } from 'lucide-react';
 import { PHONE_DISPLAY, PHONE_HREF, whatsAppHref } from '@/constants/contact';
 import { usePhoneClick } from '@/utils/attribution/usePhoneClick';
-import { deliveryWindow } from '@/utils/delivery';
 import WhatsAppIcon from '@/components/Product/WhatsAppIcon';
 import Timeline from '@/components/UI/Timeline';
 
@@ -21,28 +20,21 @@ interface Props {
 const STEP_MS = 150;
 
 const MONEY = new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' });
-
+const PENDING_STAGES = ['Request received', 'Confirmed', 'Being prepared', 'Out for delivery', 'Delivered'] as const;
 
 /**
- * The page a customer screenshots.
+ * The page shown immediately after checkout placement.
  *
- * That is the whole brief for this screen, and it changes what belongs on it.
- * Somebody who has just agreed to hand over several hundred pounds in cash at
- * their own front door will look at this again on the day — so the things they
- * will want then are set out in writing here, at a size that survives being
- * photographed and sent to whoever is going to be in: the exact amount, what
- * we take, and what happens if nobody answers.
- *
- * The £50 re-delivery charge is stated plainly rather than left on the terms
- * page. Finding out about it on the day is how a good delivery becomes a
- * complaint; finding out now is just information.
+ * A website COD submission is a request, not yet the confirmed Purchase event.
+ * The team/customer confirmation step happens afterwards, so this screen must
+ * not tell somebody that the order is already confirmed when the database is
+ * still `pending_cod`.
  */
 export default function SuccessStep({ orderId, postcode, amount }: Props) {
   const [copied, setCopied] = useState(false);
   const onPhoneClick = usePhoneClick();
 
   const reference = `#${orderId.split('-')[0].toUpperCase()}`;
-  const window = deliveryWindow();
 
   const trackHref =
     `/track-order?ref=${encodeURIComponent(reference.replace('#', ''))}` +
@@ -61,16 +53,13 @@ export default function SuccessStep({ orderId, postcode, amount }: Props) {
 
   return (
     <div data-existing-order-context className="mx-auto max-w-[560px]">
-      {/* ── The tick ───────────────────────────────────────────────────── */}
       <Reveal index={0} className="flex justify-center">
         <DrawnTick />
       </Reveal>
 
       <Reveal index={1} className="mt-6 text-center">
-        <p className="eyebrow text-ember-700">Order confirmed</p>
+        <p className="eyebrow text-ember-700">Order request received</p>
 
-        {/* 24px mono. It is a reference number, and a reference number is read
-            character by character — which is what a monospaced face is for. */}
         <div className="mt-3 flex items-center justify-center gap-2">
           <span className="font-data text-[24px] font-bold tracking-[0.08em] tabular-nums text-ink-900">
             {reference}
@@ -90,26 +79,24 @@ export default function SuccessStep({ orderId, postcode, amount }: Props) {
 
       <Reveal index={2} className="mt-2 text-center">
         <p className="m-0 font-display text-h2 font-semibold leading-tight text-ink-900">
-          Arriving {window.label}
+          We&apos;ll confirm it with you first
         </p>
-        <p className="m-0 mt-2 text-body-sm text-ink-500">
-          We ring ahead to agree a slot with you first.
+        <p className="m-0 mt-2 text-body-sm leading-relaxed text-ink-500">
+          Your request is safely recorded. One of our team will contact you to confirm the order
+          before delivery is arranged. Nothing is charged now.
         </p>
       </Reveal>
 
-      {/* ── Where it is up to ──────────────────────────────────────────── */}
       <Reveal index={3} className="mt-8">
-        <Timeline current={0} />
+        <Timeline current={0} stages={PENDING_STAGES} />
       </Reveal>
 
-      {/* ── What to have ready ─────────────────────────────────────────── */}
       <Reveal index={4} className="mt-8">
         <section aria-labelledby="on-the-day" className="rounded-md border border-calico-300 bg-calico-100 p-5">
-          <h3 id="on-the-day" className="m-0 text-body font-semibold text-ink-900">On the day</h3>
+          <h3 id="on-the-day" className="m-0 text-body font-semibold text-ink-900">Once confirmed, on delivery day</h3>
 
           <div className="mt-4 flex items-baseline justify-between gap-4 border-b border-calico-300 pb-4">
             <span className="text-body-sm text-ink-500">Have ready</span>
-            {/* 28px mono: the one number on this page somebody has to act on. */}
             <span className="font-data text-[28px] font-bold leading-none tabular-nums text-ink-900">
               {MONEY.format(amount)}
             </span>
@@ -146,7 +133,6 @@ export default function SuccessStep({ orderId, postcode, amount }: Props) {
         </section>
       </Reveal>
 
-      {/* ── Where next ─────────────────────────────────────────────────── */}
       <Reveal index={5} className="mt-6 flex flex-col gap-3">
         <Link
           href={trackHref}
@@ -177,7 +163,6 @@ export default function SuccessStep({ orderId, postcode, amount }: Props) {
         </div>
       </Reveal>
 
-      {/* ── And afterwards ─────────────────────────────────────────────── */}
       <Reveal index={6} className="mt-8">
         <p className="m-0 flex items-start gap-2.5 border-t border-calico-300 pt-6 text-caption leading-relaxed text-ink-500">
           <Star aria-hidden="true" className="mt-0.5 h-3.5 w-3.5 shrink-0 text-ember-500" />
@@ -191,22 +176,12 @@ export default function SuccessStep({ orderId, postcode, amount }: Props) {
   );
 }
 
-// ─── The tick ────────────────────────────────────────────────────────────────
-/**
- * A tick that draws itself.
- *
- * The stroke, not a fade: the ring runs round and the check follows it, which
- * is the difference between a confirmation that happens and an icon that is
- * simply present. `pathLength="1"` normalises both paths to a length of one,
- * so the dash values are fractions rather than numbers measured off the
- * geometry — change the shape and the timing still holds.
- */
 function DrawnTick() {
   return (
     <svg
       viewBox="0 0 80 80"
       role="img"
-      aria-label="Your order is confirmed"
+      aria-label="Your order request has been received"
       className="h-20 w-20"
     >
       <circle
@@ -227,22 +202,12 @@ function DrawnTick() {
         strokeLinejoin="round"
         strokeDasharray="1"
         strokeDashoffset="1"
-        // Starts a beat into the ring, so the two read as one gesture.
         style={{ animation: 'draw-stroke 450ms var(--ease-out-expo) 250ms forwards' }}
       />
     </svg>
   );
 }
 
-// ─── Sequenced reveal ────────────────────────────────────────────────────────
-/**
- * One block arriving, 150ms after the one above it.
- *
- * Wrapped in a media query rather than applied unconditionally: `both` holds an
- * element at the keyframe's start for the length of its delay, so under reduced
- * motion this would be a page that stays blank for a second before appearing at
- * once. There, everything is simply present.
- */
 function Reveal({ index, className, children }: {
   index: number;
   className?: string;
