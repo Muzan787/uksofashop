@@ -47,7 +47,7 @@ revoke all on table public.checkout_recovery_leads from anon, authenticated;
 comment on table public.checkout_recovery_leads is
   'Explicit abandoned-checkout reminder consent. Service-role only; expires after 90 days unless converted/unsubscribed sooner.';
 comment on column public.checkout_recovery_leads.basket is
-  'Minimal basket identity snapshot only: variant_id, quantity and optional fabric_id. No client prices.';
+  'Server-verified product snapshot: title/SKU/variant, colour or fabric, quantity and current unit price. Never an order/discount authority.';
 
 -- When an opted-in checkout becomes an order, the order becomes the lawful
 -- operational record. Keep the consent/audit shell, but remove the duplicate
