@@ -111,6 +111,13 @@ export const metadata: Metadata = {
   // Next serves the manifest.ts route at /manifest.webmanifest; '/manifest.json'
   // was a 404, so no browser ever read it.
   manifest: '/manifest.webmanifest',
+  icons: {
+    icon: [
+      { url: '/icon.svg', type: 'image/svg+xml' },
+      { url: '/icon-192x192.png', type: 'image/png', sizes: '192x192' },
+    ],
+    apple: [{ url: '/icon-192x192.png', type: 'image/png', sizes: '192x192' }],
+  },
   keywords: "sofa UK, corner sofa, fabric sofa, recliner sofa, cash on delivery sofas, custom fabric sofa",
   openGraph: {
     type: 'website',
@@ -197,10 +204,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <OfferProvider>
           {/* ── Toasts ─────────────────────────────────────────────────────
               On the tokens: Ink 900 with Calico 50 copy and an ember rule down
-              the leading edge, sage where something succeeded and rust where
-              it did not. Bottom centre rather than bottom right, and lifted
-              clear of the bottom navigation — a toast that lands on top of the
-              cart button is a toast that gets tapped through. */}
+              the leading edge, sage where something succeeded and rust where it
+              did not. Bottom centre rather than bottom right, and lifted clear
+              of the bottom navigation — a toast that lands on top of the cart
+              button is a toast that gets tapped through. */}
           <Toaster
             position="bottom-center"
             containerStyle={{ bottom: 'calc(var(--bottom-nav) + env(safe-area-inset-bottom) + 16px)' }}
