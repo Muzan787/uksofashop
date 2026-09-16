@@ -7,7 +7,7 @@
 import { NextResponse } from 'next/server'
 import { cookies, headers } from 'next/headers'
 import { z } from 'zod'
-import { createAdminClient } from '@/utils/supabase/admin'
+import { createUntypedAdminClient } from '@/utils/supabase/admin'
 import { isValidUkMobile } from '@/utils/phone'
 import { callerKey, rateLimit } from '@/utils/rateLimit'
 import { isProductionRequestHost } from '@/utils/trackingEnv'
@@ -79,7 +79,12 @@ export async function POST(request: Request) {
   }
 
   const v = parsed.data
-  const admin = createAdminClient()
+  // This route is the only storefront owner of checkout_recovery_leads. The
+  // table was added by today's migration and is not in the checked-in generated
+  // Database type yet, so this one server-only route uses the scoped untyped
+  // service-role client. Product/fabric reads below are still validated into
+  // the narrow snapshot shapes declared above.
+  const admin = createUntypedAdminClient()
 
   // Unticking both channels is an immediate opt-out. If no row exists this is
   // simply a no-op; if one does, erase the duplicate contact/basket data now.
