@@ -5,7 +5,7 @@
 // the checkout converts or the shopper opts out.
 
 import { NextResponse } from 'next/server'
-import { createAdminClient } from '@/utils/supabase/admin'
+import { createUntypedAdminClient } from '@/utils/supabase/admin'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
@@ -16,7 +16,11 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Not authorised' }, { status: 401 })
   }
 
-  const admin = createAdminClient()
+  // checkout_recovery_leads was introduced by today's migration and is not in
+  // the checked-in generated Database type yet. This route is server-only and
+  // service-role authenticated, so use the narrow escape hatch until types are
+  // regenerated.
+  const admin = createUntypedAdminClient()
   const { data, error } = await admin
     .from('checkout_recovery_leads')
     .delete()
