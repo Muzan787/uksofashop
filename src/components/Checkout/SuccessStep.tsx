@@ -20,15 +20,13 @@ interface Props {
 const STEP_MS = 150;
 
 const MONEY = new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' });
-const PENDING_STAGES = ['Request received', 'Confirmed', 'Being prepared', 'Out for delivery', 'Delivered'] as const;
 
 /**
- * The page shown immediately after checkout placement.
+ * The page a customer sees immediately after a successful website checkout.
  *
- * A website COD submission is a request, not yet the confirmed Purchase event.
- * The team/customer confirmation step happens afterwards, so this screen must
- * not tell somebody that the order is already confirmed when the database is
- * still `pending_cod`.
+ * Customer-facing language says the order is confirmed because the website has
+ * accepted and recorded it. Operationally it still enters `pending_cod`; the
+ * team verifies the details before the Purchase event and delivery arrangement.
  */
 export default function SuccessStep({ orderId, postcode, amount }: Props) {
   const [copied, setCopied] = useState(false);
@@ -58,7 +56,7 @@ export default function SuccessStep({ orderId, postcode, amount }: Props) {
       </Reveal>
 
       <Reveal index={1} className="mt-6 text-center">
-        <p className="eyebrow text-ember-700">Order request received</p>
+        <p className="eyebrow text-ember-700">Order confirmed</p>
 
         <div className="mt-3 flex items-center justify-center gap-2">
           <span className="font-data text-[24px] font-bold tracking-[0.08em] tabular-nums text-ink-900">
@@ -79,21 +77,20 @@ export default function SuccessStep({ orderId, postcode, amount }: Props) {
 
       <Reveal index={2} className="mt-2 text-center">
         <p className="m-0 font-display text-h2 font-semibold leading-tight text-ink-900">
-          We&apos;ll confirm it with you first
+          We&apos;ve got your order
         </p>
         <p className="m-0 mt-2 text-body-sm leading-relaxed text-ink-500">
-          Your request is safely recorded. One of our team will contact you to confirm the order
-          before delivery is arranged. Nothing is charged now.
+          One of our team will contact you to confirm the details and arrange delivery. Nothing is charged now.
         </p>
       </Reveal>
 
       <Reveal index={3} className="mt-8">
-        <Timeline current={0} stages={PENDING_STAGES} />
+        <Timeline current={0} />
       </Reveal>
 
       <Reveal index={4} className="mt-8">
         <section aria-labelledby="on-the-day" className="rounded-md border border-calico-300 bg-calico-100 p-5">
-          <h3 id="on-the-day" className="m-0 text-body font-semibold text-ink-900">Once confirmed, on delivery day</h3>
+          <h3 id="on-the-day" className="m-0 text-body font-semibold text-ink-900">On delivery day</h3>
 
           <div className="mt-4 flex items-baseline justify-between gap-4 border-b border-calico-300 pb-4">
             <span className="text-body-sm text-ink-500">Have ready</span>
@@ -181,7 +178,7 @@ function DrawnTick() {
     <svg
       viewBox="0 0 80 80"
       role="img"
-      aria-label="Your order request has been received"
+      aria-label="Your order is confirmed"
       className="h-20 w-20"
     >
       <circle
