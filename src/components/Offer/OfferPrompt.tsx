@@ -4,9 +4,9 @@ import { useEffect, useRef, useState } from 'react'
 import { Check, Copy, Truck, Wallet } from 'lucide-react'
 import { usePathname } from 'next/navigation'
 import Modal from '@/components/UI/Modal'
-import Sheet from '@/components/UI/Sheet'
 import { OFFER_PUBLIC_CODE } from '@/utils/offers/constants'
 import { trackOfferAction } from '@/utils/tracking'
+import { CONSENT_CHANGED_EVENT, getConsent } from '@/utils/consent'
 import { useOffer } from './OfferProvider'
 
 const EXCLUDED_PREFIXES = [
@@ -54,7 +54,7 @@ function OfferContent({ onCopied }: { onCopied: () => void }) {
         Extra savings on selected sofas
       </h3>
 
-      <div className="mt-4 flex flex-col gap-2 rounded-md border border-calico-300 bg-calico-100/60 p-4">
+      <div className="mt-4 flex flex-col gap-2 rounded-md border border-calico-300 bg-calico-100/60 p-3.5">
         <div className="flex items-center gap-2 text-body-sm font-semibold text-ink-900">
           <Truck aria-hidden="true" className="h-4 w-4 shrink-0 text-ember-700" />
           FREE UK Mainland Delivery
@@ -65,7 +65,7 @@ function OfferContent({ onCopied }: { onCopied: () => void }) {
         </div>
       </div>
 
-      <div className="mt-4 flex items-center justify-between gap-3 rounded-sm border border-ember-500/30 bg-ember-500/[0.08] px-4 py-3">
+      <div className="mt-4 flex items-center justify-between gap-3 rounded-sm border border-ember-500/30 bg-ember-500/[0.08] px-3.5 py-2.5">
         <code className="select-all font-data text-body font-extrabold tracking-[0.12em] text-ink-900">
           {OFFER_PUBLIC_CODE}
         </code>
@@ -90,20 +90,26 @@ export default function OfferPrompt() {
   const pathname = usePathname() ?? '/'
   const { active, startedAt } = useOffer()
   const [open, setOpen] = useState(false)
-  const [mobile, setMobile] = useState<boolean | null>(null)
+  const [consentResolved, setConsentResolved] = useState(false)
   const shownThisMount = useRef(new Set<string>())
   const shownEventThisMount = useRef(new Set<string>())
 
+  // Do not stack the paid-offer dialog on top of the cookie question. The offer
+  // is not conditional on accepting advertising cookies; it simply waits until
+  // the visitor has answered either way, then appears as the one active dialog.
   useEffect(() => {
-    const media = window.matchMedia('(max-width: 767px)')
-    const update = () => setMobile(media.matches)
+    const update = () => {
+      const resolved = getConsent() !== null
+      setConsentResolved(resolved)
+      if (!resolved) setOpen(false)
+    }
     update()
-    media.addEventListener?.('change', update)
-    return () => media.removeEventListener?.('change', update)
+    window.addEventListener(CONSENT_CHANGED_EVENT, update)
+    return () => window.removeEventListener(CONSENT_CHANGED_EVENT, update)
   }, [])
 
   useEffect(() => {
-    if (!active || !startedAt || mobile === null || !promptAllowed(pathname)) return
+    if (!active || !startedAt || !consentResolved || !promptAllowed(pathname)) return
 
     const version = startedAt
     const key = `uksofashop_offer_prompt_seen:${version}`
@@ -115,12 +121,10 @@ export default function OfferPrompt() {
       // Keep the in-memory guard below even if storage is unavailable.
     }
 
-    // "Seen" means visibly presented, not explicitly dismissed. This prevents
-    // navigation or an accidental backdrop tap from causing prompt harassment.
     shownThisMount.current.add(version)
     try { localStorage.setItem(key, '1') } catch {}
     queueMicrotask(() => setOpen(true))
-  }, [active, startedAt, mobile, pathname])
+  }, [active, startedAt, consentResolved, pathname])
 
   useEffect(() => {
     if (!open || !startedAt || shownEventThisMount.current.has(startedAt)) return
@@ -128,7 +132,7 @@ export default function OfferPrompt() {
     trackOfferAction('offer_prompt_shown', startedAt)
   }, [open, startedAt])
 
-  if (!open || mobile === null) return null
+  if (!open) return null
 
   const title = 'Your online sofa offer is active'
   const close = () => {
@@ -139,14 +143,9 @@ export default function OfferPrompt() {
     if (startedAt) trackOfferAction('offer_code_copied', startedAt)
   }
 
-  if (mobile) {
-    return (
-      <Sheet title={title} onClose={close} clearsBottomNav>
-        <OfferContent onCopied={copied} />
-      </Sheet>
-    )
-  }
-
+  // Deliberately centred at every viewport width. The old mobile bottom sheet
+  // competed with the cookie banner and covered too much of the first product
+  // view; Modal keeps a 16px edge gap and a 420px maximum width instead.
   return (
     <Modal title={title} onClose={close} size="sm" hideTitle>
       <OfferContent onCopied={copied} />
