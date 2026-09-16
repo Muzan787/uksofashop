@@ -1,23 +1,18 @@
 // src/utils/supabase/admin.ts
 //
-// Service-role Supabase client. This bypasses RLS entirely, so it must never be
-// reachable from the browser and must never be used for anything a signed-in
+// Service-role Supabase clients. These bypass RLS entirely, so they must never
+// be reachable from the browser and must never be used for anything a signed-in
 // user could do with their own session.
 //
-// It exists for operations that have no caller identity to check at all - the
-// newsletter double opt-in being the case it was written for. There, the
-// confirmation token has to be generated and emailed without ever passing
-// through the client, because a token the browser can read defeats double
-// opt-in completely.
-//
-// If you are reaching for this to make an admin screen work, don't: add an RLS
-// policy keyed on is_admin() and use the ordinary cookie-bound client instead,
-// the way src/app/admin/reviews/page.tsx does.
+// The typed client remains the default. The untyped variant exists narrowly for
+// a table introduced by a migration before the checked-in generated Database
+// type has been regenerated. Keeping that exception here makes it visible and
+// prevents `as any` from spreading through application code.
 
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { Database } from '@/types/supabase'
 
-export function createAdminClient() {
+function credentials() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY
 
@@ -25,7 +20,26 @@ export function createAdminClient() {
     throw new Error('Supabase service role credentials are not configured.')
   }
 
-  return createSupabaseClient<Database>(url, key, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  })
+  return { url, key }
+}
+
+const OPTIONS = {
+  auth: { persistSession: false, autoRefreshToken: false },
+} as const
+
+export function createAdminClient() {
+  const { url, key } = credentials()
+  return createSupabaseClient<Database>(url, key, OPTIONS)
+}
+
+/**
+ * Server-only escape hatch for service-role operations on a newly migrated
+ * table that is not yet represented in src/types/supabase.ts.
+ *
+ * Do not use this for ordinary application queries. Regenerate the database
+ * types and move callers back to createAdminClient() when convenient.
+ */
+export function createUntypedAdminClient() {
+  const { url, key } = credentials()
+  return createSupabaseClient(url, key, OPTIONS)
 }
