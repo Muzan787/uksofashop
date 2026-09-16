@@ -27,6 +27,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { MessageCircleQuestionMark, RotateCcw, SendHorizontal, X } from 'lucide-react';
 import { useWhatsAppCTA } from '@/utils/attribution/useWhatsAppCTA';
+import { PHONE_DISPLAY } from '@/constants/contact';
 import { useBodyLock } from '@/components/UI/useBodyLock';
 import WhatsAppIcon from '@/components/Product/WhatsAppIcon';
 import AssistantText from './AssistantText';
@@ -43,8 +44,7 @@ const MAX_INPUT = 1500;
 /** Turns sent with each request. Mirrors MAX_TURNS in app/api/chat/route.ts. */
 const HISTORY_LIMIT = 16;
 
-const FALLBACK =
-  'Sorry, I could not answer that just now. Message us on WhatsApp using the button below and someone from the team will reply.';
+const FALLBACK = `Sorry, I can't answer that one just now. Please ring or WhatsApp ${PHONE_DISPLAY} and the team will help.`;
 
 const STARTERS = [
   'Do you deliver to my area, and what does it cost?',

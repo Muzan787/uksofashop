@@ -9,11 +9,21 @@
 // screen in about a second rather than after a tool loop.
 //
 // CACHED PREFIX. The knowledge block is several thousand tokens and is the
-// same for every visitor, so it carries cache_control with a one-hour TTL:
-// after the first turn of the hour, every visitor's turn reads it at a tenth
-// of the price. The one volatile fact - which page the visitor is on - is a
-// SEPARATE system block placed after the cached one, so it never breaks the
-// match.
+// same for every visitor, so it carries cache_control: a turn that follows
+// another within five minutes reads it at a tenth of the price. The one
+// volatile fact - which page the visitor is on - is a SEPARATE system block
+// placed after the cached one, so it never breaks the match.
+//
+// WHAT IT COSTS, AND WHY THIS MODEL. The first live question cost 18 cents on
+// Opus: with only a few questions an hour the cache is cold nearly every
+// time, so each question paid to WRITE the whole catalogue into the cache
+// at Opus prices, plus Opus thinking on top. The job here is reading a fixed
+// document and quoting it, which Haiku 4.5 does accurately at a twentieth of
+// the price - roughly a penny for a cold question and a fraction of one for
+// a warm one. The five-minute cache is deliberate too: its write premium is
+// 1.25x rather than the one-hour cache's 2x, and a visitor's follow-up
+// questions arrive well inside five minutes. Haiku takes no effort or
+// adaptive-thinking parameters, so none are sent.
 //
 // PLAIN TEXT, NOT SSE. The client only needs the text deltas, so the body is
 // the reply itself, chunked as it is generated. Anything that fails before
@@ -31,13 +41,14 @@ import { headers } from 'next/headers'
 import { z } from 'zod'
 import { rateLimit, callerKey } from '@/utils/rateLimit'
 import { getAssistantKnowledge } from '@/utils/chat/knowledge'
+import { PHONE_DISPLAY } from '@/constants/contact'
 
 export const dynamic = 'force-dynamic'
 // A reply streams for a few seconds; Vercel's default function timeout is
 // enough, but a slow first token on a cold cache should not be cut off.
 export const maxDuration = 60
 
-const MODEL = 'claude-opus-5'
+const MODEL = 'claude-haiku-4-5'
 
 /** Turns kept per request. Older ones are dropped by the widget before posting. */
 const MAX_TURNS = 16
@@ -45,10 +56,10 @@ const MAX_MESSAGE_CHARS = 1500
 
 /** What the visitor reads if the model cannot answer for any reason. */
 const FALLBACK =
-  'Sorry, I could not answer that just now. Message us on WhatsApp using the button below and someone from the team will reply.'
+  `Sorry, I can't answer that one just now. Please ring or WhatsApp ${PHONE_DISPLAY} and the team will help.`
 /** The same hand-over, for the errors returned before a reply starts. */
 const UNAVAILABLE =
-  'The assistant is not available right now. Message us on WhatsApp using the button below and someone from the team will reply.'
+  `The assistant is not available right now. Please ring or WhatsApp ${PHONE_DISPLAY} and the team will help.`
 
 const bodySchema = z.object({
   messages: z
@@ -71,7 +82,7 @@ export async function POST(request: Request) {
   const hdrs = await headers()
   const limit = rateLimit(callerKey(hdrs, 'chat'), 20, 10 * 60 * 1000)
   if (!limit.ok) {
-    return jsonError('Too many messages in a short time. Please try again in a few minutes, or message us on WhatsApp using the button below.', 429)
+    return jsonError(`Too many messages in a short time. Please try again in a few minutes, or ring or WhatsApp ${PHONE_DISPLAY}.`, 429)
   }
 
   if (!process.env.ANTHROPIC_API_KEY) {
@@ -103,9 +114,10 @@ export async function POST(request: Request) {
 
   const stream = client.messages.stream({
     model: MODEL,
-    max_tokens: 700,
+    // Replies are told to be short; this is a ceiling, not a target.
+    max_tokens: 400,
     system: [
-      { type: 'text', text: knowledge, cache_control: { type: 'ephemeral', ttl: '1h' } },
+      { type: 'text', text: knowledge, cache_control: { type: 'ephemeral' } },
       {
         type: 'text',
         text: page
@@ -114,10 +126,6 @@ export async function POST(request: Request) {
       },
     ],
     messages: messages.map<Anthropic.MessageParam>(m => ({ role: m.role, content: m.content })),
-    // A short customer-service reply does not need deep reasoning, and the
-    // visitor is watching a blinking cursor while it happens.
-    output_config: { effort: 'low' },
-    thinking: { type: 'adaptive' },
   })
 
   // Wait for the API to accept the request before committing to a 200. A bad
@@ -131,7 +139,7 @@ export async function POST(request: Request) {
       return jsonError(UNAVAILABLE, 503)
     }
     if (err instanceof Anthropic.RateLimitError) {
-      return jsonError('The assistant is busy right now. Please try again in a moment, or message us on WhatsApp using the button below.', 503)
+      return jsonError(`The assistant is busy right now. Please try again in a moment, or ring or WhatsApp ${PHONE_DISPLAY}.`, 503)
     }
     console.error('[chat] could not start a reply', err)
     return jsonError(UNAVAILABLE, 502)
@@ -157,7 +165,7 @@ export async function POST(request: Request) {
         if (final.stop_reason === 'refusal' || !sentAnything) send(FALLBACK)
       } catch (err) {
         console.error('[chat] stream failed', err)
-        send(sentAnything ? '\n\nSorry - I lost the thread there. Could you ask that again?' : FALLBACK)
+        send(sentAnything ? `\n\nSorry - I lost the thread there. Could you ask that again, or ring ${PHONE_DISPLAY}?` : FALLBACK)
       } finally {
         controller.close()
       }

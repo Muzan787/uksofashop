@@ -45,8 +45,14 @@ import { canonicalProductPath } from '@/utils/productUrl'
 /** How long a catalogue snapshot is reused before it is fetched again. */
 const CATALOGUE_TTL_MS = 10 * 60 * 1000
 
-/** Longest description the prompt carries per product. Bounds the token cost. */
-const DESCRIPTION_CAP = 600
+/**
+ * Longest description the prompt carries per product. Bounds the token cost,
+ * which matters more than it looks: with a few questions an hour the cache is
+ * usually cold, so most questions pay for the whole document. The first
+ * sentence or two of a description is where the material and the features
+ * are; the rest is the copywriting.
+ */
+const DESCRIPTION_CAP = 280
 
 interface Snapshot {
   text: string
@@ -271,8 +277,8 @@ function renderPrompt(catalogue: string | null, fabrics: string | null): string 
 
 # How to answer
 
-- Be brief. One to four short sentences, or a short list of up to four bullets. No headings. British English, plain and warm, no sales patter.
-- Answer from the facts below. If something is not covered here, say you are not sure and suggest they ask the team on WhatsApp (the green button under this chat) or ring ${PHONE_DISPLAY}. Never guess a price, a dimension, a delivery date or a policy.
+- Be brief. One to three short sentences, or a short list of up to four bullets. No headings. British English, plain and warm, no sales patter.
+- Answer only from the facts below. If the answer is not in this document, do not work it out or guess - say so in one sentence and give the number, like this: "I can't answer that one, sorry - please ring or WhatsApp ${PHONE_DISPLAY} and the team will help." Never guess a price, a dimension, a delivery date or a policy.
 - Quote prices exactly as listed, in pounds. You cannot offer discounts, negotiate, or promise a price for a custom size or fabric - the team quotes those on WhatsApp, usually the same day.
 - When you mention a product, link it in Markdown using its Link line exactly, e.g. [Lily 3+2 Seater High Back](/shop/3-2-seater/lily-high-back-3and2-seater). Do not invent products or links. When several products fit, name the two or three closest matches rather than listing everything.
 - When a visitor wants to order, wants a custom size or fabric, needs delivery outside UK Mainland, or has a question you cannot answer, point them to the WhatsApp button under this chat. They can also order on the website: add the sofa to the basket and check out - nothing is paid until it arrives.
