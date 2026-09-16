@@ -25,11 +25,31 @@ const schema = z.object({
   whatsappOptIn: z.boolean(),
   email: z.string().trim().max(254).optional(),
   phone: z.string().trim().max(32).optional(),
-  basket: z.array(itemSchema).max(20),
+  basket: z.array(itemSchema).min(1).max(20),
 }).strict()
 
 const joinKey = z.string().uuid()
 const noContent = (status: number) => new NextResponse(null, { status })
+
+type VariantSnapshotRow = {
+  id: string
+  sku: string
+  color: string | null
+  material: string | null
+  price_adjustment: number | null
+  products: {
+    id: string
+    title: string
+    base_price: number
+  } | null
+}
+
+type FabricSnapshotRow = {
+  id: string
+  code: string
+  name: string
+  fabric_collections: { name: string } | null
+}
 
 export async function POST(request: Request) {
   const hdrs = await headers()
@@ -90,13 +110,65 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Enter a valid UK mobile number before choosing WhatsApp reminders.' }, { status: 400 })
   }
 
-  // Store a minimal basket identity snapshot. Prices never come from the
-  // browser, so this table can never become a discount/order authority.
-  const basket = v.basket.map(item => ({
-    variant_id: item.variant_id,
-    quantity: item.quantity,
-    fabric_id: item.fabric_id ?? null,
-  }))
+  // Product details are resolved from Supabase rather than trusted from the
+  // browser. This gives the recovery sheet a useful snapshot (title, SKU,
+  // colour/fabric, quantity and price at the time) without making recovery data
+  // an order or discount authority.
+  const variantIds = [...new Set(v.basket.map(item => item.variant_id))]
+  const fabricIds = [...new Set(v.basket.map(item => item.fabric_id).filter((id): id is string => Boolean(id)))]
+
+  const { data: rawVariants, error: variantError } = await admin
+    .from('product_variants')
+    .select('id, sku, color, material, price_adjustment, products!inner(id, title, base_price)')
+    .in('id', variantIds)
+
+  if (variantError) {
+    console.error(`checkout recovery product lookup failed: ${variantError.message}`)
+    return NextResponse.json({ error: 'Could not save that reminder preference. Please try again.' }, { status: 500 })
+  }
+
+  let rawFabrics: unknown[] = []
+  if (fabricIds.length > 0) {
+    const { data, error } = await admin
+      .from('fabrics')
+      .select('id, code, name, fabric_collections(name)')
+      .in('id', fabricIds)
+
+    if (error) {
+      console.error(`checkout recovery fabric lookup failed: ${error.message}`)
+      return NextResponse.json({ error: 'Could not save that reminder preference. Please try again.' }, { status: 500 })
+    }
+    rawFabrics = data ?? []
+  }
+
+  const variants = (rawVariants ?? []) as unknown as VariantSnapshotRow[]
+  const fabrics = rawFabrics as FabricSnapshotRow[]
+  const variantById = new Map(variants.map(row => [row.id, row]))
+  const fabricById = new Map(fabrics.map(row => [row.id, row]))
+
+  const basket = v.basket.map(item => {
+    const variant = variantById.get(item.variant_id)
+    const product = variant?.products ?? null
+    const fabric = item.fabric_id ? fabricById.get(item.fabric_id) ?? null : null
+    const unitPrice = product
+      ? Number(product.base_price) + Number(variant?.price_adjustment ?? 0)
+      : null
+
+    return {
+      product_title: product?.title ?? null,
+      product_id: product?.id ?? null,
+      variant_id: item.variant_id,
+      sku: variant?.sku ?? null,
+      color: variant?.color ?? null,
+      material: variant?.material ?? null,
+      fabric_id: item.fabric_id ?? null,
+      fabric_name: fabric?.name ?? null,
+      fabric_code: fabric?.code ?? null,
+      fabric_collection: fabric?.fabric_collections?.name ?? null,
+      quantity: item.quantity,
+      unit_price_gbp: unitPrice,
+    }
+  })
 
   const now = new Date()
   const expires = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000)
