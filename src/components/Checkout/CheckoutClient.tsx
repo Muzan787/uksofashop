@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import {
@@ -41,6 +41,7 @@ import SuccessStep from './SuccessStep'
 import AdsPurchaseConversion from './AdsPurchaseConversion'
 import OfferCode from './OfferCode'
 import OrderOnWhatsApp from './OrderOnWhatsApp'
+import CheckoutRecoveryOptIn from './CheckoutRecoveryOptIn'
 import { useOffer } from '@/components/Offer/OfferProvider'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -351,6 +352,7 @@ function DetailsStep({
   const [pending, setPending] = useState(false)
   const [serverError, setServerError] = useState('')
   const [checkingDelivery, setCheckingDelivery] = useState(false)
+  const submitInFlight = useRef(false)
 
   const [addresses, setAddresses] = useState<string[]>([])
   const [searchingPostcode, setSearchingPostcode] = useState(false)
@@ -364,9 +366,6 @@ function DetailsStep({
 
   const setPostcode = (value: string) => {
     set('postcode')(value.toUpperCase())
-    // Removing the old decision synchronously is what prevents a stale
-    // mainland=true state surviving while a new custom-quote postcode is being
-    // checked. The six form fields themselves are deliberately untouched.
     setDeliveryCheck(null)
     setConfirmed(null)
     setAddresses([])
@@ -374,8 +373,6 @@ function DetailsStep({
     setServerError('')
   }
 
-  // Resolve every complete postcode as the customer types. This response is
-  // only UX state; placeOrder independently resolves the actual postcode again.
   useEffect(() => {
     const raw = form.postcode.trim()
     if (!isValidUkPostcode(raw)) {
@@ -488,12 +485,10 @@ function DetailsStep({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (offerPending || !validate()) return
+    if (submitInFlight.current || offerPending || !validate()) return
 
     setServerError('')
 
-    // Do not trust a client-side decision, even our own previous one. Recheck
-    // the actual postcode immediately before invoking the order Server Action.
     let currentDecision = deliveryCheck
     if (currentDecision?.postcode !== normalisePostcode(form.postcode)) {
       setCheckingDelivery(true)
@@ -515,6 +510,7 @@ function DetailsStep({
       return
     }
 
+    submitInFlight.current = true
     setPending(true)
 
     setMetaIdentity({
@@ -528,13 +524,26 @@ function DetailsStep({
     Object.entries(form).forEach(([k, v]) => fd.append(k, v))
 
     const items = toOfferItems(cartItems)
-    const res = await placeOrder(fd, items, grandTotal, extras, appliedPromotionCode)
+    try {
+      const res = await placeOrder(fd, items, grandTotal, extras, appliedPromotionCode)
 
-    if (res?.error) { setServerError(res.error); setPending(false) }
-    else if (res?.success) {
-      trackOrderPlaced(res.orderId, res.total, toTrackedItems(cartItems))
-      clearCart()
-      onSuccess(res.orderId, form.postcode.toUpperCase(), res.total)
+      if (res?.error) {
+        setServerError(res.error)
+        setPending(false)
+        submitInFlight.current = false
+      } else if (res?.success) {
+        trackOrderPlaced(res.orderId, res.total, toTrackedItems(cartItems))
+        clearCart()
+        onSuccess(res.orderId, form.postcode.toUpperCase(), res.total)
+      } else {
+        setServerError('We could not place the order right now. Please try again.')
+        setPending(false)
+        submitInFlight.current = false
+      }
+    } catch {
+      setServerError('We could not place the order right now. Please try again.')
+      setPending(false)
+      submitInFlight.current = false
     }
   }
 
@@ -550,10 +559,6 @@ function DetailsStep({
         <ArrowLeft aria-hidden="true" className="h-3 w-3" /> Back to Cart
       </button>
 
-      {/* Offered before the first field, not after the last. Whoever this
-          form loses, it loses at the top — a phone shows the heading, three
-          inputs and no way out. Everything typed so far rides along in the
-          message, so choosing this is never a step backwards. */}
       <OrderOnWhatsApp
         variant="panel"
         className="mb-6"
@@ -579,9 +584,15 @@ function DetailsStep({
       )}
 
       <div className="mb-4 flex flex-col gap-4">
-        <Field label="Full Name" name="customerName" value={form.customerName} onChange={set('customerName')} error={errors.customerName} />
-        <Field label="Email Address" type="email" name="customerEmail" hint="Your order confirmation will be sent here" value={form.customerEmail} onChange={set('customerEmail')} error={errors.customerEmail} />
-        <Field label="Mobile Number" type="tel" name="customerPhone" hint="A UK mobile — our driver calls before delivery, and we message you on WhatsApp" value={form.customerPhone} onChange={set('customerPhone')} error={errors.customerPhone} />
+        <Field label="Full Name" name="customerName" autoComplete="name" value={form.customerName} onChange={set('customerName')} error={errors.customerName} />
+        <Field label="Email Address" type="email" name="customerEmail" autoComplete="email" hint="Your order confirmation will be sent here" value={form.customerEmail} onChange={set('customerEmail')} error={errors.customerEmail} />
+        <Field label="Mobile Number" type="tel" name="customerPhone" autoComplete="tel" hint="A UK mobile — our driver calls before delivery, and we message you on WhatsApp" value={form.customerPhone} onChange={set('customerPhone')} error={errors.customerPhone} />
+
+        <CheckoutRecoveryOptIn
+          email={form.customerEmail}
+          phone={form.customerPhone}
+          basket={toOfferItems(cartItems)}
+        />
 
         <div>
           <label className="mb-2 flex items-center gap-1 font-data text-eyebrow font-bold uppercase tracking-[0.15em] text-ink-500">
@@ -895,8 +906,6 @@ function DetailsStep({
             By placing this order you agree to pay on delivery. We&apos;ll send a confirmation email with a tracking link.
           </p>
 
-          {/* For whoever scrolled the whole form and is now looking at a
-              grey button that will not press. */}
           <div className="mt-4">
             <OrderOnWhatsApp
               variant="link"
@@ -926,9 +935,6 @@ export default function CheckoutClient() {
     customerName: '', customerEmail: '', customerPhone: '',
     postcode: '', shippingAddress: '', specialInstructions: '',
   })
-  // Lives beside the six form fields so Delivery -> Cart -> Delivery does not
-  // forget the fulfilment decision either. It is presentation state only; the
-  // server re-runs the classification at placement time.
   const [deliveryCheck, setDeliveryCheck] = useState<DeliveryCheckResult | null>(null)
 
   const [offerCodeInput, setOfferCodeInput] = useState('')
@@ -1060,7 +1066,7 @@ export default function CheckoutClient() {
         <h1 className="sr-only">
           {step === 'cart' ? 'Your cart'
             : step === 'details' ? 'Delivery details'
-            : 'Order confirmed'}
+            : 'Order request received'}
         </h1>
 
         {step !== 'success' && <Steps current={step} />}

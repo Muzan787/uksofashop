@@ -29,6 +29,7 @@ export default function MainLayoutWrapper({
 }) {
   const pathname = usePathname()
   const isAdmin = pathname?.startsWith('/admin')
+  const isCheckout = pathname?.startsWith('/checkout')
 
   // If it's an admin route, return ONLY the raw content (Admin layout handles its own UI)
   if (isAdmin) {
@@ -63,24 +64,20 @@ export default function MainLayoutWrapper({
       <ViewTransitions />
       <Cursor />
       <Header categories={categories} />
-      {/* The bottom-navigation clearance is NOT here any more — it moved to the
-          last row of the Footer, which is the element that actually sits under
-          that bar. On <main> it protected nothing (the footer follows it) and,
-          because <main> carries no background, it painted 68px of page ground
-          between the last section and the footer — a bright strip across the
-          bottom of every dark-footed page. */}
       <main id="main-content" className="flex-grow">
         <PageFade>{children}</PageFade>
       </main>
       <Footer categories={categories} />
-      {/* Storefront only, and mounted here rather than on the homepage so it
-          exists on every customer-facing route. It stays visible at every
-          scroll position, repositions above pinned bottom bars, and switches
-          to support-only semantics in known existing-order contexts. */}
+
+      {/* WhatsApp is a permanent support escape hatch on every customer-facing
+          route, including checkout. The dedicated checkout WhatsApp handoffs
+          remain too; this button is for somebody who simply wants to ask us a
+          question without hunting for the right form control. */}
       <WhatsAppFab />
-      {/* The "Ask us" pill, stacked above WhatsApp. Storefront only, like the
-          button it stands on, and only when there is a key to answer with. */}
-      {chatEnabled && <ChatWidget />}
+      {/* Keep the AI assistant out of checkout for now. WhatsApp is the human
+          contact route we explicitly want present there; chat can stay focused
+          on browsing/product questions elsewhere. */}
+      {!isCheckout && chatEnabled && <ChatWidget />}
       <MobileNav />
     </SmoothScroll>
   )

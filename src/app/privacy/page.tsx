@@ -12,12 +12,12 @@ export const metadata: Metadata = {
   alternates: { canonical: '/privacy' },
 }
 
-/** Set by hand. See the note in src/app/terms/page.tsx. */
-const LAST_UPDATED = '2026-08-27'
+const LAST_UPDATED = '2026-09-16'
 
 const TOC = [
   { id: 'collect', label: 'What we collect' },
   { id: 'use', label: 'What we use it for' },
+  { id: 'checkout-reminders', label: 'Checkout reminders' },
   { id: 'sharing', label: 'Who else sees it' },
   { id: 'cookies', label: 'Cookies' },
   { id: 'retention', label: 'How long we keep it' },
@@ -52,8 +52,13 @@ export default function PrivacyPage() {
           <li>Your name, delivery address, email address and phone number</li>
           <li>What you ordered, and the delivery options you chose</li>
           <li>Your IP address, and which pages you visited and when</li>
-          <li>Anything you type into a form — a message, a review, your room measurements</li>
+          <li>Anything you deliberately submit in a form — a message, a review or room measurements</li>
         </ul>
+        <p>
+          Checkout diagnostics record things such as which step was reached, whether a field was
+          completed and whether a postcode lookup succeeded. Those diagnostic events do not copy
+          the name, email, phone number, postcode, address or free text typed into the form.
+        </p>
         <p>
           We never see or store card details, because we do not take card payments. Payment happens
           at your door, in cash or by bank transfer, and nothing about it passes through this site.
@@ -73,7 +78,27 @@ export default function PrivacyPage() {
           analytics and marketing, and legitimate interests for keeping the site secure and working.
         </p>
 
-        <h2 id="sharing">3. Who else sees it</h2>
+        <h2 id="checkout-reminders">3. Checkout reminders</h2>
+        <p>
+          During checkout you can choose, separately, whether you want a reminder by WhatsApp or by
+          email if you do not finish. Both choices are off by default. We only create a checkout-
+          reminder record after you actively choose at least one channel.
+        </p>
+        <p>
+          If you choose WhatsApp we keep the mobile number you entered; if you choose email we keep
+          the email address you entered. We also keep a snapshot of the products in that basket —
+          such as the sofa, variant or SKU, colour or chosen fabric, quantity and the current product
+          price — so a later reminder or follow-up can relate to the exact sofa you were considering.
+          We do not copy your delivery address, postcode, special instructions or the values typed
+          into other checkout fields into the reminder record.
+        </p>
+        <p>
+          You can opt out at any time. If you untick both reminder choices, the duplicate reminder
+          contact and basket data are erased. If you complete the order, the order itself becomes
+          the operational record and the duplicate reminder contact and basket data are cleared.
+        </p>
+
+        <h2 id="sharing">4. Who else sees it</h2>
         <p>
           We do not sell or rent your personal data to anybody, ever. We share the minimum needed
           to get your sofa to you — usually your name, address and phone number — with the delivery
@@ -81,12 +106,12 @@ export default function PrivacyPage() {
         </p>
         <p>
           Beyond that, the site runs on services that necessarily process some data on our behalf:
-          hosting and databases, email delivery for order confirmations, image hosting, and — only
-          if you agree to them — analytics and advertising measurement. Our{' '}
-          <Link href="/cookies">cookies page</Link> names each one and what it does.
+          hosting and databases, email delivery for order confirmations and requested reminders,
+          image hosting, and — only if you agree to them — analytics and advertising measurement.
+          Our <Link href="/cookies">cookies page</Link> names each one and what it does.
         </p>
 
-        <h2 id="cookies">4. Cookies</h2>
+        <h2 id="cookies">5. Cookies</h2>
         <p>
           Some storage is essential and cannot be turned off: your basket, your session, and the
           record of the cookie choice you made. Everything else — analytics, advertising
@@ -94,15 +119,17 @@ export default function PrivacyPage() {
           from the <Link href="/cookies">cookies page</Link>.
         </p>
 
-        <h2 id="retention">5. How long we keep it</h2>
+        <h2 id="retention">6. How long we keep it</h2>
         <p>
           Order records are kept for seven years, because UK tax law requires it. Enquiries and
           messages are kept for as long as they are useful to the conversation and then deleted.
-          Analytics data expires on the schedule set by the provider. You can ask us to delete
-          anything that is not covered by a legal obligation to keep it.
+          Checkout-reminder records expire after at most 90 days; their duplicate contact and basket
+          data are cleared earlier if you opt out or complete the order. Analytics data expires on
+          the schedule set by the provider. You can ask us to delete anything that is not covered
+          by a legal obligation to keep it.
         </p>
 
-        <h2 id="rights">6. Your rights</h2>
+        <h2 id="rights">7. Your rights</h2>
         <p>Under UK GDPR you have the right to:</p>
         <ul>
           <li>See the personal data we hold about you</li>
@@ -117,7 +144,7 @@ export default function PrivacyPage() {
           is no charge, and we will respond within one month.
         </p>
 
-        <h2 id="complaints">7. Complaints</h2>
+        <h2 id="complaints">8. Complaints</h2>
         <p>
           If you think we have handled your data badly, tell us first — we would rather fix it. You
           also have the right to complain to the Information Commissioner’s Office, the UK’s data

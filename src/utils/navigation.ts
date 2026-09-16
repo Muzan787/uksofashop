@@ -22,7 +22,9 @@
 // than merely deferred.
 
 import 'server-only'
-import { createClient } from '@/utils/supabase/server'
+import { unstable_cache } from 'next/cache'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
+import type { Database } from '@/types/supabase'
 
 export interface NavCategory {
   id: string
@@ -32,21 +34,49 @@ export interface NavCategory {
 }
 
 /**
+ * The nav changes very rarely but RootLayout needs it on every storefront
+ * request. Using the ordinary SSR client here would tie the query to request
+ * cookies, which cannot live inside a shared Next cache. This deliberately
+ * uses the public anon key instead: categories were already public to the old
+ * browser implementation, so there is no privilege expansion.
+ */
+const readNavCategories = unstable_cache(
+  async (): Promise<NavCategory[]> => {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    if (!url || !key) return []
+
+    const supabase = createSupabaseClient<Database>(url, key, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    })
+
+    const { data, error } = await supabase
+      .from('categories')
+      .select('id, name, slug, image_url')
+      .order('name')
+
+    if (error) {
+      console.error(`navigation categories fetch failed: ${error.message}`)
+      return []
+    }
+
+    return data ?? []
+  },
+  ['uksofashop-nav-categories-v1'],
+  {
+    // Five minutes removes the repeat database hit from normal page-to-page
+    // browsing while keeping admin category changes reasonably quick to appear.
+    revalidate: 300,
+    tags: ['nav-categories'],
+  },
+)
+
+/**
  * Called once from the root layout, so both the header and the footer are
  * rendered with the list already in them rather than filling in after a client
- * round trip. That also fixes a smaller thing on the way: the category links in
- * the footer and the mega menu are now in the server HTML, where a crawler can
- * follow them.
+ * round trip. The shared cache means a browsing session no longer turns every
+ * route transition into another categories query.
  */
 export async function getNavCategories(): Promise<NavCategory[]> {
-  const supabase = await createClient()
-
-  const { data } = await supabase
-    .from('categories')
-    .select('id, name, slug, image_url')
-    .order('name')
-
-  // An empty list renders a nav without category links, which is degraded but
-  // navigable. Throwing here would take down every page on the site.
-  return data ?? []
+  return readNavCategories()
 }
