@@ -351,6 +351,7 @@ export type Database = {
           total_amount: number
           wants_assembly: boolean
           wants_sofa_removal: boolean
+          sofa_removal_seats: number | null
           visitor_id: string | null
           session_id: string | null
           arrival_id: string | null
@@ -405,6 +406,7 @@ export type Database = {
           total_amount: number
           wants_assembly?: boolean
           wants_sofa_removal?: boolean
+          sofa_removal_seats?: number | null
           visitor_id?: string | null
           session_id?: string | null
           arrival_id?: string | null
@@ -459,6 +461,7 @@ export type Database = {
           total_amount?: number
           wants_assembly?: boolean
           wants_sofa_removal?: boolean
+          sofa_removal_seats?: number | null
           visitor_id?: string | null
           session_id?: string | null
           arrival_id?: string | null
@@ -1220,6 +1223,7 @@ export type Database = {
           p_special_instructions: string
           p_wants_assembly?: boolean
           p_wants_sofa_removal?: boolean
+          p_sofa_removal_seats?: number | null
         }
         Returns: Json
       }

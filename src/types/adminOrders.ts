@@ -39,5 +39,6 @@ export interface AdminOrderDisplay {
   fee_upstairs?: number | null
   fee_assembly?: number | null
   fee_sofa_removal?: number | null
+  sofa_removal_seats?: number | null
   order_items: AdminOrderItemDisplay[]
 }

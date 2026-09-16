@@ -3,7 +3,10 @@
 import { after } from 'next/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { sendOrderConfirmation, sendAdminOrderNotification } from '@/utils/email'
-import { deliveryBreakdown, NO_EXTRAS, type DeliveryOptions } from '@/constants/delivery'
+import {
+  deliveryBreakdown, NO_EXTRAS, SOFA_REMOVAL_MAX_SEATS, SOFA_REMOVAL_MIN_SEATS,
+  type DeliveryOptions,
+} from '@/constants/delivery'
 import { isValidUkMobile, UK_MOBILE_ERROR } from '@/utils/phone'
 import { resolveDeliveryPostcode } from '@/utils/postcode'
 import { z } from 'zod'
@@ -42,6 +45,7 @@ const extrasSchema = z.object({
   hasLift: z.boolean(),
   assembly: z.boolean(),
   sofaRemoval: z.boolean(),
+  sofaRemovalSeats: z.number().int().min(SOFA_REMOVAL_MIN_SEATS).max(SOFA_REMOVAL_MAX_SEATS),
 })
 
 const itemsSchema = z.array(z.object({
@@ -205,6 +209,9 @@ export async function placeOrder(
     p_delivery_has_lift: opts.hasLift,
     p_wants_assembly: opts.assembly,
     p_wants_sofa_removal: opts.sofaRemoval,
+    // The seat count only means something when removal is wanted; place_order
+    // prices it at its own per-seat rate, so this is a quantity not an amount.
+    p_sofa_removal_seats: opts.sofaRemoval ? opts.sofaRemovalSeats : null,
     // The code/token are authorisation inputs only. The database decides the
     // tier, discount and final total; the browser never supplies those values.
     p_promotion_code: promotionCode,

@@ -27,8 +27,9 @@ import {
 import { PROMISES } from '@/constants/promises'
 import { isValidUkMobile, UK_MOBILE_ERROR } from '@/utils/phone'
 import {
-  ASSEMBLY_FEE, SOFA_REMOVAL_FEE, UPSTAIRS_FIRST_FLOOR, UPSTAIRS_PER_EXTRA_FLOOR,
-  DELIVERY_AREA_NOTE, NO_EXTRAS, deliveryBreakdown, deliveryTotal, floorName,
+  ASSEMBLY_FEE, UPSTAIRS_FIRST_FLOOR, UPSTAIRS_PER_EXTRA_FLOOR,
+  SOFA_REMOVAL_PER_SEAT, SOFA_REMOVAL_MIN_SEATS, SOFA_REMOVAL_MAX_SEATS,
+  DELIVERY_AREA_NOTE, NO_EXTRAS, deliveryBreakdown, deliveryTotal, floorName, sofaRemovalFee,
   type DeliveryOptions,
 } from '@/constants/delivery'
 import { isValidUkPostcode, lookupAddresses, normalisePostcode } from '@/utils/postcode'
@@ -135,7 +136,7 @@ function fieldClass(error: boolean): string {
 
 // ─── Optional delivery extra ──────────────────────────────────────────────────
 function ExtraOption({
-  checked, onToggle, title, note, price, priceIsFrom = false, children,
+  checked, onToggle, title, note, price, priceIsFrom = false, priceUnit, children,
 }: {
   checked: boolean
   onToggle: (on: boolean) => void
@@ -143,6 +144,8 @@ function ExtraOption({
   note: string
   price: number
   priceIsFrom?: boolean
+  /** Shown after the price when it is a rate rather than a total, e.g. "per seat". */
+  priceUnit?: string
   children?: React.ReactNode
 }) {
   return (
@@ -166,6 +169,9 @@ function ExtraOption({
                 <span className="font-data text-caption font-semibold text-ink-500">from </span>
               )}
               £{price.toFixed(2)}
+              {priceUnit && (
+                <span className="font-data text-caption font-semibold text-ink-500"> {priceUnit}</span>
+              )}
             </span>
           </span>
           <span className="mt-1 block text-caption leading-relaxed text-ink-500">{note}</span>
@@ -769,9 +775,32 @@ function DetailsStep({
             checked={extras.sofaRemoval}
             onToggle={on => setExtras({ ...extras, sofaRemoval: on })}
             title="Old sofa removal"
-            note="We take your old sofa away. This is an estimate — for very large items the team will contact you to confirm before delivery."
-            price={SOFA_REMOVAL_FEE}
-          />
+            note={`We take your old sofa away for £${SOFA_REMOVAL_PER_SEAT} a seat. Count every seat we're collecting — a 3-seater and a 2-seater together is 5. For unusually large items the team will confirm before delivery.`}
+            price={extras.sofaRemoval ? sofaRemovalFee(extras.sofaRemovalSeats) : SOFA_REMOVAL_PER_SEAT}
+            priceUnit={extras.sofaRemoval ? undefined : 'per seat'}
+          >
+            <div className="flex flex-wrap items-center gap-3 pt-3">
+              <div className="flex items-center gap-2">
+                <span className="text-caption font-semibold text-ink-500">Seats</span>
+                <div className="flex items-center overflow-hidden rounded-sm border border-calico-300 bg-calico-50">
+                  <button type="button" aria-label="Fewer seats"
+                    onClick={() => setExtras({ ...extras, sofaRemovalSeats: Math.max(SOFA_REMOVAL_MIN_SEATS, extras.sofaRemovalSeats - 1) })}
+                    className="flex h-11 w-11 items-center justify-center rounded-sm text-ink-700 hover:bg-calico-200">
+                    <Minus aria-hidden="true" className="h-3 w-3" />
+                  </button>
+                  <span className="min-w-[30px] text-center text-body-sm font-bold text-ink-900">{extras.sofaRemovalSeats}</span>
+                  <button type="button" aria-label="More seats"
+                    onClick={() => setExtras({ ...extras, sofaRemovalSeats: Math.min(SOFA_REMOVAL_MAX_SEATS, extras.sofaRemovalSeats + 1) })}
+                    className="flex h-11 w-11 items-center justify-center rounded-sm text-ink-700 hover:bg-calico-200">
+                    <Plus aria-hidden="true" className="h-3 w-3" />
+                  </button>
+                </div>
+                <span className="text-caption text-ink-500">
+                  {extras.sofaRemovalSeats} × £{SOFA_REMOVAL_PER_SEAT}
+                </span>
+              </div>
+            </div>
+          </ExtraOption>
         </div>
 
         <p className="mt-3 text-caption leading-relaxed text-ink-500">

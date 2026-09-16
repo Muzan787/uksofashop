@@ -74,7 +74,7 @@ ${ARTICLES_BY_DATE.map(a => `- [${a.title}](${url(`/journal/${a.slug}`)}): ${a.d
 
 - Delivery is free to every UK Mainland address with no minimum order. Most UK Mainland orders arrive in 2-4 working days; some Wales and Scotland postcodes take 5-7 working days. Northern Ireland, the Isle of Man and the Scottish Islands are arranged individually rather than quoted online.
 - Payment is cash or bank transfer on delivery. No deposit, no card payments, no finance.
-- Optional extras, booked at checkout and not addable on the day: upstairs delivery from GBP 20, assembly GBP 20, old sofa removal GBP 30 indicative.
+- Optional extras, booked at checkout and not addable on the day: upstairs delivery from GBP 20, assembly GBP 20, old sofa removal GBP 10 per seat.
 - Every sofa carries a 1-year guarantee covering structural faults in the wooden frame and the springs.
 - Made-to-order fabric sofas are exempt from the 14-day right to change your mind, as goods made to the customer's specification under the Consumer Contracts Regulations. Stocked leather sofas carry the full 14 days.
 `

@@ -248,7 +248,12 @@ function Result({ order }: { order: TrackedOrder }) {
                 />
               )}
               {Number(order.fee_assembly ?? 0) > 0 && <Line label="Assembly" value={Number(order.fee_assembly)} />}
-              {Number(order.fee_sofa_removal ?? 0) > 0 && <Line label="Old sofa removal" value={Number(order.fee_sofa_removal)} />}
+              {Number(order.fee_sofa_removal ?? 0) > 0 && (
+                <Line
+                  label={`Old sofa removal${order.sofa_removal_seats ? ` (${order.sofa_removal_seats} seats)` : ''}`}
+                  value={Number(order.fee_sofa_removal)}
+                />
+              )}
               <span aria-hidden="true" className="my-1 h-px bg-calico-50/10" />
             </>
           )}

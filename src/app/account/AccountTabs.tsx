@@ -36,6 +36,7 @@ export interface AccountOrder {
   feeUpstairs: number
   feeAssembly: number
   feeSofaRemoval: number
+  sofaRemovalSeats: number | null
   items: AccountOrderItem[]
 }
 
@@ -361,7 +362,12 @@ function OrderCard({ order }: { order: AccountOrder }) {
                 )}
                 {order.feeUpstairs > 0 && <Line label="Upstairs delivery" value={order.feeUpstairs} />}
                 {order.feeAssembly > 0 && <Line label="Assembly" value={order.feeAssembly} />}
-                {order.feeSofaRemoval > 0 && <Line label="Old sofa removal" value={order.feeSofaRemoval} />}
+                {order.feeSofaRemoval > 0 && (
+                  <Line
+                    label={`Old sofa removal${order.sofaRemovalSeats ? ` (${order.sofaRemovalSeats} seats)` : ''}`}
+                    value={order.feeSofaRemoval}
+                  />
+                )}
               </dl>
             )}
 

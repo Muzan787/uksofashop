@@ -4,7 +4,7 @@
 // (which emits the FAQPage schema) and the client accordion can read them
 // without the client bundle pulling in the page.
 
-import { ASSEMBLY_FEE, SOFA_REMOVAL_FEE, UPSTAIRS_FIRST_FLOOR } from '@/constants/delivery'
+import { ASSEMBLY_FEE, SOFA_REMOVAL_PER_SEAT, UPSTAIRS_FIRST_FLOOR } from '@/constants/delivery'
 import { PROMISES } from '@/constants/promises'
 import { SUPPORT_EMAIL } from '@/constants/contact'
 
@@ -37,7 +37,7 @@ export const faqGroups: FaqGroup[] = [
       },
       {
         q: 'Can you take my old sofa away?',
-        a: `Yes. Old sofa removal is £${SOFA_REMOVAL_FEE} and you can add it at checkout. For very large or unusual items the charge may be a little different — if so, we’ll tell you as soon as we’ve received your order, well before delivery day.`,
+        a: `Yes. Old sofa removal is £${SOFA_REMOVAL_PER_SEAT} per seat — £${SOFA_REMOVAL_PER_SEAT * 2} for a two-seater, £${SOFA_REMOVAL_PER_SEAT * 3} for a three-seater — and you add it at checkout, telling us how many seats we’re collecting. For very large or unusual items the charge may be a little different — if so, we’ll tell you as soon as we’ve received your order, well before delivery day.`,
       },
       {
         q: 'What happens if I miss my delivery?',

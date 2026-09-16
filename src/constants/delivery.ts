@@ -5,7 +5,8 @@
 // IMPORTANT: these figures are duplicated inside the place_order database
 // function, which recomputes every fee server-side so the browser cannot set
 // its own prices. If you change a price here you MUST change it there too -
-// see supabase/migrations/*_delivery_extras.sql. place_order raises an
+// see the latest supabase/migrations/*place_order* definition (currently
+// 20260916120000_sofa_removal_per_seat.sql). place_order raises an
 // exception when the client's expected delivery total disagrees with its own
 // calculation, so a drift between the two fails loudly at checkout rather than
 // quietly charging the wrong amount.
@@ -23,10 +24,16 @@ export const UPSTAIRS_PER_EXTRA_FLOOR = 10
 export const ASSEMBLY_FEE = 20
 
 /**
- * Taking the old sofa away. Indicative: very large items may cost more, and the
- * team confirms before delivery, so the customer is told this on the checkout.
+ * Taking the old sofa away, priced per seat so a corner sofa pays more than a
+ * two-seater. The customer counts every seat we are taking, so a 3-seater and
+ * a 2-seater going together is 5. Unusual items are still confirmed before
+ * delivery, and the customer is told this on the checkout.
  */
-export const SOFA_REMOVAL_FEE = 30
+export const SOFA_REMOVAL_PER_SEAT = 10
+export const SOFA_REMOVAL_MIN_SEATS = 1
+export const SOFA_REMOVAL_MAX_SEATS = 10
+/** What the seat stepper opens on: a 3-seater is the most common old sofa. */
+export const SOFA_REMOVAL_DEFAULT_SEATS = 3
 
 export interface DeliveryOptions {
   /** 0 = ground floor. 1 = first floor, 2 = second, and so on. */
@@ -35,6 +42,8 @@ export interface DeliveryOptions {
   hasLift: boolean
   assembly: boolean
   sofaRemoval: boolean
+  /** Seats being taken away. Only charged when sofaRemoval is on. */
+  sofaRemovalSeats: number
 }
 
 export const NO_EXTRAS: DeliveryOptions = {
@@ -42,6 +51,18 @@ export const NO_EXTRAS: DeliveryOptions = {
   hasLift: false,
   assembly: false,
   sofaRemoval: false,
+  sofaRemovalSeats: SOFA_REMOVAL_DEFAULT_SEATS,
+}
+
+/** Seat count held to the range the checkout and place_order both accept. */
+export function clampRemovalSeats(seats: number): number {
+  if (!Number.isFinite(seats)) return SOFA_REMOVAL_DEFAULT_SEATS
+  return Math.min(SOFA_REMOVAL_MAX_SEATS, Math.max(SOFA_REMOVAL_MIN_SEATS, Math.floor(seats)))
+}
+
+/** Removal charge for a given number of seats. */
+export function sofaRemovalFee(seats: number): number {
+  return clampRemovalSeats(seats) * SOFA_REMOVAL_PER_SEAT
 }
 
 /** Carrying charge for the chosen floor. Ground floor is free. */
@@ -84,11 +105,12 @@ export function deliveryBreakdown(opts: DeliveryOptions): DeliveryBreakdown {
   }
 
   if (opts.sofaRemoval) {
+    const seats = clampRemovalSeats(opts.sofaRemovalSeats)
     lines.push({
       key: 'sofaRemoval',
       label: 'Old sofa removal',
-      detail: 'Estimate - we confirm before delivery',
-      amount: SOFA_REMOVAL_FEE,
+      detail: `${seats} ${seats === 1 ? 'seat' : 'seats'} at £${SOFA_REMOVAL_PER_SEAT} each`,
+      amount: sofaRemovalFee(seats),
     })
   }
 

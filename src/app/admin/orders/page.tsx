@@ -240,7 +240,9 @@ export default async function AdminOrdersPage(props: { searchParams: SearchParam
                     {order.wants_sofa_removal && (
                       <p className="text-stone-700">
                         <span className="font-semibold">Old sofa removal</span>
-                        <span className="text-stone-500"> — £{Number(order.fee_sofa_removal).toFixed(2)} (confirm if oversized)</span>
+                        <span className="text-stone-500">
+                          {' '}— {order.sofa_removal_seats ? `${order.sofa_removal_seats} seats · ` : ''}£{Number(order.fee_sofa_removal).toFixed(2)} (confirm if oversized)
+                        </span>
                       </p>
                     )}
                   </div>

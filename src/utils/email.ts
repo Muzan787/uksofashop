@@ -305,7 +305,7 @@ export async function sendAdminOrderNotification(
         ${totalsTable(itemsSubtotal, breakdown, totalAmount, discountAmount, promotionCode)}
         ${(breakdown?.lines.some(l => l.key === 'sofaRemoval'))
           ? `<p style="margin: 14px 0 0 0; padding: 10px 12px; background: #fef9f0; border-left: 3px solid #d4871a; color: #57534e; font-size: 12px;">
-               <strong>Action:</strong> this customer wants their old sofa removed. Confirm the charge with them before delivery if the item is unusually large.
+               <strong>Action:</strong> this customer wants their old sofa removed (${esc(breakdown?.lines.find(l => l.key === 'sofaRemoval')?.detail ?? '')}). Confirm the charge with them before delivery if the item is unusually large.
              </p>` : ''}
       </div>
 

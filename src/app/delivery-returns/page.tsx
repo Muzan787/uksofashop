@@ -6,7 +6,7 @@ import EditorialHero from '@/components/Editorial/EditorialHero'
 import EditorialSchema from '@/components/Editorial/EditorialSchema'
 import EditorialLayout, { Note, PullQuote } from '@/components/Editorial/EditorialLayout'
 import CoverageMap from '@/components/Editorial/CoverageMap'
-import { ASSEMBLY_FEE, SOFA_REMOVAL_FEE, UPSTAIRS_FIRST_FLOOR } from '@/constants/delivery'
+import { ASSEMBLY_FEE, SOFA_REMOVAL_PER_SEAT, UPSTAIRS_FIRST_FLOOR } from '@/constants/delivery'
 import { PROMISES } from '@/constants/promises'
 import { SUPPORT_EMAIL } from '@/constants/contact'
 
@@ -52,8 +52,8 @@ const CHARGES = [
   },
   {
     label: 'Taking your old sofa away',
-    price: `£${SOFA_REMOVAL_FEE}`,
-    note: 'May differ for very large items — we will tell you as soon as your order reaches us',
+    price: `£${SOFA_REMOVAL_PER_SEAT} per seat`,
+    note: 'Count every seat we collect. May differ for very large items — we will tell you as soon as your order reaches us',
   },
   {
     label: 'Re-delivery after a missed slot',

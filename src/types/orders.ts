@@ -30,4 +30,5 @@ export interface TrackedOrder {
   fee_assembly?: number
   wants_sofa_removal?: boolean
   fee_sofa_removal?: number
+  sofa_removal_seats?: number | null
 }

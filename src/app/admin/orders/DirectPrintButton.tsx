@@ -327,7 +327,7 @@ export default function DirectPrintButton({ order }: { order: AdminOrderDisplay 
                 </div>` : ''}
                 ${Number(activeOrder.fee_sofa_removal ?? 0) > 0 ? `
                 <div class="summary-row">
-                  <span>Old sofa removal</span>
+                  <span>Old sofa removal${activeOrder.sofa_removal_seats ? ` (${activeOrder.sofa_removal_seats} seats)` : ''}</span>
                   <span style="font-weight: 600; color: #1c1917;">£${Number(activeOrder.fee_sofa_removal).toFixed(2)}</span>
                 </div>` : ''}
                 <div class="summary-total">

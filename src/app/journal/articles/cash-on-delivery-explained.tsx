@@ -87,7 +87,7 @@ export default function CashOnDeliveryExplained() {
           <strong>Assembly in the room — £20.</strong>
         </li>
         <li>
-          <strong>Taking your old sofa away — £30</strong>, indicative. A very large item can cost
+          <strong>Taking your old sofa away — £10 per seat</strong>, so £30 for a three-seater. A very large or unusual item can cost
           more, and the team confirms with you before delivery rather than on the doorstep.
         </li>
       </ul>

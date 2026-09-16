@@ -104,7 +104,7 @@ export const ARTICLES: Article[] = [
       'No deposit, no card, no finance: you pay for the sofa when it reaches your house, in cash or by bank transfer. What to have ready on the day, what the optional extras cost, and what happens if something is wrong.',
     lede: 'You pay nothing until the sofa is at your door and you have looked at it. Here is exactly how that works on the day, including the parts that catch people out.',
     published: '2026-09-03',
-    updated: '2026-09-03',
+    updated: '2026-09-16',
     toc: [
       { id: 'how', label: 'Nothing upfront' },
       { id: 'methods', label: 'Cash or bank transfer' },
@@ -169,7 +169,7 @@ export const ARTICLES: Article[] = [
     lede:
       'Most deliveries that go badly were decided days earlier, by something nobody thought to do. None of it is dramatic and all of it is avoidable.',
     published: '2026-09-04',
-    updated: '2026-09-04',
+    updated: '2026-09-16',
     toc: [
       { id: 'checkout', label: 'Book the extras early' },
       { id: 'slot', label: 'Confirm and protect the day' },

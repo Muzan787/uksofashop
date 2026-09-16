@@ -30,7 +30,7 @@ export default async function AccountPage() {
     .select(`
       id, status, created_at, total_amount, items_subtotal, discount_amount,
       discount_tier, promotion_code, offer_source, delivery_total,
-      fee_upstairs, fee_assembly, fee_sofa_removal,
+      fee_upstairs, fee_assembly, fee_sofa_removal, sofa_removal_seats,
       order_items (
         quantity,
         price_at_time_of_purchase,
@@ -88,6 +88,7 @@ export default async function AccountPage() {
     feeUpstairs: Number(o.fee_upstairs ?? 0),
     feeAssembly: Number(o.fee_assembly ?? 0),
     feeSofaRemoval: Number(o.fee_sofa_removal ?? 0),
+    sofaRemovalSeats: o.sofa_removal_seats ?? null,
     items: (o.order_items ?? []).map((i) => {
       const variant = one(i.product_variants)
       const product = one(variant?.products)
