@@ -2,12 +2,13 @@
 // src/components/Admin/AdminSidebarClient.tsx
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, ShoppingCart, Package, Tags, LogOut, Star, Palette } from 'lucide-react'
+import { LayoutDashboard, ShoppingCart, Package, Tags, LogOut, Star, Palette, UsersRound } from 'lucide-react'
 import { logout } from '@/app/actions/auth'
 
 const navItems = [
   { href: '/admin',            icon: LayoutDashboard, label: 'Home' },
   { href: '/admin/orders',     icon: ShoppingCart,    label: 'Orders' },
+  { href: '/admin/leads',      icon: UsersRound,      label: 'Leads' },
   { href: '/admin/inventory',  icon: Package,         label: 'Inventory' },
   { href: '/admin/categories', icon: Tags,            label: 'Categories' },
   { href: '/admin/reviews',    icon: Star,            label: 'Reviews' },
@@ -58,12 +59,12 @@ export default function AdminSidebarClient() {
       {/* ========================================= */}
       {/* MOBILE BOTTOM TABS (Hidden on desktop)      */}
       {/* ========================================= */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-[#0a0a0a]/90 backdrop-blur-md border-t border-white/10 z-50 pb-safe">
-        <div className="flex justify-around items-center px-2 py-2">
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-[#0a0a0a]/90 backdrop-blur-md border-t border-white/10 z-50 pb-safe overflow-x-auto [&::-webkit-scrollbar]:hidden">
+        <div className="flex min-w-max items-center px-2 py-2">
           {navItems.map(({ href, icon: Icon, label }) => {
             const active = href === '/admin' ? pathname === href : pathname.startsWith(href)
             return (
-              <Link key={href} href={href} className="flex flex-col items-center p-2 w-16">
+              <Link key={href} href={href} className="flex w-16 shrink-0 flex-col items-center p-2">
                 <div className={`p-1.5 rounded-pill transition-colors ${active ? 'bg-orange-500/10 text-orange-500' : 'text-zinc-400'}`}>
                   <Icon className="w-6 h-6" />
                 </div>
