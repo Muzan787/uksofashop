@@ -11,6 +11,8 @@ export interface RecoveryItem {
   fabric_id?: string | null
 }
 
+const SESSION_KEY = 'ukss_checkout_recovery_preferences'
+
 export default function CheckoutRecoveryOptIn({
   email,
   phone,
@@ -22,6 +24,7 @@ export default function CheckoutRecoveryOptIn({
 }) {
   const [emailOptIn, setEmailOptIn] = useState(false)
   const [whatsappOptIn, setWhatsappOptIn] = useState(false)
+  const [hydrated, setHydrated] = useState(false)
   const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [message, setMessage] = useState('')
   const lastPayload = useRef('')
@@ -30,7 +33,33 @@ export default function CheckoutRecoveryOptIn({
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
   const phoneValid = isValidUkMobile(phone.trim())
 
+  // Delivery -> Cart -> Delivery remounts this component. Remember the shopper's
+  // own choices for this browser session so the UI never appears to silently
+  // untick something the server is still holding.
   useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(SESSION_KEY)
+      if (raw) {
+        const saved = JSON.parse(raw) as { email?: boolean; whatsapp?: boolean }
+        const nextEmail = Boolean(saved.email)
+        const nextWhatsApp = Boolean(saved.whatsapp)
+        setEmailOptIn(nextEmail)
+        setWhatsappOptIn(nextWhatsApp)
+        hasEverOpted.current = nextEmail || nextWhatsApp
+      }
+    } catch {}
+    setHydrated(true)
+  }, [])
+
+  useEffect(() => {
+    if (!hydrated) return
+    try {
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify({ email: emailOptIn, whatsapp: whatsappOptIn }))
+    } catch {}
+  }, [hydrated, emailOptIn, whatsappOptIn])
+
+  useEffect(() => {
+    if (!hydrated) return
     if (!emailOptIn && !whatsappOptIn && !hasEverOpted.current) return
 
     if (emailOptIn && !emailValid) {
@@ -83,7 +112,7 @@ export default function CheckoutRecoveryOptIn({
       window.clearTimeout(timer)
       controller.abort()
     }
-  }, [email, phone, basket, emailOptIn, whatsappOptIn, emailValid, phoneValid])
+  }, [hydrated, email, phone, basket, emailOptIn, whatsappOptIn, emailValid, phoneValid])
 
   return (
     <div className="rounded-sm border border-calico-300 bg-calico-100 px-4 py-3.5">
