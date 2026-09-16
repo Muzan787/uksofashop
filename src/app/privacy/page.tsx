@@ -12,7 +12,6 @@ export const metadata: Metadata = {
   alternates: { canonical: '/privacy' },
 }
 
-/** Set by hand. See the note in src/app/terms/page.tsx. */
 const LAST_UPDATED = '2026-09-16'
 
 const TOC = [
@@ -87,10 +86,11 @@ export default function PrivacyPage() {
         </p>
         <p>
           If you choose WhatsApp we keep the mobile number you entered; if you choose email we keep
-          the email address you entered. We also keep a minimal snapshot of the basket — product
-          variant, quantity and any chosen fabric — so the reminder can relate to the sofa you were
-          considering. We do not copy your delivery address, postcode, special instructions or the
-          values typed into other checkout fields into the reminder record.
+          the email address you entered. We also keep a snapshot of the products in that basket —
+          such as the sofa, variant or SKU, colour or chosen fabric, quantity and the current product
+          price — so a later reminder or follow-up can relate to the exact sofa you were considering.
+          We do not copy your delivery address, postcode, special instructions or the values typed
+          into other checkout fields into the reminder record.
         </p>
         <p>
           You can opt out at any time. If you untick both reminder choices, the duplicate reminder
@@ -125,8 +125,8 @@ export default function PrivacyPage() {
           messages are kept for as long as they are useful to the conversation and then deleted.
           Checkout-reminder records expire after at most 90 days; their duplicate contact and basket
           data are cleared earlier if you opt out or complete the order. Analytics data expires on
-          the schedule set by the provider. You can ask us to delete anything that is not covered by
-          a legal obligation to keep it.
+          the schedule set by the provider. You can ask us to delete anything that is not covered
+          by a legal obligation to keep it.
         </p>
 
         <h2 id="rights">7. Your rights</h2>
