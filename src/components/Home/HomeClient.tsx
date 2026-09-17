@@ -4,6 +4,7 @@ import Hero from './Hero';
 import TrustMarquee from './TrustMarquee';
 import ProductRail from './ProductRail';
 import CategoryBento, { type CategoryTile } from './CategoryBento';
+import BuildYourOwn, { type BuildTeaser } from './BuildYourOwn';
 import StatsBand from './StatsBand';
 import CollectionShowcase, { type HomeCollection } from './CollectionShowcase';
 import CraftStory from './CraftStory';
@@ -30,6 +31,7 @@ interface Props {
   collections: HomeCollection[];
   sofaCount: number;
   reviews: HomeReview[];
+  buildTeaser: BuildTeaser;
 }
 
 /**
@@ -43,21 +45,25 @@ interface Props {
  *    2  Trust marquee   ember    the four terms, moving
  *    3  Latest arrivals calico   something to buy, three screens sooner than
  *                                the build this replaces managed
- *    4  Categories      calico   the shape of the range
- *    5  Figures         ink      how big the shop actually is
- *    6  Collections     calico   the whole room at once
- *    7  How it works    indigo   what buying here involves
- *    8  Quote           image    a breath
- *    9  Reviews         calico   other people
- *   10  Closing         ink      the decision
+ *    4  Build your own  ink      the sofa that is not in the rail, made
+ *    5  Categories      calico   the shape of the range
+ *    6  Figures         ink      how big the shop actually is
+ *    7  Collections     calico   the whole room at once
+ *    8  How it works    indigo   what buying here involves
+ *    9  Quote           image    a breath
+ *   10  Reviews         calico   other people
+ *   11  Closing         ink      the decision
  *
- * The grounds alternate the whole way down — dark, ember, light, light, dark,
- * light, indigo, dark, light, dark. That rhythm is doing real work. The page
- * this replaces ran five light sections in a row through its middle, and the
- * effect was that the entire centre of the homepage read as one long
+ * The grounds alternate the whole way down — dark, ember, light, dark, light,
+ * dark, light, indigo, dark, light, dark. That rhythm is doing real work. The
+ * page this replaces ran five light sections in a row through its middle, and
+ * the effect was that the entire centre of the homepage read as one long
  * undifferentiated block that people scrolled straight past. Two consecutive
  * light sections are allowed, and they are separated by calico-50 against
- * calico-100; three are not.
+ * calico-100; three are not. The builder went in at four rather than lower
+ * down for the same reason it exists: the person it is for has just looked at
+ * six sofas and not found theirs, and should meet it before deciding the range
+ * is the range.
  *
  * Every section owns its own heading, ground, gradient and reveal timing. This
  * file decides nothing except what goes where, which is why it is 120 lines
@@ -116,7 +122,7 @@ function toCard(product: Product) {
 }
 
 // ─── Main export ──────────────────────────────────────────────────────────────
-export default function HomeClient({ categories, products, collections, sofaCount, reviews }: Props) {
+export default function HomeClient({ categories, products, collections, sofaCount, reviews, buildTeaser }: Props) {
   const lead = products[0] ?? null;
   // Same product as the first card in the rail below, so the same URL — see
   // the note in toCard.
@@ -142,6 +148,8 @@ export default function HomeClient({ categories, products, collections, sofaCoun
         viewAllHref="/shop/all"
         viewAllLabel="View all sofas"
       />
+
+      <BuildYourOwn teaser={buildTeaser} />
 
       <CategoryBento categories={categories} />
 

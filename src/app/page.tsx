@@ -2,6 +2,7 @@
 import type { Metadata } from 'next';
 import { createClient } from '@/utils/supabase/server';
 import { summariseCollections } from '@/utils/collections';
+import { getFabricLibrary } from '@/utils/fabrics';
 import HomeClient from '@/components/Home/HomeClient';
 import { organizationSchema, webSiteSchema, jsonLd } from '@/utils/schema';
 
@@ -117,6 +118,51 @@ export default async function HomePage() {
     .order('created_at', { ascending: false })
     .limit(12);
 
+  // 6. The "build your own" board: one made-to-order frame to photograph the
+  //    section with, the cheapest 3 seater we build, and the fabric library
+  //    for its count and three swatches. The Ashton high back is the first
+  //    choice because it is the best studio shot in the range; anything
+  //    custom_made with a photograph will do if it is ever retired.
+  const [{ data: buildFrames }, fabricLibrary] = await Promise.all([
+    supabase
+      .from('products')
+      .select('slug, title, base_price, size_label, product_variants(image_url, priority)')
+      .eq('custom_made', true)
+      .eq('is_active', true),
+    getFabricLibrary(),
+  ]);
+
+  const frames = (buildFrames ?? []).map(f => ({
+    ...f,
+    image: [...(f.product_variants ?? [])]
+      .sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0))
+      .find(v => v.image_url)?.image_url ?? null,
+  }));
+  const board =
+    frames.find(f => f.slug === 'ashton-high-back-3-seater' && f.image) ??
+    frames.find(f => f.size_label === '3 Seater' && f.image) ??
+    frames.find(f => f.image) ??
+    null;
+  const threeSeaters = frames
+    .filter(f => f.size_label === '3 Seater')
+    .map(f => Number(f.base_price))
+    .filter(Number.isFinite);
+  const allFabrics = fabricLibrary.flatMap(c => c.fabrics);
+  // Three that read as a range at 28px: a colour, a neutral and a dark.
+  const wanted = ['PL08', 'CH02', 'CH05'];
+  const swatches = wanted
+    .map(code => allFabrics.find(f => f.code === code))
+    .filter((f): f is NonNullable<typeof f> => Boolean(f));
+  const buildTeaser = {
+    image: board?.image ?? null,
+    title: board?.title ?? null,
+    threeSeaterFrom: threeSeaters.length ? Math.min(...threeSeaters) : null,
+    fabricCount: allFabrics.length,
+    swatches: (swatches.length === 3 ? swatches : allFabrics.slice(0, 3)).map(f => ({
+      image: f.image, hex: f.hex, name: f.name,
+    })),
+  };
+
   const reviews = (reviewRows ?? []).map(r => ({
     id: r.id,
     rating: r.rating,
@@ -139,6 +185,7 @@ export default async function HomePage() {
         collections={collectionsData}
         sofaCount={sofaCount ?? 0}
         reviews={reviews}
+        buildTeaser={buildTeaser}
       />
     </>
   );
