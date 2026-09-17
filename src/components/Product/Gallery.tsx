@@ -117,10 +117,17 @@ export default function Gallery({
   const count = images.length;
 
   const describe = useCallback(
-    (i: number) =>
-      `${title}${selectedColor ? ` in ${selectedColor}` : ''}${material ? ` ${material}` : ''}` +
-      (count > 1 ? ` — photo ${i + 1} of ${count}` : ''),
-    [title, selectedColor, material, count],
+    (i: number) => {
+      // A photograph that names its own colourway (made-to-order frames, where
+      // the gallery is every colour we have shot) describes itself; otherwise
+      // the whole set is the selected variant.
+      const label = images[i]?.label;
+      const shown = label
+        ? ` in ${label}`
+        : `${selectedColor ? ` in ${selectedColor}` : ''}${material ? ` ${material}` : ''}`;
+      return `${title}${shown}${count > 1 ? ` — photo ${i + 1} of ${count}` : ''}`;
+    },
+    [title, images, selectedColor, material, count],
   );
 
   // A colour change rewrites the list with the new variant's photograph at the
@@ -165,6 +172,65 @@ export default function Gallery({
     };
     el.addEventListener('touchstart', onTouch, { passive: false });
     return () => el.removeEventListener('touchstart', onTouch);
+  }, []);
+
+  // ── The swipe hint ───────────────────────────────────────────────────────
+  //
+  // A carousel that shows one photograph per screen, with no next slide
+  // peeking in from the edge, gives no sign that there is anything to swipe
+  // to - the dots are the only clue, and they are small and below. So once
+  // the first photograph has had a moment on screen, the whole strip eases
+  // 44px to the left, showing the edge of the second picture, holds, and
+  // eases back. Once per visit to the page.
+  //
+  // A transform on the track rather than a scroll: scroll-snap-mandatory
+  // would catch a partial scroll and finish it one way or the other on its
+  // own timing, and the point is a nudge, not a slide change.
+  //
+  // On the motion rule - a sofa is heavy - both legs are the long ease-out
+  // curve, no spring, no overshoot. Skipped entirely when there is only one
+  // photograph, when the visitor prefers reduced motion, when the phone
+  // carousel is not the layout on screen, and if they have already touched
+  // or scrolled the strip before it gets going - they have found it.
+  useEffect(() => {
+    const el = trackRef.current;
+    if (!el || count < 2) return;
+    if (typeof el.animate !== 'function') return;
+
+    let animation: Animation | null = null;
+    const stop = () => { animation?.cancel(); animation = null; };
+
+    const timer = window.setTimeout(() => {
+      // Read here rather than from the hook: useReducedMotionSafe starts
+      // false on the server and the first client render, and this closure
+      // was made on that first render.
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      if (el.clientWidth === 0 || el.scrollLeft > 0) return;
+      animation = el.animate(
+        [
+          { transform: 'translateX(0)', easing: 'cubic-bezier(0.16, 1, 0.3, 1)' },
+          { transform: 'translateX(-44px)', offset: 0.4, easing: 'linear' },
+          { transform: 'translateX(-44px)', offset: 0.52, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' },
+          { transform: 'translateX(0)' },
+        ],
+        { duration: 1500 },
+      );
+      animation.onfinish = () => { animation = null; };
+    }, 1100);
+
+    el.addEventListener('pointerdown', stop, { passive: true });
+    el.addEventListener('touchstart', stop, { passive: true });
+    el.addEventListener('scroll', stop, { passive: true });
+    return () => {
+      window.clearTimeout(timer);
+      stop();
+      el.removeEventListener('pointerdown', stop);
+      el.removeEventListener('touchstart', stop);
+      el.removeEventListener('scroll', stop);
+    };
+    // Once per page: `count` is known from the server-rendered props, and a
+    // colour change part-way through a visit should not replay the hint.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const current = images[index] ?? images[0];

@@ -59,6 +59,13 @@ export interface SizeVariant {
 /** One image in the main slider. */
 export interface GalleryImage {
   src: string
+  /**
+   * What the photograph shows, where that differs from the selected variant -
+   * "Navy Blue Plush Velvet". Set on made-to-order frames, where every
+   * colourway we have photographed is in the one gallery and the alt text
+   * has to name the colour in THIS picture, not the one in the first.
+   */
+  label?: string
 }
 
 /** One colour choice under the gallery. */

@@ -163,7 +163,26 @@ export default function ProductPageClient({
   }, [sizeVariants, currentSizeLabel, categorySlug]);
 
   // ── Gallery inputs ───────────────────────────────────────────────────────
+  //
+  // Two kinds of product, two readings of the variant rows.
+  //
+  // A stocked recliner's variants are real choices: Black leather or Grey
+  // fabric is what turns up on the van. So the swatches choose, and the
+  // gallery leads with the chosen colour's photograph.
+  //
+  // A made-to-order frame is built in whichever of the 70 fabrics the
+  // customer picks in the dialog, and its variant rows are only the colourways
+  // we happen to have photographed - Lily in grey, black, navy and beige. A
+  // colour swatch there was a second, misleading choice that changed nothing
+  // about what got built. Muaz asked (2026-09-18) for those photographs to be
+  // treated as the gallery instead: every colourway in one swipeable strip,
+  // no swatch row, no material pills, and the fabric picker as the only
+  // choice. Each photograph carries its own colour for the alt text, since
+  // the first picture is no longer "the selected variant".
+  const photographsAreGallery = Boolean(product.custom_made);
+
   const swatches = useMemo<Swatch[]>(() => {
+    if (photographsAreGallery) return [];
     const seen = new Set<string>();
     const out: Swatch[] = [];
     for (const v of inMaterial) {
@@ -173,21 +192,30 @@ export default function ProductPageClient({
       out.push({ id: v.id, color: key, hex: v.color_hex, image: v.image_url });
     }
     return out;
-  }, [inMaterial]);
+  }, [inMaterial, photographsAreGallery]);
 
   const images = useMemo<GalleryImage[]>(() => {
     const seen = new Set<string>();
     const out: GalleryImage[] = [];
+    const push = (src: string | null | undefined, label?: string) => {
+      if (src && !seen.has(src)) { out.push({ src, label }); seen.add(src); }
+    };
 
-    // The selected variant's own photograph leads.
-    const lead = selVariant?.image_url || inMaterial[0]?.image_url;
-    if (lead) { out.push({ src: lead }); seen.add(lead); }
-
-    for (const url of product.gallery_images ?? []) {
-      if (url && !seen.has(url)) { out.push({ src: url }); seen.add(url); }
+    if (photographsAreGallery) {
+      // The variant a card's swatch linked to (?variant=) still leads, so the
+      // colour that was tapped is the colour that appears; after that, every
+      // colourway in priority order, then the gallery proper.
+      const labelOf = (v: Variant) => [v.color, v.material].filter(Boolean).join(' ') || undefined;
+      if (selVariant) push(selVariant.image_url, labelOf(selVariant));
+      for (const v of variants) push(v.image_url, labelOf(v));
+    } else {
+      // The selected variant's own photograph leads.
+      push(selVariant?.image_url || inMaterial[0]?.image_url);
     }
+
+    for (const url of product.gallery_images ?? []) push(url);
     return out;
-  }, [selVariant?.image_url, inMaterial, product.gallery_images]);
+  }, [photographsAreGallery, selVariant, variants, inMaterial, product.gallery_images]);
 
   // ── Specs ────────────────────────────────────────────────────────────────
   const specs = useMemo<Record<string, string>>(() => {
@@ -395,9 +423,11 @@ export default function ProductPageClient({
               title={product.title}
               images={images}
               swatches={swatches}
-              selectedColor={selColor}
+              // On a made-to-order frame each photograph names its own colour
+              // (see `images` above), so no page-wide colour is claimed.
+              selectedColor={photographsAreGallery ? '' : selColor}
               onSelectColor={setSelColor}
-              material={selMat === 'Standard' ? '' : selMat}
+              material={photographsAreGallery || selMat === 'Standard' ? '' : selMat}
               fabrics={fabrics}
               selectedFabric={fabric}
               onOpenFabrics={madeToOrder ? () => setFabricOpen(true) : undefined}
@@ -431,7 +461,10 @@ export default function ProductPageClient({
                 hrefForSubgroup={hrefForSubgroup}
                 sizes={sizes}
                 onCustomSize={() => setShowCustomSize(true)}
-                materials={materials}
+                // No material pills on a made-to-order frame: the fabric
+                // picker is the material choice, and "Marble / Plush Velvet"
+                // was only which colourways had been photographed.
+                materials={photographsAreGallery ? [] : materials}
                 selectedMaterial={selMat}
                 onSelectMaterial={handleMaterial}
                 added={added}
