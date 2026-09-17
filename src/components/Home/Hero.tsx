@@ -87,24 +87,20 @@ export default function Hero({ image, productTitle, productHref, fromPrice, sofa
   /*
    * WHY THE HEIGHT IS NOT 100svh.
    *
-   * The hero does not own the whole screen on a phone. Two fixed bars eat into
-   * it: the announcement strip above (2.5rem) pushes the section down, and the
-   * bottom navigation below (57px plus its border and safe area) covers the
-   * last ~68px of the viewport. At a full 100svh the bottom of this section —
-   * the caption rail, the sofa's contact shadow, the point where the ember band
-   * begins — sat underneath that navigation and could not be seen at all.
+   * The announcement strip above (2.5rem) pushes the section down, so that
+   * much has to come off or the bottom of the hero sits below the fold. On a
+   * phone a further 1.5rem comes off so that a sliver of the ember band shows
+   * beneath this section on the first screen. That sliver is deliberate: it is
+   * the one honest signal on a phone that there is more page below. (It used
+   * to be 7rem, to clear a fixed bottom navigation as well; that bar was
+   * removed on 2026-09-18.)
    *
-   * 7rem is those two together plus a little over, so the section stops just
-   * short of the navigation and a sliver of the ember band shows in the gap.
-   * That sliver is deliberate: it is the one honest signal on a phone that
-   * there is more page below.
-   *
-   * Desktop has no bottom navigation, so it only subtracts the announcement.
+   * Desktop only subtracts the announcement.
    */
   return (
     <section
       data-ground="dark"
-      className="grain relative isolate flex min-h-[calc(100svh-7rem)] flex-col overflow-hidden bg-ink-900 lg:min-h-[calc(100svh-2.5rem)]"
+      className="grain relative isolate flex min-h-[calc(100svh-4rem)] flex-col overflow-hidden bg-ink-900 lg:min-h-[calc(100svh-2.5rem)]"
     >
       {/* ── 1. The room ──────────────────────────────────────────────────── */}
       {room && (
@@ -322,13 +318,11 @@ export default function Hero({ image, productTitle, productHref, fromPrice, sofa
       </div>
 
       {/* ── The bottom edge ──────────────────────────────────────────────────
-          Desktop only, and not as a cosmetic choice. On a phone this row sat
-          entirely underneath the fixed bottom navigation — 53px of caption and
-          a scroll cue that nobody could see, taken off the height of the sofa
-          to render something the navigation was covering. The caption's job
-          (naming the sofa, linking to it) is done on mobile by the price chip
-          above, and the scroll cue's job is done by the sliver of ember band
-          showing beneath this section. */}
+          Desktop only. On a phone this row is 53px of caption and scroll cue
+          taken off the height of the sofa: the caption's job (naming the
+          sofa, linking to it) is done there by the price chip above, and the
+          scroll cue's job by the sliver of ember band showing beneath this
+          section. */}
       <div className="relative mx-auto hidden w-full max-w-shell items-center justify-between gap-4 border-t border-calico-50/10 px-4 py-3 sm:px-6 lg:flex">
         <p className="m-0 font-data text-caption tabular-nums text-calico-300">
           {productTitle ? (

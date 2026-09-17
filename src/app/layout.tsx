@@ -205,12 +205,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           {/* ── Toasts ─────────────────────────────────────────────────────
               On the tokens: Ink 900 with Calico 50 copy and an ember rule down
               the leading edge, sage where something succeeded and rust where it
-              did not. Bottom centre rather than bottom right, and lifted clear
-              of the bottom navigation — a toast that lands on top of the cart
-              button is a toast that gets tapped through. */}
+              did not. Bottom centre rather than bottom right, so it never lands
+              on the WhatsApp or add-to-cart buttons in the corners. */}
           <Toaster
             position="bottom-center"
-            containerStyle={{ bottom: 'calc(var(--bottom-nav) + env(safe-area-inset-bottom) + 16px)' }}
+            containerStyle={{ bottom: 'calc(env(safe-area-inset-bottom) + 16px)' }}
             toastOptions={{
               duration: 3000,
               style: {

@@ -416,20 +416,10 @@ export default function Footer({ categories }: { categories: NavCategory[] }) {
       </div>
 
       {/* ── Base ─────────────────────────────────────────────────────────────
-          THE BOTTOM PADDING IS LOAD-BEARING ON A PHONE.
-
-          The fixed bottom navigation covers the last 68px of the viewport, and
-          this row — copyright, the three legal links, the social icons and back
-          to top — sat underneath it: rendered, tabbable, and impossible to see
-          or tap. The clearance used to live on <main>, which is the wrong
-          element for it twice over. It did not protect this row, because the
-          footer is <main>'s sibling and comes after it. And because <main> has
-          no background of its own, those 68px painted in the page ground —
-          a bright calico strip driven between the ink closing panel and this
-          ink footer, which was the most visible seam on the whole page.
-
-          It belongs on the last element in the document, which is this one. */}
-      <div className="pb-bottom-nav relative border-t border-calico-50/10">
+          Copyright, the three legal links, the social icons and back to top.
+          `pb-safe` keeps the row above a handset's home indicator; there is
+          no bottom navigation to clear any more (removed 2026-09-18). */}
+      <div className="pb-safe relative border-t border-calico-50/10">
         <div className="mx-auto flex max-w-shell flex-col gap-4 px-4 py-4 sm:flex-row sm:items-center sm:px-6 lg:py-5">
           <p className="m-0 text-caption text-calico-300">
             © <span className="font-data tabular-nums">{year}</span> UK Sofa Shop. All rights reserved.

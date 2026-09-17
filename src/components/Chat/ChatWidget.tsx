@@ -5,8 +5,11 @@
 //
 // Mounted once in MainLayoutWrapper, next to the WhatsApp button, and only
 // when the server has an ANTHROPIC_API_KEY to answer with (root layout). It is
-// a second floating pill stacked above the WhatsApp one, on the same
+// a second floating button stacked above the WhatsApp one, on the same
 // `--fab-extra` clearance, so the two move together when a bottom bar is up.
+// Like that one it shows its word only while the page is at the top and
+// contracts to a circle once scrolled (useCompactFab) - a size smaller than
+// WhatsApp, because WhatsApp is the one that reaches a person.
 //
 // WHAT IT IS FOR. Visitors ask the same handful of things before they will
 // message - does it fit, do you deliver here, how do I pay, can I have it in
@@ -27,6 +30,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { MessageCircleQuestionMark, RotateCcw, SendHorizontal, X } from 'lucide-react';
 import { useWhatsAppCTA } from '@/utils/attribution/useWhatsAppCTA';
+import { useCompactFab } from '@/components/Layout/useCompactFab';
 import { PHONE_DISPLAY } from '@/constants/contact';
 import { useBodyLock } from '@/components/UI/useBodyLock';
 import WhatsAppIcon from '@/components/Product/WhatsAppIcon';
@@ -99,6 +103,7 @@ export default function ChatWidget() {
   const [busy, setBusy] = useState(false);
   const [narrow, setNarrow] = useState(false);
   const loaded = useRef(false);
+  const compact = useCompactFab();
 
   const launcher = useRef<HTMLButtonElement>(null);
   const textarea = useRef<HTMLTextAreaElement>(null);
@@ -231,11 +236,13 @@ export default function ChatWidget() {
 
   return (
     <>
-      {/* The launcher. Stacked above the WhatsApp pill in the bottom-right
-          corner: same edge inset, same clearance, one pill-height higher. Ink
-          rather than a second colour so the green stays the one thing that
-          means "talk to a person". The left-hand corner is the product
-          page's "Add to cart" pill - see components/Layout/WhatsAppFab.tsx. */}
+      {/* The launcher. Stacked above the WhatsApp button in the bottom-right
+          corner: same edge inset, same clearance, one button-height higher.
+          Ink rather than a second colour so the green stays the one thing
+          that means "talk to a person". 44px to WhatsApp's 48, and the label
+          contracts the same way: 12px + 20px icon + 12px is a circle once the
+          page is scrolled. The left-hand corner is the product page's
+          "Add to cart" pill - see components/Layout/WhatsAppFab.tsx. */}
       <button
         ref={launcher}
         type="button"
@@ -243,12 +250,26 @@ export default function ChatWidget() {
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-controls="site-assistant"
-        className={`hover-btn fab-offset-2 fixed right-4 z-sticky-bar flex h-12 items-center gap-2 rounded-pill bg-ink-900 px-4 text-calico-50 shadow-e2 transition-[bottom,opacity,transform] duration-base ease-out-expo focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-900 ${
+        aria-label="Ask us a question"
+        className={`hover-btn fab-offset-2 fixed right-4 z-sticky-bar flex h-11 items-center rounded-pill bg-ink-900 text-calico-50 shadow-e2 transition-[bottom,opacity,transform,padding,gap] duration-base ease-out-expo focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-900 ${
           open ? 'pointer-events-none translate-y-2 opacity-0' : 'translate-y-0 opacity-100'
-        }`}
+        } ${compact ? 'gap-0 px-3' : 'gap-2 px-4'}`}
       >
         <MessageCircleQuestionMark className="h-5 w-5 shrink-0" aria-hidden="true" />
-        <span className="whitespace-nowrap text-body-sm font-semibold">Ask us</span>
+        <span
+          aria-hidden={compact || undefined}
+          className={`grid transition-[grid-template-columns] duration-base ease-out-expo ${
+            compact ? 'grid-cols-[0fr]' : 'grid-cols-[1fr]'
+          }`}
+        >
+          <span
+            className={`min-w-0 overflow-hidden whitespace-nowrap text-body-sm font-semibold transition-opacity duration-swift ease-out-expo ${
+              compact ? 'opacity-0' : 'opacity-100'
+            }`}
+          >
+            Ask us
+          </span>
+        </span>
       </button>
 
       {open && (

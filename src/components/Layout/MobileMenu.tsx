@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   House, Sofa, LayoutGrid, Palette, Star, PackageSearch, Mail,
-  Phone, ShoppingBag, X, ArrowRight, Hammer, type LucideIcon,
+  Phone, ShoppingBag, X, ArrowRight, Hammer, User, type LucideIcon,
 } from 'lucide-react';
 import { PHONE_HREF, PHONE_DISPLAY } from '@/constants/contact';
 import { usePhoneClick } from '@/utils/attribution/usePhoneClick';
@@ -37,6 +37,10 @@ const LINKS: { href: string; label: string; icon: LucideIcon }[] = [
   { href: '/reviews',     label: 'Reviews',      icon: Star },
   { href: '/track-order', label: 'Track Order',  icon: PackageSearch },
   { href: '/contact',     label: 'Contact Us',   icon: Mail },
+  // The header only shows the account icon from `lg` up, and the bottom
+  // navigation that used to carry it on phones is gone, so this is the one
+  // route to /account (and the wishlist inside it) on a phone.
+  { href: '/account',     label: 'Account',      icon: User },
 ];
 
 const FOCUSABLE = 'a[href], button:not([disabled]), input, [tabindex]:not([tabindex="-1"])';
@@ -230,10 +234,8 @@ export default function MobileMenu({ open, onClose, categories, itemCount, trigg
           )}
         </nav>
 
-        {/* The foot. `pb-safe` rather than the bottom-nav clearance: this sheet
-            sits ABOVE that bar in the z-stack (drawer 70, nav 40) and covers
-            it, so there is nothing to clear — only the handset's own home
-            indicator to stay clear of.
+        {/* The foot. `pb-safe` keeps it clear of the handset's own home
+            indicator; there is nothing else at the bottom edge to clear.
 
             Written as px-4 pt-4 rather than p-4, because `p-4` and `pb-safe`
             are both single-class utilities setting padding-bottom and the

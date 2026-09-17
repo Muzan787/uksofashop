@@ -452,7 +452,7 @@ export default function BuildClient({ designs, sizes, collections }: Props) {
       {/* ── The bar ─────────────────────────────────────────────────────── */}
       <div
         data-bottom-bar=""
-        className="sticky above-bottom-nav z-sticky-bar border-t border-calico-300 bg-calico-50/95 backdrop-blur-sm"
+        className="sticky bottom-0 z-sticky-bar border-t border-calico-300 bg-calico-50/95 backdrop-blur-sm"
       >
         <div aria-hidden="true" className="h-0.5 w-full bg-calico-200">
           <span

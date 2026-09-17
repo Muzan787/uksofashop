@@ -10,8 +10,6 @@ interface Props {
   onClose: () => void;
   children: React.ReactNode;
   footer?: React.ReactNode;
-  /** Clears the bottom navigation where the sheet sits above it. */
-  clearsBottomNav?: boolean;
   /** On the wrapper, so a caller can scope the sheet to a breakpoint. */
   className?: string;
 }
@@ -32,7 +30,7 @@ const DISMISS_AFTER = 96;
  * to a drag, so the gesture works wherever a thumb naturally lands.
  */
 export default function Sheet({
-  title, onClose, children, footer, clearsBottomNav, className,
+  title, onClose, children, footer, className,
 }: Props) {
   const panel = useDialog<HTMLDivElement>(onClose);
   const [drag, setDrag] = useState(0);
@@ -72,7 +70,6 @@ export default function Sheet({
         className="absolute inset-x-0 bottom-0 flex max-h-[85vh] flex-col rounded-t-lg bg-calico-50 shadow-e3 outline-none"
         style={{
           animation: 'bottomSheet var(--dur-base) var(--ease-out-expo)',
-          marginBottom: clearsBottomNav ? 'calc(var(--bottom-nav) + env(safe-area-inset-bottom))' : undefined,
           // While a finger is on it the sheet follows, so the transform is set
           // directly rather than transitioned.
           transform: drag ? `translateY(${drag}px)` : undefined,

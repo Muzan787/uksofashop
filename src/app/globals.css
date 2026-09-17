@@ -185,52 +185,6 @@
   .pt-safe { padding-top: env(safe-area-inset-top); }
   .mb-safe { margin-bottom: env(safe-area-inset-bottom); }
 
-  /* Bottom nav clearance */
-  /* Clearance for the mobile bottom navigation.
-   *
-   * That navigation is `lg:hidden`, so above the breakpoint there is nothing to
-   * clear and this has to collapse to nothing. Building the query into the
-   * utility rather than leaving every caller to pair it with `lg:pb-0` is the
-   * difference between correct and coincidental: the two are ordinary utilities
-   * of equal specificity, so which one wins depends on the order they happen to
-   * land in the stylesheet, and here `pb-bottom-nav` won at every width — 68px
-   * of dead space under the desktop footer.
-   *
-   * 68px rather than the 57px in --bottom-nav, because this is clearance above
-   * the bar rather than a flush fit against it. */
-  .pb-bottom-nav {
-    padding-bottom: calc(68px + env(safe-area-inset-bottom));
-  }
-
-  @media (width >= 64rem) {
-    .pb-bottom-nav { padding-bottom: 0; }
-  }
-
-  /* A bar of our own, parked on top of that navigation.
-   *
-   * The sibling of .pb-bottom-nav, for the other half of the same problem.
-   * That one keeps a page's last CONTENT clear of the bar; this one positions
-   * a fixed or sticky bar of ours flush against its top edge.
-   *
-   * Flush, rather than the 68px of breathing room .pb-bottom-nav leaves: two
-   * stacked bars with a strip of page showing between them reads as a mistake,
-   * and the product page's add-to-cart bar, while it existed, always sat
-   * directly on the navigation. It is the same expression that bar wrote
-   * inline, lifted here because a second bar needed it and a third did.
-   *
-   * The media query is built in for exactly the reason it is built into
-   * .pb-bottom-nav: the navigation is lg:hidden, so above the breakpoint there
-   * is nothing to clear, and leaving every caller to remember `lg:bottom-0`
-   * makes correctness depend on which equal-specificity utility happens to
-   * land last in the stylesheet. */
-  .above-bottom-nav {
-    bottom: calc(var(--bottom-nav) + env(safe-area-inset-bottom));
-  }
-
-  @media (width >= 64rem) {
-    .above-bottom-nav { bottom: 0; }
-  }
-
   /* Snap scrolling for carousels */
   .snap-x-mandatory { scroll-snap-type: x mandatory; }
   .snap-start  { scroll-snap-align: start; }
@@ -1530,37 +1484,35 @@ html.entrance .brand-entrance__rule {
 /* Where the floating buttons sit - WhatsApp and "Ask us" on the right, the
  * product page's "Add to cart" on the left. Same rules, both corners.
  *
- * In CSS rather than on the element, because the two rules it needs cannot
- * both be expressed there. The mobile offset has to be a calc() against
- * --bottom-nav and the safe-area inset, which means an inline style — and an
- * inline style beats every class, so the `lg:bottom-6` this used to carry
- * alongside it never applied once. The button has been sitting 73px off the
- * bottom of every desktop screen instead of 24px, silently, because the
- * override it was written with could not win.
+ * In CSS rather than on the element, because the offset is a calc() against
+ * the safe-area inset and --fab-extra, which means an inline style — and an
+ * inline style beats every class, so a `lg:bottom-6` written alongside it
+ * could never win. A media query has nothing to beat.
  *
- * A media query has nothing to beat.
- */
-/*
+ * There is no bottom navigation to clear any more (removed 2026-09-18), so
+ * the base is simply the inset plus a 16px margin on phones and 24px on
+ * desktop.
+ *
  * --fab-extra is set from JS (components/Layout/WhatsAppFab.tsx) on <html>, to
  * the measured height of whatever full-width bar - the checkout total bar,
- * the sample basket on /swatches - is currently pinned to the same edge, so
- * the buttons are pushed up clear of it rather than hidden. Defaults to 0px,
- * so a page with no such bar is unaffected. It lives on the root rather than
- * on any one button so that the assistant's pill (components/Chat/
- * ChatWidget.tsx), which stands one pill-height above WhatsApp, and the
- * add-to-cart pill in the opposite corner (components/Product/
- * AddToCartFab.tsx) are all lifted by the same amount without measuring
- * three times.
+ * the sample basket on /swatches, the builder's summary bar - is currently
+ * pinned to the same edge, so the buttons are pushed up clear of it rather
+ * than hidden. Defaults to 0px, so a page with no such bar is unaffected. It
+ * lives on the root rather than on any one button so that the assistant's
+ * button (components/Chat/ChatWidget.tsx), which stands directly above
+ * WhatsApp, and the add-to-cart pill in the opposite corner
+ * (components/Product/AddToCartFab.tsx) are all lifted by the same amount
+ * without measuring three times.
  */
 .fab-offset {
-  bottom: calc(var(--bottom-nav) + env(safe-area-inset-bottom) + 16px + var(--fab-extra, 0px));
+  bottom: calc(env(safe-area-inset-bottom) + 16px + var(--fab-extra, 0px));
 }
-/* One pill (48px) and a 12px gap above .fab-offset. */
+/* The WhatsApp button (48px) and an 8px gap above .fab-offset. */
 .fab-offset-2 {
-  bottom: calc(var(--bottom-nav) + env(safe-area-inset-bottom) + 16px + 3.75rem + var(--fab-extra, 0px));
+  bottom: calc(env(safe-area-inset-bottom) + 16px + 3.5rem + var(--fab-extra, 0px));
 }
 
 @media (width >= 64rem) {
   .fab-offset { bottom: calc(1.5rem + var(--fab-extra, 0px)); }
-  .fab-offset-2 { bottom: calc(1.5rem + 3.75rem + var(--fab-extra, 0px)); }
+  .fab-offset-2 { bottom: calc(1.5rem + 3.5rem + var(--fab-extra, 0px)); }
 }

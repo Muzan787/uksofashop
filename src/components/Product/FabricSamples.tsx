@@ -204,9 +204,9 @@ export interface SampleBarSofa {
  * keeps the order in view while they take it. It survives the request being
  * sent, because that is exactly when they want to go back.
  *
- * One bar, two rows, rather than two bars: stacked on a phone above the
- * bottom navigation, two separate bars with a strip of page between them read
- * as a mistake, and the WhatsApp pill would have to measure both.
+ * One bar, two rows, rather than two bars: two separate bars stacked on a
+ * phone with a strip of page between them read as a mistake, and the
+ * WhatsApp button would have to measure both.
  */
 export function SampleBar({ sofa }: { sofa?: SampleBarSofa | null }) {
   const { samples, remove } = useSamples()
@@ -225,7 +225,7 @@ export function SampleBar({ sofa }: { sofa?: SampleBarSofa | null }) {
         // on the left both read this. See coveringBarHeight() in
         // src/components/Layout/WhatsAppFab.tsx.
         data-bottom-bar=""
-        className="sticky above-bottom-nav z-sticky-bar border-t border-calico-300 bg-calico-50/95 backdrop-blur-sm"
+        className="sticky bottom-0 z-sticky-bar border-t border-calico-300 bg-calico-50/95 backdrop-blur-sm"
       >
         {sofa && (
           <div

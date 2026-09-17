@@ -53,7 +53,7 @@ export default function CookieConsent() {
       aria-modal="false"
       aria-labelledby="consent-heading"
       className="fixed inset-x-0 z-consent px-3 pb-3 sm:px-5"
-      style={{ bottom: 'calc(var(--bottom-nav) + env(safe-area-inset-bottom))' }}
+      style={{ bottom: 'env(safe-area-inset-bottom)' }}
     >
       <div
         className={`mx-auto max-w-[760px] rounded-md border border-ink-700 bg-ink-900 px-4 py-3.5 shadow-e3 transition-[transform,opacity] duration-base ease-out-expo ${

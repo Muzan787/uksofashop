@@ -148,13 +148,6 @@
      Four, by role rather than by t-shirt size, so the name says where it goes.
      ═══════════════════════════════════════════════════════════════════════ */
 
-  /* The mobile bottom navigation's full rendered height — 56px of content
-   * plus its 1px top border. Six components clear this bar (the sticky
-   * add-to-cart, the WhatsApp button, the cookie sheet, bottom sheets, the
-   * checkout total bar and the toaster) and each carried its own copy of the
-   * number 56, which was one pixel short of the truth in every one of them. */
-  --bottom-nav: 57px;
-
   --radius-sm:   8px;     /* inputs, buttons, chips, swatches, small wells */
   --radius-md:   16px;    /* cards, image wells, panels */
   --radius-lg:   24px;    /* sheets, modals, drawers */
@@ -218,15 +211,14 @@
   --stagger-step:  70ms;    /* per child, capped at 6 children */
 
   /* ── Z-index ─────────────────────────────────────────────────────────────
-     One stack for the whole site. The ordering encodes two rules that are
-     currently broken in the codebase: the bottom navigation sits ABOVE the
-     product page's sticky add-to-cart bar, and the cookie banner sits below
-     both so it can never cover them. */
+     One stack for the whole site. The ordering encodes the rules: the
+     floating buttons sit under the header, the cookie banner sits above them
+     so a visitor answers it before anything else claims that corner, and
+     drawers and modals sit above everything. */
 
   --z-base:        0;
   --z-raised:      10;
   --z-sticky-bar:  30;   /* product page add-to-cart */
-  --z-bottom-nav:  40;
   --z-header:      50;
   --z-scroll-rail: 55;   /* above the header, below anything that opens over it */
   --z-consent:     60;
@@ -473,7 +465,6 @@
 @utility z-base       { z-index: var(--z-base); }
 @utility z-raised     { z-index: var(--z-raised); }
 @utility z-sticky-bar { z-index: var(--z-sticky-bar); }
-@utility z-bottom-nav { z-index: var(--z-bottom-nav); }
 @utility z-header      { z-index: var(--z-header); }
 @utility z-scroll-rail { z-index: var(--z-scroll-rail); }
 @utility z-consent    { z-index: var(--z-consent); }

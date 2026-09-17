@@ -31,7 +31,7 @@ export default function MobileTotalBar({ total, itemCount, quoteRequired = false
     return () => window.removeEventListener('keydown', onKey);
   }, [open]);
 
-  const clearance = 'calc(var(--bottom-nav) + env(safe-area-inset-bottom))';
+  const clearance = 'env(safe-area-inset-bottom)';
 
   return (
     <div className="lg:hidden">

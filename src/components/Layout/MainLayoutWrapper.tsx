@@ -3,7 +3,6 @@
 import { usePathname } from 'next/navigation'
 import Header from "./Header"
 import Footer from "./Footer"
-import MobileNav from "./Mobilenav"
 import PWAPromptManager from "@/components/Admin/PWAPromptManager"
 import ImageGuard from "@/components/UI/ImageGuard"
 import SmoothScroll from "@/components/Motion/SmoothScroll"
@@ -64,6 +63,12 @@ export default function MainLayoutWrapper({
       <ViewTransitions />
       <Cursor />
       <Header categories={categories} />
+      {/* There is no bottom navigation bar any more. It went on 2026-09-18 at
+          Muaz's request: on a phone it, the WhatsApp pill and the "Ask us"
+          pill between them took the bottom quarter of the screen. Everything
+          it linked to is reachable elsewhere - the cart from the header on
+          every width; Home, Shop, Reviews and Account from the menu. Nothing
+          needs bottom clearance now except the safe-area inset. */}
       <main id="main-content" className="flex-grow">
         <PageFade>{children}</PageFade>
       </main>
@@ -78,7 +83,6 @@ export default function MainLayoutWrapper({
           contact route we explicitly want present there; chat can stay focused
           on browsing/product questions elsewhere. */}
       {!isCheckout && chatEnabled && <ChatWidget />}
-      <MobileNav />
     </SmoothScroll>
   )
 }

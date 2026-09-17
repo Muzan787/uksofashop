@@ -4,6 +4,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { useWhatsAppCTA } from '@/utils/attribution/useWhatsAppCTA';
+import { useCompactFab } from './useCompactFab';
 
 /**
  * Height of whatever full-width bar is currently pinned to the same edge -
@@ -35,10 +36,9 @@ const FAB_CLEARANCE = 72;
 
 function coveringBarHeight(): number {
   const bars = document.querySelectorAll<HTMLElement>('[data-bottom-bar]');
-  // The bottom navigation, where the pill's base offset starts. 0 on desktop,
-  // where it is display:none and measures nothing.
-  const nav = document.querySelector<HTMLElement>('nav[aria-label="Primary"]');
-  const floor = window.innerHeight - (nav?.getBoundingClientRect().height ?? 0);
+  // The bottom of the viewport, where the button's base offset starts. There
+  // is no bottom navigation to subtract any more.
+  const floor = window.innerHeight;
 
   let tallest = 0;
   for (const bar of bars) {
@@ -70,11 +70,17 @@ function coveringBarHeight(): number {
  * acquisition control, not a decoration: a visitor who wants to ask a
  * question before reading a word should be able to.
  *
- * ICON + WORD, ALWAYS. A round icon-only pill photographs well but tells a
- * first-time visitor nothing; the label reads "WhatsApp" permanently rather
- * than expanding on hover, because hover has no equivalent on a touch device
- * and a mobile visitor was previously left to guess what a green circle was
- * for.
+ * ICON + WORD AT THE TOP OF THE PAGE, ICON ALONE ONCE SCROLLED. The label
+ * "WhatsApp" is written out while the page is at the top, so a first-time
+ * visitor learns what the green button is - a round icon on its own told
+ * them nothing, and hover has no equivalent on a touch screen. Once they
+ * scroll it contracts to a 48px circle and stays out of the way of what
+ * they are reading; back at the top it opens out again. See useCompactFab
+ * for the thresholds. It used to be a labelled pill permanently, and with
+ * the "Ask us" pill above it and the bottom navigation beneath, the three
+ * took the bottom quarter of a phone screen on every page - Muaz asked for
+ * the screen to relax (2026-09-18), and the navigation went at the same
+ * time.
  *
  * CONTRAST. Calico 50 on WhatsApp green is 2.15:1 - it does not pass for text
  * at any size. It carries Ink 900, which is 9.4:1 on the flat green and about
@@ -87,16 +93,14 @@ function coveringBarHeight(): number {
  * (components/Product/AddToCartFab.tsx) is its mirror image in the bottom-left
  * corner: buy on the left, ask on the right. It was briefly the other way
  * round; Muaz asked for this one back where it was.
- * `.fab-offset` (globals.css) clears the bottom navigation and the
- * safe-area inset on mobile, and drops to a plain 24px edge inset at the `lg`
- * breakpoint where there is no bottom navigation to clear - both as a single
- * CSS rule, because the mobile figure is a calc() no Tailwind utility can
- * express. `--fab-extra`, published on <html> below, adds the height of any
- * covering bar on top of that - for this button, for the assistant's "Ask us"
- * pill stacked above it, and for the add-to-cart pill opposite.
+ * `.fab-offset` (globals.css) clears the safe-area inset plus a 16px margin
+ * on phones and a 24px inset from `lg` up - as a single CSS rule, because the
+ * figure is a calc() no Tailwind utility can express. `--fab-extra`,
+ * published on <html> below, adds the height of any covering bar on top of
+ * that - for this button, for the assistant's "Ask us" button stacked above
+ * it, and for the add-to-cart pill opposite.
  *
- * STACKING. z-sticky-bar (30): below the bottom navigation (40, so this never
- * sits over the primary nav), below the cookie-consent banner (60, so a
+ * STACKING. z-sticky-bar (30): below the cookie-consent banner (60, so a
  * visitor resolves consent before anything else claims that corner) and well
  * below any drawer or modal (70/80).
  */
@@ -135,6 +139,7 @@ export default function WhatsAppFab() {
   });
   const [extra, setExtra] = useState(0);
   const ref = useRef<HTMLAnchorElement>(null);
+  const compact = useCompactFab();
 
   useEffect(() => {
     // Checkout keeps the same pathname after a successful order, so route
@@ -217,13 +222,31 @@ export default function WhatsAppFab() {
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Chat with us on WhatsApp"
-      className="hover-btn btn-whatsapp shadow-whatsapp fab-offset fixed right-4 z-sticky-bar flex h-12 items-center gap-2 rounded-pill bg-whatsapp px-4 text-ink-900 no-underline transition-[bottom] duration-base ease-out-expo focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-900"
+      // 12px + 24px icon + 12px = a 48px circle when compact. The label's
+      // grid track and the gap both animate to nothing rather than being
+      // removed, so the pill contracts instead of snapping.
+      className={`hover-btn btn-whatsapp shadow-whatsapp fab-offset fixed right-4 z-sticky-bar flex h-12 items-center rounded-pill bg-whatsapp text-ink-900 no-underline transition-[bottom,padding,gap] duration-base ease-out-expo focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-900 ${
+        compact ? 'gap-0 px-3' : 'gap-2 px-4'
+      }`}
     >
       <svg viewBox="0 0 24 24" aria-hidden="true" className="h-6 w-6 shrink-0 fill-current">
         <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
       </svg>
 
-      <span className="whitespace-nowrap text-body-sm font-semibold">WhatsApp</span>
+      <span
+        aria-hidden={compact || undefined}
+        className={`grid transition-[grid-template-columns] duration-base ease-out-expo ${
+          compact ? 'grid-cols-[0fr]' : 'grid-cols-[1fr]'
+        }`}
+      >
+        <span
+          className={`min-w-0 overflow-hidden whitespace-nowrap text-body-sm font-semibold transition-opacity duration-swift ease-out-expo ${
+            compact ? 'opacity-0' : 'opacity-100'
+          }`}
+        >
+          WhatsApp
+        </span>
+      </span>
     </a>
   );
 }

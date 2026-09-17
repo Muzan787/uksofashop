@@ -31,10 +31,10 @@ interface Props {
  * "ADD TO CART — £549" does not fit; "ADD TO CART" does, and the price is in
  * the buy box a thumb-flick away.
  *
- * POSITION AND STACKING are the WhatsApp pill's: `.fab-offset` clears the
- * bottom navigation, the safe-area inset and any bar pinned above them, and
- * z-sticky-bar keeps it under the navigation, the consent banner and every
- * dialog - so it cannot sit over the fabric picker it is the reason for.
+ * POSITION AND STACKING are the WhatsApp button's: `.fab-offset` clears the
+ * safe-area inset and any bar pinned to the bottom edge, and z-sticky-bar
+ * keeps it under the consent banner and every dialog - so it cannot sit over
+ * the fabric picker it is the reason for.
  *
  * The fixed positioning is on a wrapper rather than on the button because
  * `.sheen` (globals.css) sets `position: relative` for the band of light it
