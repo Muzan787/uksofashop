@@ -10,6 +10,8 @@ import WhatsAppLink from '@/components/UI/WhatsAppLink'
 import { leadVariantImage, ogImage } from '@/utils/socialImage'
 import { canonicalProductPath } from '@/utils/productUrl'
 import { createClient } from '@/utils/supabase/server'
+import { getBuildTeaser } from '@/utils/buildTeaser'
+import BuildYourOwn from '@/components/Home/BuildYourOwn'
 import SwatchBrowser from './SwatchBrowser'
 
 /**
@@ -172,6 +174,7 @@ export default async function SwatchesPage(props: { searchParams: SearchParams }
     getFabricLibrary(),
     sofaFromSlug(one(params.sofa), one(params.from) === 'build'),
   ])
+  const buildTeaser = await getBuildTeaser(collections)
   const total = collections.reduce((n, c) => n + c.fabrics.length, 0)
 
   // Codes are matched case-insensitively: they are typed by hand in chats
@@ -311,6 +314,11 @@ export default async function SwatchesPage(props: { searchParams: SearchParams }
             </p>
           </div>
         </section>
+
+        {/* The next decision. The page used to end by pointing at the shop to
+            find a frame; the builder is the better answer to "I've picked my
+            colour, now what" - it takes the colour as step three. */}
+        <BuildYourOwn teaser={buildTeaser} context="samples" />
 
         <SampleBar sofa={sofa} />
       </SamplesProvider>

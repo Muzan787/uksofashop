@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowRight, Package, Palette, PhoneCall, Footprints } from 'lucide-react';
+import { ArrowRight, BookOpen, Package, Palette, PhoneCall, Footprints } from 'lucide-react';
 import { Reveal, SplitText } from '@/components/Motion';
 import { staggerDelay } from '@/components/Motion/tokens';
 import { FEET } from '@/constants/feet';
@@ -51,8 +51,25 @@ const STEPS = ['Seats', 'Design', 'Fabric', 'Feet', 'Piping', 'Extras', 'Summary
  * button - so the picture is the second thing seen and the button is never
  * more than a thumb-flick below it. The grid re-places the same three blocks
  * into two columns from lg; nothing is duplicated.
+ *
+ * THE SAMPLES PAGE carries the same section at its foot, after "what happens
+ * next". Somebody who has just chosen three swatches is one decision away
+ * from a sofa, and the page used to end by sending them to the shop to find
+ * a frame; now it sends them to build one around the colour they picked.
  */
-export default function BuildYourOwn({ teaser }: { teaser: BuildTeaser }) {
+interface Props {
+  teaser: BuildTeaser;
+  /**
+   * Where the section is standing. On the samples page the reader has just
+   * picked three swatches, so the sentence starts from there and the
+   * "samples first" button - which would point at the page they are on - is
+   * replaced by the fabric guide.
+   */
+  context?: 'home' | 'samples';
+}
+
+export default function BuildYourOwn({ teaser, context = 'home' }: Props) {
+  const onSamples = context === 'samples';
   const feetCount = FEET.length;
   // The rose-gold fluted shell, the most photogenic foot in the range, on the
   // feet chip. A constant rather than a query: the feet are a constant.
@@ -86,7 +103,7 @@ export default function BuildYourOwn({ teaser }: { teaser: BuildTeaser }) {
             <Reveal distance={14} amount={0.3}>
               <p className="eyebrow m-0 flex items-center gap-3 text-ember-300">
                 <span aria-hidden="true" className="block h-px w-8 bg-ember-500" />
-                Made to order
+                {onSamples ? 'Once the samples arrive' : 'Made to order'}
               </p>
             </Reveal>
 
@@ -104,8 +121,9 @@ export default function BuildYourOwn({ teaser }: { teaser: BuildTeaser }) {
 
             <Reveal delay={0.15} distance={12} amount={0.2}>
               <p className="m-0 mt-4 max-w-[46ch] text-body leading-relaxed text-calico-300 lg:text-lead">
-                Choose the seats, the design, the fabric, the feet and the piping. Seven quick
-                steps, a guide price at the end, and nothing to pay until it&apos;s in your room.
+                {onSamples
+                  ? 'When the swatches have settled the colour, build the sofa around it: the seats, the design, the feet and the piping. Seven quick steps, a guide price at the end, and nothing to pay until it’s in your room.'
+                  : <>Choose the seats, the design, the fabric, the feet and the piping. Seven quick steps, a guide price at the end, and nothing to pay until it&apos;s in your room.</>}
               </p>
             </Reveal>
           </div>
@@ -267,13 +285,23 @@ export default function BuildYourOwn({ teaser }: { teaser: BuildTeaser }) {
                   Start building
                   <ArrowRight aria-hidden="true" className="h-4 w-4" />
                 </Link>
-                <Link
-                  href="/swatches"
-                  className="hover-btn hover-btn-dark glass-dark-panel flex h-14 items-center justify-center gap-2.5 rounded-pill px-6 text-body-sm font-semibold text-calico-50 no-underline"
-                >
-                  <Package aria-hidden="true" className="h-4 w-4 text-ember-300" />
-                  Free fabric samples first
-                </Link>
+                {onSamples ? (
+                  <Link
+                    href="/fabrics"
+                    className="hover-btn hover-btn-dark glass-dark-panel flex h-14 items-center justify-center gap-2.5 rounded-pill px-6 text-body-sm font-semibold text-calico-50 no-underline"
+                  >
+                    <BookOpen aria-hidden="true" className="h-4 w-4 text-ember-300" />
+                    What each fabric is like
+                  </Link>
+                ) : (
+                  <Link
+                    href="/swatches"
+                    className="hover-btn hover-btn-dark glass-dark-panel flex h-14 items-center justify-center gap-2.5 rounded-pill px-6 text-body-sm font-semibold text-calico-50 no-underline"
+                  >
+                    <Package aria-hidden="true" className="h-4 w-4 text-ember-300" />
+                    Free fabric samples first
+                  </Link>
+                )}
               </div>
             </Reveal>
 
