@@ -22,6 +22,7 @@ import WhatsAppIcon from '@/components/Product/WhatsAppIcon'
 import { useWhatsAppCTA } from '@/utils/attribution/useWhatsAppCTA'
 import type { DisplayCartItem } from '@/context/CartContext'
 import { deliveryBreakdown, NO_EXTRAS, type DeliveryOptions } from '@/constants/delivery'
+import { describeBuild } from '@/types/build'
 import { isValidUkPostcode, normalisePostcode } from '@/utils/postcode'
 
 /** Whole pounds read as whole pounds; anything else gets its pence. */
@@ -36,6 +37,8 @@ function describe(item: DisplayCartItem): string {
   const specification = [
     item.fabric_label?.trim() || item.color?.trim() || '',
     item.fabric_code?.trim() || '',
+    // Everything /build recorded, so the chat opens with the whole sofa.
+    ...describeBuild(item.build).map(line => `${line.label}: ${line.value}`),
   ].filter(Boolean).join(' · ')
   return specification ? `${item.title} (${specification})` : item.title
 }

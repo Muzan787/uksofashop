@@ -9,6 +9,7 @@ import NewWhatsAppOrder from './NewWhatsAppOrder'
 import Link from 'next/link'
 
 import { whatsAppLink } from '@/utils/phone'
+import { asBuildSnapshot, describeBuild } from '@/types/build'
 
 
 export const metadata: Metadata = { title: 'Orders' }
@@ -72,7 +73,7 @@ export default async function AdminOrdersPage(props: { searchParams: SearchParam
       *,
       order_items (
         id, quantity, price_at_time_of_purchase,
-        fabric_code, fabric_name, fabric_collection,
+        fabric_code, fabric_name, fabric_collection, customisation,
         product_variants ( sku, color, products ( title ) )
       )
     `, { count: 'exact' })
@@ -294,6 +295,19 @@ export default async function AdminOrdersPage(props: { searchParams: SearchParam
                           {item.fabric_collection} {item.fabric_name}
                           <span className="ml-1 font-mono text-stone-400">{item.fabric_code}</span>
                         </span>
+                      )}
+                      {/* A sofa from /build: feet, piping, custom size and the
+                          customer's own notes. Every line is something to
+                          confirm on the phone before it goes to the workshop. */}
+                      {asBuildSnapshot(item.customisation) && (
+                        <ul className="mt-1.5 list-none space-y-0.5 rounded-sm border border-amber-200 bg-amber-50 px-2.5 py-2 text-xs text-stone-700">
+                          <li className="font-bold uppercase tracking-wide text-amber-800">Built to order — confirm on the phone</li>
+                          {describeBuild(asBuildSnapshot(item.customisation)).map(line => (
+                            <li key={line.label}>
+                              <span className="font-semibold text-stone-900">{line.label}:</span> {line.value}
+                            </li>
+                          ))}
+                        </ul>
                       )}
                     </div>
                     <span className="font-medium text-stone-900">£{item.price_at_time_of_purchase.toFixed(2)}</span>

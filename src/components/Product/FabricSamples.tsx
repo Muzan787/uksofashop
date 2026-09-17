@@ -181,7 +181,12 @@ export interface SampleBarSofa {
   title: string
   href: string
   image: string | null
+  /** Zero where there is no single price to show - a build in progress. */
   price: number
+  /** "Back to the sofa" unless the caller has a better name for where it goes. */
+  backLabel?: string
+  /** The second line, where it is not the price. */
+  detail?: string
 }
 
 /**
@@ -239,8 +244,14 @@ export function SampleBar({ sofa }: { sofa?: SampleBarSofa | null }) {
                 {sofa.title}
               </span>
               <span className="mt-0.5 block truncate font-data text-caption tabular-nums leading-tight text-ink-500">
-                £{sofa.price.toFixed(0)}
-                <span className="hidden sm:inline"> · built in any fabric on this page</span>
+                {sofa.price > 0 ? (
+                  <>
+                    £{sofa.price.toFixed(0)}
+                    <span className="hidden sm:inline"> · {sofa.detail ?? 'built in any fabric on this page'}</span>
+                  </>
+                ) : (
+                  sofa.detail
+                )}
               </span>
             </span>
 
@@ -249,7 +260,11 @@ export function SampleBar({ sofa }: { sofa?: SampleBarSofa | null }) {
               className="hover-btn flex h-11 shrink-0 items-center gap-2 rounded-pill border border-calico-300 bg-calico-50 px-4 text-body-sm font-semibold text-ink-900 no-underline"
             >
               <ArrowLeft aria-hidden="true" className="h-4 w-4" />
-              Back to <span className="hidden sm:inline">the </span>sofa
+              {sofa.backLabel ?? (
+                <>
+                  Back to <span className="hidden sm:inline">the </span>sofa
+                </>
+              )}
             </Link>
           </div>
         )}

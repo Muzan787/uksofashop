@@ -14,6 +14,9 @@ export interface AdminOrderItemDisplay {
   fabric_code?: string | null
   fabric_name?: string | null
   fabric_collection?: string | null
+  /** The /build specification, where the line came from there - jsonb, so
+   *  narrowed with asBuildSnapshot() before it is read. See types/build.ts. */
+  customisation?: unknown
   product_variants: AdminOrderVariantDisplay | null
 }
 

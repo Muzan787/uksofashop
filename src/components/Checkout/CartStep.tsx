@@ -11,6 +11,7 @@ import toast from 'react-hot-toast';
 import { PROMISES } from '@/constants/promises';
 import { useCart, lineKey, type DisplayCartItem } from '@/context/CartContext';
 import { blurDataURL } from '@/utils/cloudinary';
+import { describeBuild } from '@/types/build';
 import { useReducedMotionSafe } from '@/components/Motion/useReducedMotionSafe';
 import OrderOnWhatsApp from './OrderOnWhatsApp';
 
@@ -157,6 +158,19 @@ function Row({ item, onRemove, onQuantity }: {
       <div className="min-w-0 self-start py-0.5">
         <h3 className="m-0 break-words font-body text-body-sm font-semibold leading-snug text-ink-900">{item.title}</h3>
         {(specification || item.fabric_code) && <p className="m-0 mt-1 break-words font-data text-caption leading-snug text-ink-500">{specification}{item.fabric_code && <span className="text-ember-700">{specification ? ' · ' : ''}{item.fabric_code}</span>}</p>}
+        {/* A line from /build carries the rest of the specification. Shown in
+            full: it is the one place before the order where the customer can
+            check that what they built is what they are about to buy. */}
+        {item.build && (
+          <ul className="m-0 mt-1.5 flex list-none flex-col gap-0.5 p-0 text-caption leading-snug text-ink-700">
+            {describeBuild(item.build).map(line => (
+              <li key={line.label} className="break-words">
+                <span className="font-semibold text-ink-900">{line.label}:</span> {line.value}
+              </li>
+            ))}
+            <li className="text-ink-500">Guide price — we ring you to confirm the final quotation.</li>
+          </ul>
+        )}
       </div>
       <div className="col-span-2 flex min-w-0 items-center gap-1 pt-1">
         <Stepper quantity={item.quantity} title={item.title} onChange={onQuantity} />

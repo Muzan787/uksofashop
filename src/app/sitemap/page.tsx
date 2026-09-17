@@ -80,6 +80,7 @@ export default async function HTMLSitemapPage() {
         { name: 'Fabric & Leather Care Guide', href: '/care-guide' },
         { name: 'Choosing Your Fabric', href: '/fabrics' },
         { name: 'Free Fabric Samples', href: '/swatches' },
+        { name: 'Build Your Own Sofa', href: '/build' },
         { name: 'Frequently Asked Questions', href: '/faq' },
       ],
     },

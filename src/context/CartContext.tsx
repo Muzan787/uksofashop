@@ -3,6 +3,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { CartItem } from '@/app/actions/checkout'
+import type { BuildSpec } from '@/types/build'
 
 export interface DisplayCartItem extends CartItem {
   /**
@@ -27,6 +28,15 @@ export interface DisplayCartItem extends CartItem {
   fabric_label?: string | null
   fabric_code?: string | null
   fabric_swatch?: string | null
+
+  /**
+   * Lines that came from /build. The whole specification - seats, feet,
+   * piping, notes - as the customer left it on the summary screen. It is
+   * shown in the basket, sent to placeOrder as the line's customisation, and
+   * snapshotted onto order_items so the workshop reads what the customer
+   * read. Absent on everything else.
+   */
+  build?: BuildSpec | null
 }
 
 /**
@@ -36,9 +46,14 @@ export interface DisplayCartItem extends CartItem {
  * the basket on variant_id alone silently merged them into one line of
  * quantity two - carrying whichever fabric happened to be added first. Stocked
  * products have no fabric, so their key is exactly what it always was.
+ *
+ * A built sofa is its own line even beside the same frame in the same fabric:
+ * two builds can differ in everything the key cannot see, so each carries the
+ * key /build minted for it.
  */
-export function lineKey(item: Pick<DisplayCartItem, 'variant_id' | 'fabric_id'>): string {
-  return item.fabric_id ? `${item.variant_id}:${item.fabric_id}` : item.variant_id
+export function lineKey(item: Pick<DisplayCartItem, 'variant_id' | 'fabric_id' | 'build'>): string {
+  const base = item.fabric_id ? `${item.variant_id}:${item.fabric_id}` : item.variant_id
+  return item.build ? `${base}:build:${item.build.key}` : base
 }
 
 interface CartContextType {

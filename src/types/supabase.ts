@@ -259,6 +259,7 @@ export type Database = {
       }
       order_items: {
         Row: {
+          customisation: Json | null
           fabric_code: string | null
           fabric_collection: string | null
           fabric_id: string | null
@@ -270,6 +271,7 @@ export type Database = {
           variant_id: string
         }
         Insert: {
+          customisation?: Json | null
           fabric_code?: string | null
           fabric_collection?: string | null
           fabric_id?: string | null
@@ -281,6 +283,7 @@ export type Database = {
           variant_id: string
         }
         Update: {
+          customisation?: Json | null
           fabric_code?: string | null
           fabric_collection?: string | null
           fabric_id?: string | null

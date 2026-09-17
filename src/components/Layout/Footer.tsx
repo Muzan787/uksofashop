@@ -46,6 +46,7 @@ const supportLinks = [
   { href: '/care-guide',       label: 'Care Guide' },
   { href: '/fabrics',          label: 'Fabric Guide' },
   { href: '/swatches',         label: 'Free Fabric Samples' },
+  { href: '/build',            label: 'Build Your Own Sofa' },
 ];
 
 const companyLinks = [

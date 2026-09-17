@@ -48,6 +48,7 @@ const STATIC_PATHS = [
   '/care-guide',
   '/fabrics',
   '/swatches',
+  '/build',
   '/journal',
   '/terms',
   '/privacy',

@@ -20,6 +20,7 @@ import {
   isValidWhatsAppReference,
 } from '@/utils/attribution/whatsapp'
 import { isDeterministicCheckoutWhatsAppMatch } from '@/utils/attribution/checkoutLinkage'
+import type { BuildSnapshot } from '@/types/build'
 
 /** What the browser is allowed to tell us: what was ordered, never what it costs. */
 export interface CartItem {
@@ -27,7 +28,42 @@ export interface CartItem {
   quantity: number
   /** Made-to-order lines only. The database re-reads the name from this id. */
   fabric_id?: string | null
+  /**
+   * Lines from /build only: the seats, feet, piping and notes the customer
+   * chose. Labels, not prices - nothing in it changes what the line costs,
+   * which the database still works out from the variant. It is validated for
+   * shape and length here and stored on order_items as the customer wrote it.
+   */
+  customisation?: BuildSnapshot | null
 }
+
+const text = (max: number) => z.string().trim().max(max)
+const optionalText = (max: number) => text(max).transform(v => v || null).nullish()
+
+const customisationSchema = z.object({
+  seats: text(60),
+  custom_seats: optionalText(300),
+  back: z.enum(['High Back', 'Scattered Back']).nullish(),
+  design: text(60),
+  feet: z.object({
+    code: text(20),
+    name: text(60),
+    finish: optionalText(40),
+    image: text(500).nullish(),
+  }).nullish(),
+  piping: z.object({
+    fabric_id: z.string().uuid(),
+    code: text(20),
+    name: text(60),
+    collection: text(60),
+    image: text(500).nullish(),
+  }).nullish(),
+  notes: z.object({
+    dimensions: optionalText(600),
+    design: optionalText(600),
+    other: optionalText(600),
+  }),
+})
 
 const checkoutSchema = z.object({
   customerName: z.string().min(2, 'Full name must be at least 2 characters.'),
@@ -52,6 +88,7 @@ const itemsSchema = z.array(z.object({
   variant_id: z.string().uuid(),
   quantity: z.number().int().min(1).max(99),
   fabric_id: z.string().uuid().nullish(),
+  customisation: customisationSchema.nullish(),
 })).min(1, 'Your cart is empty.')
 
 interface PlacedOrder {
@@ -203,6 +240,10 @@ export async function placeOrder(
       // Just the id. The fabric's name and code are snapshotted onto the order
       // by place_order, from the database's own row rather than the browser's.
       fabric_id: item.fabric_id ?? null,
+      // The build, where there is one. Validated above and stored as given. It
+      // carries no prices, so there is nothing in it for the browser to lie
+      // about that the database would believe.
+      customisation: item.customisation ?? null,
     })),
     p_expected_total: expectedTotal,
     p_delivery_floor: opts.floor,

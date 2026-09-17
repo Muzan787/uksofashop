@@ -10,6 +10,7 @@ import { Check, Copy } from 'lucide-react'
 import { formatUkMobileIntl } from '@/utils/phone'
 import { isValidUkPostcode, normalisePostcode } from '@/utils/postcode'
 import type { AdminOrderDisplay, AdminOrderItemDisplay } from '@/types/adminOrders'
+import { asBuildSnapshot, describeBuild } from '@/types/build'
 
 /** Every UK Mainland order, whatever it is. There is no per-order estimate. */
 const DELIVERY_WINDOW = '2-4 days'
@@ -55,6 +56,9 @@ function itemBlock(item: AdminOrderItemDisplay): string {
     // into a chat is how a made-to-order sofa gets built in the wrong colour.
     item.fabric_code &&
       `Fabric: ${[item.fabric_collection, item.fabric_name].filter(Boolean).join(' ')} (${item.fabric_code})`,
+    // Everything the customer chose on /build, one line each. Same words the
+    // customer read on the summary screen and the basket.
+    ...describeBuild(asBuildSnapshot(item.customisation)).map(line => `${line.label}: ${line.value}`),
     `Price: ${money(Number(item.price_at_time_of_purchase) * Number(item.quantity))}`,
   ]
   return lines.filter(Boolean).join('\n')

@@ -25,6 +25,7 @@ const navLinks = [
   { href: '/',            label: 'Home' },
   { href: '/shop/all',    label: 'Shop', hasMenu: true },
   { href: '/collection',  label: 'Collections' },
+  { href: '/build',       label: 'Build' },
   { href: '/swatches',    label: 'Samples' },
   { href: '/reviews',     label: 'Reviews' },
   { href: '/track-order', label: 'Track' },

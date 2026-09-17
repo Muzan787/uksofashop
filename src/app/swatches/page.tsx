@@ -69,6 +69,11 @@ import SwatchBrowser from './SwatchBrowser'
  *   ?pick=<fabric code>    The swatch they were looking at when they asked,
  *                          already in the basket as the first of their three.
  *
+ *   ?from=build            They came from the fabric step of /build. The bar
+ *                          still shows the sofa, but the way back is to the
+ *                          builder - which reopens on the fabric step with
+ *                          the rest of the build intact - and says so.
+ *
  * Neither changes what the page is, and an unknown slug or code is simply
  * ignored - the canonical stays /swatches.
  */
@@ -126,9 +131,18 @@ const PROMISES = [
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>
 
+/** Where the bar sends somebody who came from the builder. */
+const BUILD_RETURN = { href: '/build#step-fabric', backLabel: 'Back to your build' }
+
 /** The sofa named in ?sofa=, as the bar needs it. Null for anything unknown. */
-async function sofaFromSlug(slug: string | undefined): Promise<SampleBarSofa | null> {
-  if (!slug) return null
+async function sofaFromSlug(slug: string | undefined, fromBuild: boolean): Promise<SampleBarSofa | null> {
+  if (!slug) {
+    // A build with no design yet cannot happen - the fabric step comes after
+    // the design - but a hand-typed URL can, and the way back still matters.
+    return fromBuild
+      ? { title: 'Your sofa build', image: null, price: 0, detail: 'Saved where you left it', ...BUILD_RETURN }
+      : null
+  }
   const supabase = await createClient()
   const { data } = await supabase
     .from('products')
@@ -136,12 +150,17 @@ async function sofaFromSlug(slug: string | undefined): Promise<SampleBarSofa | n
     .eq('slug', slug)
     .maybeSingle()
 
-  if (!data || data.is_active === false) return null
+  if (!data || data.is_active === false) {
+    return fromBuild
+      ? { title: 'Your sofa build', image: null, price: 0, detail: 'Saved where you left it', ...BUILD_RETURN }
+      : null
+  }
   return {
     title: data.title,
     href: canonicalProductPath(data),
     image: leadVariantImage(data.product_variants) ?? null,
     price: Number(data.base_price) || 0,
+    ...(fromBuild ? { ...BUILD_RETURN, detail: 'your build is saved where you left it' } : {}),
   }
 }
 
@@ -151,7 +170,7 @@ export default async function SwatchesPage(props: { searchParams: SearchParams }
 
   const [collections, sofa] = await Promise.all([
     getFabricLibrary(),
-    sofaFromSlug(one(params.sofa)),
+    sofaFromSlug(one(params.sofa), one(params.from) === 'build'),
   ])
   const total = collections.reduce((n, c) => n + c.fabrics.length, 0)
 

@@ -25,6 +25,7 @@ import {
   type TrackedItem,
 } from '@/utils/tracking'
 import { PROMISES } from '@/constants/promises'
+import { buildSnapshot, describeBuild } from '@/types/build'
 import { isValidUkMobile, UK_MOBILE_ERROR } from '@/utils/phone'
 import {
   ASSEMBLY_FEE, UPSTAIRS_FIRST_FLOOR, UPSTAIRS_PER_EXTRA_FLOOR,
@@ -69,6 +70,18 @@ function toOfferItems(items: DisplayCartItem[]) {
     variant_id: i.variant_id,
     quantity: i.quantity,
     fabric_id: i.fabric_id ?? null,
+  }))
+}
+
+/**
+ * The same, plus the build on lines that came from /build - which only the
+ * order needs. The offer quote and the recovery lead work from identities
+ * alone, and the recovery route's schema is strict about it.
+ */
+function toOrderItems(items: DisplayCartItem[]) {
+  return items.map(i => ({
+    ...toOfferItems([i])[0],
+    customisation: i.build ? buildSnapshot(i.build) : null,
   }))
 }
 
@@ -234,6 +247,15 @@ function OrderSummary({
                   <span className="font-data text-ember-300"> · {item.fabric_code}</span>
                 )}
               </div>
+              {item.build && (
+                <ul className="m-0 mt-1 list-none p-0 text-caption leading-snug text-calico-300/80">
+                  {describeBuild(item.build).map(line => (
+                    <li key={line.label} className="break-words">
+                      <span className="text-calico-300">{line.label}:</span> {line.value}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
             <div className="font-data tnum shrink-0 text-caption font-bold text-calico-50">
               £{(item.price * item.quantity).toFixed(0)}
@@ -459,6 +481,7 @@ function DetailsStep({
     const configuration = [
       item.fabric_label || item.color,
       item.fabric_code ? `code ${item.fabric_code}` : '',
+      ...describeBuild(item.build).map(line => `${line.label}: ${line.value}`),
     ].filter(Boolean).join(', ')
     return `- ${item.title}${configuration ? ` (${configuration})` : ''} x ${item.quantity}`
   }).join('\n')
@@ -529,7 +552,7 @@ function DetailsStep({
     const fd = new FormData()
     Object.entries(form).forEach(([k, v]) => fd.append(k, v))
 
-    const items = toOfferItems(cartItems)
+    const items = toOrderItems(cartItems)
     try {
       const res = await placeOrder(fd, items, grandTotal, extras, appliedPromotionCode)
 

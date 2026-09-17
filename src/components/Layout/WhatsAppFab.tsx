@@ -30,16 +30,33 @@ import { useWhatsAppCTA } from '@/utils/attribution/useWhatsAppCTA';
  *   keyboard uses to skip it. No bar does this today; the product page's
  *   add-to-cart bar did, and the test costs nothing to keep.
  */
+/** The pill's own height plus the gap it keeps, so a bar this far above it is not in its way. */
+const FAB_CLEARANCE = 72;
+
 function coveringBarHeight(): number {
   const bars = document.querySelectorAll<HTMLElement>('[data-bottom-bar]');
+  // The bottom navigation, where the pill's base offset starts. 0 on desktop,
+  // where it is display:none and measures nothing.
+  const nav = document.querySelector<HTMLElement>('nav[aria-label="Primary"]');
+  const floor = window.innerHeight - (nav?.getBoundingClientRect().height ?? 0);
+
   let tallest = 0;
   for (const bar of bars) {
     if (bar.hasAttribute('inert')) continue;
     const rect = bar.getBoundingClientRect();
     if (rect.width === 0 || rect.height === 0) continue;
-    tallest = Math.max(tallest, rect.height);
+
+    // A sticky bar stops being stuck once the page has scrolled past its
+    // natural position - on /swatches and /build it then sits above the
+    // footer rather than on the navigation. The pill has to clear it only
+    // while it is actually in the pill's way: flush against the floor, or
+    // lifted less than the pill's own height above it. Beyond that the pill
+    // fits underneath, and pushing it up would put it on top of the bar.
+    const lift = floor - rect.bottom;
+    if (lift > FAB_CLEARANCE) continue;
+    tallest = Math.max(tallest, floor - rect.top);
   }
-  return tallest;
+  return Math.max(0, tallest);
 }
 
 /**
