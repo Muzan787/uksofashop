@@ -44,6 +44,7 @@ import AdsPurchaseConversion from './AdsPurchaseConversion'
 import OfferCode from './OfferCode'
 import OrderOnWhatsApp from './OrderOnWhatsApp'
 import CheckoutRecoveryOptIn from './CheckoutRecoveryOptIn'
+import TrustBox from '@/components/UI/TrustBox'
 import { useOffer } from '@/components/Offer/OfferProvider'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -1112,6 +1113,15 @@ export default function CheckoutClient() {
             </div>
           )}
         </div>
+        {/* Trustpilot's one-line badge under the checkout header, on the
+            dark ground. Someone about to hand over a name and address is
+            the person a rating from strangers is for. Nothing renders until
+            the widgets are switched on - see constants/trustpilot.ts. */}
+        {step !== 'success' && (
+          <div className="mx-auto max-w-[60rem] px-4 pb-3">
+            <TrustBox kind="microCombo" theme="dark" />
+          </div>
+        )}
       </div>
 
       <div className="mx-auto max-w-[60rem] px-4 py-6">

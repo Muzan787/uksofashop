@@ -10,6 +10,26 @@ import Link from 'next/link'
 
 import { whatsAppLink } from '@/utils/phone'
 import { asBuildSnapshot, describeBuild } from '@/types/build'
+import { trustpilotInviteLink } from '@/constants/trustpilot'
+
+/**
+ * The WhatsApp message that asks a delivered customer for a Trustpilot
+ * review. Most orders are WhatsApp orders with no email address, so the
+ * automatic invitation (BCC on the delivered email) never reaches them -
+ * this button is the ask for everyone else, one tap after each delivery.
+ * The link is the dashboard's invitation link when TRUSTPILOT_INVITE_LINK
+ * is set (reviews through it count as invited), otherwise the public
+ * review page.
+ */
+function reviewAskLink(customerName: string, customerPhone: string): string | null {
+  const firstName = (customerName || '').trim().split(/s+/)[0] || 'there'
+  return whatsAppLink(
+    customerPhone,
+    `Hi ${firstName}, we hope the sofa has settled in well! If you have a minute, a quick review on Trustpilot would help the next person decide - it takes about a minute: ${trustpilotInviteLink()}
+
+Thank you from all of us at UK Sofa Shop.`,
+  )
+}
 
 
 export const metadata: Metadata = { title: 'Orders' }
@@ -273,6 +293,22 @@ export default async function AdminOrdersPage(props: { searchParams: SearchParam
               <DirectPrintButton order={order} />
 
             </div>
+
+            {/* Delivered orders only: the review ask, pre-written, to the
+                customer's own WhatsApp. Sits under the quick actions rather
+                than among them so it reads as the next step, not another
+                way to open the chat. */}
+            {order.status === 'delivered' && reviewAskLink(order.customer_name, order.customer_phone) && (
+              <a
+                href={reviewAskLink(order.customer_name, order.customer_phone)!}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mb-4 flex items-center justify-center gap-2 rounded-sm border border-[#00b67a]/40 bg-[#00b67a]/10 py-2.5 text-sm font-bold text-[#007a52] transition hover:bg-[#00b67a]/20"
+              >
+                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.9 6.7 7.1.6-5.4 4.7 1.7 7-6.3-3.8L5.7 21l1.7-7L2 9.3l7.1-.6L12 2z"/></svg>
+                Ask for a Trustpilot review on WhatsApp
+              </a>
+            )}
 
             {/* Expandable Items */}
             <details className="group/details mb-6">

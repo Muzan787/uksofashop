@@ -1,6 +1,7 @@
 import nodemailer from 'nodemailer';
 import type { DeliveryBreakdown } from '@/constants/delivery';
 import { whatsAppLink } from '@/utils/phone';
+import { trustpilotInviteBcc, trustpilotInviteLink } from '@/constants/trustpilot';
 import { PHONE_DISPLAY, SUPPORT_EMAIL, ORDERS_EMAIL, whatsAppHref } from '@/constants/contact';
 import { gbp, recoveryBasketLines, recoveryBasketTotal, recoveryReminderEmail } from '@/utils/recoveryLeadFormat';
 
@@ -149,13 +150,20 @@ type Mail = Omit<nodemailer.SendMailOptions, 'from' | 'to'> & { from?: string; t
  * - If the relay refuses the alias outright, the message is sent again from
  *   the mailbox address itself and the fact is logged. A confirmation from
  *   enquiries@ is better than no confirmation.
+ * - A custom envelope REPLACES nodemailer's own recipient list, so every
+ *   recipient - To, Cc and Bcc - has to be repeated in it. Before this was
+ *   written out, a Bcc would have been in the headers and never actually
+ *   sent, which is exactly the silent failure a Bcc to Trustpilot's
+ *   invitation service would produce.
  */
 async function deliver(mail: Mail) {
   const message: nodemailer.SendMailOptions = {
     from: sender(),
     replyTo: MAIL_REPLY_TO,
     ...mail,
-    ...(usingDomainSender ? { envelope: { from: SMTP_USER, to: mail.to } } : {}),
+    ...(usingDomainSender
+      ? { envelope: { from: SMTP_USER, to: envelopeRecipients(mail.to, mail.cc, mail.bcc) } }
+      : {}),
   }
   try {
     return await transporter.sendMail(message)
@@ -167,6 +175,27 @@ async function deliver(mail: Mail) {
     console.warn(`[email] relay rejected From <${MAIL_FROM_ADDRESS}>, re-sending from <${SMTP_USER}>:`, (err as Error).message)
     return transporter.sendMail({ ...message, from: from.replace(MAIL_FROM_ADDRESS, SMTP_USER) })
   }
+}
+
+/**
+ * Every recipient as a bare address, for the SMTP envelope. Headers may carry
+ * display names ("Jane Smith" <jane@example.com>); the envelope wants only
+ * what is between the angle brackets.
+ */
+function envelopeRecipients(...fields: nodemailer.SendMailOptions['to'][]): string[] {
+  const out: string[] = []
+  for (const field of fields) {
+    if (!field) continue
+    for (const entry of Array.isArray(field) ? field : [field]) {
+      const raw = typeof entry === 'string' ? entry : entry.address
+      for (const part of raw.split(',')) {
+        const address = part.match(/<([^>]+)>/)?.[1] ?? part
+        const trimmed = address.trim()
+        if (trimmed) out.push(trimmed)
+      }
+    }
+  }
+  return out
 }
 
 /**
@@ -408,15 +437,27 @@ export async function sendContactNotification(
 // Add to the bottom of src/utils/email.ts
 
 // 7. Customer: Automated Status Update Notification
+//
+// Returns whether the message was copied to Trustpilot's invitation service
+// (delivered status, TRUSTPILOT_INVITE_BCC set), so the caller can record
+// that this customer has now been asked for a review and the site's own
+// review-request email does not ask a second time.
 export async function sendOrderStatusUpdate(
   email: string,
   name: string,
   orderId: string,
   status: string,
   postcode: string = ''
-) {
+): Promise<{ trustpilotInvited: boolean }> {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
   const shortCode = orderId.substring(0, 8).toUpperCase();
+
+  // Trustpilot's Automatic Feedback Service: a transactional email BCC'd to
+  // this address becomes a review invitation to its To recipient, sent after
+  // whatever delay is set in the Trustpilot dashboard. Only the delivered
+  // email - the review should be about the sofa in the room, not the order
+  // form - and only while the address is configured.
+  const inviteBcc = status === 'delivered' ? trustpilotInviteBcc() : null;
   // Tracking needs both the reference and the delivery postcode. When the
   // postcode couldn't be read off the address the link still opens the page
   // with the reference filled in, and the customer types the postcode.
@@ -427,7 +468,16 @@ export async function sendOrderStatusUpdate(
   const config: Record<string, { color: string, bg: string, title: string, message: string }> = {
     processing: { color: '#2563eb', bg: '#dbeafe', title: 'Order Processing', message: 'Your furniture is currently being processed and prepared for dispatch. We ensure every piece meets our strict quality standards before it leaves.' },
     shipped: { color: '#7e22ce', bg: '#f3e8ff', title: 'Order Shipped!', message: 'Your order has left our warehouse and is on its way! Our delivery team will be in touch shortly to arrange a precise delivery time slot.' },
-    delivered: { color: '#16a34a', bg: '#dcfce7', title: 'Order Delivered', message: 'Your new furniture has been delivered. We hope it looks perfect in your home!' },
+    delivered: {
+      color: '#16a34a',
+      bg: '#dcfce7',
+      title: 'Order Delivered',
+      // Told here so the invitation that follows is expected rather than
+      // mistaken for spam.
+      message: inviteBcc
+        ? 'Your new furniture has been delivered. We hope it looks perfect in your home! In a few days Trustpilot will email you on our behalf to ask how it went - a line or two would help the next person decide.'
+        : 'Your new furniture has been delivered. We hope it looks perfect in your home!',
+    },
     cancelled: { color: '#dc2626', bg: '#fee2e2', title: 'Order Cancelled', message: 'Your order has been cancelled. If you have any questions, please contact our support team.' }
   };
 
@@ -455,10 +505,15 @@ export async function sendOrderStatusUpdate(
 
   await deliver({
     from: sender(),
-    to: email,
+    // Name and address together on the invited email: Trustpilot takes the
+    // customer's name from the To header, and greets them by it.
+    to: inviteBcc && name.trim() ? `"${name.trim().replace(/["<>]/g, '')}" <${email}>` : email,
+    ...(inviteBcc ? { bcc: inviteBcc } : {}),
     subject: `Update: ${esc(currentConfig.title)} (#${shortCode})`,
     html: generateEmailHTML(content),
   });
+
+  return { trustpilotInvited: Boolean(inviteBcc) };
 }
 
 // 8. Admin: Order Status Update Notification (With WhatsApp Integration)
@@ -487,7 +542,10 @@ export async function sendAdminOrderStatusNotification(
       break;
     case 'delivered':
       title = 'Order Delivered';
-      waMessageText = `Dear ${esc(customerName)}, your order (#${shortCode}) has been successfully delivered! We hope you love your new furniture.`;
+      // The review ask rides on the delivered message, because for most
+      // customers - the WhatsApp ones with no email on the order - this
+      // message is the only invitation they will get.
+      waMessageText = `Dear ${esc(customerName)}, your order (#${shortCode}) has been successfully delivered! We hope you love your new furniture. If you have a minute, a quick review would mean a lot to us: ${trustpilotInviteLink()}`;
       break;
     case 'cancelled':
       title = 'Order Cancelled';

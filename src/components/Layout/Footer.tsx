@@ -14,6 +14,7 @@ import {
   SOCIAL_PROFILES, PHONE_DISPLAY, PHONE_HREF, SUPPORT_EMAIL, ADDRESS, OPENING_HOURS,
 } from '@/constants/contact';
 import TikTokIcon from '@/components/UI/TikTokIcon';
+import { TRUSTPILOT_PROFILE_URL } from '@/constants/trustpilot';
 import type { NavCategory } from '@/utils/navigation';
 import { usePhoneClick } from '@/utils/attribution/usePhoneClick';
 
@@ -52,6 +53,9 @@ const supportLinks = [
 const companyLinks = [
   { href: '/about',    label: 'Our Story' },
   { href: '/showroom', label: 'Showroom' },
+  // Off-site on purpose: reviews a visitor can check somewhere we do not
+  // control are worth more than our own page saying the same thing.
+  { href: TRUSTPILOT_PROFILE_URL, label: 'Reviews on Trustpilot', external: true },
   { href: '/journal',  label: 'Journal' },
   { href: '/careers',  label: 'Careers' },
   { href: '/sitemap',  label: 'Sitemap' },
@@ -91,14 +95,21 @@ function ColumnHeading({ children }: { children: React.ReactNode }) {
   );
 }
 
-function FooterLinks({ links }: { links: { href: string; label: string }[] }) {
+function FooterLinks({ links }: { links: { href: string; label: string; external?: boolean }[] }) {
+  const linkClass = 'hover-link inline-flex min-h-11 items-center py-1 text-body-sm text-calico-300 no-underline';
   return (
     <ul className="m-0 flex list-none flex-col gap-1 p-0">
-      {links.map(({ href, label }) => (
+      {links.map(({ href, label, external }) => (
         <li key={href}>
-          <Link href={href} className="hover-link inline-flex min-h-11 items-center py-1 text-body-sm text-calico-300 no-underline">
-            {label}
-          </Link>
+          {external ? (
+            <a href={href} target="_blank" rel="noopener noreferrer" className={linkClass}>
+              {label}
+            </a>
+          ) : (
+            <Link href={href} className={linkClass}>
+              {label}
+            </Link>
+          )}
         </li>
       ))}
     </ul>

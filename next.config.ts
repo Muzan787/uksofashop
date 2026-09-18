@@ -86,6 +86,11 @@ const nextConfig: NextConfig = {
    *   *.supabase.co                                           - database + auth
    *   fonts.googleapis.com / fonts.gstatic.com                - webfonts
    *   vitals.vercel-insights.com                              - Vercel Analytics
+   *   widget.trustpilot.com                                   - Trustpilot
+   *                                                             TrustBoxes: the
+   *                                                             bootstrap script
+   *                                                             and the iframes
+   *                                                             it draws
    */
   async headers() {
     const csp = [
@@ -94,7 +99,7 @@ const nextConfig: NextConfig = {
       // conversion tag, which the Google tag pulls in because Ads is a
       // destination on the container. Without them the tag loads, reports
       // AW-18399071645 as a destination, and then silently cannot measure.
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.googleadservices.com https://*.g.doubleclick.net https://connect.facebook.net https://*.vercel-insights.com https://va.vercel-scripts.com",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.googleadservices.com https://*.g.doubleclick.net https://connect.facebook.net https://*.vercel-insights.com https://va.vercel-scripts.com https://widget.trustpilot.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' data: https://fonts.gstatic.com",
       // pagead2.googlesyndication.com/ccm/collect is the one that was still
@@ -187,7 +192,8 @@ const nextConfig: NextConfig = {
       // only way to embed a real, pannable map without shipping a mapping
       // library and a tile key - and OSM needs no key and sets no cookies,
       // which a Google Maps embed does before the visitor has agreed to any.
-      "frame-src 'self' https://www.facebook.com https://www.openstreetmap.org",
+      // widget.trustpilot.com: every TrustBox is an iframe from there.
+      "frame-src 'self' https://www.facebook.com https://www.openstreetmap.org https://widget.trustpilot.com",
       "object-src 'none'",
       "base-uri 'self'",
       // www.facebook.com because the Meta Pixel falls back to submitting a

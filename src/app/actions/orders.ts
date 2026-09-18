@@ -83,13 +83,25 @@ export async function updateOrderStatus(formData: FormData) {
       const postcode = extractPostcode(order.shipping_address)
 
       // 1. Send the automated generic update to the customer
-      await sendOrderStatusUpdate(
+      const { trustpilotInvited } = await sendOrderStatusUpdate(
         order.customer_email,
         order.customer_name,
         orderId,
         newStatus,
         postcode
       )
+
+      // The delivered email went to Trustpilot's invitation service as well,
+      // so this customer is being asked for a review. Stamp the order so the
+      // review-request cron (api/cron/review-requests) does not ask a second
+      // time three days later. One customer, one ask.
+      if (trustpilotInvited) {
+        await supabase
+          .from('orders')
+          .update({ review_request_sent_at: new Date().toISOString() })
+          .eq('id', orderId)
+          .is('review_request_sent_at', null)
+      }
 
       // 2. Send the highly-personalized WhatsApp prompt to the Admin
       if (order.customer_phone) {

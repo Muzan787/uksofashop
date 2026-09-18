@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { Star, BadgeCheck, ArrowRight, Quote } from 'lucide-react';
 import { Marquee, Reveal } from '@/components/Motion';
 import SectionHeading from '@/components/UI/SectionHeading';
+import TrustBox from '@/components/UI/TrustBox';
+import { TRUSTPILOT_REVIEW_URL, TRUSTPILOT_WIDGETS_ENABLED } from '@/constants/trustpilot';
 
 export interface HomeReview {
   id: string;
@@ -52,12 +54,24 @@ function Stars({ rating }: { rating: number }) {
  * the ground reads as a band passing behind the page.
  */
 export default function ReviewTicker({ reviews }: { reviews: HomeReview[] }) {
+  // Trustpilot, once it is switched on, is the social proof this section
+  // exists for: reviews a visitor can verify on a site that is not ours.
+  // The site's own reviews carry on below it when there are enough of them.
+  const trustpilot = TRUSTPILOT_WIDGETS_ENABLED && (
+    <div className="relative mx-auto mb-10 max-w-shell px-4 sm:px-6">
+      <div className="rounded-md border border-calico-300 bg-calico-50 px-4 py-5 shadow-e1 sm:px-6">
+        <TrustBox kind="carousel" />
+      </div>
+    </div>
+  );
+
   if (reviews.length < 3) {
     return (
       <section
         aria-label="Customer reviews"
         className="grain-light section-y relative bg-calico-100"
       >
+        {trustpilot}
         <div className="relative mx-auto max-w-read px-4 text-center sm:px-6">
           <Reveal distance={12} amount={0.3}>
             <p className="eyebrow m-0 flex items-center justify-center gap-3 text-ember-700">
@@ -68,22 +82,49 @@ export default function ReviewTicker({ reviews }: { reviews: HomeReview[] }) {
           </Reveal>
 
           <Reveal delay={0.1} distance={16} amount={0.3}>
-            <h2 className="m-0 mt-4 font-display text-h1 font-semibold leading-tight text-ink-900">
-              Be the first to say how it went.
-            </h2>
-            <p className="mx-auto mt-5 max-w-[46ch] text-body text-ink-500">
-              We are a new shop and we would rather show you nothing than show
-              you something we made up. If you have bought from us, a couple of
-              lines about how the delivery went would help the next person
-              decide.
-            </p>
-            <Link
-              href="/reviews"
-              className="hover-btn sheen btn-ember shadow-ember mt-9 inline-flex h-14 items-center gap-3 rounded-pill bg-ember-500 px-8 text-body font-semibold text-ink-900 no-underline"
-            >
-              Leave a review
-              <ArrowRight aria-hidden="true" className="h-5 w-5" />
-            </Link>
+            {TRUSTPILOT_WIDGETS_ENABLED ? (
+              // The Trustpilot carousel above carries the reviews; this is the
+              // ask, sent to Trustpilot rather than to our own form so every
+              // review lands where a visitor can check it is real.
+              <>
+                <h2 className="m-0 mt-4 font-display text-h1 font-semibold leading-tight text-ink-900">
+                  Collected by Trustpilot, not by us.
+                </h2>
+                <p className="mx-auto mt-5 max-w-[46ch] text-body text-ink-500">
+                  Every review above was left on Trustpilot, where we cannot
+                  edit or remove it. If you have bought from us, a couple of
+                  lines about how it went would help the next person decide.
+                </p>
+                <a
+                  href={TRUSTPILOT_REVIEW_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover-btn sheen btn-ember shadow-ember mt-9 inline-flex h-14 items-center gap-3 rounded-pill bg-ember-500 px-8 text-body font-semibold text-ink-900 no-underline"
+                >
+                  Review us on Trustpilot
+                  <ArrowRight aria-hidden="true" className="h-5 w-5" />
+                </a>
+              </>
+            ) : (
+              <>
+                <h2 className="m-0 mt-4 font-display text-h1 font-semibold leading-tight text-ink-900">
+                  Be the first to say how it went.
+                </h2>
+                <p className="mx-auto mt-5 max-w-[46ch] text-body text-ink-500">
+                  We are a new shop and we would rather show you nothing than show
+                  you something we made up. If you have bought from us, a couple of
+                  lines about how the delivery went would help the next person
+                  decide.
+                </p>
+                <Link
+                  href="/reviews"
+                  className="hover-btn sheen btn-ember shadow-ember mt-9 inline-flex h-14 items-center gap-3 rounded-pill bg-ember-500 px-8 text-body font-semibold text-ink-900 no-underline"
+                >
+                  Leave a review
+                  <ArrowRight aria-hidden="true" className="h-5 w-5" />
+                </Link>
+              </>
+            )}
           </Reveal>
         </div>
       </section>
@@ -106,6 +147,8 @@ export default function ReviewTicker({ reviews }: { reviews: HomeReview[] }) {
           className="mb-0"
         />
       </div>
+
+      {trustpilot}
 
       {/* Marquee handles the accessible copy, the duplicate track and the pause
           on hover and focus — see the primitive for why each matters. */}

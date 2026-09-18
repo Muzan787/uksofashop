@@ -63,6 +63,18 @@ is `src/utils/email.ts`.
 | `MAIL_FROM`, `MAIL_REPLY_TO` | Override the From and Reply-To addresses. Default to `orders@` and `enquiries@`. |
 | `EMAIL_USER`, `EMAIL_APP_PASSWORD` | Legacy Gmail fallback, used only while `SMTP_PASSWORD` is unset. Mail sent this way is not authenticated for the domain and lands in spam. |
 
+### Trustpilot — optional
+
+The Trustpilot profile (business unit `6aad5fc120d98657b6af39aa`,
+`uk.trustpilot.com/review/uksofashop.co.uk`) is claimed. The public ids
+live in `src/constants/trustpilot.ts`; these three switch the integration on.
+
+| Variable | What it does |
+| --- | --- |
+| `TRUSTPILOT_INVITE_BCC` | The Automatic Feedback Service address from the Trustpilot dashboard. Set, the **delivered** email is BCC'd to it and Trustpilot sends the customer an invitation on its own schedule; the order is stamped `review_request_sent_at` so the site's own review-request email does not ask a second time. Treat it as private: anyone holding it can send invitations in the shop's name. |
+| `TRUSTPILOT_INVITE_LINK` | Optional. The shareable invitation link from the dashboard, used by the admin "Ask for a Trustpilot review on WhatsApp" button on delivered orders. Reviews through it count as invited; unset, the button uses the public review page and reviews count as organic. |
+| `NEXT_PUBLIC_TRUSTPILOT_WIDGETS` | Set to `1` to show the TrustBoxes (homepage reviews section, product page buy box, checkout header). Leave unset until there are enough reviews for a rating to mean something. Needs a deploy to change. |
+
 ### Advertising and analytics — optional
 
 Everything below no-ops when unset, so the site runs normally without them.

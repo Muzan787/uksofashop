@@ -24,6 +24,7 @@ import {
   OPENING_HOURS,
   SOCIAL_SAME_AS,
 } from '@/constants/contact'
+import { TRUSTPILOT_PROFILE_URL } from '@/constants/trustpilot'
 
 export const ORGANISATION_NAME = 'UK Sofa Shop'
 
@@ -101,10 +102,10 @@ export function organizationSchema() {
       availableLanguage: 'English',
     },
     // Only real, verified profiles. SOCIAL_SAME_AS already filters out the
-    // TikTok placeholder, so this is empty rather than wrong when there is
-    // nothing to point at - attaching an unverified handle to the business
-    // entity is worse than attaching none.
-    ...(SOCIAL_SAME_AS.length ? { sameAs: SOCIAL_SAME_AS } : {}),
+    // TikTok placeholder - attaching an unverified handle to the business
+    // entity is worse than attaching none. The Trustpilot profile is claimed
+    // and verified against the domain, so it always belongs here.
+    sameAs: [...SOCIAL_SAME_AS, TRUSTPILOT_PROFILE_URL],
   }
 }
 
@@ -461,11 +462,12 @@ export function localBusinessSchema() {
       opens: h.opens,
       closes: h.closes,
     })),
-    // Only present when there is something real to point at - see
-    // SOCIAL_PROFILES in constants/contact.ts for why a link that doesn't
-    // identify this business is worse than an absent one. Placeholder entries
-    // are already filtered out of SOCIAL_SAME_AS.
-    ...(SOCIAL_SAME_AS.length ? { sameAs: SOCIAL_SAME_AS } : {}),
+    // Only real profiles - see SOCIAL_PROFILES in constants/contact.ts for
+    // why a link that doesn't identify this business is worse than an absent
+    // one; placeholder entries are already filtered out of SOCIAL_SAME_AS.
+    // The Trustpilot profile is claimed against the domain, so it is always
+    // one of them.
+    sameAs: [...SOCIAL_SAME_AS, TRUSTPILOT_PROFILE_URL],
     makesOffer: {
       '@type': 'Offer',
       itemOffered: {
