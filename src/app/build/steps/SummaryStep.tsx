@@ -19,6 +19,7 @@ interface Props {
   spec: BuildSpec
   onEdit: (step: StepId) => void
   onCheckout: () => void
+  onWhatsApp: () => void
   /** True for the two seconds after the sofa went into the cart. */
   added: boolean
   onWhatsApp: () => void
