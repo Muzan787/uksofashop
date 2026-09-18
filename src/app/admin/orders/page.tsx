@@ -62,6 +62,14 @@ function SourceBadge({ source }: { source: string | null }) {
   )
 }
 
+function manualAcquisition(order: unknown): { source: string | null; note: string | null } {
+  const row = order as { manual_acquisition_source?: string | null; manual_acquisition_note?: string | null }
+  return {
+    source: row.manual_acquisition_source ?? null,
+    note: row.manual_acquisition_note ?? null,
+  }
+}
+
 const StatusBadge = ({ status }: { status: string }) => {
   const styles: Record<string, string> = {
     pending_cod: 'bg-stone-100 text-stone-600 border-stone-200',
@@ -229,6 +237,14 @@ export default async function AdminOrdersPage(props: { searchParams: SearchParam
                   {order.utm_source === 'meta' && (
                     <span className="rounded-pill border border-blue-200 bg-blue-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-blue-700">
                       Meta attributed
+                    </span>
+                  )}
+                  {order.utm_source !== 'meta' && manualAcquisition(order).source === 'meta' && (
+                    <span
+                      title={manualAcquisition(order).note ?? 'Staff-confirmed acquisition source'}
+                      className="rounded-pill border border-sky-200 bg-sky-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-sky-700"
+                    >
+                      Meta · staff confirmed
                     </span>
                   )}
                   {order.utm_campaign === 'offer-test' && (
