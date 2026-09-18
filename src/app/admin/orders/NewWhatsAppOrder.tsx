@@ -189,8 +189,8 @@ export default function NewWhatsAppOrder({
           </h2>
           <p className="mt-1 text-xs leading-relaxed text-stone-500">
             Saves as <strong>pending</strong>, like a website order. Mark it confirmed
-            once they have agreed, and that is what reports the sale to Meta against
-            their number.
+            once they have agreed. Advertising is a separate deliberate step: the order
+            card then gives you a button to send the Purchase event to Meta.
           </p>
         </div>
         <button
