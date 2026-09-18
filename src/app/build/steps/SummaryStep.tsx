@@ -22,7 +22,6 @@ interface Props {
   onWhatsApp: () => void
   /** True for the two seconds after the sofa went into the cart. */
   added: boolean
-  onWhatsApp: () => void
 }
 
 /**
