@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
 // src/app/admin/orders/page.tsx
 import { createClient } from '@/utils/supabase/server'
-import { Package, Inbox, MapPin, User, Truck, CalendarDays } from 'lucide-react'
-import { updateOrderStatus } from '@/app/actions/orders'
+import { Package, Inbox, MapPin, User, Truck, CalendarDays, Clock3, Radio, AlertTriangle } from 'lucide-react'
+import { updateOrderStatus, sendOrderConversion } from '@/app/actions/orders'
 import DirectPrintButton from './DirectPrintButton'
 import CopyOrderButton from './CopyOrderButton'
 import NewWhatsAppOrder from './NewWhatsAppOrder'
@@ -34,6 +34,33 @@ Thank you from all of us at UK Sofa Shop.`,
 
 
 export const metadata: Metadata = { title: 'Orders' }
+
+const UK_TIME = new Intl.DateTimeFormat('en-GB', {
+  timeZone: 'Europe/London',
+  day: '2-digit', month: 'short', year: 'numeric',
+  hour: '2-digit', minute: '2-digit', hour12: false,
+})
+const PK_TIME = new Intl.DateTimeFormat('en-GB', {
+  timeZone: 'Asia/Karachi',
+  day: '2-digit', month: 'short', year: 'numeric',
+  hour: '2-digit', minute: '2-digit', hour12: false,
+})
+
+function dualTime(value: string | null | undefined): { uk: string; pk: string } | null {
+  if (!value) return null
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return null
+  return { uk: UK_TIME.format(d), pk: PK_TIME.format(d) }
+}
+
+function SourceBadge({ source }: { source: string | null }) {
+  const label = source === 'whatsapp' ? 'WhatsApp' : source === 'website' ? 'Website' : source || 'Unknown'
+  return (
+    <span className="rounded-pill border border-stone-200 bg-stone-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-stone-600">
+      {label}
+    </span>
+  )
+}
 
 const StatusBadge = ({ status }: { status: string }) => {
   const styles: Record<string, string> = {
@@ -189,15 +216,28 @@ export default async function AdminOrdersPage(props: { searchParams: SearchParam
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+      <div className="space-y-4">
         {orders?.map((order) => (
           <div key={order.id} className="bg-white rounded-md p-5 shadow-sm border border-stone-200 flex flex-col">
             
-            {/* Header: ID & Status */}
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <p className="text-xs font-mono text-stone-400">#{order.id.split('-')[0]}</p>
-                <p className="text-lg font-bold text-stone-900 mt-1">£{order.total_amount.toFixed(2)}</p>
+            {/* Operational header: reference, source, money, state and dual clocks. */}
+            <div className="mb-4 flex flex-col gap-3 border-b border-stone-100 pb-4 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="m-0 text-xs font-mono text-stone-500">#{order.id.split('-')[0].toUpperCase()}</p>
+                  <SourceBadge source={order.source} />
+                  {order.utm_source === 'meta' && (
+                    <span className="rounded-pill border border-blue-200 bg-blue-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-blue-700">
+                      Meta attributed
+                    </span>
+                  )}
+                  {order.utm_campaign === 'offer-test' && (
+                    <span className="rounded-pill border border-violet-200 bg-violet-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-violet-700">
+                      QA / test
+                    </span>
+                  )}
+                </div>
+                <p className="text-xl font-bold text-stone-900 mt-2">£{order.total_amount.toFixed(2)}</p>
                 {(Number(order.discount_amount ?? 0) > 0 || Number(order.delivery_total ?? 0) > 0) && (
                   <p className="text-[11px] text-stone-500 mt-0.5">
                     £{Number(order.items_subtotal ?? 0).toFixed(2)} subtotal
@@ -214,16 +254,29 @@ export default async function AdminOrdersPage(props: { searchParams: SearchParam
                     {order.promotion_code} · {order.offer_source?.replace('_', ' ') ?? 'offer'} · {order.discount_tier ?? 'EXCLUDED'}
                   </p>
                 )}
+                {dualTime(order.created_at) && (
+                  <div className="mt-2 flex items-start gap-2 text-[11px] leading-relaxed text-stone-500">
+                    <Clock3 className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                    <span>
+                      <strong className="font-semibold text-stone-700">Placed</strong>{' '}
+                      {dualTime(order.created_at)!.uk} UK
+                      <span className="mx-1.5 text-stone-300">|</span>
+                      {dualTime(order.created_at)!.pk} PK
+                    </span>
+                  </div>
+                )}
               </div>
-              <StatusBadge status={order.status || 'pending_cod'} />
-              {/* Not a status of its own - see the note on orders.has_made_to_order.
-                  It is a reminder that this one needs a phone call before it is
-                  built, which the status machine has no opinion about. */}
-              {order.has_made_to_order && (
-                <span className="rounded-pill border border-amber-200 bg-amber-50 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-700 sm:text-xs">
-                  Call to confirm
-                </span>
-              )}
+              <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                <StatusBadge status={order.status || 'pending_cod'} />
+                {/* Not a status of its own - see the note on orders.has_made_to_order.
+                    It is a reminder that this one needs a phone call before it is
+                    built, which the status machine has no opinion about. */}
+                {order.has_made_to_order && (
+                  <span className="rounded-pill border border-amber-200 bg-amber-50 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-700 sm:text-xs">
+                    Call to confirm
+                  </span>
+                )}
+              </div>
             </div>
 
             {/* Customer Details */}
@@ -284,6 +337,28 @@ export default async function AdminOrdersPage(props: { searchParams: SearchParam
               )}
             </div>
 
+            {/* Business timeline. One timestamp is stored in UTC; the panel renders
+                it in both UK and Pakistan time so the operations team and Hassan
+                can talk about the same moment without mental conversion. */}
+            <div className="mb-4 grid gap-2 rounded-sm border border-stone-200 bg-white px-4 py-3 text-xs sm:grid-cols-2 lg:grid-cols-4">
+              {[
+                ['Placed', order.created_at],
+                ['Confirmed', order.confirmed_at],
+                ['Delivered', order.delivered_at],
+                ['Cancelled', order.cancelled_at],
+              ].map(([label, value]) => {
+                const t = dualTime(value)
+                if (!t) return null
+                return (
+                  <div key={label} className="min-w-0">
+                    <p className="m-0 font-bold uppercase tracking-wider text-stone-500">{label}</p>
+                    <p className="m-0 mt-1 font-medium text-stone-800">{t.uk} UK</p>
+                    <p className="m-0 mt-0.5 text-stone-500">{t.pk} PK</p>
+                  </div>
+                )
+              })}
+            </div>
+
             {/* Quick Actions (WhatsApp & Print) */}
             <div className="flex gap-2 mb-4">
               {/* Hidden when the stored number is not a UK mobile, rather than
@@ -322,6 +397,96 @@ export default async function AdminOrdersPage(props: { searchParams: SearchParam
                 Ask for a Trustpilot review on WhatsApp
               </a>
             )}
+
+            {/* Advertising conversion control. Operational status and ad-platform
+                reporting are deliberately separate human actions. */}
+            <div className="mb-4 rounded-sm border border-stone-200 bg-stone-50 p-4">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <p className="m-0 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-stone-700">
+                    <Radio className="h-4 w-4 text-blue-600" /> Meta conversion
+                  </p>
+                  <p className="m-0 mt-1 text-[11px] leading-relaxed text-stone-500">
+                    Changing order status does not send an ad conversion. Send it here only after the business event is real.
+                  </p>
+                </div>
+              </div>
+
+              {order.utm_campaign === 'offer-test' ? (
+                <div className="flex items-start gap-2 rounded-sm border border-violet-200 bg-violet-50 px-3 py-2 text-xs text-violet-800">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                  <span><strong>QA/test order.</strong> Meta conversion sending is blocked.</span>
+                </div>
+              ) : (
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <div className="rounded-sm border border-stone-200 bg-white p-3">
+                    <p className="m-0 text-[11px] font-bold uppercase tracking-wider text-stone-500">Purchase</p>
+                    {order.purchase_event_sent_at ? (
+                      <div className="mt-1.5">
+                        <p className="m-0 text-sm font-bold text-green-700">Sent to Meta</p>
+                        {dualTime(order.purchase_event_sent_at) && (
+                          <p className="m-0 mt-0.5 text-[11px] text-stone-500">
+                            {dualTime(order.purchase_event_sent_at)!.uk} UK · {dualTime(order.purchase_event_sent_at)!.pk} PK
+                          </p>
+                        )}
+                        {order.status === 'cancelled' && (
+                          <p className="m-0 mt-2 text-[11px] font-semibold leading-relaxed text-red-700">
+                            This Purchase was sent before the order was cancelled. Do not count it as current revenue.
+                          </p>
+                        )}
+                      </div>
+                    ) : order.confirmed_at && order.status !== 'cancelled' ? (
+                      <form action={async (formData) => {
+                        "use server"
+                        await sendOrderConversion(formData)
+                      }} className="mt-2">
+                        <input type="hidden" name="orderId" value={order.id} />
+                        <input type="hidden" name="kind" value="purchase" />
+                        <button type="submit" className="w-full rounded-sm bg-blue-700 px-3 py-2.5 text-xs font-bold text-white transition hover:bg-blue-800">
+                          Send Purchase event to Meta
+                        </button>
+                      </form>
+                    ) : (
+                      <p className="m-0 mt-1.5 text-xs text-stone-500">
+                        {order.status === 'cancelled' ? 'Cancelled — nothing to send.' : 'Confirm the order first.'}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="rounded-sm border border-stone-200 bg-white p-3">
+                    <p className="m-0 text-[11px] font-bold uppercase tracking-wider text-stone-500">Delivered</p>
+                    {order.delivered_event_sent_at ? (
+                      <div className="mt-1.5">
+                        <p className="m-0 text-sm font-bold text-green-700">OrderDelivered sent</p>
+                        {dualTime(order.delivered_event_sent_at) && (
+                          <p className="m-0 mt-0.5 text-[11px] text-stone-500">
+                            {dualTime(order.delivered_event_sent_at)!.uk} UK · {dualTime(order.delivered_event_sent_at)!.pk} PK
+                          </p>
+                        )}
+                      </div>
+                    ) : order.status === 'delivered' && order.delivered_at ? (
+                      <form action={async (formData) => {
+                        "use server"
+                        await sendOrderConversion(formData)
+                      }} className="mt-2">
+                        <input type="hidden" name="orderId" value={order.id} />
+                        <input type="hidden" name="kind" value="delivered" />
+                        <button type="submit" className="w-full rounded-sm bg-green-700 px-3 py-2.5 text-xs font-bold text-white transition hover:bg-green-800">
+                          Send Delivered event to Meta
+                        </button>
+                        {!order.purchase_event_sent_at && (
+                          <p className="m-0 mt-1.5 text-[10px] leading-relaxed text-stone-500">
+                            Purchase has not been sent; this action will send Purchase first, then OrderDelivered.
+                          </p>
+                        )}
+                      </form>
+                    ) : (
+                      <p className="m-0 mt-1.5 text-xs text-stone-500">Mark the order Delivered first.</p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* Expandable Items */}
             <details className="group/details mb-6">
@@ -405,7 +570,7 @@ export default async function AdminOrdersPage(props: { searchParams: SearchParam
         ))}
 
         {(!orders || orders.length === 0) && (
-          <div className="col-span-full py-12 flex flex-col items-center justify-center bg-white rounded-lg border border-stone-200 shadow-sm">
+          <div className="py-12 flex flex-col items-center justify-center bg-white rounded-lg border border-stone-200 shadow-sm">
             <Inbox className="w-12 h-12 text-stone-300 mb-3" />
             <p className="text-lg font-bold text-stone-900">
               {status === 'attention' ? 'Nothing needs your attention' : 'No orders here'}
