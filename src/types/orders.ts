@@ -31,4 +31,6 @@ export interface TrackedOrder {
   wants_sofa_removal?: boolean
   fee_sofa_removal?: number
   sofa_removal_seats?: number | null
+  /** YYYY-MM-DD the customer asked for at checkout, or null for as soon as possible. */
+  preferred_delivery_date?: string | null
 }

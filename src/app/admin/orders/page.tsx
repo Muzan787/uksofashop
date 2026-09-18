@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 // src/app/admin/orders/page.tsx
 import { createClient } from '@/utils/supabase/server'
-import { Package, Inbox, MapPin, User, Truck } from 'lucide-react'
+import { Package, Inbox, MapPin, User, Truck, CalendarDays } from 'lucide-react'
 import { updateOrderStatus } from '@/app/actions/orders'
 import DirectPrintButton from './DirectPrintButton'
 import CopyOrderButton from './CopyOrderButton'
@@ -11,6 +11,7 @@ import Link from 'next/link'
 import { whatsAppLink } from '@/utils/phone'
 import { asBuildSnapshot, describeBuild } from '@/types/build'
 import { trustpilotInviteLink } from '@/constants/trustpilot'
+import { formatPreferredDeliveryDate } from '@/utils/delivery'
 
 /**
  * The WhatsApp message that asks a delivered customer for a Trustpilot
@@ -238,6 +239,18 @@ export default async function AdminOrdersPage(props: { searchParams: SearchParam
                 <MapPin className="w-4 h-4 text-stone-400 mt-0.5 shrink-0" />
                 <p className="text-sm text-stone-600 line-clamp-2">{order.shipping_address}</p>
               </div>
+              {/* The day the customer asked for. Shown only when they chose
+                  one - most orders are "as soon as possible", and a line
+                  saying so on every card would bury the ones that are not. */}
+              {order.preferred_delivery_date && (
+                <div className="flex items-start gap-3">
+                  <CalendarDays className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+                  <p className="text-sm text-stone-900">
+                    <span className="font-semibold">Wants delivery on {formatPreferredDeliveryDate(order.preferred_delivery_date)}</span>
+                    <span className="text-stone-500"> — confirm the slot on the call</span>
+                  </p>
+                </div>
+              )}
 
               {/* What the driver needs to do on arrival, and what to collect for it. */}
               {Number(order.delivery_total ?? 0) > 0 && (

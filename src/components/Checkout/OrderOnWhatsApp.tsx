@@ -24,6 +24,7 @@ import type { DisplayCartItem } from '@/context/CartContext'
 import { deliveryBreakdown, NO_EXTRAS, type DeliveryOptions } from '@/constants/delivery'
 import { describeBuild } from '@/types/build'
 import { isValidUkPostcode, normalisePostcode } from '@/utils/postcode'
+import { formatPreferredDeliveryDate, isValidPreferredDeliveryDate } from '@/utils/delivery'
 
 /** Whole pounds read as whole pounds; anything else gets its pence. */
 function pounds(amount: number): string {
@@ -52,6 +53,8 @@ export interface OrderMessageContext {
   postcode?: string
   /** Delivery extras ticked on the form, if any. */
   extras?: DeliveryOptions
+  /** The day they asked for on the form, YYYY-MM-DD, if they chose one. */
+  preferredDeliveryDate?: string
 }
 
 /**
@@ -92,6 +95,10 @@ export function whatsAppOrderMessage(items: DisplayCartItem[], ctx: OrderMessage
   const extras = deliveryBreakdown(ctx.extras ?? NO_EXTRAS).lines
     .map(line => `${line.label}${line.detail ? ` (${line.detail})` : ''}`)
   if (extras.length > 0) lines.push(`Delivery extras: ${extras.join(', ')}`)
+
+  if (ctx.preferredDeliveryDate && isValidPreferredDeliveryDate(ctx.preferredDeliveryDate)) {
+    lines.push(`Preferred delivery day: ${formatPreferredDeliveryDate(ctx.preferredDeliveryDate)}`)
+  }
 
   return lines.join('\n')
 }

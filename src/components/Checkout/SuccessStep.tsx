@@ -8,12 +8,15 @@ import { PHONE_DISPLAY, PHONE_HREF, whatsAppHref } from '@/constants/contact';
 import { usePhoneClick } from '@/utils/attribution/usePhoneClick';
 import WhatsAppIcon from '@/components/Product/WhatsAppIcon';
 import Timeline from '@/components/UI/Timeline';
+import { formatPreferredDeliveryDate } from '@/utils/delivery';
 
 interface Props {
   orderId: string;
   postcode: string;
   /** The database's own figure for the order, not ours. See handleSubmit. */
   amount: number;
+  /** The day they asked for, YYYY-MM-DD, or null for as soon as possible. */
+  preferredDeliveryDate?: string | null;
 }
 
 /** Every block that reveals, 150ms apart. */
@@ -28,7 +31,7 @@ const MONEY = new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP
  * accepted and recorded it. Operationally it still enters `pending_cod`; the
  * team verifies the details before the Purchase event and delivery arrangement.
  */
-export default function SuccessStep({ orderId, postcode, amount }: Props) {
+export default function SuccessStep({ orderId, postcode, amount, preferredDeliveryDate = null }: Props) {
   const [copied, setCopied] = useState(false);
   const onPhoneClick = usePhoneClick();
 
@@ -82,6 +85,11 @@ export default function SuccessStep({ orderId, postcode, amount }: Props) {
         <p className="m-0 mt-2 text-body-sm leading-relaxed text-ink-500">
           One of our team will contact you to confirm the details and arrange delivery. Nothing is charged now.
         </p>
+        {preferredDeliveryDate && (
+          <p className="m-0 mt-3 text-body-sm leading-relaxed text-ink-900">
+            You asked for <strong className="font-semibold">{formatPreferredDeliveryDate(preferredDeliveryDate)}</strong> — we&apos;ll ring to agree the time slot.
+          </p>
+        )}
       </Reveal>
 
       <Reveal index={3} className="mt-8">

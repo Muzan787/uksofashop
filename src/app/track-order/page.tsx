@@ -11,6 +11,7 @@ import Timeline from '@/components/UI/Timeline'
 import { STATUS } from '@/utils/orderStatus'
 import { PHONE_DISPLAY, PHONE_HREF } from '@/constants/contact'
 import { usePhoneClick } from '@/utils/attribution/usePhoneClick'
+import { formatPreferredDeliveryDate } from '@/utils/delivery'
 
 /**
  * Where is it.
@@ -180,6 +181,9 @@ function Result({ order }: { order: TrackedOrder }) {
           </p>
           <p className="m-0 mt-1 text-caption text-ink-500">
             Placed {new Date(order.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+            {order.preferred_delivery_date && order.status !== 'delivered' && order.status !== 'cancelled' && (
+              <> · Requested for {formatPreferredDeliveryDate(order.preferred_delivery_date)}</>
+            )}
           </p>
         </div>
         <p className="m-0 shrink-0 font-data text-body font-bold tabular-nums text-ink-900">

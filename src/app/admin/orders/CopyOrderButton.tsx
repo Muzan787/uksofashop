@@ -11,6 +11,7 @@ import { formatUkMobileIntl } from '@/utils/phone'
 import { isValidUkPostcode, normalisePostcode } from '@/utils/postcode'
 import type { AdminOrderDisplay, AdminOrderItemDisplay } from '@/types/adminOrders'
 import { asBuildSnapshot, describeBuild } from '@/types/build'
+import { formatPreferredDeliveryDate } from '@/utils/delivery'
 
 /** Every UK Mainland order, whatever it is. There is no per-order estimate. */
 const DELIVERY_WINDOW = '2-4 days'
@@ -92,7 +93,9 @@ export function formatOrderForCopy(order: AdminOrderDisplay): string {
   const blocks = [
     [
       `Order on ${orderDate}`,
-      `Delivery: ${DELIVERY_WINDOW}`,
+      order.preferred_delivery_date
+        ? `Delivery: requested for ${formatPreferredDeliveryDate(order.preferred_delivery_date)}`
+        : `Delivery: ${DELIVERY_WINDOW}`,
     ].join('\n'),
 
     [

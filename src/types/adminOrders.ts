@@ -43,5 +43,7 @@ export interface AdminOrderDisplay {
   fee_assembly?: number | null
   fee_sofa_removal?: number | null
   sofa_removal_seats?: number | null
+  /** YYYY-MM-DD the customer asked for at checkout, or null for as soon as possible. */
+  preferred_delivery_date?: string | null
   order_items: AdminOrderItemDisplay[]
 }

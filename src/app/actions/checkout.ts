@@ -9,6 +9,9 @@ import {
 } from '@/constants/delivery'
 import { isValidUkMobile, UK_MOBILE_ERROR } from '@/utils/phone'
 import { resolveDeliveryPostcode } from '@/utils/postcode'
+import {
+  earliestPreferredDeliveryDate, formatPreferredDeliveryDate, isValidPreferredDeliveryDate,
+} from '@/utils/delivery'
 import { z } from 'zod'
 import { cookies, headers } from 'next/headers'
 import { OFFER_ENTITLEMENT_COOKIE } from '@/utils/offers/constants'
@@ -74,6 +77,13 @@ const checkoutSchema = z.object({
   postcode: z.string().trim().min(5, 'Please provide a valid UK postcode.').max(12, 'Please provide a valid UK postcode.'),
   shippingAddress: z.string().min(10, 'Please provide a complete shipping address.'),
   specialInstructions: z.string().optional(),
+  // The day they would like the sofa, or nothing for "as soon as you can".
+  // The same two limits place_order enforces, checked here first so the
+  // customer reads a sentence rather than a database exception.
+  preferredDeliveryDate: z.string().trim().optional().transform(v => (v ? v : undefined)).refine(
+    v => v === undefined || isValidPreferredDeliveryDate(v),
+    { error: () => `Please choose a delivery date from ${formatPreferredDeliveryDate(earliestPreferredDeliveryDate())} onwards.` },
+  ),
 })
 
 const extrasSchema = z.object({
@@ -173,6 +183,7 @@ export async function placeOrder(
     postcode: formData.get('postcode'),
     shippingAddress: formData.get('shippingAddress'),
     specialInstructions: formData.get('specialInstructions'),
+    preferredDeliveryDate: formData.get('preferredDeliveryDate') ?? undefined,
   })
   if (!validatedData.success) {
     return { error: validatedData.error.issues[0].message }
@@ -195,6 +206,7 @@ export async function placeOrder(
     postcode,
     shippingAddress,
     specialInstructions,
+    preferredDeliveryDate,
   } = validatedData.data
   const opts = validatedExtras.data
 
@@ -257,6 +269,9 @@ export async function placeOrder(
     // tier, discount and final total; the browser never supplies those values.
     p_promotion_code: promotionCode,
     p_offer_entitlement_token: entitlementCookie.success ? entitlementCookie.data : null,
+    // Null for "as soon as you can". place_order re-checks the four-day lead
+    // against today in the UK and refuses anything sooner.
+    p_preferred_delivery_date: preferredDeliveryDate ?? null,
   })
 
   if (orderError || !data) {
@@ -274,6 +289,9 @@ export async function placeOrder(
     }
     if (message.includes('UNAVAILABLE_FABRIC')) {
       return { error: 'One of the fabrics in your basket is no longer available. Please choose another and try again.' }
+    }
+    if (message.includes('DELIVERY_DATE_TOO_SOON') || message.includes('DELIVERY_DATE_TOO_FAR')) {
+      return { error: `Please choose a delivery date from ${formatPreferredDeliveryDate(earliestPreferredDeliveryDate())} onwards.` }
     }
     return { error: 'We could not place your order. Please try again, or call us on 07476 616022.' }
   }
@@ -295,11 +313,13 @@ export async function placeOrder(
           customerEmail, customerName, shortCode, order.id,
           Number(order.total_amount), Number(order.items_subtotal), breakdown,
           Number(order.discount_amount), order.promotion_code,
+          preferredDeliveryDate ?? null,
         ),
         sendAdminOrderNotification(
           customerName, customerEmail, customerPhone, shortCode, order.id,
           Number(order.total_amount), Number(order.items_subtotal), breakdown,
           Number(order.discount_amount), order.promotion_code,
+          preferredDeliveryDate ?? null,
         ),
       ])
     } catch (err) {

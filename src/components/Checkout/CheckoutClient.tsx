@@ -34,6 +34,7 @@ import {
   type DeliveryOptions,
 } from '@/constants/delivery'
 import { isValidUkPostcode, lookupAddresses, normalisePostcode } from '@/utils/postcode'
+import { isValidPreferredDeliveryDate } from '@/utils/delivery'
 import { useWhatsAppCTA } from '@/utils/attribution/useWhatsAppCTA'
 import CartStep from './CartStep'
 import Steps from './Steps'
@@ -43,6 +44,7 @@ import SuccessStep from './SuccessStep'
 import AdsPurchaseConversion from './AdsPurchaseConversion'
 import OfferCode from './OfferCode'
 import OrderOnWhatsApp from './OrderOnWhatsApp'
+import DeliveryDateField from './DeliveryDateField'
 import CheckoutRecoveryOptIn from './CheckoutRecoveryOptIn'
 import TrustBox from '@/components/UI/TrustBox'
 import { useOffer } from '@/components/Offer/OfferProvider'
@@ -101,6 +103,8 @@ interface FormState {
   postcode: string
   shippingAddress: string
   specialInstructions: string
+  /** YYYY-MM-DD, or '' for as soon as possible. See DeliveryDateField. */
+  preferredDeliveryDate: string
 }
 
 interface FieldError { [key: string]: string }
@@ -356,7 +360,7 @@ function DetailsStep({
   deliveryCheck, setDeliveryCheck,
 }: {
   onBack: () => void
-  onSuccess: (id: string, postcode: string, amount: number) => void
+  onSuccess: (id: string, postcode: string, amount: number, preferredDeliveryDate: string | null) => void
   extras: DeliveryOptions
   setExtras: (next: DeliveryOptions) => void
   form: FormState
@@ -378,6 +382,9 @@ function DetailsStep({
   const grandTotal = Math.max(0, totalAmount - offerDiscount) + extrasTotal
 
   const [errors, setErrors] = useState<FieldError>({})
+  // Whether "Choose a day" is open. Kept apart from the date itself so a
+  // customer can open the calendar before they have picked anything.
+  const [choosingDate, setChoosingDate] = useState(Boolean(form.preferredDeliveryDate))
   const [pending, setPending] = useState(false)
   const [serverError, setServerError] = useState('')
   const [checkingDelivery, setCheckingDelivery] = useState(false)
@@ -440,6 +447,10 @@ function DetailsStep({
     if (!isValidUkMobile(form.customerPhone)) errs.customerPhone = UK_MOBILE_ERROR
     if (!isValidUkPostcode(form.postcode)) errs.postcode = 'Please enter a valid UK postcode'
     if (form.shippingAddress.trim().length < 5) errs.shippingAddress = 'Please enter your full delivery address'
+    // "Choose a day" with no day chosen is not an order for as soon as
+    // possible - it is a question left unanswered, so it is asked again.
+    if (choosingDate && !form.preferredDeliveryDate) errs.preferredDeliveryDate = 'Pick a day, or choose "As soon as possible"'
+    else if (form.preferredDeliveryDate && !isValidPreferredDeliveryDate(form.preferredDeliveryDate)) errs.preferredDeliveryDate = 'That day is too soon - pick one at least 4 days ahead'
     setErrors(errs)
     return Object.keys(errs).length === 0
   }
@@ -564,7 +575,7 @@ function DetailsStep({
       } else if (res?.success) {
         trackOrderPlaced(res.orderId, res.total, toTrackedItems(cartItems))
         clearCart()
-        onSuccess(res.orderId, form.postcode.toUpperCase(), res.total)
+        onSuccess(res.orderId, form.postcode.toUpperCase(), res.total, form.preferredDeliveryDate || null)
       } else {
         setServerError('We could not place the order right now. Please try again.')
         setPending(false)
@@ -597,6 +608,7 @@ function DetailsStep({
         discounted={offerDiscount > 0}
         postcode={form.postcode}
         extras={extras}
+        preferredDeliveryDate={form.preferredDeliveryDate || undefined}
         pageContext="checkout_details_whatsapp_order"
       />
 
@@ -726,6 +738,18 @@ function DetailsStep({
         )}
 
         <Field label="Full Address" name="shippingAddress" type="textarea" value={form.shippingAddress} onChange={set('shippingAddress')} error={errors.shippingAddress} />
+
+        <DeliveryDateField
+          value={form.preferredDeliveryDate}
+          onChange={set('preferredDeliveryDate')}
+          choosing={choosingDate}
+          onChoosing={open => {
+            setChoosingDate(open)
+            if (errors.preferredDeliveryDate) setErrors(e => { const n = { ...e }; delete n.preferredDeliveryDate; return n })
+          }}
+          error={errors.preferredDeliveryDate}
+        />
+
         <Field label="Special Instructions" name="specialInstructions" required={false} type="textarea" value={form.specialInstructions} onChange={set('specialInstructions')} />
       </div>
 
@@ -981,12 +1005,14 @@ export default function CheckoutClient() {
   const [orderId, setOrderId] = useState('')
   const [orderPostcode, setOrderPostcode] = useState('')
   const [orderAmount, setOrderAmount] = useState(0)
+  const [orderDeliveryDate, setOrderDeliveryDate] = useState<string | null>(null)
   const [direction, setDirection] = useState<'forward' | 'back'>('forward')
   const [visible, setVisible] = useState(true)
   const [extras, setExtras] = useState<DeliveryOptions>(NO_EXTRAS)
   const [form, setForm] = useState<FormState>({
     customerName: '', customerEmail: '', customerPhone: '',
     postcode: '', shippingAddress: '', specialInstructions: '',
+    preferredDeliveryDate: '',
   })
   const [deliveryCheck, setDeliveryCheck] = useState<DeliveryCheckResult | null>(null)
 
@@ -1083,10 +1109,11 @@ export default function CheckoutClient() {
     transition('details', 'forward')
   }
   const goBack = () => transition('cart', 'back')
-  const goSuccess = (id: string, postcode: string, amount: number) => {
+  const goSuccess = (id: string, postcode: string, amount: number, preferredDeliveryDate: string | null) => {
     setOrderId(id)
     setOrderPostcode(postcode)
     setOrderAmount(amount)
+    setOrderDeliveryDate(preferredDeliveryDate)
     transition('success', 'forward')
   }
 
@@ -1166,7 +1193,7 @@ export default function CheckoutClient() {
             {step === 'success' && (
               <>
                 <AdsPurchaseConversion reference={orderId} total={orderAmount} />
-                <SuccessStep orderId={orderId} postcode={orderPostcode} amount={orderAmount} />
+                <SuccessStep orderId={orderId} postcode={orderPostcode} amount={orderAmount} preferredDeliveryDate={orderDeliveryDate} />
               </>
             )}
           </div>

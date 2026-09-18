@@ -86,3 +86,69 @@ export function deliveryWindow(now: Date = new Date()): DeliveryWindow {
     toISO: to.toISOString().slice(0, 10),
   }
 }
+
+// ─── A preferred delivery day ────────────────────────────────────────────────
+//
+// The customer may pick the day they want the sofa, at checkout. A request,
+// not a booking - the team rings to agree the slot - but it tells them which
+// week to aim for. Muaz's rule (2026-09-18): any day at all, as long as it is
+// at least four days away. The database function place_order enforces the
+// same two limits, so the browser's calendar and the server can never
+// disagree about which days are allowed.
+
+/** Days from today before the first day a customer may ask for. */
+export const PREFERRED_DELIVERY_MIN_DAYS = 4
+/** How far ahead a request is accepted. A sanity ceiling, not a promise. */
+export const PREFERRED_DELIVERY_MAX_DAYS = 180
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
+
+function isoDate(d: Date): string {
+  return d.toISOString().slice(0, 10)
+}
+
+function addDays(from: Date, n: number): Date {
+  const d = new Date(from)
+  d.setUTCDate(d.getUTCDate() + n)
+  return d
+}
+
+/** The first day a customer may ask for, as YYYY-MM-DD in Europe/London. */
+export function earliestPreferredDeliveryDate(now: Date = new Date()): string {
+  return isoDate(addDays(londonToday(now), PREFERRED_DELIVERY_MIN_DAYS))
+}
+
+/** The last day accepted, as YYYY-MM-DD. */
+export function latestPreferredDeliveryDate(now: Date = new Date()): string {
+  return isoDate(addDays(londonToday(now), PREFERRED_DELIVERY_MAX_DAYS))
+}
+
+/**
+ * Whether a value is a real calendar date inside the accepted range.
+ *
+ * Strings compare correctly in YYYY-MM-DD form, which is why the range check
+ * is a string comparison and needs no Date at all - but the round trip
+ * through Date is still made, because "2026-02-31" matches the pattern and
+ * is not a day.
+ */
+export function isValidPreferredDeliveryDate(value: string, now: Date = new Date()): boolean {
+  if (!ISO_DATE.test(value)) return false
+  const parsed = new Date(`${value}T00:00:00Z`)
+  if (Number.isNaN(parsed.getTime()) || isoDate(parsed) !== value) return false
+  return value >= earliestPreferredDeliveryDate(now) && value <= latestPreferredDeliveryDate(now)
+}
+
+const FULL_DAY = new Intl.DateTimeFormat('en-GB', { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long' })
+const FULL_DAY_YEAR = new Intl.DateTimeFormat('en-GB', { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+
+/**
+ * "Saturday 26 September" - the year only when it is not this year, which
+ * for a sofa ordered in December it sometimes is not.
+ */
+export function formatPreferredDeliveryDate(value: string, now: Date = new Date()): string {
+  if (!ISO_DATE.test(value)) return value
+  const d = new Date(`${value}T00:00:00Z`)
+  if (Number.isNaN(d.getTime())) return value
+  const thisYear = londonToday(now).getUTCFullYear() === d.getUTCFullYear()
+  return (thisYear ? FULL_DAY : FULL_DAY_YEAR).format(d)
+}

@@ -2,6 +2,7 @@ import nodemailer from 'nodemailer';
 import type { DeliveryBreakdown } from '@/constants/delivery';
 import { whatsAppLink } from '@/utils/phone';
 import { trustpilotInviteBcc, trustpilotInviteLink } from '@/constants/trustpilot';
+import { formatPreferredDeliveryDate } from '@/utils/delivery';
 import { PHONE_DISPLAY, SUPPORT_EMAIL, ORDERS_EMAIL, whatsAppHref } from '@/constants/contact';
 import { gbp, recoveryBasketLines, recoveryBasketTotal, recoveryReminderEmail } from '@/utils/recoveryLeadFormat';
 
@@ -252,6 +253,8 @@ export async function sendOrderConfirmation(
   breakdown?: DeliveryBreakdown,
   discountAmount = 0,
   promotionCode: string | null = null,
+  /** The day they asked for at checkout, YYYY-MM-DD, or null for as soon as possible. */
+  preferredDeliveryDate: string | null = null,
 ) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
   const confirmLink = `${siteUrl}/confirm-order/${fullOrderId}`;
@@ -270,6 +273,10 @@ export async function sendOrderConfirmation(
       <div style="background-color: #fafaf9; border: 1px solid #e7e5e4; padding: 24px; border-radius: 10px; margin-bottom: 32px;">
         <p style="margin: 0 0 4px 0; color: #78716c; font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; font-weight: bold;">Order Reference</p>
         <p style="margin: 0 0 24px 0; font-size: 24px; font-weight: bold; font-family: monospace; letter-spacing: 2px; color: #1c1917;">${shortCode}</p>
+        ${preferredDeliveryDate ? `
+        <p style="margin: 0 0 4px 0; color: #78716c; font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; font-weight: bold;">Requested delivery day</p>
+        <p style="margin: 0 0 4px 0; font-size: 16px; font-weight: bold; color: #1c1917;">${esc(formatPreferredDeliveryDate(preferredDeliveryDate))}</p>
+        <p style="margin: 0 0 24px 0; color: #78716c; font-size: 12px;">We will ring to agree the time slot on the day.</p>` : ''}
         
         <div style="text-align: left; padding-top: 4px;">
           ${totalsTable(itemsSubtotal, breakdown, total, discountAmount, promotionCode)}
@@ -302,6 +309,8 @@ export async function sendAdminOrderNotification(
   breakdown?: DeliveryBreakdown,
   discountAmount = 0,
   promotionCode: string | null = null,
+  /** The day the customer asked for, YYYY-MM-DD, or null for as soon as possible. */
+  preferredDeliveryDate: string | null = null,
 ) {
   const adminEmail = process.env.ADMIN_EMAIL;
   if (!adminEmail) return;
@@ -330,6 +339,9 @@ export async function sendAdminOrderNotification(
         
         <p style="margin: 0 0 4px 0; color: #78716c; font-size: 11px; text-transform: uppercase; font-weight: bold;">Customer Phone</p>
         <p style="margin: 0 0 16px 0; font-size: 16px; font-weight: bold;">${esc(customerPhone)}</p>
+
+        <p style="margin: 0 0 4px 0; color: #78716c; font-size: 11px; text-transform: uppercase; font-weight: bold;">Requested delivery day</p>
+        <p style="margin: 0 0 16px 0; font-size: 16px; font-weight: bold;">${preferredDeliveryDate ? esc(formatPreferredDeliveryDate(preferredDeliveryDate)) : 'As soon as possible'}</p>
         
         <p style="margin: 0 0 6px 0; color: #78716c; font-size: 11px; text-transform: uppercase; font-weight: bold;">Amount to Collect</p>
         ${totalsTable(itemsSubtotal, breakdown, totalAmount, discountAmount, promotionCode)}
