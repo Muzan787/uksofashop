@@ -882,7 +882,7 @@ export async function sendCheckoutReminder(email: string, basket: unknown) {
   const content = `
     <div style="text-align: left;">
       <h2 style="margin: 0 0 16px 0; font-size: 22px; color: #1c1917;">
-        ${lines.length > 1 ? 'Your sofas are' : 'Your sofa is'} still waiting for you
+        Need any help finishing your order?
       </h2>
       <p style="margin: 0 0 20px 0; color: #57534e; line-height: 1.6;">
         You asked us to remind you if you didn't finish your order on uksofashop.co.uk
@@ -913,11 +913,12 @@ export async function sendCheckoutReminder(email: string, basket: unknown) {
         Chat on WhatsApp
       </a>
       <a href="${siteUrl}/checkout" style="background-color: #1c1917; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px; display: inline-block; margin: 0 0 8px 0;">
-        Finish your order
+        Return to checkout
       </a>
 
       <p style="margin: 24px 0 0 0; color: #a8a29e; line-height: 1.6; font-size: 12px;">
         You asked for this reminder on our checkout. If you'd rather not hear from us, just reply and say so.
+        Your basket is saved in the browser you used to shop, so the checkout button works best on that device.
         Or call us on ${PHONE_DISPLAY}.
       </p>
     </div>
