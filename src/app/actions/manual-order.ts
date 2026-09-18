@@ -224,6 +224,24 @@ async function resolveWhatsAppMatch(
   }
 }
 
+export async function previewWhatsAppTimeMatch(input: {
+  date: string
+  hour: number
+  minute: number
+  meridiem: 'AM' | 'PM'
+  timezone: 'Asia/Karachi' | 'Europe/London'
+}): Promise<{ match: WhatsAppAttributionMatch | null; error?: string }> {
+  if (!(await isAdmin())) return { match: null, error: 'Not authorised.' }
+
+  const parsed = schema.shape.contactTime.safeParse(input)
+  if (!parsed.success) {
+    return { match: null, error: parsed.error.issues[0]?.message ?? 'Check the contact time.' }
+  }
+
+  const resolved = await resolveWhatsAppMatch(undefined, parsed.data)
+  return { match: resolved.match }
+}
+
 export async function createWhatsAppOrder(input: ManualOrderInput): Promise<ManualOrderResult> {
   // Checked here as well as inside place_manual_order. The database check is
   // the boundary that matters - a Server Action compiles to a public endpoint -
