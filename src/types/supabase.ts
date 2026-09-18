@@ -690,12 +690,14 @@ export type Database = {
           meta_fbp: string | null
           offer_source: string | null
           preferred_delivery_date: string | null
+          processing_at: string | null
           promotion_code: string | null
           purchase_event_id: string
           purchase_event_sent_at: string | null
           referrer: string | null
           review_request_sent_at: string | null
           session_id: string | null
+          shipped_at: string | null
           shipping_address: string
           sofa_removal_seats: number | null
           source: string
@@ -749,12 +751,14 @@ export type Database = {
           meta_fbp?: string | null
           offer_source?: string | null
           preferred_delivery_date?: string | null
+          processing_at?: string | null
           promotion_code?: string | null
           purchase_event_id?: string
           purchase_event_sent_at?: string | null
           referrer?: string | null
           review_request_sent_at?: string | null
           session_id?: string | null
+          shipped_at?: string | null
           shipping_address: string
           sofa_removal_seats?: number | null
           source?: string
@@ -808,12 +812,14 @@ export type Database = {
           meta_fbp?: string | null
           offer_source?: string | null
           preferred_delivery_date?: string | null
+          processing_at?: string | null
           promotion_code?: string | null
           purchase_event_id?: string
           purchase_event_sent_at?: string | null
           referrer?: string | null
           review_request_sent_at?: string | null
           session_id?: string | null
+          shipped_at?: string | null
           shipping_address?: string
           sofa_removal_seats?: number | null
           source?: string
