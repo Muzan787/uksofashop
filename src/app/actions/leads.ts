@@ -4,6 +4,7 @@
 import { revalidatePath } from 'next/cache'
 import { requireAdmin } from '@/utils/auth'
 import { createUntypedAdminClient } from '@/utils/supabase/admin'
+import { sendCheckoutReminder } from '@/utils/email'
 
 /**
  * Tick a checkout-recovery lead off, or put it back.
@@ -46,4 +47,62 @@ export async function setLeadDone(formData: FormData) {
 
   revalidatePath('/admin/leads')
   revalidatePath('/admin')
+}
+
+export type SendReminderState =
+  | { status: 'idle' }
+  | { status: 'sent' }
+  | { status: 'error'; message: string }
+
+/**
+ * Send the reminder email to a lead, from the page, without a mail app.
+ *
+ * Returns its result rather than throwing, unlike setLeadDone: this one is
+ * driven by useActionState so the card can say "Sent" or show why it was not,
+ * where a thrown error would land on the site's error page mid-list.
+ */
+export async function sendLeadReminderEmail(
+  _prev: SendReminderState,
+  formData: FormData,
+): Promise<SendReminderState> {
+  await requireAdmin()
+
+  const id = formData.get('id')
+  if (typeof id !== 'string' || !/^[0-9a-f-]{36}$/i.test(id)) {
+    return { status: 'error', message: 'Missing or invalid lead id' }
+  }
+
+  const admin = createUntypedAdminClient()
+  const { data, error } = await admin
+    .from('checkout_recovery_leads')
+    .select('email, email_opt_in, basket, status')
+    .eq('id', id)
+    .maybeSingle()
+
+  if (error) return { status: 'error', message: error.message }
+
+  const lead = data as { email: string | null; email_opt_in: boolean; basket: unknown; status: string } | null
+  // Converted and unsubscribed rows have had their email cleared, and a row
+  // without the email tick never had it - either way there is nothing to send to.
+  if (!lead || !['active', 'done'].includes(lead.status) || !lead.email_opt_in || !lead.email) {
+    return { status: 'error', message: 'This lead did not ask for an email reminder.' }
+  }
+
+  try {
+    await sendCheckoutReminder(lead.email, lead.basket)
+  } catch (err) {
+    console.error(`lead reminder email failed: ${err instanceof Error ? err.message : String(err)}`)
+    return { status: 'error', message: 'The email could not be sent. Try again in a moment.' }
+  }
+
+  const { error: stampError } = await admin
+    .from('checkout_recovery_leads')
+    .update({ reminder_emailed_at: new Date().toISOString() })
+    .eq('id', id)
+  // The email has gone either way; a failed stamp only means the card will
+  // not say so, which is worth logging but not worth reporting as a failure.
+  if (stampError) console.error(`lead reminder stamp failed: ${stampError.message}`)
+
+  revalidatePath('/admin/leads')
+  return { status: 'sent' }
 }

@@ -140,8 +140,3 @@ export function recoveryReminderEmail(basket: unknown): { subject: string; body:
 
   return { subject, body }
 }
-
-/** mailto: with the subject and body filled in. */
-export function mailtoLink(to: string, subject: string, body: string): string {
-  return `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
-}

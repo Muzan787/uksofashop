@@ -1,14 +1,13 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { Check, Inbox, Mail, RotateCcw } from 'lucide-react'
+import { Check, Inbox, RotateCcw } from 'lucide-react'
 import { createUntypedAdminClient } from '@/utils/supabase/admin'
 import { setLeadDone } from '@/app/actions/leads'
+import EmailLeadButton from './EmailLeadButton'
 import {
   gbp,
-  mailtoLink,
   recoveryBasketLines,
   recoveryBasketTotal,
-  recoveryReminderEmail,
   recoveryReminderMessage,
 } from '@/utils/recoveryLeadFormat'
 import { formatUkMobile, whatsAppLink } from '@/utils/phone'
@@ -26,6 +25,7 @@ type RecoveryLead = {
   email_opt_in: boolean
   updated_at: string
   done_at: string | null
+  reminder_emailed_at: string | null
 }
 
 /**
@@ -68,7 +68,7 @@ export default async function AdminLeadsPage(props: { searchParams: SearchParams
   const admin = createUntypedAdminClient()
   const { data, error } = await admin
     .from('checkout_recovery_leads')
-    .select('id, basket, phone, email, whatsapp_opt_in, email_opt_in, updated_at, done_at')
+    .select('id, basket, phone, email, whatsapp_opt_in, email_opt_in, updated_at, done_at, reminder_emailed_at')
     .eq('status', view === 'done' ? 'done' : 'active')
     // Newest shopper activity first while waiting; most recently ticked first once done.
     .order(view === 'done' ? 'done_at' : 'updated_at', { ascending: false })
@@ -91,8 +91,8 @@ export default async function AdminLeadsPage(props: { searchParams: SearchParams
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-orange-600">Checkout recovery</p>
           <h1 className="mt-1 text-2xl font-bold tracking-tight text-zinc-900 lg:text-3xl">Leads</h1>
           <p className="mt-1 max-w-2xl text-sm text-zinc-500">
-            Each of these asked for a reminder before leaving checkout. Tap WhatsApp or Email to send it —
-            the message is already written, and you can change it before it goes. Tick Done once it&apos;s concluded.
+            Each of these asked for a reminder before leaving checkout. WhatsApp opens the chat with the
+            message already typed; Email sends it straight away. Tick Done once it&apos;s concluded.
           </p>
         </div>
         <p className="text-sm font-medium text-zinc-500">
@@ -141,8 +141,6 @@ export default async function AdminLeadsPage(props: { searchParams: SearchParams
             const wa = lead.whatsapp_opt_in && lead.phone
               ? whatsAppLink(lead.phone, recoveryReminderMessage(lead.basket))
               : null
-            const email = lead.email_opt_in && lead.email ? recoveryReminderEmail(lead.basket) : null
-            const mailto = email && lead.email ? mailtoLink(lead.email, email.subject, email.body) : null
 
             return (
               <article key={lead.id} className="flex flex-col rounded-md border border-zinc-200 bg-white p-5 shadow-sm">
@@ -189,8 +187,9 @@ export default async function AdminLeadsPage(props: { searchParams: SearchParams
                   </ul>
                 )}
 
-                {/* The reminder, one tap away, on whichever channel they chose. */}
-                <div className="mt-4 flex gap-2">
+                {/* The reminder, one tap away, on whichever channel they chose: WhatsApp
+                    opens the chat with it typed; Email sends it from here. */}
+                <div className="mt-4 flex items-start gap-2">
                   {wa && (
                     <a
                       href={wa}
@@ -202,14 +201,11 @@ export default async function AdminLeadsPage(props: { searchParams: SearchParams
                       WhatsApp
                     </a>
                   )}
-                  {mailto && (
-                    <a
-                      href={mailto}
-                      className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-sm bg-zinc-900 py-2.5 text-sm font-bold text-white transition hover:bg-zinc-800 active:scale-[0.98]"
-                    >
-                      <Mail className="h-4 w-4" aria-hidden="true" />
-                      Email
-                    </a>
+                  {lead.email_opt_in && lead.email && (
+                    <EmailLeadButton
+                      id={lead.id}
+                      sentLabel={lead.reminder_emailed_at ? when(lead.reminder_emailed_at) : null}
+                    />
                   )}
                 </div>
 

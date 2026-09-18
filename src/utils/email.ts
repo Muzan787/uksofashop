@@ -1,7 +1,8 @@
 import nodemailer from 'nodemailer';
 import type { DeliveryBreakdown } from '@/constants/delivery';
 import { whatsAppLink } from '@/utils/phone';
-import { PHONE_DISPLAY, SUPPORT_EMAIL, ORDERS_EMAIL } from '@/constants/contact';
+import { PHONE_DISPLAY, SUPPORT_EMAIL, ORDERS_EMAIL, whatsAppHref } from '@/constants/contact';
+import { gbp, recoveryBasketLines, recoveryBasketTotal, recoveryReminderEmail } from '@/utils/recoveryLeadFormat';
 
 /**
  * Escapes a value before it goes into an email's HTML.
@@ -764,6 +765,94 @@ export async function sendAdminSwatchNotification(
     to: MAIL_TO_ADMIN,
     replyTo: email,
     subject: `Swatches: ${esc(swatchCodes(items))} to ${esc(postcode)}`,
+    html: generateEmailHTML(content),
+  })
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  CHECKOUT REMINDER
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * The reminder a shopper asked for on the checkout, sent from the admin leads
+ * page with one tap. Same words as the WhatsApp version, laid out as an email,
+ * with the two ways back: WhatsApp first, because that is where the sale gets
+ * made, and the checkout itself, which still holds their basket on the phone
+ * they shopped on.
+ *
+ * The plain-text part is the WhatsApp message with a sign-off, so a client
+ * that strips HTML still shows something that reads as written by a person.
+ */
+export async function sendCheckoutReminder(email: string, basket: unknown) {
+  const lines = recoveryBasketLines(basket)
+  const total = recoveryBasketTotal(lines)
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+
+  const rows = lines
+    .map(
+      l => `
+      <tr>
+        <td style="padding: 10px 0; border-bottom: 1px solid #e7e5e4; color: #1c1917;">
+          <span style="font-weight: 600;">${l.quantity > 1 ? `${l.quantity} × ` : ''}${esc(l.title)}</span>
+          ${l.detail ? `<br><span style="color: #78716c; font-size: 13px;">${esc(l.detail)}</span>` : ''}
+        </td>
+        <td style="padding: 10px 0; border-bottom: 1px solid #e7e5e4; text-align: right; color: #1c1917; white-space: nowrap; vertical-align: top;">
+          ${l.lineTotal !== null ? gbp(l.lineTotal) : ''}
+        </td>
+      </tr>`,
+    )
+    .join('')
+
+  // What their WhatsApp opens with - so the reply arrives already saying
+  // which sofa it is about.
+  const waMessage = `Hi, I was looking at ${lines
+    .map(l => `${l.title}${l.detail ? ` (${l.detail})` : ''}`)
+    .join(' and ') || 'a sofa'} on your website.`
+
+  const content = `
+    <div style="text-align: left;">
+      <h2 style="margin: 0 0 16px 0; font-size: 22px; color: #1c1917;">
+        ${lines.length > 1 ? 'Your sofas are' : 'Your sofa is'} still waiting for you
+      </h2>
+      <p style="margin: 0 0 20px 0; color: #57534e; line-height: 1.6;">
+        You asked us to remind you if you didn't finish your order on uksofashop.co.uk
+        ${lines.length > 0 ? '– here is what you had picked out:' : '.'}
+      </p>
+
+      ${lines.length > 0 ? `
+      <table style="width: 100%; border-collapse: collapse; margin: 0 0 8px 0;">
+        ${rows}
+        ${total !== null ? `
+        <tr>
+          <td style="padding: 12px 0 0 0; color: #1c1917; font-weight: bold;">Total</td>
+          <td style="padding: 12px 0 0 0; text-align: right; color: #d4871a; font-size: 18px; font-weight: bold; white-space: nowrap;">${gbp(total)}</td>
+        </tr>` : ''}
+      </table>` : ''}
+
+      <p style="margin: 20px 0 24px 0; color: #57534e; line-height: 1.6;">
+        ${lines.length === 1 ? "It's still available." : lines.length > 1 ? "They're all still available." : ''}
+        Would you like to go ahead, or is there anything you'd like to check first? Happy to help.
+      </p>
+
+      <a href="${whatsAppHref(waMessage)}" style="background-color: #25D366; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px; display: inline-block; margin: 0 8px 8px 0;">
+        Chat on WhatsApp
+      </a>
+      <a href="${siteUrl}/checkout" style="background-color: #1c1917; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px; display: inline-block; margin: 0 0 8px 0;">
+        Finish your order
+      </a>
+
+      <p style="margin: 24px 0 0 0; color: #a8a29e; line-height: 1.6; font-size: 12px;">
+        You asked for this reminder on our checkout. If you'd rather not hear from us, just reply and say so.
+        Or call us on ${PHONE_DISPLAY}.
+      </p>
+    </div>
+  `
+
+  await deliver({
+    from: sender(),
+    to: email,
+    subject: recoveryReminderEmail(basket).subject,
+    text: recoveryReminderEmail(basket).body,
     html: generateEmailHTML(content),
   })
 }
