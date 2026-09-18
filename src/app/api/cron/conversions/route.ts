@@ -32,7 +32,6 @@
 
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/utils/supabase/admin'
-import { reportOrderConversion } from '@/utils/orderConversions'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -97,27 +96,19 @@ export async function GET(request: Request) {
   const purchases = unreported ?? []
   const deliveries = undelivered ?? []
 
-  // Sequentially, not in parallel: this is a backstop that runs once a day
-  // against a handful of rows, and two ad platforms per order. There is nothing
-  // to gain from hammering them and something to lose if one rate-limits.
-  for (const order of purchases) {
-    await reportOrderConversion(order.id, 'purchase')
-  }
-  for (const order of deliveries) {
-    await reportOrderConversion(order.id, 'delivered')
-  }
-
+  // Deliberately audit-only. Status changes no longer send advertising
+  // conversions automatically; the admin order card is the single place where
+  // a human explicitly sends Purchase / OrderDelivered.
   if (purchases.length || deliveries.length) {
     console.warn(
-      `Conversion backfill reported ${purchases.length} purchase(s) and ` +
-      `${deliveries.length} delivery(ies) that the admin panel had missed. ` +
-      `Statuses changed outside the admin panel do not report on their own.`,
+      `Conversion audit: ${purchases.length} sold order(s) still need Purchase and ` +
+      `${deliveries.length} delivered order(s) still need OrderDelivered.`,
     )
   }
 
   return NextResponse.json({
     windowHours: WINDOW_HOURS,
-    purchasesReported: purchases.length,
-    deliveriesReported: deliveries.length,
+    purchasesWaiting: purchases.length,
+    deliveriesWaiting: deliveries.length,
   })
 }
