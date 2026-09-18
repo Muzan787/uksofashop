@@ -15,7 +15,7 @@
 // form.
 
 import { useMemo, useState } from 'react'
-import { MessageCircle, Plus, X, Loader2, Check } from 'lucide-react'
+import { MessageCircle, Plus, X, Loader2, Check, Clock3 } from 'lucide-react'
 import { createWhatsAppOrder } from '@/app/actions/manual-order'
 
 export interface PickerVariant {
@@ -55,7 +55,13 @@ export default function NewWhatsAppOrder({
   const [open, setOpen] = useState(false)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState('')
-  const [done, setDone] = useState<{ reference: string; total: number } | null>(null)
+  const [done, setDone] = useState<{
+    reference: string
+    total: number
+    matchedReference: string | null
+    matchGapMinutes: number | null
+    searchedTime: boolean
+  } | null>(null)
 
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
@@ -65,6 +71,12 @@ export default function NewWhatsAppOrder({
   const [notes, setNotes] = useState('')
   const [delivery, setDelivery] = useState('')
   const [whatsappReference, setWhatsappReference] = useState('')
+  const [matchByTime, setMatchByTime] = useState(false)
+  const [contactDate, setContactDate] = useState('')
+  const [contactHour, setContactHour] = useState('10')
+  const [contactMinute, setContactMinute] = useState('00')
+  const [contactMeridiem, setContactMeridiem] = useState<'AM' | 'PM'>('PM')
+  const [contactTimezone, setContactTimezone] = useState<'Asia/Karachi' | 'Europe/London'>('Asia/Karachi')
   const [lines, setLines] = useState<Line[]>([{ ...BLANK }])
 
   const priceOf = useMemo(() => {
@@ -88,7 +100,9 @@ export default function NewWhatsAppOrder({
 
   const reset = () => {
     setName(''); setPhone(''); setEmail(''); setAddress(''); setPostcode('')
-    setNotes(''); setDelivery(''); setWhatsappReference(''); setLines([{ ...BLANK }]); setError('')
+    setNotes(''); setDelivery(''); setWhatsappReference(''); setMatchByTime(false)
+    setContactDate(''); setContactHour('10'); setContactMinute('00'); setContactMeridiem('PM')
+    setContactTimezone('Asia/Karachi'); setLines([{ ...BLANK }]); setError('')
   }
 
   const submit = async (e: React.FormEvent) => {
@@ -126,13 +140,29 @@ export default function NewWhatsAppOrder({
       deliveryCharge: delivery.trim() === '' ? 0 : Number(delivery),
       items,
       whatsappReference: whatsappReference.trim() || undefined,
+      contactTime:
+        !whatsappReference.trim() && matchByTime
+          ? {
+              date: contactDate,
+              hour: Number(contactHour),
+              minute: Number(contactMinute),
+              meridiem: contactMeridiem,
+              timezone: contactTimezone,
+            }
+          : undefined,
     })
     setPending(false)
 
     // Discriminating on `success` rather than on `error`: it is the literal
     // that narrows the union, and it is the field the action promises.
     if (!res.success) { setError(res.error); return }
-    setDone({ reference: res.orderId, total: res.total })
+    setDone({
+      reference: res.orderId,
+      total: res.total,
+      matchedReference: res.attributionMatch?.reference ?? null,
+      matchGapMinutes: res.attributionMatch?.gapMinutes ?? null,
+      searchedTime: res.contactTimeSearched,
+    })
     reset()
   }
 
