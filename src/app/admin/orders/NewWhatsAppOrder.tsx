@@ -206,8 +206,20 @@ export default function NewWhatsAppOrder({
       {done && (
         <div className="mb-5 flex items-center gap-2 rounded-sm border border-green-200 bg-green-50 px-3 py-2.5 text-sm text-green-800">
           <Check className="h-4 w-4 shrink-0" />
-          <span>
+          <span className="leading-relaxed">
             Saved as <strong className="font-mono">#{done.reference}</strong> — £{done.total.toFixed(2)}
+            {done.matchedReference ? (
+              <>
+                <br />
+                <strong>Attribution linked:</strong> {done.matchedReference}
+                {done.matchGapMinutes !== null ? ` · ${done.matchGapMinutes} min before the WhatsApp message` : ''}
+              </>
+            ) : done.searchedTime ? (
+              <>
+                <br />
+                <strong>No tracked WhatsApp click found in the previous 10 minutes.</strong> Order saved without a guessed attribution.
+              </>
+            ) : null}
           </span>
         </div>
       )}
