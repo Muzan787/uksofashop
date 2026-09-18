@@ -496,7 +496,12 @@ function DetailsStep({
       }
 
       setConfirmed(decision.postcode)
-      setAddresses(await lookupAddresses(decision.postcode))
+      const matches = await lookupAddresses(decision.postcode)
+      setAddresses(matches)
+      // GOV.UK's postcode pattern is postcode -> immediately choose the
+      // returned address. Opening the list here removes a redundant extra tap
+      // after "Find address" while keeping manual entry available below.
+      setDropdownOpen(matches.length > 0)
     } catch (err) {
       const message = err instanceof Error ? err.message : ''
       setErrors(e => ({ ...e, postcode: message || 'Lookup failed. Please type your address below.' }))
