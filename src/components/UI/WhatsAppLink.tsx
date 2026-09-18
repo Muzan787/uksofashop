@@ -10,7 +10,7 @@
 // data-ground, ...) passes straight through unchanged, so the visual markup
 // at each call site is untouched.
 
-import type { AnchorHTMLAttributes, ReactNode } from 'react';
+import type { AnchorHTMLAttributes, ReactNode, MouseEvent } from 'react';
 import { useWhatsAppCTA, type WhatsAppCTAOptions } from '@/utils/attribution/useWhatsAppCTA';
 
 type Props = WhatsAppCTAOptions &
@@ -32,9 +32,9 @@ export default function WhatsAppLink({
 }: Props) {
   const cta = useWhatsAppCTA({ message, pageContext, productId, variantId, productName });
 
-  const handleClick = () => {
+  const handleClick = (event: MouseEvent<HTMLAnchorElement>) => {
     onBeforeOpen?.()
-    cta.onClick()
+    cta.onClick(event)
   }
 
   return (
