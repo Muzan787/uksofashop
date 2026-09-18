@@ -1,4 +1,36 @@
-/  const shortCode = order.id.substring(0, 8).toUpperCase()
+// src/app/confirm-order/[id]/page.tsx
+import type { Metadata } from 'next'
+import { createClient } from '@/utils/supabase/server'
+import { notFound } from 'next/navigation'
+import { CheckCircle, MessageCircle, Package, ArrowRight } from 'lucide-react'
+import Link from 'next/link'
+
+
+export const metadata: Metadata = {
+  title: 'Confirm Your Order',
+  description:
+    'Confirm the details of your order.',
+  robots: { index: false, follow: false },
+}
+
+export default async function ConfirmOrderPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const supabase = await createClient()
+
+  // Fetch the order and, when it is still pending_cod, atomically transition it
+  // to confirmed with confirmed_at inside the SECURITY DEFINER database RPC.
+  // Reopening an already-confirmed link returns the same order without moving
+  // the timestamp, so the business-event time remains the first confirmation.
+  const { data: orders, error } = await supabase.rpc('confirm_order', { p_order_id: id })
+  const order = orders?.[0]
+
+  if (error || !order) return notFound()
+
+  // Confirmation changes the business state only. Advertising conversion
+  // reporting is deliberately a separate explicit admin action, so a customer
+  // clicking this link can never train Meta without a human review.
+
+  const shortCode = order.id.substring(0, 8).toUpperCase()
 
   // 3. Set up the WhatsApp URL
   const whatsappNumber = "447476616022" // <-- CHANGE THIS TO YOUR ACTUAL BUSINESS WHATSAPP NUMBER!
