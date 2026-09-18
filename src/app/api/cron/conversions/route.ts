@@ -1,34 +1,16 @@
 // src/app/api/cron/conversions/route.ts
 //
-// Reports conversions for orders that reached a selling status without going
-// through the admin panel.
+// Conversion audit endpoint.
 //
-// WHY THIS EXISTS. reportOrderConversion is called from exactly two places:
-// updateOrderStatus (the admin dropdown) and confirmCustomerOrder (the link in
-// the confirmation email). Neither of them runs when a status is edited
-// directly in the Supabase dashboard, and the row changes just the same - so
-// the order is confirmed, the money is real, and Meta and GA4 are never told.
+// Order status and advertising reporting are intentionally separate actions.
+// Confirming or delivering an order no longer pushes an event to Meta by
+// itself. This route therefore does NOT send anything; it only identifies
+// recent sold/delivered orders whose explicit conversion button has not yet
+// been used. It is kept as a protected diagnostic endpoint for operations.
 //
-// That is not hypothetical. Two orders sat at 'confirmed' with
-// purchase_event_sent_at still null, and the failure is invisible: nothing in
-// the admin panel distinguishes an order whose conversion reported from one
-// whose conversion did not. This is the backstop that closes it.
-//
-// SAFE TO RUN REPEATEDLY, by construction. reportOrderConversion claims its
-// guard column with a conditional update BEFORE it sends anything, so an order
-// picked up here cannot be reported twice, and cannot race the admin panel
-// doing it at the same moment.
-//
-// WHY THE WINDOW IS SHORT. Neither sendCapiEvent nor sendGa4Event carries the
-// order's own timestamp - both stamp the event at the moment they send. A
-// backfilled conversion is therefore dated today, not the day it was agreed.
-// Over a day or two that is a rounding error; over a week it would move revenue
-// into the wrong reporting period and, for Meta, fall outside the 7-day limit
-// on event_time entirely. So this catches the recent miss it exists for and
-// deliberately leaves older orders alone rather than misdating them.
-//
-// Scheduled in vercel.json. Protected by CRON_SECRET, like the review cron: the
-// path is guessable and this one reports revenue to two ad platforms.
+// The scheduled Vercel cron entry was removed when manual sending became the
+// source of truth. If this endpoint is called directly it is protected by
+// CRON_SECRET and is read-only with respect to ad-platform conversions.
 
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/utils/supabase/admin'
