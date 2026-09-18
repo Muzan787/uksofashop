@@ -14,9 +14,9 @@
 // and the orders that need doing today should not be pushed below the fold by a
 // form.
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useTransition } from 'react'
 import { MessageCircle, Plus, X, Loader2, Check, Clock3 } from 'lucide-react'
-import { createWhatsAppOrder } from '@/app/actions/manual-order'
+import { createWhatsAppOrder, previewWhatsAppTimeMatch, type WhatsAppAttributionMatch } from '@/app/actions/manual-order'
 
 export interface PickerVariant {
   id: string
@@ -54,6 +54,8 @@ export default function NewWhatsAppOrder({
 }) {
   const [open, setOpen] = useState(false)
   const [pending, setPending] = useState(false)
+  const [matchingTime, startTimeMatch] = useTransition()
+  const [timePreview, setTimePreview] = useState<WhatsAppAttributionMatch | null | undefined>(undefined)
   const [error, setError] = useState('')
   const [done, setDone] = useState<{
     reference: string
@@ -102,9 +104,27 @@ export default function NewWhatsAppOrder({
     setName(''); setPhone(''); setEmail(''); setAddress(''); setPostcode('')
     setNotes(''); setDelivery(''); setWhatsappReference(''); setMatchByTime(false)
     setContactDate(''); setContactHour('10'); setContactMinute('00'); setContactMeridiem('PM')
-    setContactTimezone('Asia/Karachi'); setLines([{ ...BLANK }]); setError('')
+    setContactTimezone('Asia/Karachi'); setTimePreview(undefined); setLines([{ ...BLANK }]); setError('')
   }
 
+  const previewTimeMatch = () => {
+    setError('')
+    startTimeMatch(async () => {
+      const result = await previewWhatsAppTimeMatch({
+        date: contactDate,
+        hour: Number(contactHour),
+        minute: Number(contactMinute),
+        meridiem: contactMeridiem,
+        timezone: contactTimezone,
+      })
+      if (result.error) {
+        setTimePreview(undefined)
+        setError(result.error)
+        return
+      }
+      setTimePreview(result.match)
+    })
+  }
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
@@ -378,34 +398,59 @@ export default function NewWhatsAppOrder({
               <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
                 <div className="col-span-2 sm:col-span-1">
                   <label className={label} htmlFor="wa-contact-date">Date</label>
-                  <input id="wa-contact-date" type="date" className={field} value={contactDate} onChange={e => setContactDate(e.target.value)} />
+                  <input id="wa-contact-date" type="date" className={field} value={contactDate} onChange={e => { setContactDate(e.target.value); setTimePreview(undefined) }} />
                 </div>
                 <div>
                   <label className={label} htmlFor="wa-contact-hour">Hour</label>
-                  <select id="wa-contact-hour" className={field} value={contactHour} onChange={e => setContactHour(e.target.value)}>
+                  <select id="wa-contact-hour" className={field} value={contactHour} onChange={e => { setContactHour(e.target.value); setTimePreview(undefined) }}>
                     {Array.from({ length: 12 }, (_, i) => String(i + 1)).map(h => <option key={h} value={h}>{h}</option>)}
                   </select>
                 </div>
                 <div>
                   <label className={label} htmlFor="wa-contact-minute">Minute</label>
-                  <select id="wa-contact-minute" className={field} value={contactMinute} onChange={e => setContactMinute(e.target.value)}>
+                  <select id="wa-contact-minute" className={field} value={contactMinute} onChange={e => { setContactMinute(e.target.value); setTimePreview(undefined) }}>
                     {Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0')).map(m => <option key={m} value={m}>{m}</option>)}
                   </select>
                 </div>
                 <div>
                   <label className={label} htmlFor="wa-contact-meridiem">AM / PM</label>
-                  <select id="wa-contact-meridiem" className={field} value={contactMeridiem} onChange={e => setContactMeridiem(e.target.value as 'AM' | 'PM')}>
+                  <select id="wa-contact-meridiem" className={field} value={contactMeridiem} onChange={e => { setContactMeridiem(e.target.value as 'AM' | 'PM'); setTimePreview(undefined) }}>
                     <option value="AM">AM</option>
                     <option value="PM">PM</option>
                   </select>
                 </div>
                 <div className="col-span-2 sm:col-span-1">
                   <label className={label} htmlFor="wa-contact-zone">Clock shown in</label>
-                  <select id="wa-contact-zone" className={field} value={contactTimezone} onChange={e => setContactTimezone(e.target.value as 'Asia/Karachi' | 'Europe/London')}>
+                  <select id="wa-contact-zone" className={field} value={contactTimezone} onChange={e => { setContactTimezone(e.target.value as 'Asia/Karachi' | 'Europe/London'); setTimePreview(undefined) }}>
                     <option value="Asia/Karachi">Pakistan</option>
                     <option value="Europe/London">UK</option>
                   </select>
                 </div>
+              </div>
+
+              <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+                <button
+                  type="button"
+                  onClick={previewTimeMatch}
+                  disabled={matchingTime || !contactDate}
+                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-sm bg-blue-700 px-4 text-xs font-bold text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {matchingTime ? <Loader2 className="h-4 w-4 animate-spin" /> : <Clock3 className="h-4 w-4" />}
+                  {matchingTime ? 'Checking…' : 'Find tracked click'}
+                </button>
+                {timePreview === null && (
+                  <p className="m-0 text-xs font-semibold text-amber-700">
+                    No unconverted website WhatsApp click in the previous 10 minutes.
+                  </p>
+                )}
+                {timePreview && (
+                  <div className="rounded-sm border border-green-200 bg-green-50 px-3 py-2 text-xs leading-relaxed text-green-800">
+                    <strong>{timePreview.reference}</strong>
+                    {timePreview.gapMinutes !== null ? ' · ' + timePreview.gapMinutes + ' min earlier' : ''}
+                    {timePreview.utmSource ? ' · ' + timePreview.utmSource : ''}
+                    {timePreview.utmContent ? ' · ' + timePreview.utmContent : ''}
+                  </div>
+                )}
               </div>
             </div>
           )}
