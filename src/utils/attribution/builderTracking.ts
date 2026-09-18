@@ -31,7 +31,7 @@ export function trackBuilderAction(
   const body = JSON.stringify({
     action,
     actionId: globalThis.crypto.randomUUID(),
-    path: \`\${window.location.pathname}\${window.location.search}\`,
+    path: window.location.pathname + window.location.search,
     productId: options.productId || undefined,
     variantId: options.variantId || undefined,
     metadata: {
