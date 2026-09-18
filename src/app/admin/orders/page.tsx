@@ -361,6 +361,8 @@ export default async function AdminOrdersPage(props: { searchParams: SearchParam
               {[
                 ['Placed', order.created_at],
                 ['Confirmed', order.confirmed_at],
+                ['Processing', order.processing_at],
+                ['Shipped', order.shipped_at],
                 ['Delivered', order.delivered_at],
                 ['Cancelled', order.cancelled_at],
               ].map(([label, value]) => {
