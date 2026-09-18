@@ -363,7 +363,7 @@ export type LedgerAction =
 function ledger(
   action: LedgerAction,
   actionId: string,
-  context: { variantId?: string; productId?: string } = {},
+  context: { variantId?: string; productId?: string; metadata?: { step?: string; value?: string } } = {},
 ): void {
   if (typeof window === 'undefined') return
   if (!isBrowserTrackingEnabled()) return
@@ -379,6 +379,7 @@ function ledger(
         path: window.location.pathname + window.location.search,
         productId: context.productId,
         variantId: context.variantId,
+        metadata: context.metadata,
       }),
     }).catch(() => {})
   } catch {
@@ -395,7 +396,7 @@ function ledger(
  */
 export function trackOperationalAction(
   action: LedgerAction,
-  context: { productId?: string; variantId?: string } = {},
+  context: { productId?: string; variantId?: string; metadata?: { step?: string; value?: string } } = {},
   dedupeKey?: string,
 ): void {
   if (typeof window === 'undefined') return
