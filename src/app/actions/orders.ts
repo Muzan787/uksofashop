@@ -154,7 +154,7 @@ export async function sendOrderConversion(formData: FormData) {
 
   const looksLikeQa =
     order.utm_campaign === 'offer-test' ||
-    /(?:^|\\b)(?:test|testing|qa)(?:\\b|$)/i.test(order.cancellation_reason ?? '')
+    /(?:^|\b)(?:test|testing|qa)(?:\b|$)/i.test(order.cancellation_reason ?? '')
 
   if (looksLikeQa) {
     return { error: 'This order is classified as test/QA. Advertising conversion blocked.' }
