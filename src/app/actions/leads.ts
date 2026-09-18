@@ -75,16 +75,22 @@ export async function sendLeadReminderEmail(
   const admin = createUntypedAdminClient()
   const { data, error } = await admin
     .from('checkout_recovery_leads')
-    .select('email, email_opt_in, basket, status')
+    .select('email, email_opt_in, basket, status, data_class')
     .eq('id', id)
     .maybeSingle()
 
   if (error) return { status: 'error', message: error.message }
 
-  const lead = data as { email: string | null; email_opt_in: boolean; basket: unknown; status: string } | null
+  const lead = data as {
+    email: string | null
+    email_opt_in: boolean
+    basket: unknown
+    status: string
+    data_class: string
+  } | null
   // Converted and unsubscribed rows have had their email cleared, and a row
   // without the email tick never had it - either way there is nothing to send to.
-  if (!lead || !['active', 'done'].includes(lead.status) || !lead.email_opt_in || !lead.email) {
+  if (!lead || lead.data_class === 'qa_test' || !['active', 'done'].includes(lead.status) || !lead.email_opt_in || !lead.email) {
     return { status: 'error', message: 'This lead did not ask for an email reminder.' }
   }
 

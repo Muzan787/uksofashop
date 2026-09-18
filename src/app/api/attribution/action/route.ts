@@ -19,11 +19,19 @@ const schema = z.object({
   action: z.enum([
     'product_view', 'add_to_cart', 'checkout_start', 'call_click',
     'offer_prompt_shown', 'offer_prompt_dismissed', 'offer_code_copied',
+    'builder_started', 'builder_size_selected', 'builder_design_selected',
+    'builder_fabric_selected', 'builder_feet_selected', 'builder_piping_selected',
+    'builder_custom_details_completed', 'builder_summary_viewed',
+    'builder_add_to_cart', 'builder_whatsapp_click',
   ]),
   actionId: z.string().uuid(),
   path: z.string().max(1024),
   productId: z.string().uuid().optional(),
   variantId: z.string().uuid().optional(),
+  metadata: z.object({
+    step: z.string().max(64).optional(),
+    value: z.string().max(160).optional(),
+  }).optional(),
 })
 
 const noContent = (status: number) => new NextResponse(null, { status })
@@ -117,6 +125,7 @@ export async function POST(request: Request) {
         data_class: /(?:^|[?&=/_-])(qa|test|debug|probe)(?:[=&/_-]|$)/i.test(event.path)
           ? 'qa_test'
           : 'unclassified',
+        ...(event.metadata ?? {}),
       },
     }, { onConflict: 'id', ignoreDuplicates: true })
     if (error) {

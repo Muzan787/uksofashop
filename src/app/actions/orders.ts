@@ -3,7 +3,6 @@
 
 import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
-import { after } from 'next/server'
 import { reportOrderConversion } from '@/utils/orderConversions'
 import { sendOrderStatusUpdate, sendAdminOrderStatusNotification } from '@/utils/email'
 import { requireAdmin } from '@/utils/auth'
@@ -44,7 +43,7 @@ export async function updateOrderStatus(formData: FormData) {
   // the same "first time only" guarantee delivered_at already has.
   const { data: order } = await supabase
     .from('orders')
-    .select('customer_email, customer_name, customer_phone, shipping_address, confirmed_at, delivered_at, cancelled_at')
+    .select('customer_email, customer_name, customer_phone, shipping_address, confirmed_at, processing_at, shipped_at, delivered_at, cancelled_at')
     .eq('id', orderId)
     .single()
 
@@ -55,12 +54,16 @@ export async function updateOrderStatus(formData: FormData) {
     status: string
     delivered_at?: string
     confirmed_at?: string
+    processing_at?: string
+    shipped_at?: string
     cancelled_at?: string
     cancellation_reason?: string
   } = { status: newStatus }
 
   if (newStatus === 'delivered' && !order?.delivered_at) patch.delivered_at = new Date().toISOString()
   if (newStatus === 'confirmed' && !order?.confirmed_at) patch.confirmed_at = new Date().toISOString()
+  if (newStatus === 'processing' && !order?.processing_at) patch.processing_at = new Date().toISOString()
+  if (newStatus === 'shipped' && !order?.shipped_at) patch.shipped_at = new Date().toISOString()
   if (newStatus === 'cancelled' && !order?.cancelled_at) {
     patch.cancelled_at = new Date().toISOString()
     const reason = formData.get('cancellationReason')
@@ -117,18 +120,78 @@ export async function updateOrderStatus(formData: FormData) {
     }
   }
 
-  // --- CONVERSION REPORTING ---
-  // Deferred so a slow call to Meta or Google cannot hold up the admin panel,
-  // and reported at 'confirmed' rather than at order placement - see
-  // utils/orderConversions.ts for why. Both are idempotent, so moving an order
-  // back and forth between statuses does not report anything twice.
-  if (newStatus === 'confirmed' || newStatus === 'delivered') {
-    after(() =>
-      reportOrderConversion(
-        orderId,
-        newStatus === 'confirmed' ? 'purchase' : 'delivered',
-      ),
-    )
+  // Conversion reporting is deliberately manual from the admin panel.
+  // Changing operational status must never silently tell an ad platform that
+  // money changed hands. The order card exposes an explicit, idempotent
+  // "Send Purchase" / "Send Delivered" action after the relevant status exists.
+
+  revalidatePath('/admin/orders')
+  return { success: true }
+}
+
+
+/**
+ * Explicit advertising conversion action for the admin order card.
+ *
+ * Status is business truth. Advertising is a second, deliberate action.
+ * This prevents tests, mistaken confirmations and status corrections from
+ * silently training Meta. reportOrderConversion remains idempotent, so a
+ * double-click cannot produce a duplicate event.
+ */
+export async function sendOrderConversion(formData: FormData) {
+  await requireAdmin()
+
+  const orderId = String(formData.get('orderId') ?? '')
+  const kind = String(formData.get('kind') ?? '') as 'purchase' | 'delivered'
+  if (!orderId || (kind !== 'purchase' && kind !== 'delivered')) {
+    return { error: 'Missing order or conversion type.' }
+  }
+
+  const supabase = await createClient()
+  const { data: order, error } = await supabase
+    .from('orders')
+    .select('id, status, confirmed_at, delivered_at, purchase_event_sent_at, delivered_event_sent_at, utm_campaign, cancellation_reason')
+    .eq('id', orderId)
+    .single()
+
+  if (error || !order) return { error: 'Order could not be loaded.' }
+
+  const looksLikeQa =
+    order.utm_campaign === 'offer-test' ||
+    /(?:^|\b)(?:test|testing|qa)(?:\b|$)/i.test(order.cancellation_reason ?? '')
+
+  if (looksLikeQa) {
+    return { error: 'This order is classified as test/QA. Advertising conversion blocked.' }
+  }
+
+  if (order.status === 'cancelled') {
+    return { error: 'Cancelled orders cannot send advertising conversion events.' }
+  }
+
+  if (kind === 'purchase' && !order.confirmed_at) {
+    return { error: 'Confirm the order first, then send the Purchase event.' }
+  }
+
+  if (kind === 'delivered' && (!order.delivered_at || order.status !== 'delivered')) {
+    return { error: 'Mark the order Delivered first.' }
+  }
+
+  // A delivered sale should never have the deeper signal without the standard
+  // Purchase. If somebody skipped the earlier button, repair the sequence here.
+  if (kind === 'delivered' && !order.purchase_event_sent_at) {
+    await reportOrderConversion(orderId, 'purchase')
+  }
+  await reportOrderConversion(orderId, kind)
+
+  const sentColumn = kind === 'purchase' ? 'purchase_event_sent_at' : 'delivered_event_sent_at'
+  const { data: verified } = await supabase
+    .from('orders')
+    .select('purchase_event_sent_at, delivered_event_sent_at')
+    .eq('id', orderId)
+    .single()
+
+  if (!verified?.[sentColumn]) {
+    return { error: 'The conversion was not marked as sent. Please retry or inspect tracking logs.' }
   }
 
   revalidatePath('/admin/orders')
@@ -145,10 +208,9 @@ export async function confirmCustomerOrder(orderId: string) {
   }
 
   // confirm_order atomically performs pending_cod -> confirmed and stamps the
-  // first confirmed_at inside the database transaction. Do not add an app-side
-  // fallback timestamp here: a missing confirmed_at is an invariant violation,
-  // and reportOrderConversion deliberately refuses to invent one.
-  after(() => reportOrderConversion(orderId, 'purchase'))
+  // first confirmed_at inside the database transaction. Conversion reporting is
+  // intentionally NOT automatic: an admin must explicitly send the Purchase
+  // signal from the order card after reviewing the order.
 
   // Refresh the confirmation page and admin panel to show the new status
   revalidatePath(`/confirm-order/${orderId}`)

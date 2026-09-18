@@ -14,9 +14,9 @@
 // and the orders that need doing today should not be pushed below the fold by a
 // form.
 
-import { useMemo, useState } from 'react'
-import { MessageCircle, Plus, X, Loader2, Check } from 'lucide-react'
-import { createWhatsAppOrder } from '@/app/actions/manual-order'
+import { useMemo, useState, useTransition } from 'react'
+import { MessageCircle, Plus, X, Loader2, Check, Clock3 } from 'lucide-react'
+import { createWhatsAppOrder, previewWhatsAppTimeMatch, type WhatsAppAttributionMatch } from '@/app/actions/manual-order'
 
 export interface PickerVariant {
   id: string
@@ -54,8 +54,16 @@ export default function NewWhatsAppOrder({
 }) {
   const [open, setOpen] = useState(false)
   const [pending, setPending] = useState(false)
+  const [matchingTime, startTimeMatch] = useTransition()
+  const [timePreview, setTimePreview] = useState<WhatsAppAttributionMatch | null | undefined>(undefined)
   const [error, setError] = useState('')
-  const [done, setDone] = useState<{ reference: string; total: number } | null>(null)
+  const [done, setDone] = useState<{
+    reference: string
+    total: number
+    matchedReference: string | null
+    matchGapMinutes: number | null
+    searchedTime: boolean
+  } | null>(null)
 
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
@@ -65,6 +73,12 @@ export default function NewWhatsAppOrder({
   const [notes, setNotes] = useState('')
   const [delivery, setDelivery] = useState('')
   const [whatsappReference, setWhatsappReference] = useState('')
+  const [matchByTime, setMatchByTime] = useState(false)
+  const [contactDate, setContactDate] = useState('')
+  const [contactHour, setContactHour] = useState('10')
+  const [contactMinute, setContactMinute] = useState('00')
+  const [contactMeridiem, setContactMeridiem] = useState<'AM' | 'PM'>('PM')
+  const [contactTimezone, setContactTimezone] = useState<'Asia/Karachi' | 'Europe/London'>('Asia/Karachi')
   const [lines, setLines] = useState<Line[]>([{ ...BLANK }])
 
   const priceOf = useMemo(() => {
@@ -88,9 +102,29 @@ export default function NewWhatsAppOrder({
 
   const reset = () => {
     setName(''); setPhone(''); setEmail(''); setAddress(''); setPostcode('')
-    setNotes(''); setDelivery(''); setWhatsappReference(''); setLines([{ ...BLANK }]); setError('')
+    setNotes(''); setDelivery(''); setWhatsappReference(''); setMatchByTime(false)
+    setContactDate(''); setContactHour('10'); setContactMinute('00'); setContactMeridiem('PM')
+    setContactTimezone('Asia/Karachi'); setTimePreview(undefined); setLines([{ ...BLANK }]); setError('')
   }
 
+  const previewTimeMatch = () => {
+    setError('')
+    startTimeMatch(async () => {
+      const result = await previewWhatsAppTimeMatch({
+        date: contactDate,
+        hour: Number(contactHour),
+        minute: Number(contactMinute),
+        meridiem: contactMeridiem,
+        timezone: contactTimezone,
+      })
+      if (result.error) {
+        setTimePreview(undefined)
+        setError(result.error)
+        return
+      }
+      setTimePreview(result.match)
+    })
+  }
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
@@ -126,13 +160,29 @@ export default function NewWhatsAppOrder({
       deliveryCharge: delivery.trim() === '' ? 0 : Number(delivery),
       items,
       whatsappReference: whatsappReference.trim() || undefined,
+      contactTime:
+        !whatsappReference.trim() && matchByTime
+          ? {
+              date: contactDate,
+              hour: Number(contactHour),
+              minute: Number(contactMinute),
+              meridiem: contactMeridiem,
+              timezone: contactTimezone,
+            }
+          : undefined,
     })
     setPending(false)
 
     // Discriminating on `success` rather than on `error`: it is the literal
     // that narrows the union, and it is the field the action promises.
     if (!res.success) { setError(res.error); return }
-    setDone({ reference: res.orderId, total: res.total })
+    setDone({
+      reference: res.orderId,
+      total: res.total,
+      matchedReference: res.attributionMatch?.reference ?? null,
+      matchGapMinutes: res.attributionMatch?.gapMinutes ?? null,
+      searchedTime: res.contactTimeSearched,
+    })
     reset()
   }
 
@@ -159,8 +209,8 @@ export default function NewWhatsAppOrder({
           </h2>
           <p className="mt-1 text-xs leading-relaxed text-stone-500">
             Saves as <strong>pending</strong>, like a website order. Mark it confirmed
-            once they have agreed, and that is what reports the sale to Meta against
-            their number.
+            once they have agreed. Advertising is a separate deliberate step: the order
+            card then gives you a button to send the Purchase event to Meta.
           </p>
         </div>
         <button
@@ -176,8 +226,20 @@ export default function NewWhatsAppOrder({
       {done && (
         <div className="mb-5 flex items-center gap-2 rounded-sm border border-green-200 bg-green-50 px-3 py-2.5 text-sm text-green-800">
           <Check className="h-4 w-4 shrink-0" />
-          <span>
+          <span className="leading-relaxed">
             Saved as <strong className="font-mono">#{done.reference}</strong> — £{done.total.toFixed(2)}
+            {done.matchedReference ? (
+              <>
+                <br />
+                <strong>Attribution linked:</strong> {done.matchedReference}
+                {done.matchGapMinutes !== null ? ` · ${done.matchGapMinutes} min before the WhatsApp message` : ''}
+              </>
+            ) : done.searchedTime ? (
+              <>
+                <br />
+                <strong>No tracked WhatsApp click found in the previous 10 minutes.</strong> Order saved without a guessed attribution.
+              </>
+            ) : null}
           </span>
         </div>
       )}
@@ -292,18 +354,106 @@ export default function NewWhatsAppOrder({
           </button>
         </div>
 
-        <div>
+        <div className="rounded-sm border border-stone-200 bg-stone-50 p-4">
           <label className={label} htmlFor="wa-reference">
-            WhatsApp reference <span className="font-normal normal-case tracking-normal text-stone-400">— optional, e.g. UKSS-WA-260906-A7F31C, if the customer quoted one</span>
+            WhatsApp reference <span className="font-normal normal-case tracking-normal text-stone-400">— best match when the customer sent it</span>
           </label>
           <input
             id="wa-reference"
             className={`${field} uppercase`}
             value={whatsappReference}
-            onChange={e => setWhatsappReference(e.target.value.toUpperCase())}
+            onChange={e => {
+              setWhatsappReference(e.target.value.toUpperCase())
+              if (e.target.value.trim()) setMatchByTime(false)
+            }}
             placeholder="UKSS-WA-260906-A7F31C"
             autoComplete="off"
           />
+
+          <div className="my-3 flex items-center gap-3 text-[10px] font-bold uppercase tracking-[0.2em] text-stone-400">
+            <span className="h-px flex-1 bg-stone-200" />
+            Or
+            <span className="h-px flex-1 bg-stone-200" />
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              setMatchByTime(v => !v)
+              if (!matchByTime) setWhatsappReference('')
+            }}
+            className="inline-flex items-center gap-2 rounded-sm border border-stone-300 bg-white px-3 py-2 text-xs font-bold text-stone-700 transition hover:border-stone-400"
+          >
+            <Clock3 className="h-4 w-4" />
+            {matchByTime ? 'Hide contact-time matcher' : 'No reference? Match by WhatsApp message time'}
+          </button>
+
+          {matchByTime && (
+            <div className="mt-4 rounded-sm border border-blue-100 bg-blue-50/60 p-3">
+              <p className="m-0 text-xs leading-relaxed text-stone-600">
+                Enter the time shown beside the customer&apos;s first WhatsApp message. We only look
+                <strong> backwards</strong> for the closest unconverted website WhatsApp click within
+                <strong> 10 minutes</strong>. If there is no tracked click, the order still saves and nothing is guessed.
+              </p>
+              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
+                <div className="col-span-2 sm:col-span-1">
+                  <label className={label} htmlFor="wa-contact-date">Date</label>
+                  <input id="wa-contact-date" type="date" className={field} value={contactDate} onChange={e => { setContactDate(e.target.value); setTimePreview(undefined) }} />
+                </div>
+                <div>
+                  <label className={label} htmlFor="wa-contact-hour">Hour</label>
+                  <select id="wa-contact-hour" className={field} value={contactHour} onChange={e => { setContactHour(e.target.value); setTimePreview(undefined) }}>
+                    {Array.from({ length: 12 }, (_, i) => String(i + 1)).map(h => <option key={h} value={h}>{h}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className={label} htmlFor="wa-contact-minute">Minute</label>
+                  <select id="wa-contact-minute" className={field} value={contactMinute} onChange={e => { setContactMinute(e.target.value); setTimePreview(undefined) }}>
+                    {Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0')).map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className={label} htmlFor="wa-contact-meridiem">AM / PM</label>
+                  <select id="wa-contact-meridiem" className={field} value={contactMeridiem} onChange={e => { setContactMeridiem(e.target.value as 'AM' | 'PM'); setTimePreview(undefined) }}>
+                    <option value="AM">AM</option>
+                    <option value="PM">PM</option>
+                  </select>
+                </div>
+                <div className="col-span-2 sm:col-span-1">
+                  <label className={label} htmlFor="wa-contact-zone">Clock shown in</label>
+                  <select id="wa-contact-zone" className={field} value={contactTimezone} onChange={e => { setContactTimezone(e.target.value as 'Asia/Karachi' | 'Europe/London'); setTimePreview(undefined) }}>
+                    <option value="Asia/Karachi">Pakistan</option>
+                    <option value="Europe/London">UK</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+                <button
+                  type="button"
+                  onClick={previewTimeMatch}
+                  disabled={matchingTime || !contactDate}
+                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-sm bg-blue-700 px-4 text-xs font-bold text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {matchingTime ? <Loader2 className="h-4 w-4 animate-spin" /> : <Clock3 className="h-4 w-4" />}
+                  {matchingTime ? 'Checking…' : 'Find tracked click'}
+                </button>
+                {timePreview === null && (
+                  <p className="m-0 text-xs font-semibold text-amber-700">
+                    No unconverted website WhatsApp click in the previous 10 minutes.
+                  </p>
+                )}
+                {timePreview && (
+                  <div className="rounded-sm border border-green-200 bg-green-50 px-3 py-2 text-xs leading-relaxed text-green-800">
+                    <strong>{timePreview.reference}</strong>
+                    {timePreview.gapMinutes !== null ? ' · ' + timePreview.gapMinutes + ' min earlier' : ''}
+                    {timePreview.utmSource ? ' · ' + timePreview.utmSource : ''}
+                    {timePreview.utmContent ? ' · ' + timePreview.utmContent : ''}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">

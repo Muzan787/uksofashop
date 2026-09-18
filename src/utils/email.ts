@@ -882,7 +882,7 @@ export async function sendCheckoutReminder(email: string, basket: unknown) {
   const content = `
     <div style="text-align: left;">
       <h2 style="margin: 0 0 16px 0; font-size: 22px; color: #1c1917;">
-        ${lines.length > 1 ? 'Your sofas are' : 'Your sofa is'} still waiting for you
+        Need any help finishing your order?
       </h2>
       <p style="margin: 0 0 20px 0; color: #57534e; line-height: 1.6;">
         You asked us to remind you if you didn't finish your order on uksofashop.co.uk
@@ -899,20 +899,26 @@ export async function sendCheckoutReminder(email: string, basket: unknown) {
         </tr>` : ''}
       </table>` : ''}
 
+      <div style="margin: 20px 0; padding: 12px 14px; border-radius: 8px; background: #fef9f0; border: 1px solid #f5dfbd; color: #57534e; font-size: 13px; line-height: 1.5;">
+        <strong style="color:#1c1917;">Free UK Mainland ground-floor delivery</strong>
+        <span style="color:#d6b47b;"> &nbsp;·&nbsp; </span>
+        <strong style="color:#1c1917;">Pay on delivery</strong>
+      </div>
+
       <p style="margin: 20px 0 24px 0; color: #57534e; line-height: 1.6;">
-        ${lines.length === 1 ? "It's still available." : lines.length > 1 ? "They're all still available." : ''}
-        Would you like to go ahead, or is there anything you'd like to check first? Happy to help.
+        If you&apos;d like to go ahead, we can confirm availability and delivery, or answer anything you&apos;d like to check first.
       </p>
 
       <a href="${whatsAppHref(waMessage)}" style="background-color: #25D366; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px; display: inline-block; margin: 0 8px 8px 0;">
         Chat on WhatsApp
       </a>
       <a href="${siteUrl}/checkout" style="background-color: #1c1917; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px; display: inline-block; margin: 0 0 8px 0;">
-        Finish your order
+        Return to checkout
       </a>
 
       <p style="margin: 24px 0 0 0; color: #a8a29e; line-height: 1.6; font-size: 12px;">
         You asked for this reminder on our checkout. If you'd rather not hear from us, just reply and say so.
+        Your basket is saved in the browser you used to shop, so the checkout button works best on that device.
         Or call us on ${PHONE_DISPLAY}.
       </p>
     </div>

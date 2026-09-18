@@ -332,7 +332,7 @@ function newEventId(): string {
  * page because an advertising endpoint was unhappy.
  */
 /** attribution_actions.action_type values written to the first-party ledger. */
-type LedgerAction =
+export type LedgerAction =
   | 'product_view'
   | 'add_to_cart'
   | 'checkout_start'
@@ -340,6 +340,16 @@ type LedgerAction =
   | 'offer_prompt_shown'
   | 'offer_prompt_dismissed'
   | 'offer_code_copied'
+  | 'builder_started'
+  | 'builder_size_selected'
+  | 'builder_design_selected'
+  | 'builder_fabric_selected'
+  | 'builder_feet_selected'
+  | 'builder_piping_selected'
+  | 'builder_custom_details_completed'
+  | 'builder_summary_viewed'
+  | 'builder_add_to_cart'
+  | 'builder_whatsapp_click'
 
 /**
  * Write an operational action independently of advertising consent.
@@ -353,7 +363,7 @@ type LedgerAction =
 function ledger(
   action: LedgerAction,
   actionId: string,
-  context: { variantId?: string; productId?: string } = {},
+  context: { variantId?: string; productId?: string; metadata?: { step?: string; value?: string } } = {},
 ): void {
   if (typeof window === 'undefined') return
   if (!isBrowserTrackingEnabled()) return
@@ -369,11 +379,43 @@ function ledger(
         path: window.location.pathname + window.location.search,
         productId: context.productId,
         variantId: context.variantId,
+        metadata: context.metadata,
       }),
     }).catch(() => {})
   } catch {
     // Operational telemetry must never interrupt the customer journey.
   }
+}
+
+/**
+ * Record a non-advertising first-party funnel action.
+ *
+ * A stable localStorage key can be supplied for step-view events so going back
+ * and forth in a multi-step tool does not inflate the funnel. The server
+ * upserts on the action UUID as a second idempotency layer.
+ */
+export function trackOperationalAction(
+  action: LedgerAction,
+  context: { productId?: string; variantId?: string; metadata?: { step?: string; value?: string } } = {},
+  dedupeKey?: string,
+): void {
+  if (typeof window === 'undefined') return
+
+  let actionId = newEventId()
+  if (dedupeKey) {
+    try {
+      const key = `uksofashop_ledger:${dedupeKey}`
+      actionId = localStorage.getItem(key) ?? actionId
+      localStorage.setItem(key, actionId)
+    } catch {
+      // Storage can be unavailable. The event is still useful without dedupe.
+    }
+  }
+
+  ledger(action, actionId, context)
+  // The first render can beat AttributionBoot by a few milliseconds. Reusing
+  // the same UUID makes this a retry, never a duplicate.
+  window.setTimeout(() => ledger(action, actionId, context), 750)
 }
 
 export type OfferLedgerAction =

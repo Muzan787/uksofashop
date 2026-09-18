@@ -328,6 +328,8 @@ export type Database = {
           customer_user_agent: string | null
           delivered_event_sent_at: string | null
           delivered_at: string | null
+          processing_at: string | null
+          shipped_at: string | null
           review_request_sent_at: string | null
           delivery_floor: number
           delivery_has_lift: boolean
@@ -374,6 +376,9 @@ export type Database = {
           confirmed_at: string | null
           cancelled_at: string | null
           cancellation_reason: string | null
+          manual_acquisition_source: string | null
+          manual_acquisition_note: string | null
+          manual_acquisition_at: string | null
         }
         Insert: {
           created_at?: string | null
@@ -384,6 +389,8 @@ export type Database = {
           customer_user_agent: string | null
           delivered_event_sent_at?: string | null
           delivered_at?: string | null
+          processing_at?: string | null
+          shipped_at?: string | null
           review_request_sent_at?: string | null
           delivery_floor?: number
           delivery_has_lift?: boolean
@@ -430,6 +437,9 @@ export type Database = {
           confirmed_at?: string | null
           cancelled_at?: string | null
           cancellation_reason?: string | null
+          manual_acquisition_source?: string | null
+          manual_acquisition_note?: string | null
+          manual_acquisition_at?: string | null
         }
         Update: {
           created_at?: string | null
@@ -486,6 +496,9 @@ export type Database = {
           confirmed_at?: string | null
           cancelled_at?: string | null
           cancellation_reason?: string | null
+          manual_acquisition_source?: string | null
+          manual_acquisition_note?: string | null
+          manual_acquisition_at?: string | null
         }
         Relationships: []
       }

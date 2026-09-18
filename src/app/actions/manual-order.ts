@@ -34,6 +34,7 @@ import { createClient } from '@/utils/supabase/server'
 import { isAdmin } from '@/utils/auth'
 import { isValidUkMobile, UK_MOBILE_ERROR } from '@/utils/phone'
 import { isValidWhatsAppReference } from '@/utils/attribution/whatsapp'
+import { createAdminClient } from '@/utils/supabase/admin'
 
 const itemSchema = z.object({
   variant_id: z.string().uuid(),
@@ -76,13 +77,170 @@ const schema = z.object({
    * 20260906160000_manual_order_whatsapp_reference.sql.
    */
   whatsappReference: z.string().trim().max(32).optional(),
+  /**
+   * Fallback when the customer did not paste the reference into WhatsApp.
+   * This is the timestamp visible beside their first message, interpreted in
+   * the timezone the admin says that WhatsApp screen was showing.
+   */
+  contactTime: z.object({
+    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Choose the contact date.'),
+    hour: z.number().int().min(1).max(12),
+    minute: z.number().int().min(0).max(59),
+    meridiem: z.enum(['AM', 'PM']),
+    timezone: z.enum(['Asia/Karachi', 'Europe/London']),
+  }).optional(),
 })
 
 export type ManualOrderInput = z.input<typeof schema>
 
+export type WhatsAppAttributionMatch = {
+  reference: string
+  method: 'reference' | 'contact_time'
+  gapMinutes: number | null
+  pageContext: string | null
+  utmSource: string | null
+  utmContent: string | null
+}
+
 export type ManualOrderResult =
   | { success?: undefined; error: string }
-  | { success: true; error?: undefined; orderId: string; total: number }
+  | {
+      success: true
+      error?: undefined
+      orderId: string
+      total: number
+      attributionMatch: WhatsAppAttributionMatch | null
+      contactTimeSearched: boolean
+    }
+
+const WHATSAPP_TIME_MATCH_MINUTES = 10
+
+/**
+ * Convert a wall-clock time from the admin's WhatsApp screen into UTC.
+ * Intl is used rather than a fixed +05/+01 offset so Europe/London keeps
+ * working across BST/GMT automatically.
+ */
+function localWallClockToUtc(input: {
+  date: string
+  hour: number
+  minute: number
+  meridiem: 'AM' | 'PM'
+  timezone: 'Asia/Karachi' | 'Europe/London'
+}): Date | null {
+  const [year, month, day] = input.date.split('-').map(Number)
+  let hour = input.hour % 12
+  if (input.meridiem === 'PM') hour += 12
+  if (![year, month, day, hour, input.minute].every(Number.isFinite)) return null
+
+  const desired = Date.UTC(year, month - 1, day, hour, input.minute, 0)
+  let guess = desired
+  const fmt = new Intl.DateTimeFormat('en-CA', {
+    timeZone: input.timezone,
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+  })
+
+  // Two passes are enough to converge across normal timezone offsets and DST.
+  for (let i = 0; i < 2; i += 1) {
+    const parts = Object.fromEntries(
+      fmt.formatToParts(new Date(guess))
+        .filter(p => p.type !== 'literal')
+        .map(p => [p.type, p.value]),
+    )
+    const seenAsUtc = Date.UTC(
+      Number(parts.year), Number(parts.month) - 1, Number(parts.day),
+      Number(parts.hour), Number(parts.minute), 0,
+    )
+    guess -= seenAsUtc - desired
+  }
+
+  const result = new Date(guess)
+  if (Number.isNaN(result.getTime())) return null
+  return result
+}
+
+async function resolveWhatsAppMatch(
+  exactReference: string | undefined,
+  contactTime: z.infer<typeof schema>['contactTime'],
+): Promise<{ reference: string | null; match: WhatsAppAttributionMatch | null; searchedTime: boolean }> {
+  const admin = createAdminClient()
+
+  if (exactReference && isValidWhatsAppReference(exactReference)) {
+    const reference = exactReference.trim().toUpperCase()
+    const { data } = await admin
+      .from('whatsapp_enquiries')
+      .select('reference, created_at, page_context, utm_source, utm_content, converted_order_id')
+      .eq('reference', reference)
+      .maybeSingle()
+
+    return {
+      reference,
+      searchedTime: false,
+      match: data && !data.converted_order_id
+        ? {
+            reference,
+            method: 'reference',
+            gapMinutes: null,
+            pageContext: data.page_context,
+            utmSource: data.utm_source,
+            utmContent: data.utm_content,
+          }
+        : null,
+    }
+  }
+
+  if (!contactTime) return { reference: null, match: null, searchedTime: false }
+
+  const target = localWallClockToUtc(contactTime)
+  if (!target) return { reference: null, match: null, searchedTime: true }
+
+  const earliest = new Date(target.getTime() - WHATSAPP_TIME_MATCH_MINUTES * 60_000)
+  const { data } = await admin
+    .from('whatsapp_enquiries')
+    .select('reference, created_at, page_context, utm_source, utm_content, converted_order_id')
+    .is('converted_order_id', null)
+    // Never attach a click that happened after the customer's first message.
+    .lte('created_at', target.toISOString())
+    .gte('created_at', earliest.toISOString())
+    // Closest previous click = newest row inside the backwards-only window.
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (!data) return { reference: null, match: null, searchedTime: true }
+
+  const gapMinutes = Math.max(0, (target.getTime() - Date.parse(data.created_at)) / 60_000)
+  return {
+    reference: data.reference,
+    searchedTime: true,
+    match: {
+      reference: data.reference,
+      method: 'contact_time',
+      gapMinutes: Math.round(gapMinutes * 10) / 10,
+      pageContext: data.page_context,
+      utmSource: data.utm_source,
+      utmContent: data.utm_content,
+    },
+  }
+}
+
+export async function previewWhatsAppTimeMatch(input: {
+  date: string
+  hour: number
+  minute: number
+  meridiem: 'AM' | 'PM'
+  timezone: 'Asia/Karachi' | 'Europe/London'
+}): Promise<{ match: WhatsAppAttributionMatch | null; error?: string }> {
+  if (!(await isAdmin())) return { match: null, error: 'Not authorised.' }
+
+  const parsed = schema.shape.contactTime.safeParse(input)
+  if (!parsed.success) {
+    return { match: null, error: parsed.error.issues[0]?.message ?? 'Check the contact time.' }
+  }
+
+  const resolved = await resolveWhatsAppMatch(undefined, parsed.data)
+  return { match: resolved.match }
+}
 
 export async function createWhatsAppOrder(input: ManualOrderInput): Promise<ManualOrderResult> {
   // Checked here as well as inside place_manual_order. The database check is
@@ -100,6 +258,7 @@ export async function createWhatsAppOrder(input: ManualOrderInput): Promise<Manu
   const v = parsed.data
 
   const supabase = await createClient()
+  const attribution = await resolveWhatsAppMatch(v.whatsappReference, v.contactTime)
 
   const { data, error } = await supabase.rpc('place_manual_order', {
     p_customer_name: v.customerName,
@@ -124,10 +283,7 @@ export async function createWhatsAppOrder(input: ManualOrderInput): Promise<Manu
     // whole order over a typo'd reference - the database function already
     // treats an unmatched reference as a no-op, so this only avoids sending
     // it a value that could never match anything.
-    p_whatsapp_reference:
-      v.whatsappReference && isValidWhatsAppReference(v.whatsappReference)
-        ? v.whatsappReference.toUpperCase()
-        : null,
+    p_whatsapp_reference: attribution.reference,
   })
 
   if (error || !data) {
@@ -166,5 +322,7 @@ export async function createWhatsAppOrder(input: ManualOrderInput): Promise<Manu
     // The short reference, as the rest of the site uses it.
     orderId: order.id.substring(0, 8).toUpperCase(),
     total: Number(order.total_amount),
+    attributionMatch: attribution.match,
+    contactTimeSearched: attribution.searchedTime,
   }
 }

@@ -229,7 +229,7 @@ export default function CheckoutTelemetry() {
       const anchor = target.closest('a')
       const text = (button?.textContent ?? anchor?.textContent ?? '').replace(/\s+/g, ' ').trim().toLowerCase()
 
-      if (button && /^find$/.test(text)) {
+      if (button && /^find(?: address)?$/.test(text)) {
         postcodeAttempt += 1
         transmit('postcode_lookup_attempt', { attempt: postcodeAttempt, outcome: 'submitted' })
         return

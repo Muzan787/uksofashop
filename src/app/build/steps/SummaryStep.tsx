@@ -19,6 +19,7 @@ interface Props {
   spec: BuildSpec
   onEdit: (step: StepId) => void
   onCheckout: () => void
+  onWhatsApp: () => void
   /** True for the two seconds after the sofa went into the cart. */
   added: boolean
 }
@@ -39,7 +40,7 @@ interface Props {
  * same summary as a message, for the customer who would rather talk first -
  * which, on this shop, is most of them.
  */
-export default function SummaryStep({ design, fabric, resolved, spec, onEdit, onCheckout, added }: Props) {
+export default function SummaryStep({ design, fabric, resolved, spec, onEdit, onCheckout, added, onWhatsApp }: Props) {
   const lines = describeBuild(spec)
   const notes = lines.filter(l => ['Custom dimensions', 'Design changes', 'Other'].includes(l.label))
   const custom = spec.seats === 'Custom'
@@ -236,6 +237,7 @@ export default function SummaryStep({ design, fabric, resolved, spec, onEdit, on
               productId={design.productId}
               variantId={design.variantId}
               productName={design.title}
+              onBeforeOpen={onWhatsApp}
               className="hover-btn btn-whatsapp shadow-whatsapp flex h-14 w-full items-center justify-center gap-2.5 rounded-pill bg-whatsapp font-data text-eyebrow font-bold uppercase tracking-[0.1em] text-ink-900 no-underline"
             >
               <MessageCircle aria-hidden="true" className="h-4 w-4" />

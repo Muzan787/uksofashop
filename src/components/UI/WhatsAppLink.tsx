@@ -10,12 +10,14 @@
 // data-ground, ...) passes straight through unchanged, so the visual markup
 // at each call site is untouched.
 
-import type { AnchorHTMLAttributes, ReactNode } from 'react';
+import type { AnchorHTMLAttributes, ReactNode, MouseEvent } from 'react';
 import { useWhatsAppCTA, type WhatsAppCTAOptions } from '@/utils/attribution/useWhatsAppCTA';
 
 type Props = WhatsAppCTAOptions &
   Omit<AnchorHTMLAttributes<HTMLAnchorElement>, 'href' | 'onClick'> & {
     children: ReactNode;
+    /** Optional first-party telemetry hook. Runs before the WhatsApp tracker. */
+    onBeforeOpen?: () => void;
   };
 
 export default function WhatsAppLink({
@@ -25,12 +27,18 @@ export default function WhatsAppLink({
   variantId,
   productName,
   children,
+  onBeforeOpen,
   ...anchorProps
 }: Props) {
   const cta = useWhatsAppCTA({ message, pageContext, productId, variantId, productName });
 
+  const handleClick = (event: MouseEvent<HTMLAnchorElement>) => {
+    onBeforeOpen?.()
+    cta.onClick(event)
+  }
+
   return (
-    <a href={cta.href} onClick={cta.onClick} target="_blank" rel="noopener noreferrer" {...anchorProps}>
+    <a href={cta.href} onClick={handleClick} target="_blank" rel="noopener noreferrer" {...anchorProps}>
       {children}
     </a>
   );

@@ -4,8 +4,6 @@ import { createClient } from '@/utils/supabase/server'
 import { notFound } from 'next/navigation'
 import { CheckCircle, MessageCircle, Package, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
-import { after } from 'next/server'
-import { reportOrderConversion } from '@/utils/orderConversions'
 
 
 export const metadata: Metadata = {
@@ -28,11 +26,9 @@ export default async function ConfirmOrderPage({ params }: { params: Promise<{ i
 
   if (error || !order) return notFound()
 
-  // Purchase reporting is server-authoritative and idempotent. It reloads the
-  // order with service-role privileges, requires a genuine confirmed_at, and
-  // claims purchase_event_sent_at before sending. No application fallback is
-  // allowed to invent a later confirmation timestamp.
-  after(() => reportOrderConversion(id, 'purchase'))
+  // Confirmation changes the business state only. Advertising conversion
+  // reporting is deliberately a separate explicit admin action, so a customer
+  // clicking this link can never train Meta without a human review.
 
   const shortCode = order.id.substring(0, 8).toUpperCase()
 
