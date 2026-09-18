@@ -24,7 +24,7 @@ import { formatPreferredDeliveryDate } from '@/utils/delivery'
  * review page.
  */
 function reviewAskLink(customerName: string, customerPhone: string): string | null {
-  const firstName = (customerName || '').trim().split(/s+/)[0] || 'there'
+  const firstName = (customerName || '').trim().split(/\s+/)[0] || 'there'
   return whatsAppLink(
     customerPhone,
     `Hi ${firstName}, we hope the sofa has settled in well! If you have a minute, a quick review on Trustpilot would help the next person decide - it takes about a minute: ${trustpilotInviteLink()}
