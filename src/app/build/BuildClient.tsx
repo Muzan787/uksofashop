@@ -11,6 +11,7 @@ import { useCart } from '@/context/CartContext'
 import { DUR, EASE } from '@/components/Motion'
 import { useReducedMotionSafe } from '@/components/Motion/useReducedMotionSafe'
 import { trackAddToCart } from '@/utils/tracking'
+import { trackBuilderAction } from '@/utils/attribution/builderTracking'
 import type { FabricCollection } from '@/components/Product/types'
 import type { BuildDesign, BuildSize } from './catalogue'
 import {
@@ -82,6 +83,8 @@ export default function BuildClient({ designs, sizes, collections }: Props) {
   const [added, setAdded] = useState(false)
   const pushed = useRef(0)
   const top = useRef<HTMLDivElement>(null)
+  const trackedStart = useRef(false)
+  const trackedSummaryKey = useRef<string | null>(null)
   // The latest draft, for the popstate listener, which is bound once.
   const latest = useRef(draft)
   useEffect(() => { latest.current = draft }, [draft])
@@ -102,6 +105,24 @@ export default function BuildClient({ designs, sizes, collections }: Props) {
   useEffect(() => {
     if (loaded) saveDraft(draft)
   }, [draft, loaded])
+
+  useEffect(() => {
+    if (!loaded || trackedStart.current) return
+    trackedStart.current = true
+    trackBuilderAction('builder_started', { step: draft.step })
+  }, [loaded, draft.step])
+
+  useEffect(() => {
+    if (!loaded || draft.step !== 'summary' || trackedSummaryKey.current === draft.key) return
+    trackedSummaryKey.current = draft.key
+    trackBuilderAction('builder_summary_viewed', {
+      step: 'summary',
+      productId: resolved.design?.productId,
+      variantId: resolved.design?.variantId,
+      value: resolved.design?.title,
+    })
+  }, [loaded, draft.step, draft.key, resolved.design])
+
 
   // ── Derived ────────────────────────────────────────────────────────────
   const resolved = useMemo(
@@ -168,11 +189,17 @@ export default function BuildClient({ designs, sizes, collections }: Props) {
 
   const next = useCallback(() => {
     if (!complete || isLast) return
+    if (draft.step === 'notes') {
+      trackBuilderAction('builder_custom_details_completed', {
+        step: 'notes',
+        value: Object.values(draft.notes).some(n => n.on) ? 'custom-request' : 'none',
+      })
+    }
     // Leaving an optional step without answering is an answer.
     if (draft.step === 'feet' && draft.feet === null) patch({ feet: 'pictured' })
     if (draft.step === 'piping' && draft.piping === null) patch({ piping: 'none' })
     go(STEPS[index + 1].id)
-  }, [complete, isLast, draft.step, draft.feet, draft.piping, patch, go, index])
+  }, [complete, isLast, draft.step, draft.feet, draft.piping, draft.notes, patch, go, index])
 
   const back = useCallback(() => {
     if (index === 0) return
@@ -193,12 +220,15 @@ export default function BuildClient({ designs, sizes, collections }: Props) {
   }, [scrollToTop])
 
   // ── Answers ────────────────────────────────────────────────────────────
-  const onSize = (sizeKey: string) => patch(d => {
+  const onSize = (sizeKey: string) => {
+    trackBuilderAction('builder_size_selected', { step: 'seats', value: sizeKey })
+    patch(d => {
     // A design chosen for another size does not carry over, unless it happens
     // to come in this one too.
     const keep = designs.find(x => x.productId === d.productId && (sizeKey === CUSTOM_SIZE || x.sizeKey === sizeKey))
     return { sizeKey, productId: keep ? d.productId : null }
-  })
+    })
+  }
 
   const onBack = (pref: Draft['back']) => patch(d => {
     const chosen = designs.find(x => x.productId === d.productId)
@@ -211,6 +241,13 @@ export default function BuildClient({ designs, sizes, collections }: Props) {
     const design = resolved.design
     const fabric = resolved.fabric
     if (!design || !fabric || !spec || added) return
+
+    trackBuilderAction('builder_add_to_cart', {
+      step: 'summary',
+      productId: design.productId,
+      variantId: design.variantId,
+      value: design.title,
+    })
 
     addToCart({
       variant_id: design.variantId,
@@ -382,7 +419,15 @@ export default function BuildClient({ designs, sizes, collections }: Props) {
                   sizeLabel={draft.sizeKey === CUSTOM_SIZE ? null : resolved.size?.label ?? null}
                   back={draft.back}
                   productId={draft.productId}
-                  onChoose={design => patch({ productId: design.productId })}
+                  onChoose={design => {
+                    trackBuilderAction('builder_design_selected', {
+                      step: 'design',
+                      productId: design.productId,
+                      variantId: design.variantId,
+                      value: design.title,
+                    })
+                    patch({ productId: design.productId })
+                  }}
                   onShowAll={() => patch({ back: 'either' })}
                 />
               )}
@@ -392,7 +437,13 @@ export default function BuildClient({ designs, sizes, collections }: Props) {
                   collections={collections}
                   design={resolved.design}
                   fabricId={draft.fabricId}
-                  onSelect={fabric => patch({ fabricId: fabric.id })}
+                  onSelect={fabric => {
+                    trackBuilderAction('builder_fabric_selected', {
+                      step: 'fabric',
+                      value: `${fabric.collectionName} ${fabric.name}`,
+                    })
+                    patch({ fabricId: fabric.id })
+                  }}
                 />
               )}
 
@@ -400,8 +451,14 @@ export default function BuildClient({ designs, sizes, collections }: Props) {
                 <FeetStep
                   design={resolved.design}
                   feet={draft.feet}
-                  onPictured={() => patch({ feet: 'pictured' })}
-                  onChoose={choice => patch({ feet: choice })}
+                  onPictured={() => {
+                    trackBuilderAction('builder_feet_selected', { step: 'feet', value: 'as-pictured' })
+                    patch({ feet: 'pictured' })
+                  }}
+                  onChoose={choice => {
+                    trackBuilderAction('builder_feet_selected', { step: 'feet', value: choice.code })
+                    patch({ feet: choice })
+                  }}
                 />
               )}
 
@@ -411,9 +468,18 @@ export default function BuildClient({ designs, sizes, collections }: Props) {
                   cover={resolved.fabric}
                   piping={draft.piping}
                   pipingFabric={resolved.pipingFabric}
-                  onNone={() => patch({ piping: 'none' })}
+                  onNone={() => {
+                    trackBuilderAction('builder_piping_selected', { step: 'piping', value: 'none' })
+                    patch({ piping: 'none' })
+                  }}
                   onWant={() => patch(d => ({ piping: d.piping && d.piping !== 'none' ? d.piping : { fabricId: null } }))}
-                  onSelect={fabric => patch({ piping: { fabricId: fabric.id } })}
+                  onSelect={fabric => {
+                    trackBuilderAction('builder_piping_selected', {
+                      step: 'piping',
+                      value: `${fabric.collectionName} ${fabric.name}`,
+                    })
+                    patch({ piping: { fabricId: fabric.id } })
+                  }}
                 />
               )}
 
@@ -435,6 +501,12 @@ export default function BuildClient({ designs, sizes, collections }: Props) {
                     onEdit={go}
                     onCheckout={checkout}
                     added={added}
+                    onWhatsApp={() => trackBuilderAction('builder_whatsapp_click', {
+                      step: 'summary',
+                      productId: resolved.design?.productId,
+                      variantId: resolved.design?.variantId,
+                      value: resolved.design?.title,
+                    })}
                   />
                 ) : (
                   <Missing
