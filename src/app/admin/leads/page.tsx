@@ -70,6 +70,8 @@ export default async function AdminLeadsPage(props: { searchParams: SearchParams
     .from('checkout_recovery_leads')
     .select('id, basket, phone, email, whatsapp_opt_in, email_opt_in, updated_at, done_at, reminder_emailed_at')
     .eq('status', view === 'done' ? 'done' : 'active')
+    .eq('data_class', 'production_real')
+    // QA/test recovery submissions are deliberately excluded from both views.
     // Newest shopper activity first while waiting; most recently ticked first once done.
     .order(view === 'done' ? 'done_at' : 'updated_at', { ascending: false })
     .limit(500)
