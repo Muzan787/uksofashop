@@ -111,14 +111,14 @@ export function recoveryReminderMessage(basket: unknown): string {
     return `${opening}. Would you like to go ahead, or is there anything you'd like to check first? Happy to help.`
   }
 
-  const still = lines.length === 1 ? "It's still available." : "They're all still available."
-
   return [
     `${opening} – here's what you had picked out:`,
     '',
     ...lines.map((l) => `• ${customerLine(l)}`),
     '',
-    `${still} Would you like to go ahead, or is there anything you'd like to check first? Happy to help.`,
+    'Free UK Mainland ground-floor delivery · Pay on delivery.',
+    '',
+    "If you'd like to go ahead, we can confirm availability and delivery, or answer anything you'd like to check first.",
   ].join('\n')
 }
 
@@ -128,7 +128,10 @@ export function recoveryReminderMessage(basket: unknown): string {
  */
 export function recoveryReminderEmail(basket: unknown): { subject: string; body: string } {
   const lines = recoveryBasketLines(basket)
-  const subject = `${lines.length > 1 ? 'Your sofas are' : 'Your sofa is'} still waiting for you – UK Sofa Shop`
+  const subject =
+    lines.length === 1 && lines[0].title
+      ? `Still thinking about ${lines[0].title}? – UK Sofa Shop`
+      : 'Your sofa choices – UK Sofa Shop'
   const body = [
     recoveryReminderMessage(basket),
     '',
