@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.1"
   }
   public: {
     Tables: {
@@ -26,149 +26,6 @@ export type Database = {
         Update: {
           created_at?: string | null
           id?: string
-        }
-        Relationships: []
-      }
-      attribution_actions: {
-        Row: {
-          action_type: string
-          arrival_id: string | null
-          created_at: string
-          id: string
-          metadata: Json | null
-          order_id: string | null
-          page_url: string | null
-          product_id: string | null
-          session_id: string | null
-          variant_id: string | null
-          visitor_id: string | null
-          whatsapp_reference: string | null
-        }
-        Insert: {
-          action_type: string
-          arrival_id?: string | null
-          created_at?: string
-          id?: string
-          metadata?: Json | null
-          order_id?: string | null
-          page_url?: string | null
-          product_id?: string | null
-          session_id?: string | null
-          variant_id?: string | null
-          visitor_id?: string | null
-          whatsapp_reference?: string | null
-        }
-        Update: {
-          action_type?: string
-          arrival_id?: string | null
-          created_at?: string
-          id?: string
-          metadata?: Json | null
-          order_id?: string | null
-          page_url?: string | null
-          product_id?: string | null
-          session_id?: string | null
-          variant_id?: string | null
-          visitor_id?: string | null
-          whatsapp_reference?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "attribution_actions_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: false
-            referencedRelation: "orders"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      attribution_sessions: {
-        Row: {
-          arrival_id: string
-          created_at: string
-          fbclid: string | null
-          first_touch_campaign: string | null
-          first_touch_content: string | null
-          first_touch_medium: string | null
-          first_touch_source: string | null
-          first_touch_term: string | null
-          ga_client_id: string | null
-          gbraid: string | null
-          gclid: string | null
-          id: string
-          initial_product_id: string | null
-          initial_variant_id: string | null
-          landing_page: string | null
-          last_seen_at: string
-          last_touch_campaign: string | null
-          last_touch_content: string | null
-          last_touch_medium: string | null
-          last_touch_source: string | null
-          last_touch_term: string | null
-          meta_fbc: string | null
-          meta_fbp: string | null
-          referrer: string | null
-          session_id: string
-          visitor_id: string
-          wbraid: string | null
-        }
-        Insert: {
-          arrival_id: string
-          created_at?: string
-          fbclid?: string | null
-          first_touch_campaign?: string | null
-          first_touch_content?: string | null
-          first_touch_medium?: string | null
-          first_touch_source?: string | null
-          first_touch_term?: string | null
-          ga_client_id?: string | null
-          gbraid?: string | null
-          gclid?: string | null
-          id?: string
-          initial_product_id?: string | null
-          initial_variant_id?: string | null
-          landing_page?: string | null
-          last_seen_at?: string
-          last_touch_campaign?: string | null
-          last_touch_content?: string | null
-          last_touch_medium?: string | null
-          last_touch_source?: string | null
-          last_touch_term?: string | null
-          meta_fbc?: string | null
-          meta_fbp?: string | null
-          referrer?: string | null
-          session_id: string
-          visitor_id: string
-          wbraid?: string | null
-        }
-        Update: {
-          arrival_id?: string
-          created_at?: string
-          fbclid?: string | null
-          first_touch_campaign?: string | null
-          first_touch_content?: string | null
-          first_touch_medium?: string | null
-          first_touch_source?: string | null
-          first_touch_term?: string | null
-          ga_client_id?: string | null
-          gbraid?: string | null
-          gclid?: string | null
-          id?: string
-          initial_product_id?: string | null
-          initial_variant_id?: string | null
-          landing_page?: string | null
-          last_seen_at?: string
-          last_touch_campaign?: string | null
-          last_touch_content?: string | null
-          last_touch_medium?: string | null
-          last_touch_source?: string | null
-          last_touch_term?: string | null
-          meta_fbc?: string | null
-          meta_fbp?: string | null
-          referrer?: string | null
-          session_id?: string
-          visitor_id?: string
-          wbraid?: string | null
         }
         Relationships: []
       }
@@ -203,127 +60,6 @@ export type Database = {
             columns: ["parent_id"]
             isOneToOne: false
             referencedRelation: "categories"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      checkout_recovery_leads: {
-        Row: {
-          arrival_id: string
-          basket: Json
-          consent_at: string
-          consent_copy_version: string
-          converted_order_id: string | null
-          created_at: string
-          data_class: string
-          done_at: string | null
-          email: string | null
-          email_opt_in: boolean
-          expires_at: string
-          id: string
-          phone: string | null
-          reminder_emailed_at: string | null
-          session_id: string
-          status: string
-          updated_at: string
-          visitor_id: string
-          whatsapp_opt_in: boolean
-        }
-        Insert: {
-          arrival_id: string
-          basket?: Json
-          consent_at?: string
-          consent_copy_version?: string
-          converted_order_id?: string | null
-          created_at?: string
-          data_class?: string
-          done_at?: string | null
-          email?: string | null
-          email_opt_in?: boolean
-          expires_at?: string
-          id?: string
-          phone?: string | null
-          reminder_emailed_at?: string | null
-          session_id: string
-          status?: string
-          updated_at?: string
-          visitor_id: string
-          whatsapp_opt_in?: boolean
-        }
-        Update: {
-          arrival_id?: string
-          basket?: Json
-          consent_at?: string
-          consent_copy_version?: string
-          converted_order_id?: string | null
-          created_at?: string
-          data_class?: string
-          done_at?: string | null
-          email?: string | null
-          email_opt_in?: boolean
-          expires_at?: string
-          id?: string
-          phone?: string | null
-          reminder_emailed_at?: string | null
-          session_id?: string
-          status?: string
-          updated_at?: string
-          visitor_id?: string
-          whatsapp_opt_in?: boolean
-        }
-        Relationships: [
-          {
-            foreignKeyName: "checkout_recovery_leads_converted_order_id_fkey"
-            columns: ["converted_order_id"]
-            isOneToOne: false
-            referencedRelation: "orders"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      conversion_events: {
-        Row: {
-          created_at: string
-          error_metadata: Json | null
-          event_id: string | null
-          event_name: string
-          id: string
-          order_id: string | null
-          platform: string
-          response_metadata: Json | null
-          sent_at: string | null
-          status: string
-        }
-        Insert: {
-          created_at?: string
-          error_metadata?: Json | null
-          event_id?: string | null
-          event_name: string
-          id?: string
-          order_id?: string | null
-          platform: string
-          response_metadata?: Json | null
-          sent_at?: string | null
-          status?: string
-        }
-        Update: {
-          created_at?: string
-          error_metadata?: Json | null
-          event_id?: string | null
-          event_name?: string
-          id?: string
-          order_id?: string | null
-          platform?: string
-          response_metadata?: Json | null
-          sent_at?: string | null
-          status?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "conversion_events_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: false
-            referencedRelation: "orders"
             referencedColumns: ["id"]
           },
         ]
@@ -414,77 +150,6 @@ export type Database = {
           },
         ]
       }
-      google_offline_conversions: {
-        Row: {
-          conversion_stage: string
-          conversion_time: string
-          created_at: string
-          currency: string
-          customer_email: string | null
-          customer_first_name: string | null
-          customer_last_name: string | null
-          customer_phone: string | null
-          customer_postcode: string | null
-          error_message: string | null
-          gbraid: string | null
-          gclid: string | null
-          id: string
-          order_id: string
-          upload_status: string
-          uploaded_at: string | null
-          value: number
-          wbraid: string | null
-        }
-        Insert: {
-          conversion_stage: string
-          conversion_time: string
-          created_at?: string
-          currency?: string
-          customer_email?: string | null
-          customer_first_name?: string | null
-          customer_last_name?: string | null
-          customer_phone?: string | null
-          customer_postcode?: string | null
-          error_message?: string | null
-          gbraid?: string | null
-          gclid?: string | null
-          id?: string
-          order_id: string
-          upload_status?: string
-          uploaded_at?: string | null
-          value: number
-          wbraid?: string | null
-        }
-        Update: {
-          conversion_stage?: string
-          conversion_time?: string
-          created_at?: string
-          currency?: string
-          customer_email?: string | null
-          customer_first_name?: string | null
-          customer_last_name?: string | null
-          customer_phone?: string | null
-          customer_postcode?: string | null
-          error_message?: string | null
-          gbraid?: string | null
-          gclid?: string | null
-          id?: string
-          order_id?: string
-          upload_status?: string
-          uploaded_at?: string | null
-          value?: number
-          wbraid?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "google_offline_conversions_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: false
-            referencedRelation: "orders"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       newsletter_subscribers: {
         Row: {
           confirm_token: string
@@ -532,40 +197,40 @@ export type Database = {
       }
       offer_entitlements: {
         Row: {
-          created_at: string
-          expires_at: string
           id: string
-          qualifying_arrival_id: string | null
-          revoked_at: string | null
-          source: string
-          started_at: string
           token: string
-          updated_at: string
           visitor_id: string
+          source: string
+          qualifying_arrival_id: string | null
+          started_at: string
+          expires_at: string
+          revoked_at: string | null
+          created_at: string
+          updated_at: string
         }
         Insert: {
-          created_at?: string
-          expires_at: string
           id?: string
-          qualifying_arrival_id?: string | null
-          revoked_at?: string | null
-          source: string
-          started_at?: string
           token?: string
-          updated_at?: string
           visitor_id: string
+          source: string
+          qualifying_arrival_id?: string | null
+          started_at?: string
+          expires_at: string
+          revoked_at?: string | null
+          created_at?: string
+          updated_at?: string
         }
         Update: {
-          created_at?: string
-          expires_at?: string
           id?: string
-          qualifying_arrival_id?: string | null
-          revoked_at?: string | null
-          source?: string
-          started_at?: string
           token?: string
-          updated_at?: string
           visitor_id?: string
+          source?: string
+          qualifying_arrival_id?: string | null
+          started_at?: string
+          expires_at?: string
+          revoked_at?: string | null
+          created_at?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -655,187 +320,506 @@ export type Database = {
       }
       orders: {
         Row: {
-          arrival_id: string | null
-          cancellation_reason: string | null
-          cancelled_at: string | null
-          confirmed_at: string | null
           created_at: string | null
           customer_email: string | null
-          customer_ip: string | null
           customer_name: string
           customer_phone: string
+          customer_ip: string | null
           customer_user_agent: string | null
-          delivered_at: string | null
           delivered_event_sent_at: string | null
+          delivered_at: string | null
+          processing_at: string | null
+          shipped_at: string | null
+          review_request_sent_at: string | null
           delivery_floor: number
           delivery_has_lift: boolean
           delivery_total: number
           discount_amount: number
           discount_tier: string | null
-          fbclid: string | null
+          promotion_code: string | null
+          offer_source: string | null
           fee_assembly: number
           fee_sofa_removal: number
           fee_upstairs: number
-          ga_client_id: string | null
-          gbraid: string | null
-          gclid: string | null
-          has_made_to_order: boolean
           id: string
           items_subtotal: number
-          landing_page: string | null
-          manual_acquisition_at: string | null
-          manual_acquisition_note: string | null
-          manual_acquisition_source: string | null
           meta_fbc: string | null
           meta_fbp: string | null
-          offer_source: string | null
-          preferred_delivery_date: string | null
-          processing_at: string | null
-          promotion_code: string | null
           purchase_event_id: string
           purchase_event_sent_at: string | null
-          referrer: string | null
-          review_request_sent_at: string | null
-          session_id: string | null
-          shipped_at: string | null
+          ga_client_id: string | null
+          has_made_to_order: boolean
           shipping_address: string
-          sofa_removal_seats: number | null
           source: string
           special_instructions: string | null
           status: string | null
           total_amount: number
-          utm_campaign: string | null
-          utm_content: string | null
-          utm_medium: string | null
-          utm_source: string | null
-          utm_term: string | null
-          visitor_id: string | null
           wants_assembly: boolean
           wants_sofa_removal: boolean
+          sofa_removal_seats: number | null
+          preferred_delivery_date: string | null
+          visitor_id: string | null
+          session_id: string | null
+          arrival_id: string | null
+          gclid: string | null
+          gbraid: string | null
           wbraid: string | null
+          fbclid: string | null
+          utm_source: string | null
+          utm_medium: string | null
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_term: string | null
+          landing_page: string | null
+          referrer: string | null
           whatsapp_reference: string | null
+          confirmed_at: string | null
+          cancelled_at: string | null
+          cancellation_reason: string | null
+          manual_acquisition_source: string | null
+          manual_acquisition_note: string | null
+          manual_acquisition_at: string | null
         }
         Insert: {
-          arrival_id?: string | null
-          cancellation_reason?: string | null
-          cancelled_at?: string | null
-          confirmed_at?: string | null
           created_at?: string | null
           customer_email?: string | null
-          customer_ip?: string | null
           customer_name: string
           customer_phone: string
-          customer_user_agent?: string | null
-          delivered_at?: string | null
+          customer_ip: string | null
+          customer_user_agent: string | null
           delivered_event_sent_at?: string | null
+          delivered_at?: string | null
+          processing_at?: string | null
+          shipped_at?: string | null
+          review_request_sent_at?: string | null
           delivery_floor?: number
           delivery_has_lift?: boolean
           delivery_total?: number
           discount_amount?: number
           discount_tier?: string | null
-          fbclid?: string | null
+          promotion_code?: string | null
+          offer_source?: string | null
           fee_assembly?: number
           fee_sofa_removal?: number
           fee_upstairs?: number
-          ga_client_id?: string | null
-          gbraid?: string | null
-          gclid?: string | null
-          has_made_to_order?: boolean
           id?: string
           items_subtotal?: number
-          landing_page?: string | null
-          manual_acquisition_at?: string | null
-          manual_acquisition_note?: string | null
-          manual_acquisition_source?: string | null
           meta_fbc?: string | null
           meta_fbp?: string | null
-          offer_source?: string | null
-          preferred_delivery_date?: string | null
-          processing_at?: string | null
-          promotion_code?: string | null
           purchase_event_id?: string
           purchase_event_sent_at?: string | null
-          referrer?: string | null
-          review_request_sent_at?: string | null
-          session_id?: string | null
-          shipped_at?: string | null
+          ga_client_id?: string | null
+          has_made_to_order?: boolean
           shipping_address: string
-          sofa_removal_seats?: number | null
           source?: string
           special_instructions?: string | null
           status?: string | null
           total_amount: number
-          utm_campaign?: string | null
-          utm_content?: string | null
-          utm_medium?: string | null
-          utm_source?: string | null
-          utm_term?: string | null
-          visitor_id?: string | null
           wants_assembly?: boolean
           wants_sofa_removal?: boolean
+          sofa_removal_seats?: number | null
+          preferred_delivery_date?: string | null
+          visitor_id?: string | null
+          session_id?: string | null
+          arrival_id?: string | null
+          gclid?: string | null
+          gbraid?: string | null
           wbraid?: string | null
+          fbclid?: string | null
+          utm_source?: string | null
+          utm_medium?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_term?: string | null
+          landing_page?: string | null
+          referrer?: string | null
           whatsapp_reference?: string | null
+          confirmed_at?: string | null
+          cancelled_at?: string | null
+          cancellation_reason?: string | null
+          manual_acquisition_source?: string | null
+          manual_acquisition_note?: string | null
+          manual_acquisition_at?: string | null
         }
         Update: {
-          arrival_id?: string | null
-          cancellation_reason?: string | null
-          cancelled_at?: string | null
-          confirmed_at?: string | null
           created_at?: string | null
           customer_email?: string | null
-          customer_ip?: string | null
           customer_name?: string
           customer_phone?: string
+          customer_ip?: string | null
           customer_user_agent?: string | null
-          delivered_at?: string | null
           delivered_event_sent_at?: string | null
+          delivered_at?: string | null
+          review_request_sent_at?: string | null
           delivery_floor?: number
           delivery_has_lift?: boolean
           delivery_total?: number
           discount_amount?: number
           discount_tier?: string | null
-          fbclid?: string | null
+          promotion_code?: string | null
+          offer_source?: string | null
           fee_assembly?: number
           fee_sofa_removal?: number
           fee_upstairs?: number
-          ga_client_id?: string | null
-          gbraid?: string | null
-          gclid?: string | null
-          has_made_to_order?: boolean
           id?: string
           items_subtotal?: number
-          landing_page?: string | null
-          manual_acquisition_at?: string | null
-          manual_acquisition_note?: string | null
-          manual_acquisition_source?: string | null
           meta_fbc?: string | null
           meta_fbp?: string | null
-          offer_source?: string | null
-          preferred_delivery_date?: string | null
-          processing_at?: string | null
-          promotion_code?: string | null
           purchase_event_id?: string
           purchase_event_sent_at?: string | null
-          referrer?: string | null
-          review_request_sent_at?: string | null
-          session_id?: string | null
-          shipped_at?: string | null
+          ga_client_id?: string | null
+          has_made_to_order?: boolean
           shipping_address?: string
-          sofa_removal_seats?: number | null
           source?: string
           special_instructions?: string | null
           status?: string | null
           total_amount?: number
-          utm_campaign?: string | null
-          utm_content?: string | null
-          utm_medium?: string | null
-          utm_source?: string | null
-          utm_term?: string | null
-          visitor_id?: string | null
           wants_assembly?: boolean
           wants_sofa_removal?: boolean
+          sofa_removal_seats?: number | null
+          preferred_delivery_date?: string | null
+          visitor_id?: string | null
+          session_id?: string | null
+          arrival_id?: string | null
+          gclid?: string | null
+          gbraid?: string | null
           wbraid?: string | null
+          fbclid?: string | null
+          utm_source?: string | null
+          utm_medium?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_term?: string | null
+          landing_page?: string | null
+          referrer?: string | null
           whatsapp_reference?: string | null
+          confirmed_at?: string | null
+          cancelled_at?: string | null
+          cancellation_reason?: string | null
+          manual_acquisition_source?: string | null
+          manual_acquisition_note?: string | null
+          manual_acquisition_at?: string | null
+        }
+        Relationships: []
+      }
+      attribution_sessions: {
+        Row: {
+          id: string
+          visitor_id: string
+          session_id: string
+          arrival_id: string
+          created_at: string
+          last_seen_at: string
+          first_touch_source: string | null
+          first_touch_medium: string | null
+          first_touch_campaign: string | null
+          first_touch_content: string | null
+          first_touch_term: string | null
+          last_touch_source: string | null
+          last_touch_medium: string | null
+          last_touch_campaign: string | null
+          last_touch_content: string | null
+          last_touch_term: string | null
+          gclid: string | null
+          gbraid: string | null
+          wbraid: string | null
+          fbclid: string | null
+          ga_client_id: string | null
+          meta_fbp: string | null
+          meta_fbc: string | null
+          landing_page: string | null
+          referrer: string | null
+          initial_product_id: string | null
+          initial_variant_id: string | null
+        }
+        Insert: {
+          id?: string
+          visitor_id: string
+          session_id: string
+          arrival_id: string
+          created_at?: string
+          last_seen_at?: string
+          first_touch_source?: string | null
+          first_touch_medium?: string | null
+          first_touch_campaign?: string | null
+          first_touch_content?: string | null
+          first_touch_term?: string | null
+          last_touch_source?: string | null
+          last_touch_medium?: string | null
+          last_touch_campaign?: string | null
+          last_touch_content?: string | null
+          last_touch_term?: string | null
+          gclid?: string | null
+          gbraid?: string | null
+          wbraid?: string | null
+          fbclid?: string | null
+          ga_client_id?: string | null
+          meta_fbp?: string | null
+          meta_fbc?: string | null
+          landing_page?: string | null
+          referrer?: string | null
+          initial_product_id?: string | null
+          initial_variant_id?: string | null
+        }
+        Update: {
+          id?: string
+          visitor_id?: string
+          session_id?: string
+          arrival_id?: string
+          created_at?: string
+          last_seen_at?: string
+          first_touch_source?: string | null
+          first_touch_medium?: string | null
+          first_touch_campaign?: string | null
+          first_touch_content?: string | null
+          first_touch_term?: string | null
+          last_touch_source?: string | null
+          last_touch_medium?: string | null
+          last_touch_campaign?: string | null
+          last_touch_content?: string | null
+          last_touch_term?: string | null
+          gclid?: string | null
+          gbraid?: string | null
+          wbraid?: string | null
+          fbclid?: string | null
+          ga_client_id?: string | null
+          meta_fbp?: string | null
+          meta_fbc?: string | null
+          landing_page?: string | null
+          referrer?: string | null
+          initial_product_id?: string | null
+          initial_variant_id?: string | null
+        }
+        Relationships: []
+      }
+      whatsapp_enquiries: {
+        Row: {
+          id: string
+          reference: string
+          created_at: string
+          visitor_id: string | null
+          session_id: string | null
+          arrival_id: string | null
+          page_url: string | null
+          page_context: string | null
+          product_id: string | null
+          variant_id: string | null
+          product_name: string | null
+          gclid: string | null
+          gbraid: string | null
+          wbraid: string | null
+          fbclid: string | null
+          utm_source: string | null
+          utm_medium: string | null
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_term: string | null
+          ga_client_id: string | null
+          meta_fbp: string | null
+          meta_fbc: string | null
+          converted_order_id: string | null
+          converted_at: string | null
+        }
+        Insert: {
+          id?: string
+          reference: string
+          created_at?: string
+          visitor_id?: string | null
+          session_id?: string | null
+          arrival_id?: string | null
+          page_url?: string | null
+          page_context?: string | null
+          product_id?: string | null
+          variant_id?: string | null
+          product_name?: string | null
+          gclid?: string | null
+          gbraid?: string | null
+          wbraid?: string | null
+          fbclid?: string | null
+          utm_source?: string | null
+          utm_medium?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_term?: string | null
+          ga_client_id?: string | null
+          meta_fbp?: string | null
+          meta_fbc?: string | null
+          converted_order_id?: string | null
+          converted_at?: string | null
+        }
+        Update: {
+          id?: string
+          reference?: string
+          created_at?: string
+          visitor_id?: string | null
+          session_id?: string | null
+          arrival_id?: string | null
+          page_url?: string | null
+          page_context?: string | null
+          product_id?: string | null
+          variant_id?: string | null
+          product_name?: string | null
+          gclid?: string | null
+          gbraid?: string | null
+          wbraid?: string | null
+          fbclid?: string | null
+          utm_source?: string | null
+          utm_medium?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_term?: string | null
+          ga_client_id?: string | null
+          meta_fbp?: string | null
+          meta_fbc?: string | null
+          converted_order_id?: string | null
+          converted_at?: string | null
+        }
+        Relationships: []
+      }
+      attribution_actions: {
+        Row: {
+          id: string
+          created_at: string
+          visitor_id: string | null
+          session_id: string | null
+          arrival_id: string | null
+          action_type: string
+          page_url: string | null
+          product_id: string | null
+          variant_id: string | null
+          whatsapp_reference: string | null
+          order_id: string | null
+          metadata: Json | null
+        }
+        Insert: {
+          id?: string
+          created_at?: string
+          visitor_id?: string | null
+          session_id?: string | null
+          arrival_id?: string | null
+          action_type: string
+          page_url?: string | null
+          product_id?: string | null
+          variant_id?: string | null
+          whatsapp_reference?: string | null
+          order_id?: string | null
+          metadata?: Json | null
+        }
+        Update: {
+          id?: string
+          created_at?: string
+          visitor_id?: string | null
+          session_id?: string | null
+          arrival_id?: string | null
+          action_type?: string
+          page_url?: string | null
+          product_id?: string | null
+          variant_id?: string | null
+          whatsapp_reference?: string | null
+          order_id?: string | null
+          metadata?: Json | null
+        }
+        Relationships: []
+      }
+      google_offline_conversions: {
+        Row: {
+          id: string
+          order_id: string
+          conversion_stage: string
+          conversion_time: string
+          value: number
+          currency: string
+          gclid: string | null
+          gbraid: string | null
+          wbraid: string | null
+          customer_email: string | null
+          customer_phone: string | null
+          customer_first_name: string | null
+          customer_last_name: string | null
+          customer_postcode: string | null
+          upload_status: string
+          uploaded_at: string | null
+          error_message: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          order_id: string
+          conversion_stage: string
+          conversion_time: string
+          value: number
+          currency?: string
+          gclid?: string | null
+          gbraid?: string | null
+          wbraid?: string | null
+          customer_email?: string | null
+          customer_phone?: string | null
+          customer_first_name?: string | null
+          customer_last_name?: string | null
+          customer_postcode?: string | null
+          upload_status?: string
+          uploaded_at?: string | null
+          error_message?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          order_id?: string
+          conversion_stage?: string
+          conversion_time?: string
+          value?: number
+          currency?: string
+          gclid?: string | null
+          gbraid?: string | null
+          wbraid?: string | null
+          customer_email?: string | null
+          customer_phone?: string | null
+          customer_first_name?: string | null
+          customer_last_name?: string | null
+          customer_postcode?: string | null
+          upload_status?: string
+          uploaded_at?: string | null
+          error_message?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      conversion_events: {
+        Row: {
+          id: string
+          order_id: string | null
+          platform: string
+          event_name: string
+          event_id: string | null
+          created_at: string
+          sent_at: string | null
+          status: string
+          response_metadata: Json | null
+          error_metadata: Json | null
+        }
+        Insert: {
+          id?: string
+          order_id?: string | null
+          platform: string
+          event_name: string
+          event_id?: string | null
+          created_at?: string
+          sent_at?: string | null
+          status?: string
+          response_metadata?: Json | null
+          error_metadata?: Json | null
+        }
+        Update: {
+          id?: string
+          order_id?: string | null
+          platform?: string
+          event_name?: string
+          event_id?: string | null
+          created_at?: string
+          sent_at?: string | null
+          status?: string
+          response_metadata?: Json | null
+          error_metadata?: Json | null
         }
         Relationships: []
       }
@@ -924,8 +908,8 @@ export type Database = {
           average_rating: number | null
           base_price: number
           category_id: string | null
-          created_at: string | null
           custom_made: boolean
+          created_at: string | null
           description: string | null
           gallery_images: string[] | null
           id: string
@@ -944,8 +928,8 @@ export type Database = {
           average_rating?: number | null
           base_price: number
           category_id?: string | null
-          created_at?: string | null
           custom_made?: boolean
+          created_at?: string | null
           description?: string | null
           gallery_images?: string[] | null
           id?: string
@@ -964,8 +948,8 @@ export type Database = {
           average_rating?: number | null
           base_price?: number
           category_id?: string | null
-          created_at?: string | null
           custom_made?: boolean
+          created_at?: string | null
           description?: string | null
           gallery_images?: string[] | null
           id?: string
@@ -1004,8 +988,8 @@ export type Database = {
           customer_name: string | null
           id: string
           image_url: string | null
-          is_approved: boolean
           order_id: string | null
+          is_approved: boolean
           product_id: string | null
           rating: number
           user_id: string | null
@@ -1016,11 +1000,11 @@ export type Database = {
           customer_name?: string | null
           id?: string
           image_url?: string | null
-          is_approved?: boolean
           order_id?: string | null
+          is_approved?: boolean
           product_id?: string | null
           rating: number
-          user_id?: string | null
+          user_id: string | null
         }
         Update: {
           comment?: string | null
@@ -1028,20 +1012,13 @@ export type Database = {
           customer_name?: string | null
           id?: string
           image_url?: string | null
-          is_approved?: boolean
           order_id?: string | null
+          is_approved?: boolean
           product_id?: string | null
           rating?: number
           user_id?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "reviews_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: false
-            referencedRelation: "orders"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "reviews_product_id_fkey"
             columns: ["product_id"]
@@ -1159,98 +1136,6 @@ export type Database = {
         }
         Relationships: []
       }
-      whatsapp_enquiries: {
-        Row: {
-          arrival_id: string | null
-          converted_at: string | null
-          converted_order_id: string | null
-          created_at: string
-          fbclid: string | null
-          ga_client_id: string | null
-          gbraid: string | null
-          gclid: string | null
-          id: string
-          meta_fbc: string | null
-          meta_fbp: string | null
-          page_context: string | null
-          page_url: string | null
-          product_id: string | null
-          product_name: string | null
-          reference: string
-          session_id: string | null
-          utm_campaign: string | null
-          utm_content: string | null
-          utm_medium: string | null
-          utm_source: string | null
-          utm_term: string | null
-          variant_id: string | null
-          visitor_id: string | null
-          wbraid: string | null
-        }
-        Insert: {
-          arrival_id?: string | null
-          converted_at?: string | null
-          converted_order_id?: string | null
-          created_at?: string
-          fbclid?: string | null
-          ga_client_id?: string | null
-          gbraid?: string | null
-          gclid?: string | null
-          id?: string
-          meta_fbc?: string | null
-          meta_fbp?: string | null
-          page_context?: string | null
-          page_url?: string | null
-          product_id?: string | null
-          product_name?: string | null
-          reference: string
-          session_id?: string | null
-          utm_campaign?: string | null
-          utm_content?: string | null
-          utm_medium?: string | null
-          utm_source?: string | null
-          utm_term?: string | null
-          variant_id?: string | null
-          visitor_id?: string | null
-          wbraid?: string | null
-        }
-        Update: {
-          arrival_id?: string | null
-          converted_at?: string | null
-          converted_order_id?: string | null
-          created_at?: string
-          fbclid?: string | null
-          ga_client_id?: string | null
-          gbraid?: string | null
-          gclid?: string | null
-          id?: string
-          meta_fbc?: string | null
-          meta_fbp?: string | null
-          page_context?: string | null
-          page_url?: string | null
-          product_id?: string | null
-          product_name?: string | null
-          reference?: string
-          session_id?: string | null
-          utm_campaign?: string | null
-          utm_content?: string | null
-          utm_medium?: string | null
-          utm_source?: string | null
-          utm_term?: string | null
-          variant_id?: string | null
-          visitor_id?: string | null
-          wbraid?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "whatsapp_enquiries_converted_order_id_fkey"
-            columns: ["converted_order_id"]
-            isOneToOne: false
-            referencedRelation: "orders"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       wishlist: {
         Row: {
           created_at: string | null
@@ -1285,11 +1170,19 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      issue_paid_offer_entitlement: {
+        Args: {
+          p_visitor_id: string
+          p_source: string
+          p_arrival_id?: string | null
+        }
+        Returns: Json
+      }
       calculate_order_offer: {
         Args: {
           p_items: Json
-          p_offer_entitlement_token?: string
-          p_promotion_code?: string
+          p_offer_entitlement_token?: string | null
+          p_promotion_code?: string | null
         }
         Returns: Json
       }
@@ -1305,19 +1198,23 @@ export type Database = {
         }[]
       }
       is_admin: { Args: never; Returns: boolean }
-      issue_paid_offer_entitlement: {
-        Args: { p_arrival_id?: string; p_source: string; p_visitor_id: string }
+      newsletter_confirm: {
+        Args: { p_token: string }
         Returns: Json
       }
-      newsletter_confirm: { Args: { p_token: string }; Returns: Json }
       newsletter_subscribe: {
         Args: { p_email: string; p_ip?: string; p_user_agent?: string }
         Returns: Json
       }
-      newsletter_unsubscribe: { Args: { p_token: string }; Returns: Json }
+      newsletter_unsubscribe: {
+        Args: { p_token: string }
+        Returns: Json
+      }
       place_manual_order: {
         Args: {
-          p_customer_email: string
+          // text, and the column is nullable: an order taken on WhatsApp
+          // often has a phone number and no email.
+          p_customer_email: string | null
           p_customer_name: string
           p_customer_phone: string
           p_delivery_charge?: number
@@ -1325,7 +1222,8 @@ export type Database = {
           p_shipping_address: string
           p_source?: string
           p_special_instructions: string
-          p_whatsapp_reference?: string
+          // Optional. See 20260906160000_manual_order_whatsapp_reference.sql.
+          p_whatsapp_reference?: string | null
         }
         Returns: Json
       }
@@ -1338,14 +1236,14 @@ export type Database = {
           p_delivery_has_lift?: boolean
           p_expected_total: number
           p_items: Json
-          p_offer_entitlement_token?: string
-          p_preferred_delivery_date?: string
-          p_promotion_code?: string
+          p_offer_entitlement_token?: string | null
+          p_promotion_code?: string | null
           p_shipping_address: string
-          p_sofa_removal_seats?: number
           p_special_instructions: string
           p_wants_assembly?: boolean
           p_wants_sofa_removal?: boolean
+          p_sofa_removal_seats?: number | null
+          p_preferred_delivery_date?: string | null
         }
         Returns: Json
       }
@@ -1388,12 +1286,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1417,11 +1315,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1442,11 +1340,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1467,11 +1365,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1484,11 +1382,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never) = never,
+    : never = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
