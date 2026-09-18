@@ -1,40 +1,4 @@
-// src/app/confirm-order/[id]/page.tsx
-import type { Metadata } from 'next'
-import { createClient } from '@/utils/supabase/server'
-import { notFound } from 'next/navigation'
-import { CheckCircle, MessageCircle, Package, ArrowRight } from 'lucide-react'
-import Link from 'next/link'
-import { after } from 'next/server'
-import { reportOrderConversion } from '@/utils/orderConversions'
-
-
-export const metadata: Metadata = {
-  title: 'Confirm Your Order',
-  description:
-    'Confirm the details of your order.',
-  robots: { index: false, follow: false },
-}
-
-export default async function ConfirmOrderPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params
-  const supabase = await createClient()
-
-  // Fetch the order and, when it is still pending_cod, atomically transition it
-  // to confirmed with confirmed_at inside the SECURITY DEFINER database RPC.
-  // Reopening an already-confirmed link returns the same order without moving
-  // the timestamp, so the business-event time remains the first confirmation.
-  const { data: orders, error } = await supabase.rpc('confirm_order', { p_order_id: id })
-  const order = orders?.[0]
-
-  if (error || !order) return notFound()
-
-  // Purchase reporting is server-authoritative and idempotent. It reloads the
-  // order with service-role privileges, requires a genuine confirmed_at, and
-  // claims purchase_event_sent_at before sending. No application fallback is
-  // allowed to invent a later confirmation timestamp.
-  after(() => reportOrderConversion(id, 'purchase'))
-
-  const shortCode = order.id.substring(0, 8).toUpperCase()
+/  const shortCode = order.id.substring(0, 8).toUpperCase()
 
   // 3. Set up the WhatsApp URL
   const whatsappNumber = "447476616022" // <-- CHANGE THIS TO YOUR ACTUAL BUSINESS WHATSAPP NUMBER!
