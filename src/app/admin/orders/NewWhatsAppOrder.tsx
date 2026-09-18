@@ -334,18 +334,81 @@ export default function NewWhatsAppOrder({
           </button>
         </div>
 
-        <div>
+        <div className="rounded-sm border border-stone-200 bg-stone-50 p-4">
           <label className={label} htmlFor="wa-reference">
-            WhatsApp reference <span className="font-normal normal-case tracking-normal text-stone-400">— optional, e.g. UKSS-WA-260906-A7F31C, if the customer quoted one</span>
+            WhatsApp reference <span className="font-normal normal-case tracking-normal text-stone-400">— best match when the customer sent it</span>
           </label>
           <input
             id="wa-reference"
             className={`${field} uppercase`}
             value={whatsappReference}
-            onChange={e => setWhatsappReference(e.target.value.toUpperCase())}
+            onChange={e => {
+              setWhatsappReference(e.target.value.toUpperCase())
+              if (e.target.value.trim()) setMatchByTime(false)
+            }}
             placeholder="UKSS-WA-260906-A7F31C"
             autoComplete="off"
           />
+
+          <div className="my-3 flex items-center gap-3 text-[10px] font-bold uppercase tracking-[0.2em] text-stone-400">
+            <span className="h-px flex-1 bg-stone-200" />
+            Or
+            <span className="h-px flex-1 bg-stone-200" />
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              setMatchByTime(v => !v)
+              if (!matchByTime) setWhatsappReference('')
+            }}
+            className="inline-flex items-center gap-2 rounded-sm border border-stone-300 bg-white px-3 py-2 text-xs font-bold text-stone-700 transition hover:border-stone-400"
+          >
+            <Clock3 className="h-4 w-4" />
+            {matchByTime ? 'Hide contact-time matcher' : 'No reference? Match by WhatsApp message time'}
+          </button>
+
+          {matchByTime && (
+            <div className="mt-4 rounded-sm border border-blue-100 bg-blue-50/60 p-3">
+              <p className="m-0 text-xs leading-relaxed text-stone-600">
+                Enter the time shown beside the customer&apos;s first WhatsApp message. We only look
+                <strong> backwards</strong> for the closest unconverted website WhatsApp click within
+                <strong> 10 minutes</strong>. If there is no tracked click, the order still saves and nothing is guessed.
+              </p>
+              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
+                <div className="col-span-2 sm:col-span-1">
+                  <label className={label} htmlFor="wa-contact-date">Date</label>
+                  <input id="wa-contact-date" type="date" className={field} value={contactDate} onChange={e => setContactDate(e.target.value)} />
+                </div>
+                <div>
+                  <label className={label} htmlFor="wa-contact-hour">Hour</label>
+                  <select id="wa-contact-hour" className={field} value={contactHour} onChange={e => setContactHour(e.target.value)}>
+                    {Array.from({ length: 12 }, (_, i) => String(i + 1)).map(h => <option key={h} value={h}>{h}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className={label} htmlFor="wa-contact-minute">Minute</label>
+                  <select id="wa-contact-minute" className={field} value={contactMinute} onChange={e => setContactMinute(e.target.value)}>
+                    {Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0')).map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className={label} htmlFor="wa-contact-meridiem">AM / PM</label>
+                  <select id="wa-contact-meridiem" className={field} value={contactMeridiem} onChange={e => setContactMeridiem(e.target.value as 'AM' | 'PM')}>
+                    <option value="AM">AM</option>
+                    <option value="PM">PM</option>
+                  </select>
+                </div>
+                <div className="col-span-2 sm:col-span-1">
+                  <label className={label} htmlFor="wa-contact-zone">Clock shown in</label>
+                  <select id="wa-contact-zone" className={field} value={contactTimezone} onChange={e => setContactTimezone(e.target.value as 'Asia/Karachi' | 'Europe/London')}>
+                    <option value="Asia/Karachi">Pakistan</option>
+                    <option value="Europe/London">UK</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
