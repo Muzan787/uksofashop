@@ -112,17 +112,6 @@ export default function BuildClient({ designs, sizes, collections }: Props) {
     trackBuilderAction('builder_started', { step: draft.step })
   }, [loaded, draft.step])
 
-  useEffect(() => {
-    if (!loaded || draft.step !== 'summary' || trackedSummaryKey.current === draft.key) return
-    trackedSummaryKey.current = draft.key
-    trackBuilderAction('builder_summary_viewed', {
-      step: 'summary',
-      productId: resolved.design?.productId,
-      variantId: resolved.design?.variantId,
-      value: resolved.design?.title,
-    })
-  }, [loaded, draft.step, draft.key, resolved.design])
-
 
   // ── Derived ────────────────────────────────────────────────────────────
   const resolved = useMemo(
@@ -134,6 +123,17 @@ export default function BuildClient({ designs, sizes, collections }: Props) {
     () => designCards(designs, { sizeKey: draft.sizeKey, back: draft.back, productId: draft.productId }),
     [designs, draft.sizeKey, draft.back, draft.productId],
   )
+
+  useEffect(() => {
+    if (!loaded || draft.step !== 'summary' || trackedSummaryKey.current === draft.key) return
+    trackedSummaryKey.current = draft.key
+    trackBuilderAction('builder_summary_viewed', {
+      step: 'summary',
+      productId: resolved.design?.productId,
+      variantId: resolved.design?.variantId,
+      value: resolved.design?.title,
+    })
+  }, [loaded, draft.step, draft.key, resolved.design])
 
   const index = stepIndex(draft.step)
   const meta = STEPS[index]
