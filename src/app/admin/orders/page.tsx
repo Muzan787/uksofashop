@@ -2,9 +2,10 @@ import type { Metadata } from 'next'
 // src/app/admin/orders/page.tsx
 import { createClient } from '@/utils/supabase/server'
 import { Package, Inbox, MapPin, User, Truck, CalendarDays, Clock3, Radio, AlertTriangle } from 'lucide-react'
-import { updateOrderStatus, sendOrderConversion } from '@/app/actions/orders'
+import { updateOrderStatus } from '@/app/actions/orders'
 import DirectPrintButton from './DirectPrintButton'
 import CopyOrderButton from './CopyOrderButton'
+import MetaConversionButton from './MetaConversionButton'
 import NewWhatsAppOrder from './NewWhatsAppOrder'
 import Link from 'next/link'
 
@@ -452,16 +453,14 @@ export default async function AdminOrdersPage(props: { searchParams: SearchParam
                         )}
                       </div>
                     ) : order.confirmed_at && order.status !== 'cancelled' ? (
-                      <form action={async (formData) => {
-                        "use server"
-                        await sendOrderConversion(formData)
-                      }} className="mt-2">
-                        <input type="hidden" name="orderId" value={order.id} />
-                        <input type="hidden" name="kind" value="purchase" />
-                        <button type="submit" className="w-full rounded-sm bg-blue-700 px-3 py-2.5 text-xs font-bold text-white transition hover:bg-blue-800">
-                          Send Purchase event to Meta
-                        </button>
-                      </form>
+                      <div className="mt-2">
+                        <MetaConversionButton
+                          orderId={order.id}
+                          kind="purchase"
+                          label="Send Purchase event to Meta"
+                          className="w-full rounded-sm bg-blue-700 px-3 py-2.5 text-xs font-bold text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60"
+                        />
+                      </div>
                     ) : (
                       <p className="m-0 mt-1.5 text-xs text-stone-500">
                         {order.status === 'cancelled' ? 'Cancelled — nothing to send.' : 'Confirm the order first.'}
@@ -481,21 +480,19 @@ export default async function AdminOrdersPage(props: { searchParams: SearchParam
                         )}
                       </div>
                     ) : order.status === 'delivered' && order.delivered_at ? (
-                      <form action={async (formData) => {
-                        "use server"
-                        await sendOrderConversion(formData)
-                      }} className="mt-2">
-                        <input type="hidden" name="orderId" value={order.id} />
-                        <input type="hidden" name="kind" value="delivered" />
-                        <button type="submit" className="w-full rounded-sm bg-green-700 px-3 py-2.5 text-xs font-bold text-white transition hover:bg-green-800">
-                          Send Delivered event to Meta
-                        </button>
+                      <div className="mt-2">
+                        <MetaConversionButton
+                          orderId={order.id}
+                          kind="delivered"
+                          label="Send Delivered event to Meta"
+                          className="w-full rounded-sm bg-green-700 px-3 py-2.5 text-xs font-bold text-white transition hover:bg-green-800 disabled:cursor-not-allowed disabled:opacity-60"
+                        />
                         {!order.purchase_event_sent_at && (
                           <p className="m-0 mt-1.5 text-[10px] leading-relaxed text-stone-500">
                             Purchase has not been sent; this action will send Purchase first, then OrderDelivered.
                           </p>
                         )}
-                      </form>
+                      </div>
                     ) : (
                       <p className="m-0 mt-1.5 text-xs text-stone-500">Mark the order Delivered first.</p>
                     )}
