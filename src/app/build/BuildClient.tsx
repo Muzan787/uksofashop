@@ -10,7 +10,7 @@ import toast from 'react-hot-toast'
 import { useCart } from '@/context/CartContext'
 import { DUR, EASE } from '@/components/Motion'
 import { useReducedMotionSafe } from '@/components/Motion/useReducedMotionSafe'
-import { trackAddToCart } from '@/utils/tracking'
+import { trackAddToCart, trackOperationalAction } from '@/utils/tracking'
 import { trackBuilderAction } from '@/utils/attribution/builderTracking'
 import type { FabricCollection } from '@/components/Product/types'
 import type { BuildDesign, BuildSize } from './catalogue'
@@ -105,6 +105,31 @@ export default function BuildClient({ designs, sizes, collections }: Props) {
   useEffect(() => {
     if (loaded) saveDraft(draft)
   }, [draft, loaded])
+
+  // One first-party start per saved build draft. No advertising consent is
+  // required and no customer-entered text is attached.
+  useEffect(() => {
+    if (!loaded || !draft.key) return
+    trackOperationalAction(
+      'builder_started',
+      { metadata: { step: 'seats' } },
+      `builder_started:${draft.key}`,
+    )
+  }, [loaded, draft.key])
+
+  // Reaching the summary is the useful completion point of the builder itself.
+  useEffect(() => {
+    if (!loaded || draft.step !== 'summary' || !draft.key) return
+    trackOperationalAction(
+      'builder_summary_viewed',
+      {
+        productId: resolved.design?.productId,
+        variantId: resolved.design?.variantId,
+        metadata: { step: 'summary' },
+      },
+      `builder_summary_viewed:${draft.key}`,
+    )
+  }, [loaded, draft.step, draft.key, resolved.design?.productId, resolved.design?.variantId])
 
   useEffect(() => {
     if (!loaded || trackedStart.current) return
@@ -263,6 +288,11 @@ export default function BuildClient({ designs, sizes, collections }: Props) {
       build: spec,
     })
     trackAddToCart({ productId: design.productId, variantId: design.variantId, title: design.title, price: design.price, quantity: 1 })
+    trackOperationalAction('builder_add_to_cart', {
+      productId: design.productId,
+      variantId: design.variantId,
+      metadata: { step: 'summary', value: design.family },
+    })
     setAdded(true)
     toast.success('Your sofa is in the cart', { icon: '🛋️', position: 'top-center' })
 
@@ -500,6 +530,11 @@ export default function BuildClient({ designs, sizes, collections }: Props) {
                     spec={spec}
                     onEdit={go}
                     onCheckout={checkout}
+                    onWhatsApp={() => trackOperationalAction('builder_whatsapp_click', {
+                      productId: resolved.design?.productId,
+                      variantId: resolved.design?.variantId,
+                      metadata: { step: 'summary' },
+                    })}
                     added={added}
                     onWhatsApp={() => trackBuilderAction('builder_whatsapp_click', {
                       step: 'summary',
