@@ -420,11 +420,27 @@ function DetailsStep({
     const timer = window.setTimeout(() => {
       setCheckingDelivery(true)
       void checkDeliveryPostcode(raw)
-        .then(result => {
+        .then(async result => {
           if (cancelled) return
           setDeliveryCheck(result)
-          if (result.status === 'mainland') setConfirmed(result.postcode)
-          else setConfirmed(null)
+          if (result.status === 'mainland') {
+            setConfirmed(result.postcode)
+            // A valid mainland postcode is enough information to help. Do the
+            // address lookup automatically instead of making the shopper
+            // discover that "Find" is a second required action. Manual address
+            // entry remains available if Homedata returns nothing.
+            try {
+              const found = await lookupAddresses(result.postcode)
+              if (cancelled) return
+              setAddresses(found)
+              if (found.length > 0 && !form.shippingAddress.trim()) setDropdownOpen(true)
+            } catch {
+              if (!cancelled) setAddresses([])
+            }
+          } else {
+            setConfirmed(null)
+            setAddresses([])
+          }
         })
         .catch(() => {
           if (!cancelled) setDeliveryCheck(null)
@@ -659,9 +675,12 @@ function DetailsStep({
                className="flex cursor-pointer items-center gap-2 rounded-sm border-0 bg-ink-900 px-4 text-caption font-bold text-calico-50 transition-[background-color,opacity] duration-swift ease-out-expo disabled:cursor-not-allowed disabled:opacity-60"
             >
                {searchingPostcode || checkingDelivery ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-               Find
+               Find address
             </button>
           </div>
+          <p className="m-0 mt-1.5 text-[11px] leading-relaxed text-ink-500">
+            Enter your postcode and we&apos;ll check free mainland delivery and look for your address automatically. You can always type the full address below.
+          </p>
           {errors.postcode && <p className="mt-1 text-caption text-rust-700">{errors.postcode}</p>}
           {checkingDelivery && !errors.postcode && (
             <p className="m-0 mt-2 flex items-center gap-2 text-caption text-ink-500" aria-live="polite">
