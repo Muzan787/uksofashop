@@ -385,6 +385,11 @@ function DetailsStep({
   // Whether "Choose a day" is open. Kept apart from the date itself so a
   // customer can open the calendar before they have picked anything.
   const [choosingDate, setChoosingDate] = useState(Boolean(form.preferredDeliveryDate))
+  // Optional delivery services stay out of the initial visual path. Existing
+  // selections reopen the panel automatically when a customer comes back.
+  const [deliveryOptionsOpen, setDeliveryOptionsOpen] = useState(
+    extras.floor > 0 || extras.assembly || extras.sofaRemoval,
+  )
   const [pending, setPending] = useState(false)
   const [serverError, setServerError] = useState('')
   const [checkingDelivery, setCheckingDelivery] = useState(false)
@@ -647,9 +652,9 @@ function DetailsStep({
       )}
 
       <div className="mb-4 flex flex-col gap-4">
-        <Field label="Full Name" name="customerName" autoComplete="name" value={form.customerName} onChange={set('customerName')} error={errors.customerName} />
-        <Field label="Email Address" type="email" name="customerEmail" autoComplete="email" hint="Your order confirmation will be sent here" value={form.customerEmail} onChange={set('customerEmail')} error={errors.customerEmail} />
-        <Field label="Mobile Number" type="tel" name="customerPhone" autoComplete="tel" hint="A UK mobile — our driver calls before delivery, and we message you on WhatsApp" value={form.customerPhone} onChange={set('customerPhone')} error={errors.customerPhone} />
+        <Field label="Full Name" name="customerName" required autoComplete="name" value={form.customerName} onChange={set('customerName')} error={errors.customerName} />
+        <Field label="Email Address" type="email" name="customerEmail" required autoComplete="email" hint="Your order confirmation will be sent here" value={form.customerEmail} onChange={set('customerEmail')} error={errors.customerEmail} />
+        <Field label="Mobile Number" type="tel" name="customerPhone" required autoComplete="tel" hint="A UK mobile — our driver calls before delivery, and we message you on WhatsApp" value={form.customerPhone} onChange={set('customerPhone')} error={errors.customerPhone} />
 
         <CheckoutRecoveryOptIn
           email={form.customerEmail}
@@ -761,7 +766,7 @@ function DetailsStep({
           </div>
         )}
 
-        <Field label="Full Address" name="shippingAddress" type="textarea" value={form.shippingAddress} onChange={set('shippingAddress')} error={errors.shippingAddress} />
+        <Field label="Full Address" name="shippingAddress" type="textarea" required autoComplete="street-address" value={form.shippingAddress} onChange={set('shippingAddress')} error={errors.shippingAddress} />
 
         <DeliveryDateField
           value={form.preferredDeliveryDate}
@@ -774,28 +779,63 @@ function DetailsStep({
           error={errors.preferredDeliveryDate}
         />
 
-        <Field label="Special Instructions" name="specialInstructions" required={false} type="textarea" value={form.specialInstructions} onChange={set('specialInstructions')} />
+        <details className="rounded-sm border border-calico-300 bg-calico-50">
+          <summary className="cursor-pointer list-none px-4 py-3 text-body-sm font-semibold text-ink-900 [&::-webkit-details-marker]:hidden">
+            <span className="flex items-center justify-between gap-3">
+              <span>Add delivery instructions</span>
+              <span className="font-data text-caption font-semibold uppercase tracking-wider text-ink-500">Optional</span>
+            </span>
+          </summary>
+          <div className="border-t border-calico-200 px-4 py-3">
+            <Field label="Special Instructions" name="specialInstructions" required={false} type="textarea" value={form.specialInstructions} onChange={set('specialInstructions')} />
+          </div>
+        </details>
       </div>
 
-      <OfferCode
-        value={offerCodeInput}
-        onChange={setOfferCodeInput}
-        quote={offer}
-        pending={offerPending}
-        error={offerError}
-        onApply={onApplyOffer}
-      />
-
-      <div className="mb-4">
-        <div className="mb-1 font-data text-eyebrow font-bold uppercase tracking-[0.2em] text-ember-700">
-          Delivery Options
+      {offer?.valid && offerDiscount > 0 ? (
+        <div className="mb-4 flex items-start justify-between gap-4 rounded-sm border border-sage-300 bg-sage-50 px-4 py-3">
+          <div>
+            <p className="m-0 text-body-sm font-bold text-sage-800">Online offer applied</p>
+            <p className="m-0 mt-1 text-caption leading-relaxed text-sage-700">
+              £{offerDiscount.toFixed(2)} has already been taken off this basket.
+            </p>
+          </div>
+          <Check aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 text-sage-700" />
         </div>
-        <p className="mb-3 text-caption leading-relaxed text-ink-500">
-          Delivery to a UK Mainland ground floor is free. Add anything else you need —
-          your current online subtotal updates as you go.
-        </p>
+      ) : (
+        <OfferCode
+          value={offerCodeInput}
+          onChange={setOfferCodeInput}
+          quote={offer}
+          pending={offerPending}
+          error={offerError}
+          onApply={onApplyOffer}
+        />
+      )}
 
-        <div className="flex flex-col gap-2">
+      <details
+        open={deliveryOptionsOpen}
+        onToggle={event => setDeliveryOptionsOpen(event.currentTarget.open)}
+        className="mb-4 rounded-sm border border-calico-300 bg-calico-50"
+      >
+        <summary className="cursor-pointer list-none px-4 py-3 [&::-webkit-details-marker]:hidden">
+          <span className="flex items-center justify-between gap-3">
+            <span>
+              <span className="block text-body-sm font-bold text-ink-900">Need assembly, upstairs delivery or old-sofa removal?</span>
+              <span className="mt-1 block text-caption leading-relaxed text-ink-500">Free UK Mainland ground-floor delivery is already included.</span>
+            </span>
+            <span className="shrink-0 font-data text-caption font-semibold uppercase tracking-wider text-ink-500">Optional</span>
+          </span>
+        </summary>
+        <div className="border-t border-calico-200 px-4 py-4">
+          <div className="mb-1 font-data text-eyebrow font-bold uppercase tracking-[0.2em] text-ember-700">
+            Delivery Options
+          </div>
+          <p className="mb-3 text-caption leading-relaxed text-ink-500">
+            Add anything else you need — your current online subtotal updates as you go.
+          </p>
+
+          <div className="flex flex-col gap-2">
           <ExtraOption
             checked={extras.floor > 0}
             onToggle={on => setExtras({ ...extras, floor: on ? 1 : 0, hasLift: on ? extras.hasLift : false })}
@@ -875,10 +915,11 @@ function DetailsStep({
           </ExtraOption>
         </div>
 
-        <p className="mt-3 text-caption leading-relaxed text-ink-500">
-          {DELIVERY_AREA_NOTE}
-        </p>
-      </div>
+          <p className="mt-3 text-caption leading-relaxed text-ink-500">
+            {DELIVERY_AREA_NOTE}
+          </p>
+        </div>
+      </details>
 
       <div className="mb-4">
         <div className="mb-1 font-data text-eyebrow font-bold uppercase tracking-[0.2em] text-ember-700">
