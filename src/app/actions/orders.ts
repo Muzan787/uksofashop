@@ -43,7 +43,7 @@ export async function updateOrderStatus(formData: FormData) {
   // the same "first time only" guarantee delivered_at already has.
   const { data: order } = await supabase
     .from('orders')
-    .select('customer_email, customer_name, customer_phone, shipping_address, confirmed_at, delivered_at, cancelled_at')
+    .select('customer_email, customer_name, customer_phone, shipping_address, confirmed_at, processing_at, shipped_at, delivered_at, cancelled_at')
     .eq('id', orderId)
     .single()
 
@@ -54,12 +54,16 @@ export async function updateOrderStatus(formData: FormData) {
     status: string
     delivered_at?: string
     confirmed_at?: string
+    processing_at?: string
+    shipped_at?: string
     cancelled_at?: string
     cancellation_reason?: string
   } = { status: newStatus }
 
   if (newStatus === 'delivered' && !order?.delivered_at) patch.delivered_at = new Date().toISOString()
   if (newStatus === 'confirmed' && !order?.confirmed_at) patch.confirmed_at = new Date().toISOString()
+  if (newStatus === 'processing' && !order?.processing_at) patch.processing_at = new Date().toISOString()
+  if (newStatus === 'shipped' && !order?.shipped_at) patch.shipped_at = new Date().toISOString()
   if (newStatus === 'cancelled' && !order?.cancelled_at) {
     patch.cancelled_at = new Date().toISOString()
     const reason = formData.get('cancellationReason')
@@ -158,6 +162,10 @@ export async function sendOrderConversion(formData: FormData) {
 
   if (looksLikeQa) {
     return { error: 'This order is classified as test/QA. Advertising conversion blocked.' }
+  }
+
+  if (order.status === 'cancelled') {
+    return { error: 'Cancelled orders cannot send advertising conversion events.' }
   }
 
   if (kind === 'purchase' && !order.confirmed_at) {
