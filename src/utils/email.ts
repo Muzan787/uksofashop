@@ -899,9 +899,14 @@ export async function sendCheckoutReminder(email: string, basket: unknown) {
         </tr>` : ''}
       </table>` : ''}
 
+      <div style="margin: 20px 0; padding: 12px 14px; border-radius: 8px; background: #fef9f0; border: 1px solid #f5dfbd; color: #57534e; font-size: 13px; line-height: 1.5;">
+        <strong style="color:#1c1917;">Free UK Mainland ground-floor delivery</strong>
+        <span style="color:#d6b47b;"> &nbsp;·&nbsp; </span>
+        <strong style="color:#1c1917;">Pay on delivery</strong>
+      </div>
+
       <p style="margin: 20px 0 24px 0; color: #57534e; line-height: 1.6;">
-        ${lines.length === 1 ? "It's still available." : lines.length > 1 ? "They're all still available." : ''}
-        Would you like to go ahead, or is there anything you'd like to check first? Happy to help.
+        If you&apos;d like to go ahead, we can confirm availability and delivery, or answer anything you&apos;d like to check first.
       </p>
 
       <a href="${whatsAppHref(waMessage)}" style="background-color: #25D366; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px; display: inline-block; margin: 0 8px 8px 0;">
