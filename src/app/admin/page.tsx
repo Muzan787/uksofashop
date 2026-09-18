@@ -1,7 +1,8 @@
 import type { Metadata } from 'next'
 // src/app/admin/page.tsx
 import { createClient } from '@/utils/supabase/server'
-import { DollarSign, ShoppingBag, PackagePlus, ArrowRight } from 'lucide-react'
+import { createUntypedAdminClient } from '@/utils/supabase/admin'
+import { ShoppingBag, PackagePlus, ArrowRight, MessageCircle } from 'lucide-react'
 import Link from 'next/link'
 
 
@@ -44,6 +45,15 @@ export default async function AdminDashboardPage() {
     .select('*', { count: 'exact', head: true })
     .eq('is_active', true)
 
+  // Shoppers who asked for a reminder and have not converted or expired. The
+  // table is service-role only (see /admin/leads), so this one count uses the
+  // admin client rather than the session client the rest of the page does.
+  const { count: leadCount } = await createUntypedAdminClient()
+    .from('checkout_recovery_leads')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'active')
+  const leadsWaiting = leadCount ?? 0
+
   return (
     <div className="space-y-6 lg:space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
       
@@ -70,7 +80,13 @@ export default async function AdminDashboardPage() {
           <p className="text-2xl lg:text-3xl font-bold text-orange-500">{pendingOrders}</p>
         </div>
 
-        <div className="bg-white p-5 lg:p-6 rounded-md lg:rounded-lg border border-zinc-200 shadow-sm">
+        {/* A link, not just a number: the point of a lead is getting back to them. */}
+        <Link href="/admin/leads" className="bg-white p-5 lg:p-6 rounded-md lg:rounded-lg border border-zinc-200 shadow-sm hover:border-zinc-300 transition">
+          <h3 className="text-zinc-500 text-xs lg:text-sm font-semibold tracking-wider uppercase mb-2">Leads Waiting</h3>
+          <p className={`text-2xl lg:text-3xl font-bold ${leadsWaiting > 0 ? 'text-whatsapp-dark' : 'text-zinc-900'}`}>{leadsWaiting}</p>
+        </Link>
+
+        <div className="col-span-2 lg:col-span-1 bg-white p-5 lg:p-6 rounded-md lg:rounded-lg border border-zinc-200 shadow-sm">
           <h3 className="text-zinc-500 text-xs lg:text-sm font-semibold tracking-wider uppercase mb-2">Active Products</h3>
           <p className="text-2xl lg:text-3xl font-bold text-zinc-900">{productCount || 0}</p>
         </div>
@@ -91,6 +107,20 @@ export default async function AdminDashboardPage() {
             <div className="flex items-center gap-2">
               <ShoppingBag className="w-5 h-5 text-zinc-400" />
               <span>Process Orders</span>
+            </div>
+            <ArrowRight className="w-4 h-4 text-zinc-400 sm:hidden" />
+          </Link>
+
+          <Link href="/admin/leads"
+            className="flex items-center justify-between sm:justify-center gap-2 bg-white text-zinc-900 border border-zinc-200 px-5 py-4 rounded-sm font-medium hover:bg-zinc-50 active:scale-[0.98] transition-all">
+            <div className="flex items-center gap-2">
+              <MessageCircle className="w-5 h-5 text-whatsapp-dark" />
+              <span>Get Back to Leads</span>
+              {leadsWaiting > 0 && (
+                <span className="grid h-6 min-w-6 place-items-center rounded-pill bg-whatsapp-dark px-1.5 text-xs font-bold text-white">
+                  {leadsWaiting}
+                </span>
+              )}
             </div>
             <ArrowRight className="w-4 h-4 text-zinc-400 sm:hidden" />
           </Link>
