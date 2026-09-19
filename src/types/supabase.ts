@@ -1136,6 +1136,59 @@ export type Database = {
         }
         Relationships: []
       }
+      videos: {
+        Row: {
+          caption: string | null
+          created_at: string
+          duration: number | null
+          height: number | null
+          id: string
+          is_active: boolean
+          kind: string
+          product_id: string | null
+          public_id: string
+          sort_order: number
+          url: string
+          width: number | null
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string
+          duration?: number | null
+          height?: number | null
+          id?: string
+          is_active?: boolean
+          kind: string
+          product_id?: string | null
+          public_id: string
+          sort_order?: number
+          url: string
+          width?: number | null
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string
+          duration?: number | null
+          height?: number | null
+          id?: string
+          is_active?: boolean
+          kind?: string
+          product_id?: string | null
+          public_id?: string
+          sort_order?: number
+          url?: string
+          width?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "videos_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       wishlist: {
         Row: {
           created_at: string | null

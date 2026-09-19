@@ -56,8 +56,9 @@ export interface SizeVariant {
   subgroup_label?: string | null
 }
 
-/** One image in the main slider. */
+/** One slide in the main slider: a photograph, or a clip behind its poster. */
 export interface GalleryImage {
+  /** The photograph - or, for a clip, its first frame. */
   src: string
   /**
    * What the photograph shows, where that differs from the selected variant -
@@ -66,6 +67,22 @@ export interface GalleryImage {
    * has to name the colour in THIS picture, not the one in the first.
    */
   label?: string
+  /**
+   * The Cloudinary video URL, where this slide is a studio clip. The slide
+   * shows `src` with a play button until it is tapped; nothing of the clip
+   * is downloaded before then.
+   */
+  video?: string
+}
+
+/** One clip from the videos table, as the product page receives it. */
+export interface ProductVideo {
+  id: string
+  kind: 'studio' | 'customer' | 'warehouse'
+  url: string
+  caption: string | null
+  width: number | null
+  height: number | null
 }
 
 /** One colour choice under the gallery. */

@@ -82,6 +82,7 @@ const nextConfig: NextConfig = {
    *                                                             + remarketing
    *   connect.facebook.net / facebook.com                     - Meta Pixel
    *   res.cloudinary.com                                      - product images
+   *                                                             + video clips
    *   images.pexels.com                                       - one About photo
    *   *.supabase.co                                           - database + auth
    *   fonts.googleapis.com / fonts.gstatic.com                - webfonts
@@ -127,6 +128,10 @@ const nextConfig: NextConfig = {
       // membership, which is a targeting cost and NOT a measurement one. No
       // conversion depends on this line.
       "img-src 'self' data: blob: https://res.cloudinary.com https://images.pexels.com https://www.googletagmanager.com https://www.google-analytics.com https://www.googleadservices.com https://*.g.doubleclick.net https://pagead2.googlesyndication.com https://www.google.com https://www.google.co.uk https://www.facebook.com",
+      // <video> is governed by media-src, which otherwise falls back to
+      // default-src 'self' and refuses every clip. The videos are on the
+      // same Cloudinary account as the photographs.
+      "media-src 'self' https://res.cloudinary.com",
       // IMAGE HOSTS MUST APPEAR HERE AS WELL AS IN img-src.
       //
       // An <img src> is governed by img-src - but this site registers a

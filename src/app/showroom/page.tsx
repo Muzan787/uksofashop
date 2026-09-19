@@ -10,6 +10,8 @@ import { blurDataURL } from '@/utils/cloudinary'
 import { PHONE_DISPLAY, PHONE_HREF, SUPPORT_EMAIL } from '@/constants/contact'
 import WhatsAppLink from '@/components/UI/WhatsAppLink'
 import PhoneLink from '@/components/UI/PhoneLink'
+import VideoStrip from '@/components/UI/VideoStrip'
+import { getWarehouseVideos } from '@/utils/videos'
 
 /**
  * Said once, used twice: as the meta description, and as the description on
@@ -73,7 +75,9 @@ const WHAT_TO_EXPECT = [
   },
 ]
 
-export default function ShowroomPage() {
+export default async function ShowroomPage() {
+  const warehouseVideos = await getWarehouseVideos()
+
   return (
     <div className="min-h-screen bg-calico-50">
       <EditorialSchema
@@ -339,6 +343,17 @@ export default function ShowroomPage() {
             </div>
           ))}
         </div>
+
+        {/* What the unit looks like on a working day, so nobody arrives
+            expecting a showroom with a carpet. */}
+        <VideoStrip
+          videos={warehouseVideos}
+          eyebrow="Behind the scenes"
+          heading="Inside the unit."
+          emphasise="unit."
+          fallbackTitle="Inside the UK Sofa Shop unit in Blackburn"
+          className="not-prose my-10"
+        />
 
         <PullQuote>
           Bring your measurements. Half the conversations we have in the showroom end up being

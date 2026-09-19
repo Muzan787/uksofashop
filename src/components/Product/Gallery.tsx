@@ -4,10 +4,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ChevronLeft, ChevronRight, X, ZoomIn } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Play, X, ZoomIn } from 'lucide-react';
 import { productTransitionName } from '@/components/Motion/productTransition';
 import { usePointerFine } from '@/components/Motion/usePointerFine';
-import { blurDataURL, sized } from '@/utils/cloudinary';
+import { blurDataURL, sized, videoSource } from '@/utils/cloudinary';
+import VideoPlayer from '@/components/UI/VideoPlayer';
 import ColourSwatches from './ColourSwatches';
 import { useDialog } from '@/components/UI/useDialog';
 import type { GalleryImage, Swatch } from './types';
@@ -118,7 +119,8 @@ export default function Gallery({
       const shown = label
         ? ` in ${label}`
         : `${selectedColor ? ` in ${selectedColor}` : ''}${material ? ` ${material}` : ''}`;
-      return `${title}${shown}${count > 1 ? ` — photo ${i + 1} of ${count}` : ''}`;
+      const what = images[i]?.video ? 'video' : 'photo';
+      return `${title}${shown}${count > 1 ? ` — ${what} ${i + 1} of ${count}` : ''}`;
     },
     [title, images, selectedColor, material, count],
   );
@@ -232,6 +234,7 @@ export default function Gallery({
   // on src, so the preview and the real selection use the same 500ms.
   const previewed = preview ? swatches.find(sw => sw.color === preview) : undefined;
   const stageSrc = previewed?.image || current?.src || '';
+  const stageVideo = previewed ? undefined : current?.video;
   const stageAlt = previewed
     ? `${title} in ${previewed.color}${material ? ` ${material}` : ''}`
     : describe(index);
@@ -280,13 +283,23 @@ export default function Gallery({
               // the same name and exactly one of the two is ever rendered.
               style={productTransitionName(productId, i === 0)}
             >
-              <Crossfade
-                src={img.src}
-                alt={describe(i)}
-                sizes={STAGE_SIZES}
-                priority={i === 0}
-                reduced={reduced}
-              />
+              {img.video ? (
+                <VideoPlayer
+                  src={img.video}
+                  title={describe(i)}
+                  aspect="square"
+                  sizes={STAGE_SIZES}
+                  rounded={false}
+                />
+              ) : (
+                <Crossfade
+                  src={img.src}
+                  alt={describe(i)}
+                  sizes={STAGE_SIZES}
+                  priority={i === 0}
+                  reduced={reduced}
+                />
+              )}
               {i === 0 && (
                 <span
                   aria-hidden="true"
@@ -341,7 +354,7 @@ export default function Gallery({
                   aria-label={
                     isVariant
                       ? `Show photo 1 of ${count}${selectedColor ? `, the ${selectedColor} variant` : ''}`
-                      : `Show photo ${i + 1} of ${count}`
+                      : `Show ${img.video ? 'video' : 'photo'} ${i + 1} of ${count}`
                   }
                   aria-current={active ? 'true' : undefined}
                   onClick={() => goTo(i)}
@@ -397,7 +410,7 @@ export default function Gallery({
                 aria-label={
                   i === 0
                     ? `Show photo 1 of ${count}${selectedColor ? `, the ${selectedColor} variant` : ''}`
-                    : `Show photo ${i + 1} of ${count}`
+                    : `Show ${img.video ? 'video' : 'photo'} ${i + 1} of ${count}`
                 }
                 onClick={() => setIndex(i)}
                 className={`relative aspect-square w-full shrink-0 overflow-hidden rounded-sm border-2 bg-ink-900 transition-colors duration-swift ease-out-expo ${
@@ -414,19 +427,43 @@ export default function Gallery({
                   blurDataURL={blurDataURL(img.src)}
                   className="object-cover"
                 />
+                {img.video && (
+                  <span
+                    aria-hidden="true"
+                    className="absolute inset-0 flex items-center justify-center bg-ink-900/30"
+                  >
+                    <Play className="h-5 w-5 fill-current text-calico-50" />
+                  </span>
+                )}
               </motion.button>
             ))}
           </div>
         )}
 
-        <Stage
-          productId={productId}
-          src={stageSrc}
-          alt={stageAlt}
-          magnify={fine}
-          reduced={reduced}
-          onOpen={() => setLightbox(true)}
-        />
+        {stageVideo ? (
+          // The clip takes the stage's slot and its square frame, but not its
+          // magnifier or its zoom cursor - there is nothing to magnify, and a
+          // click on it should play it. It also does not carry the
+          // view-transition name: the card's photograph flies into the FIRST
+          // slide, which is always a photograph.
+          <div className="min-w-0 flex-1">
+            <VideoPlayer
+              src={stageVideo}
+              title={stageAlt}
+              aspect="square"
+              sizes={STAGE_SIZES}
+            />
+          </div>
+        ) : (
+          <Stage
+            productId={productId}
+            src={stageSrc}
+            alt={stageAlt}
+            magnify={fine}
+            reduced={reduced}
+            onOpen={() => setLightbox(true)}
+          />
+        )}
       </div>
       </div>
 
@@ -605,6 +642,7 @@ function Lightbox({ images, index, describe, onIndex, onClose }: {
   }, [count, onIndex]);
 
   const src = images[index]?.src;
+  const video = images[index]?.video;
 
   return (
     <div
@@ -630,7 +668,17 @@ function Lightbox({ images, index, describe, onIndex, onClose }: {
         </button>
 
         <div className="relative h-[80vh] w-[92vw] max-w-[1000px]">
-          {src && (
+          {video ? (
+            <video
+              key={video}
+              src={videoSource(video)}
+              controls
+              autoPlay
+              playsInline
+              aria-label={describe(index)}
+              className="absolute inset-0 h-full w-full object-contain"
+            />
+          ) : src && (
             <Image
               src={src}
               alt={describe(index)}

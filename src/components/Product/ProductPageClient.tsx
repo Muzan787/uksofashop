@@ -43,7 +43,9 @@ import SecondaryActions from './SecondaryActions';
 import Similar from './Similar';
 import WhatsAppIcon from './WhatsAppIcon';
 import Modal from '@/components/UI/Modal';
-import type { Fabric, FabricCollection, GalleryImage, Product, Review, SimilarProduct, SizeVariant, Swatch, Variant } from './types';
+import type { Fabric, FabricCollection, GalleryImage, Product, ProductVideo, Review, SimilarProduct, SizeVariant, Swatch, Variant } from './types';
+import VideoStrip from '@/components/UI/VideoStrip';
+import { videoPoster } from '@/utils/cloudinary';
 import type { OfferTier } from '@/types/offers';
 
 interface Props {
@@ -51,6 +53,8 @@ interface Props {
   variants: Variant[];
   approvedReviews: Review[];
   similarProducts: SimilarProduct[];
+  /** Studio and customer clips for this product. Empty for most. */
+  videos?: ProductVideo[];
   categorySlug: string;
   /** The category's real name. See the note on the breadcrumb below. */
   categoryName: string;
@@ -83,7 +87,7 @@ function titleCase(value: string): string {
 }
 
 export default function ProductPageClient({
-  product, variants, approvedReviews, similarProducts,
+  product, variants, approvedReviews, similarProducts, videos = [],
   categorySlug, categoryName, deliveryEstimate,
   initialWishlistState, isLoggedIn,
   sizeVariants, subgroupTitle, currentSubgroup, initialVariantId,
@@ -217,8 +221,23 @@ export default function ProductPageClient({
     }
 
     for (const url of product.gallery_images ?? []) push(url);
+
+    // Studio clips last, behind their first frame. After the photographs
+    // because the photographs are what the card promised and what the view
+    // transition lands on; the clip is the extra.
+    for (const v of videos) {
+      if (v.kind === 'studio' && !seen.has(v.url)) {
+        out.push({ src: videoPoster(v.url), video: v.url });
+        seen.add(v.url);
+      }
+    }
     return out;
-  }, [photographsAreGallery, selVariant, variants, inMaterial, product.gallery_images]);
+  }, [photographsAreGallery, selVariant, variants, inMaterial, product.gallery_images, videos]);
+
+  const customerVideos = useMemo(
+    () => videos.filter(v => v.kind === 'customer'),
+    [videos],
+  );
 
   // ── Specs ────────────────────────────────────────────────────────────────
   const specs = useMemo<Record<string, string>>(() => {
@@ -511,6 +530,17 @@ export default function ProductPageClient({
         </div>
 
         <div className="relative mx-auto max-w-shell px-4 pb-12 sm:px-6 lg:pb-16">
+          {/* Clips customers sent us of this sofa in their homes. Above the
+              written reviews because a room with the sofa in it answers
+              "what does it actually look like" faster than a paragraph. */}
+          <VideoStrip
+            videos={customerVideos}
+            eyebrow="In customers' homes"
+            heading="Delivered and in place."
+            emphasise="place."
+            fallbackTitle={`${product.title} in a customer's home`}
+            className="mb-12 lg:mb-16"
+          />
           <Reviews productId={product.id} reviews={approvedReviews} isLoggedIn={isLoggedIn} />
         </div>
 

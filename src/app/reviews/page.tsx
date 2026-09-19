@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Star, BadgeCheck } from 'lucide-react'
 import ReviewFormModal from './ReviewFormModal'
 import EditorialSchema from '@/components/Editorial/EditorialSchema'
+import VideoStrip from '@/components/UI/VideoStrip'
 
 
 const DESCRIPTION =
@@ -29,6 +30,24 @@ export default async function ReviewsPage() {
     `)
     .eq('is_approved', true)
     .order('created_at', { ascending: false })
+
+  // Clips customers sent us of their sofas in place. The product's name
+  // stands in for a caption where none was written.
+  const { data: clips } = await supabase
+    .from('videos')
+    .select('id, url, caption, width, height, product:products(title)')
+    .eq('kind', 'customer')
+    .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: false })
+    .limit(12)
+
+  const customerVideos = (clips ?? []).map(v => ({
+    id: v.id,
+    url: v.url,
+    caption: v.caption || (v.product as { title: string } | null)?.title || null,
+    width: v.width,
+    height: v.height,
+  }))
 
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -61,6 +80,15 @@ export default async function ReviewsPage() {
           <ReviewFormModal isLoggedIn={!!user} />
         </div>
  
+        <VideoStrip
+          videos={customerVideos}
+          eyebrow="In customers' homes"
+          heading="Delivered and in place."
+          emphasise="place."
+          fallbackTitle="A sofa in a customer's home"
+          className="mb-12 lg:mb-16"
+        />
+
         {/* Reviews Grid */}
         {reviews && reviews.length > 0 ? (
           <div className="columns-1 md:columns-2 lg:columns-3 gap-6 space-y-6">

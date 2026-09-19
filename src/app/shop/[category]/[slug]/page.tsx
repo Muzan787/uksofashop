@@ -11,6 +11,7 @@ import { deliveryWindow } from '@/utils/delivery';
 import ProductPageClient from '../../../../components/Product/ProductPageClient';
 import { getFabricLibrary } from '@/utils/fabrics';
 import { parseDimensions } from '@/components/Product/dimensions';
+import type { ProductVideo } from '@/components/Product/types';
 
 type Params = Promise<{ slug: string; category: string }>;
 // NEW: Define searchParams type to read the URL
@@ -151,6 +152,7 @@ export default async function ProductPage(props: { params: Params, searchParams:
     group,
     related,
     fabrics,
+    videos,
     offerTierRow,
   ] = await Promise.all([
     user
@@ -196,6 +198,18 @@ export default async function ProductPage(props: { params: Params, searchParams:
     // The fabric range, fetched only where it can be chosen. A stocked
     // recliner pays nothing for a feature it does not have.
     product.custom_made ? getFabricLibrary() : [],
+
+    // The product's clips: studio ones join the gallery, customer ones make
+    // the strip above the reviews. Public policy already limits this to
+    // active rows.
+    supabase
+      .from('videos')
+      .select('id, kind, url, caption, width, height')
+      .eq('product_id', product.id)
+      .in('kind', ['studio', 'customer'])
+      .order('sort_order', { ascending: true })
+      .order('created_at', { ascending: true })
+      .then(r => r.data ?? []),
 
     // Which offer tier this product is in, so the page can say "£30 off this
     // sofa" to a visitor holding a paid entitlement. Service role because the
@@ -394,6 +408,7 @@ export default async function ProductPage(props: { params: Params, searchParams:
       currentSubgroup={product.subgroup_label}
       initialVariantId={initialVariantId}
       fabrics={fabrics}
+      videos={videos as ProductVideo[]}
       offerTier={offerTier}
     />
     </>

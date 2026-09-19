@@ -51,3 +51,46 @@ export function darkened(url: string, brightness = -34, contrast = 12): string {
   if (!transformable(url)) return url;
   return url.replace('/upload/', `/upload/e_brightness:${brightness},e_contrast:${contrast}/`);
 }
+
+// ─── Video ───────────────────────────────────────────────────────────────────
+//
+// A clip uploaded from the admin panel arrives as a Cloudinary VIDEO resource,
+// and the same host makes both things the storefront needs from it: a still
+// frame to show before anyone presses play, and a phone-sized MP4 to play
+// when they do. Both are derived on Cloudinary, not here, so a 60MB clip
+// from a phone is never what a visitor downloads.
+
+/** True for a Cloudinary video delivery URL. */
+export function isCloudinaryVideo(url: string | null | undefined): boolean {
+  return Boolean(url && url.includes('/video/upload/'));
+}
+
+/**
+ * The clip's first frame, as a JPEG, at a chosen width.
+ *
+ * Cloudinary returns a frame when a video URL asks for an image extension;
+ * `so_0` picks the first one. The result is an ordinary image URL that
+ * next/image and the blur placeholder handle exactly like a photograph.
+ */
+export function videoPoster(url: string, width = 1200): string {
+  if (!isCloudinaryVideo(url)) return url;
+  return url
+    .replace('/video/upload/', `/video/upload/so_0,w_${width},c_limit,q_auto/`)
+    .replace(/\.[a-z0-9]+$/i, '.jpg');
+}
+
+/**
+ * The transformation the player asks for: capped at 1080px on the long edge,
+ * quality chosen by Cloudinary, delivered as H.264 MP4 - which every phone
+ * plays natively. The admin upload requests this same derivative eagerly, so
+ * the first visitor is not the one who waits for it to be encoded.
+ */
+export const VIDEO_TRANSFORM = 'w_1080,c_limit,q_auto,f_mp4';
+
+/** The clip at a size a phone can stream. */
+export function videoSource(url: string): string {
+  if (!isCloudinaryVideo(url)) return url;
+  return url
+    .replace('/video/upload/', `/video/upload/${VIDEO_TRANSFORM}/`)
+    .replace(/\.[a-z0-9]+$/i, '.mp4');
+}

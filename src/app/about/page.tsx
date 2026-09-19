@@ -7,6 +7,8 @@ import EditorialHero from '@/components/Editorial/EditorialHero'
 import EditorialSchema from '@/components/Editorial/EditorialSchema'
 import EditorialLayout, { PullQuote } from '@/components/Editorial/EditorialLayout'
 import { blurDataURL } from '@/utils/cloudinary'
+import { getWarehouseVideos } from '@/utils/videos'
+import VideoStrip from '@/components/UI/VideoStrip'
 
 /**
  * Said once, used twice: as the meta description, and as the description on
@@ -48,7 +50,9 @@ const PROMISES = [
   },
 ]
 
-export default function AboutPage() {
+export default async function AboutPage() {
+  const warehouseVideos = await getWarehouseVideos()
+
   return (
     <div className="min-h-screen bg-calico-50">
       <EditorialSchema
@@ -141,6 +145,17 @@ export default function AboutPage() {
             The unit in Blackburn. Visits are by appointment — it is not staffed for walk-ins.
           </figcaption>
         </figure>
+
+        {/* The unit as it actually is, when there are clips of it. The
+            photograph above is one moment; these are the place working. */}
+        <VideoStrip
+          videos={warehouseVideos}
+          eyebrow="Behind the scenes"
+          heading="Inside the unit."
+          emphasise="unit."
+          fallbackTitle="Inside the UK Sofa Shop unit in Blackburn"
+          className="not-prose my-10"
+        />
 
         <h2>What we promise</h2>
 
