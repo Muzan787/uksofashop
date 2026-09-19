@@ -23,7 +23,7 @@ export interface StatusConfig {
 export const STATUS: Record<string, StatusConfig> = {
   pending_cod: {
     label: 'Order received',
-    note: 'We will message you on WhatsApp with a link to confirm your order; once it is confirmed we ring you to arrange delivery.',
+    note: 'Tap the confirm link in your email or on WhatsApp; once it is confirmed we ring you to arrange delivery.',
     icon: Clock,
     pill: 'bg-ember-500/12 text-ember-700',
     stage: -1,

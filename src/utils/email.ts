@@ -256,13 +256,13 @@ export async function sendOrderConfirmation(
   /** The day they asked for at checkout, YYYY-MM-DD, or null for as soon as possible. */
   preferredDeliveryDate: string | null = null,
 ) {
-  // The email is a receipt, not a task. The confirmation itself happens on
-  // WhatsApp: the shop sends the customer the confirm link there (see
-  // sendAdminOrderNotification) so the yes is on record in the chat, and the
-  // phone call afterwards is to arrange delivery. This email says so and
-  // asks for nothing. /confirm-order is the page that link opens.
+  // A receipt that carries the confirm link. The shop also sends the same
+  // link on WhatsApp (see sendAdminOrderNotification) so the yes is on record
+  // in the chat; either tap confirms the order, and the phone call that
+  // follows is to arrange delivery.
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-  const firstName = (name || '').trim().split(/s+/)[0] || 'there';
+  const confirmLink = `${siteUrl}/confirm-order/${fullOrderId}`;
+  const firstName = (name || '').trim().split(/\s+/)[0] || 'there';
   const trackLink = `${siteUrl}/track-order?ref=${encodeURIComponent(shortCode)}`;
 
   const content = `
@@ -273,7 +273,7 @@ export async function sendOrderConfirmation(
       
       <h2 style="margin: 0 0 16px 0; font-size: 24px; color: #1c1917;">Thank you, ${esc(firstName)}!</h2>
       <p style="color: #57534e; line-height: 1.6; font-size: 15px; margin-bottom: 32px;">
-        We have your order. We will message you on WhatsApp with a link to confirm it, and once it is confirmed one of our team will ring you to arrange a delivery day. Nothing is charged now - you pay in cash or by bank transfer once the sofa is in the room.
+        We have your order. Please confirm it with the button below - we will send the same link on WhatsApp too - and once it is confirmed one of our team will ring you to arrange a delivery day. Nothing is charged now - you pay in cash or by bank transfer once the sofa is in the room.
       </p>
       
       <div style="background-color: #fafaf9; border: 1px solid #e7e5e4; padding: 24px; border-radius: 10px; margin-bottom: 32px;">
@@ -289,11 +289,11 @@ export async function sendOrderConfirmation(
         </div>
       </div>
 
-      <a href="${trackLink}" style="background-color: #0c0c0b; color: #ffffff; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">
-        Track your order
+      <a href="${confirmLink}" style="background-color: #0c0c0b; color: #ffffff; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">
+        Confirm my order
       </a>
       <p style="margin: 20px 0 0 0; color: #78716c; font-size: 12px; line-height: 1.6;">
-        Need to change anything? Reply to this email or message us on WhatsApp on ${esc(PHONE_DISPLAY)}.
+        <a href="${trackLink}" style="color: #78716c; text-decoration: underline;">Track your order</a> · Need to change anything? Reply to this email or message us on WhatsApp on ${esc(PHONE_DISPLAY)}.
       </p>
     </div>
   `;
@@ -301,7 +301,7 @@ export async function sendOrderConfirmation(
   await deliver({
     from: sender(),
     to: email,
-    subject: `We have your order (#${shortCode})`,
+    subject: `Please confirm your order (#${shortCode})`,
     html: generateEmailHTML(content),
   });
 }
@@ -333,7 +333,7 @@ export async function sendAdminOrderNotification(
   // delivery, not to confirm. (It was briefly a hello without the link.)
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
   const confirmLink = `${siteUrl}/confirm-order/${fullOrderId}`;
-  const waFirstName = (customerName || '').trim().split(/s+/)[0] || 'there';
+  const waFirstName = (customerName || '').trim().split(/\s+/)[0] || 'there';
   const waUrl = whatsAppLink(
     customerPhone,
     `Hi ${waFirstName}, thanks for your order (#${shortCode}) with UK Sofa Shop. Please confirm it by tapping this link: ${confirmLink}

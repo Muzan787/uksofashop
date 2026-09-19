@@ -25,7 +25,7 @@ interface Props {
  */
 export default function Similar({ products, categorySlug, categoryName }: Props) {
   const name = categoryName.trim().toLowerCase();
-  const lastWord = name.split(/s+/).pop() ?? name;
+  const lastWord = name.split(/\s+/).pop() ?? name;
   return (
     <ProductRow
       eyebrow="More like this"
