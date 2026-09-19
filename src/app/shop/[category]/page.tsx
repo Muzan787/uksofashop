@@ -253,10 +253,18 @@ export default async function CategoryPage(props: { params: Params; searchParams
       {/* Main content */}
       <div className="relative mx-auto max-w-shell px-4 pb-12 pt-6 sm:px-6 lg:pb-16 lg:pt-8">
 
-        {/* Sidebar is exactly 220px, the grid takes the remaining 1fr. */}
-        <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[220px_1fr] lg:gap-8">
+        {/* Two layouts from one grid.
 
-          <div className="w-full">
+            Phone: a 2-column grid where the Filters trigger and the sort
+            control share the first row - one 48px row instead of the two
+            stacked ones that, with the hero, used to push the first sofa
+            exactly onto the fold - and the results span the second.
+
+            Desktop: sidebar exactly 220px spanning both rows, sort control
+            and results in the 1fr column. */}
+        <div className="grid grid-cols-[1fr_auto] items-start gap-x-3 gap-y-4 lg:grid-cols-[220px_1fr] lg:gap-8">
+
+          <div className="w-full lg:row-span-2">
             <Suspense fallback={<FilterSidebarSkeleton />}>
               <CategoryFilters
                 categoryId={categoryData?.id ?? null}
@@ -269,30 +277,32 @@ export default async function CategoryPage(props: { params: Params; searchParams
             </Suspense>
           </div>
 
-          <div className="w-full min-w-0">
-            {/* Sort sits with the results rather than with the filters: it
-                does not change WHICH sofas are shown, and putting it inside
-                the filter sheet would hide it from everyone on a phone.
+          {/* Sort sits with the results rather than with the filters: it
+              does not change WHICH sofas are shown, and putting it inside
+              the filter sheet would hide it from everyone on a phone.
 
-                The caption used to print SORT_LABELS[sort] — the same words
-                the select next to it already displayed, twice on one row. It
-                carries the section mark instead, so the controls row is
-                anchored the way every other heading on the site is. */}
-            <div className="mb-4 flex items-end justify-between gap-4 lg:mb-5">
-              <span className="min-w-0 flex-1">
-                <span className="eyebrow m-0 flex items-center gap-2.5 text-ember-700">
-                  <span aria-hidden="true" className="block h-px w-5 bg-ember-500" />
-                  Sort
-                </span>
-                <span
-                  aria-hidden="true"
-                  className="mt-2.5 block h-px w-full"
-                  style={{ backgroundImage: 'var(--grad-rule)', opacity: 0.4 }}
-                />
+              The caption used to print SORT_LABELS[sort] — the same words
+              the select next to it already displayed, twice on one row. It
+              carries the section mark instead, so the controls row is
+              anchored the way every other heading on the site is - on
+              desktop; on a phone the mark is dropped and the select stands
+              beside the Filters button on its own. */}
+          <div className="flex items-end justify-between gap-4 lg:col-start-2 lg:mb-1">
+            <span className="hidden min-w-0 flex-1 lg:block">
+              <span className="eyebrow m-0 flex items-center gap-2.5 text-ember-700">
+                <span aria-hidden="true" className="block h-px w-5 bg-ember-500" />
+                Sort
               </span>
-              <SortSelect value={sort} />
-            </div>
+              <span
+                aria-hidden="true"
+                className="mt-2.5 block h-px w-full"
+                style={{ backgroundImage: 'var(--grad-rule)', opacity: 0.4 }}
+              />
+            </span>
+            <SortSelect value={sort} />
+          </div>
 
+          <div className="col-span-2 w-full min-w-0 lg:col-span-1 lg:col-start-2">
             <ActiveFilterChips
               basePath={basePath}
               chips={chips}

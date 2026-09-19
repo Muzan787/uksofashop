@@ -49,7 +49,7 @@ const getHomeData = unstable_cache(
       // Cheapest active product and how many there are, per category. One pass
       // over the active products rather than a query each — the tiles need a
       // price anchor and a count, and neither is worth six round trips.
-      supabase.from('products').select('base_price, product_categories!inner(category_id)').eq('is_active', true),
+      supabase.from('products').select('title, base_price, product_categories!inner(category_id)').eq('is_active', true),
 
       // Featured products: is_featured first, then newest — the same order the
       // shop's "Featured" sort uses, so ticking a product in the admin moves it
@@ -119,17 +119,24 @@ export default async function HomePage() {
     categories, categoryStats, featuredProducts, groupsData, sofaCount, reviewRows, buildTeaser,
   } = await getHomeData();
 
-  const stats = new Map<string, { fromPrice: number; count: number }>();
+  // "from £149" under Fabric Sofas was the Lily footstool. The tile says
+  // "sofas", so the price anchor is the cheapest thing that is one: footstools
+  // and armchairs still count towards the tile's total, they just cannot set
+  // its price.
+  const notASofa = /footstool|arm\s?chair/i;
+  const stats = new Map<string, { fromPrice: number | null; count: number }>();
   for (const row of categoryStats ?? []) {
     const price = Number(row.base_price);
     if (!Number.isFinite(price)) continue;
+    const anchors = !notASofa.test(row.title ?? '');
     for (const pc of row.product_categories ?? []) {
       const id = pc.category_id;
       if (!id) continue;
-      const seen = stats.get(id);
-      stats.set(id, seen
-        ? { fromPrice: Math.min(seen.fromPrice, price), count: seen.count + 1 }
-        : { fromPrice: price, count: 1 });
+      const seen = stats.get(id) ?? { fromPrice: null, count: 0 };
+      stats.set(id, {
+        fromPrice: anchors ? (seen.fromPrice === null ? price : Math.min(seen.fromPrice, price)) : seen.fromPrice,
+        count: seen.count + 1,
+      });
     }
   }
 

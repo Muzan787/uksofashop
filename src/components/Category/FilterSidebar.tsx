@@ -131,7 +131,7 @@ export default function FilterSidebar({
         onClick={() => setOpen(true)}
         aria-expanded={open}
         aria-haspopup="dialog"
-        className={`hover-btn mb-4 flex h-12 w-full items-center justify-center gap-2 rounded-pill border text-body-sm font-semibold transition-colors duration-swift ease-out-expo lg:hidden ${
+        className={`hover-btn flex h-12 w-full items-center justify-center gap-2 rounded-pill border text-body-sm font-semibold transition-colors duration-swift ease-out-expo lg:hidden ${
           activeCount
             ? 'border-ember-500 bg-ember-500/10 text-ember-700 shadow-e1'
             : 'border-calico-300 bg-calico-50 text-ink-700 shadow-e1'

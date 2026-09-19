@@ -9,9 +9,11 @@ const DELIVERY_TIMING = PROMISES.delivery.timingLong
 //
 // 1. THE TITLE WAS THE DATABASE NAME. `generateMetadata` read `categories.name`
 //    and used it as the <title>, so the corner sofa page went to market as
-//    "Corner Settees" and the recliner page as the singular "Recliner". Those
-//    are the labels that read well in the admin panel and in a breadcrumb; they
-//    are not what anybody types into Google. "Corner sofa" is the dominant UK
+//    "Corner Settees" and the recliner page as the singular "Recliner". (The
+//    DB names were changed on 2026-09-19 to "Corner Sofas", "Recliners" and
+//    "U-Shaped Sofas" - plural, and the words UK buyers actually use - but
+//    the point stands.) Those are the labels that read well in the admin
+//    panel and in a breadcrumb; they are not what anybody types into Google. "Corner sofa" is the dominant UK
 //    phrasing by a wide margin and "corner settee" is a regional variant of it,
 //    so the page was competing for the smaller half of its own market. The
 //    titles here are keyword-first, and the DB name still drives every heading,

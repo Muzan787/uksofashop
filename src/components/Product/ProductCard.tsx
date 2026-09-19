@@ -201,9 +201,17 @@ export default function ProductCard({
                 // Not a link: this previews the colour on the card. Choosing a
                 // variant happens on the product page.
                 onClick={(e) => e.preventDefault()}
-                className="h-4 w-4 rounded-pill border border-ink-900/15 transition-transform duration-swift ease-out-expo hover:scale-125"
-                style={{ background: s.hex ?? 'var(--color-calico-300)' }}
-              />
+                // The dot stays 16px; the button around it is 44px, pulled in
+                // with negative margins so the row looks as it did. A thumb
+                // aiming at a 16px target on a card missed it, or hit the card.
+                className="group/dot -mx-3 -my-3.5 grid h-11 w-11 place-items-center"
+              >
+                <span
+                  aria-hidden="true"
+                  className="block h-4 w-4 rounded-pill border border-ink-900/15 transition-transform duration-swift ease-out-expo group-hover/dot:scale-125"
+                  style={{ background: s.hex ?? 'var(--color-calico-300)' }}
+                />
+              </button>
             ))}
             {extra > 0 && (
               <span className="font-data text-caption tabular-nums text-ink-500">+{extra}</span>

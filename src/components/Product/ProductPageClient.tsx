@@ -517,7 +517,7 @@ export default function ProductPageClient({
         {/* Both rows run the full width on Calico 100. The change of ground is
             what separates them from the product detail above — no rule needed,
             and nothing to line up when one of the two is absent. */}
-        <Similar products={similarProducts} categorySlug={categorySlug} />
+        <Similar products={similarProducts} categorySlug={categorySlug} categoryName={crumbCategory} />
         <RecentlyViewed
           id={product.id}
           title={product.title}

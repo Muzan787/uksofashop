@@ -55,7 +55,12 @@ export default function CategoryHero({
   return (
     <section
       data-ground="dark"
-      className="grain relative isolate h-[38vh] min-h-[280px] overflow-hidden bg-ink-900 lg:h-[44vh] lg:min-h-[320px]"
+      // Sized to its content on a phone rather than to 38% of the screen: at
+      // 375x812 the fixed height put the first sofa exactly on the fold, and
+      // the 100px it spent on empty ink above the breadcrumb was the reason.
+      // The fixed height is kept from lg, where the photograph has room to be
+      // one.
+      className="grain relative isolate overflow-hidden bg-ink-900 lg:h-[44vh] lg:min-h-[320px]"
     >
       {image && (
         // Oversized by 12% on every edge: the drift is ±10% of the frame's own
@@ -87,7 +92,7 @@ export default function CategoryHero({
       </div>
 
       <div className="flex h-full flex-col">
-        <div className="mx-auto flex w-full max-w-shell flex-1 flex-col justify-center px-4 sm:px-6">
+        <div className="mx-auto flex w-full max-w-shell flex-1 flex-col justify-center px-4 pt-5 sm:px-6 lg:pt-0">
           {/* One line that scrolls, not a wrapping trail. A long category name
               at the end of it took two rows on a phone, above a header that is
               already competing for the first screen. */}

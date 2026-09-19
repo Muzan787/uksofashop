@@ -142,8 +142,11 @@ interface FieldError { [key: string]: string }
  */
 
 // ─── The one bespoke input on the page ────────────────────────────────────────
+// text-body (16px), not text-body-sm: iOS Safari zooms the whole page when a
+// focused field is set smaller than 16px, and the postcode was the one field
+// on the checkout still doing it.
 const FIELD_SHELL =
-  'w-full rounded-sm border-[1.5px] bg-calico-50 py-3 pl-8 pr-4 text-body-sm text-ink-900 ' +
+  'w-full rounded-sm border-[1.5px] bg-calico-50 py-3 pl-8 pr-4 text-body text-ink-900 ' +
   'outline-none transition-[border-color] duration-swift ease-out-expo'
 
 function fieldClass(error: boolean): string {

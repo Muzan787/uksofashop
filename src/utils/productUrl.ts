@@ -22,8 +22,8 @@
  */
 export const CATEGORY_PRIORITY = [
   'electric-sofa',   // Electric Recliners
-  'recliner',        // Recliner
-  'corner-sofa',     // Corner Settees
+  'recliner',        // Recliners
+  'corner-sofa',     // Corner Sofas
   '3-2-seater',      // 3+2 Seaters
   'fabric-sofa',     // Fabric Sofas
   'leather-sofa',    // Leather Sofas

@@ -256,18 +256,26 @@ export async function sendOrderConfirmation(
   /** The day they asked for at checkout, YYYY-MM-DD, or null for as soon as possible. */
   preferredDeliveryDate: string | null = null,
 ) {
+  // The email is a receipt, not a task. It used to be headed "Action
+  // Required" and ask the customer to click a link to confirm the order they
+  // had just placed - while the screen they were looking at said the shop
+  // would ring them. The ring IS the confirmation (the team phones every
+  // order before it is built), so the email now says what happens next and
+  // asks for nothing. /confirm-order still works for anyone holding an old
+  // link. (Changed 2026-09-19 at Muaz's request.)
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-  const confirmLink = `${siteUrl}/confirm-order/${fullOrderId}`;
+  const firstName = (name || '').trim().split(/s+/)[0] || 'there';
+  const trackLink = `${siteUrl}/track-order?ref=${encodeURIComponent(shortCode)}`;
 
   const content = `
     <div style="text-align: center;">
       <div style="display: inline-block; background-color: #0c0c0b; color: #d4871a; padding: 6px 14px; border-radius: 6px; font-weight: bold; font-size: 11px; margin-bottom: 24px; letter-spacing: 0.1em; text-transform: uppercase;">
-        Action Required
+        Order received
       </div>
       
-      <h2 style="margin: 0 0 16px 0; font-size: 24px; color: #1c1917;">Almost there, ${esc(name)}!</h2>
+      <h2 style="margin: 0 0 16px 0; font-size: 24px; color: #1c1917;">Thank you, ${esc(firstName)}!</h2>
       <p style="color: #57534e; line-height: 1.6; font-size: 15px; margin-bottom: 32px;">
-        We have received your Cash on Delivery request. To proceed with your order and secure your inventory, please verify your details below.
+        We have your order. One of our team will ring you shortly to run through the details and agree a delivery day. Nothing is charged now - you pay in cash or by bank transfer once the sofa is in the room.
       </p>
       
       <div style="background-color: #fafaf9; border: 1px solid #e7e5e4; padding: 24px; border-radius: 10px; margin-bottom: 32px;">
@@ -283,16 +291,19 @@ export async function sendOrderConfirmation(
         </div>
       </div>
 
-      <a href="${confirmLink}" style="background-color: #0c0c0b; color: #ffffff; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">
-        Review & Confirm Order
+      <a href="${trackLink}" style="background-color: #0c0c0b; color: #ffffff; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">
+        Track your order
       </a>
+      <p style="margin: 20px 0 0 0; color: #78716c; font-size: 12px; line-height: 1.6;">
+        Need to change anything? Reply to this email or message us on WhatsApp on ${esc(PHONE_DISPLAY)}.
+      </p>
     </div>
   `;
 
   await deliver({
     from: sender(),
     to: email,
-    subject: `Action Required: Confirm Your Order - (#${shortCode})`,
+    subject: `We have your order (#${shortCode}) - we will ring you to confirm`,
     html: generateEmailHTML(content),
   });
 }
@@ -315,12 +326,16 @@ export async function sendAdminOrderNotification(
   const adminEmail = process.env.ADMIN_EMAIL;
   if (!adminEmail) return;
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-  const confirmLink = `${siteUrl}/confirm-order/${fullOrderId}`;
-  
   // null when the number is not a UK mobile, so the button is hidden rather
-  // than rendered as a dead link.
-  const waUrl = whatsAppLink(customerPhone, `Please confirm your order: ${confirmLink}`);
+  // than rendered as a dead link. The message used to send the customer a
+  // link to confirm their own order; the phone call is the confirmation now,
+  // so this opens the chat with a hello that says the call is coming.
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+  const waFirstName = (customerName || '').trim().split(/s+/)[0] || 'there';
+  const waUrl = whatsAppLink(
+    customerPhone,
+    `Hi ${waFirstName}, thanks for your order (#${shortCode}) with UK Sofa Shop. I will give you a ring shortly to run through the details and agree a delivery day - if there is a better time to call, just let me know here.`,
+  );
 
   const content = `
     <div style="text-align: left;">
@@ -351,7 +366,7 @@ export async function sendAdminOrderNotification(
              </p>` : ''}
       </div>
 
-      ${waUrl ? `<a href="${waUrl}" style="background-color: #25D366; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px; display: inline-block; margin-top: 16px;">Ask Customer to Confirm Order</a>` : `<p style="margin-top: 16px; color: #a8a29e; font-size: 12px;">No WhatsApp button: that phone number is not a UK mobile.</p>`}
+      ${waUrl ? `<a href="${waUrl}" style="background-color: #25D366; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px; display: inline-block; margin-top: 16px;">Message Customer on WhatsApp</a>` : `<p style="margin-top: 16px; color: #a8a29e; font-size: 12px;">No WhatsApp button: that phone number is not a UK mobile.</p>`}
       
       <div style="margin-top: 32px; text-align: center;">
         <a href="${siteUrl}/admin/orders" style="color: #a8a29e; font-size: 12px; text-decoration: underline;">

@@ -7,12 +7,22 @@ import {
   getConsent, grantConsent, revokeConsent,
   CONSENT_GRANTED_EVENT, CONSENT_REOPEN_EVENT,
 } from '@/utils/consent'
+import { useDialog } from './useDialog'
 
 /**
- * Compact first-arrival consent question.
+ * The cookie question, asked as a modal.
  *
- * Essential-only and accept-all remain equally easy to reach; the banner stays
- * above the mobile navigation and never blocks the page with a modal overlay.
+ * It was a non-modal sheet that could be scrolled past, and most people did:
+ * of the visitors arriving from Meta ads, 55% never answered it at all - not
+ * refused, just never touched - and the Pixel can only see the ones who say
+ * yes. A modal asks the question once and gets an answer either way.
+ *
+ * What keeps it on the right side of PECR and the ICO's guidance is that
+ * refusing is exactly as easy as accepting: two buttons of the same size and
+ * weight, side by side, one tap each, and Escape counts as "Essential only".
+ * There is no cookie wall - the site is fully usable after either answer -
+ * and no pre-ticked anything. The backdrop does not dismiss it, because a tap
+ * outside is not an answer.
  */
 export default function CookieConsent() {
   const [open, setOpen] = useState(false)
@@ -43,20 +53,45 @@ export default function CookieConsent() {
 
   if (!open) return null
 
+  return <ConsentDialog entered={entered} onAnswer={answer} />
+}
+
+/**
+ * Rendered only while the question is open, because useDialog locks the page
+ * and traps focus for as long as it is mounted.
+ */
+function ConsentDialog({
+  entered, onAnswer,
+}: {
+  entered: boolean
+  onAnswer: (status: 'granted' | 'denied') => void
+}) {
+  // Escape is a refusal, not a dismissal: leaving the question unanswered
+  // would just ask it again on the next page, and a keyboard user must be
+  // able to get out with one key the way a thumb gets out with one tap.
+  const panel = useDialog<HTMLDivElement>(() => onAnswer('denied'))
+
   const button =
-    'hover-btn flex min-h-11 flex-1 items-center justify-center rounded-sm border px-4 ' +
-    'text-caption font-bold transition-colors duration-swift ease-out-expo sm:flex-none'
+    'hover-btn flex min-h-12 flex-1 items-center justify-center rounded-sm border px-4 ' +
+    'text-caption font-bold transition-colors duration-swift ease-out-expo sm:flex-none sm:min-w-[150px]'
 
   return (
-    <div
-      role="dialog"
-      aria-modal="false"
-      aria-labelledby="consent-heading"
-      className="fixed inset-x-0 z-consent px-3 pb-3 sm:px-5"
-      style={{ bottom: 'env(safe-area-inset-bottom)' }}
-    >
+    <div className="fixed inset-0 z-consent">
+      {/* The dim. Not a button: tapping it answers nothing, so it does nothing. */}
       <div
-        className={`mx-auto max-w-[760px] rounded-md border border-ink-700 bg-ink-900 px-4 py-3.5 shadow-e3 transition-[transform,opacity] duration-base ease-out-expo ${
+        aria-hidden="true"
+        className={`absolute inset-0 bg-ink-900/55 transition-opacity duration-base ease-out-expo ${
+          entered ? 'opacity-100' : 'opacity-0'
+        }`}
+      />
+
+      <div
+        ref={panel}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="consent-heading"
+        className={`absolute inset-x-0 bottom-0 mx-auto max-w-[760px] rounded-t-lg border border-ink-700 bg-ink-900 px-4 pb-[max(16px,env(safe-area-inset-bottom))] pt-4 shadow-e3 outline-none transition-[transform,opacity] duration-base ease-out-expo sm:bottom-5 sm:rounded-md sm:px-5 sm:py-4 ${
           entered ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
         }`}
       >
@@ -77,14 +112,14 @@ export default function CookieConsent() {
           <div className="flex shrink-0 gap-2 sm:w-auto">
             <button
               type="button"
-              onClick={() => answer('denied')}
+              onClick={() => onAnswer('denied')}
               className={`${button} border-calico-50/30 text-calico-50`}
             >
               Essential only
             </button>
             <button
               type="button"
-              onClick={() => answer('granted')}
+              onClick={() => onAnswer('granted')}
               className={`${button} border-ember-500 bg-ember-500 text-ink-900`}
             >
               Accept all

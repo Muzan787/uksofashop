@@ -11,7 +11,12 @@ import { canonicalProductPath } from '@/utils/productUrl'
 
 type Client = SupabaseClient<Database>
 
-export const ITEMS_PER_PAGE = 9
+/**
+ * Twelve, not nine: the grid is two columns on a phone and three on a desktop,
+ * and twelve fills both without leaving one card alone on the last row of a
+ * page. Nine left a lone card on every phone page.
+ */
+export const ITEMS_PER_PAGE = 12
 
 /** The query parameters that narrow the result set. `page` is not one of them. */
 /** Sort keys, as they appear in the URL. */
