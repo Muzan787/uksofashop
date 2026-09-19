@@ -48,6 +48,14 @@ export const SUPPORT_EMAIL = 'enquiries@uksofashop.co.uk'
  */
 export const ORDERS_EMAIL = 'orders@uksofashop.co.uk'
 
+/**
+ * The shop's original Gmail address, still read alongside the mailbox above.
+ * Not published anywhere on the site; it only receives copies of mail the
+ * site sends on the owner's behalf, so he sees them wherever he happens to
+ * be looking.
+ */
+export const OWNER_GMAIL = 'uksofashop.co.uk@gmail.com'
+
 export const ADDRESS = {
   street: 'Unit 02, Waverledge Street',
   locality: 'Blackburn',

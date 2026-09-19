@@ -3,7 +3,7 @@ import type { DeliveryBreakdown } from '@/constants/delivery';
 import { whatsAppLink } from '@/utils/phone';
 import { trustpilotInviteBcc, trustpilotInviteLink } from '@/constants/trustpilot';
 import { formatPreferredDeliveryDate } from '@/utils/delivery';
-import { PHONE_DISPLAY, SUPPORT_EMAIL, ORDERS_EMAIL, whatsAppHref } from '@/constants/contact';
+import { PHONE_DISPLAY, SUPPORT_EMAIL, ORDERS_EMAIL, OWNER_GMAIL, whatsAppHref } from '@/constants/contact';
 import { gbp, recoveryBasketLines, recoveryBasketTotal, recoveryReminderEmail } from '@/utils/recoveryLeadFormat';
 
 /**
@@ -872,9 +872,9 @@ export async function sendAdminSwatchNotification(
  * The plain-text part is the WhatsApp message with a sign-off, so a client
  * that strips HTML still shows something that reads as written by a person.
  *
- * The shop mailbox is BCC'd, because SMTP delivers and nothing files a copy
- * in Sent - so this is the only record of what went out, and it lands in the
- * inbox exactly as the customer saw it.
+ * The shop mailbox and the owner's Gmail are BCC'd, because SMTP delivers
+ * and nothing files a copy in Sent - so this is the only record of what went
+ * out, and it lands in the inbox exactly as the customer saw it.
  */
 export async function sendCheckoutReminder(email: string, basket: unknown) {
   const lines = recoveryBasketLines(basket)
@@ -950,7 +950,7 @@ export async function sendCheckoutReminder(email: string, basket: unknown) {
   await deliver({
     from: sender(),
     to: email,
-    bcc: SUPPORT_EMAIL,
+    bcc: [SUPPORT_EMAIL, OWNER_GMAIL],
     subject: recoveryReminderEmail(basket).subject,
     text: recoveryReminderEmail(basket).body,
     html: generateEmailHTML(content),
