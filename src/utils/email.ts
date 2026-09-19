@@ -871,6 +871,10 @@ export async function sendAdminSwatchNotification(
  *
  * The plain-text part is the WhatsApp message with a sign-off, so a client
  * that strips HTML still shows something that reads as written by a person.
+ *
+ * The shop mailbox is BCC'd, because SMTP delivers and nothing files a copy
+ * in Sent - so this is the only record of what went out, and it lands in the
+ * inbox exactly as the customer saw it.
  */
 export async function sendCheckoutReminder(email: string, basket: unknown) {
   const lines = recoveryBasketLines(basket)
@@ -946,6 +950,7 @@ export async function sendCheckoutReminder(email: string, basket: unknown) {
   await deliver({
     from: sender(),
     to: email,
+    bcc: SUPPORT_EMAIL,
     subject: recoveryReminderEmail(basket).subject,
     text: recoveryReminderEmail(basket).body,
     html: generateEmailHTML(content),
