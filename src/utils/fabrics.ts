@@ -12,6 +12,7 @@
 // offered.
 
 import { createClient } from '@/utils/supabase/server'
+import type { PublicClient } from '@/utils/supabase/public'
 import type { FabricCollection } from '@/components/Product/types'
 
 interface FabricRow {
@@ -32,8 +33,13 @@ interface CollectionRow {
   fabrics: FabricRow[] | null
 }
 
-export async function getFabricLibrary(): Promise<FabricCollection[]> {
-  const supabase = await createClient()
+/**
+ * `client` lets a caller inside a shared cache pass the cookie-less public
+ * client (utils/supabase/public.ts); the default is the request-bound one.
+ * The rows are public either way.
+ */
+export async function getFabricLibrary(client?: PublicClient): Promise<FabricCollection[]> {
+  const supabase = client ?? await createClient()
 
   const { data, error } = await supabase
     .from('fabric_collections')

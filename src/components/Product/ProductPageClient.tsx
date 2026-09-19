@@ -44,6 +44,7 @@ import Similar from './Similar';
 import WhatsAppIcon from './WhatsAppIcon';
 import Modal from '@/components/UI/Modal';
 import type { Fabric, FabricCollection, GalleryImage, Product, Review, SimilarProduct, SizeVariant, Swatch, Variant } from './types';
+import type { OfferTier } from '@/types/offers';
 
 interface Props {
   product: Product;
@@ -63,6 +64,8 @@ interface Props {
   initialVariantId?: string;
   /** The whole made-to-order fabric range. Empty on stocked products. */
   fabrics?: FabricCollection[];
+  /** This product's paid-offer tier, for the strip under the price. */
+  offerTier?: OfferTier | null;
 }
 
 /**
@@ -84,7 +87,7 @@ export default function ProductPageClient({
   categorySlug, categoryName, deliveryEstimate,
   initialWishlistState, isLoggedIn,
   sizeVariants, subgroupTitle, currentSubgroup, initialVariantId,
-  fabrics = [],
+  fabrics = [], offerTier = null,
 }: Props) {
   const { addToCart } = useCart();
   const router = useRouter();
@@ -428,9 +431,6 @@ export default function ProductPageClient({
               selectedColor={photographsAreGallery ? '' : selColor}
               onSelectColor={setSelColor}
               material={photographsAreGallery || selMat === 'Standard' ? '' : selMat}
-              fabrics={fabrics}
-              selectedFabric={fabric}
-              onOpenFabrics={madeToOrder ? () => setFabricOpen(true) : undefined}
             />
           </div>
 
@@ -467,6 +467,14 @@ export default function ProductPageClient({
                 materials={photographsAreGallery ? [] : materials}
                 selectedMaterial={selMat}
                 onSelectMaterial={handleMaterial}
+                // The fabric card stands here, after the name, the price and
+                // the size, rather than under the photographs: on a phone it
+                // used to be the first thing after the picture, ahead of what
+                // the sofa was called and what it cost.
+                fabrics={fabrics}
+                selectedFabric={fabric}
+                onOpenFabrics={madeToOrder ? () => setFabricOpen(true) : undefined}
+                offerTier={offerTier}
                 added={added}
                 onAdd={handleAdd}
                 inWishlist={inWishlist}

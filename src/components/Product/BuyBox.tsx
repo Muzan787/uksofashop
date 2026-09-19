@@ -7,10 +7,13 @@ import { PROMISES } from '@/constants/promises';
 import type { DeliveryWindow } from '@/utils/delivery';
 import AddToCart from './AddToCart';
 import DeliveryEstimate from './DeliveryEstimate';
+import FabricChoice from './FabricChoice';
 import PillGroup, { type Pill } from './PillGroup';
 import Stars from './Stars';
 import TrustBox from '@/components/UI/TrustBox';
-import type { Product, SizeVariant } from './types';
+import OfferStrip from '@/components/Offer/OfferStrip';
+import type { OfferTier } from '@/types/offers';
+import type { Fabric, FabricCollection, Product, SizeVariant } from './types';
 
 interface Props {
   product: Product;
@@ -32,6 +35,15 @@ interface Props {
   materials: string[];
   selectedMaterial: string;
   onSelectMaterial: (m: string) => void;
+
+  /** Made-to-order frames only: the fabric library and the picker's opener.
+   *  Empty elsewhere, and nothing is drawn - see FabricChoice. */
+  fabrics?: FabricCollection[];
+  selectedFabric?: Fabric | null;
+  onOpenFabrics?: () => void;
+
+  /** This product's paid-offer tier. The strip draws nothing without an entitlement. */
+  offerTier?: OfferTier | null;
 
   added: boolean;
   onAdd: () => void;
@@ -96,6 +108,8 @@ export default function BuyBox({
   subgroups, subgroupTitle, currentSubgroup, hrefForSubgroup,
   sizes, onCustomSize,
   materials, selectedMaterial, onSelectMaterial,
+  fabrics = [], selectedFabric = null, onOpenFabrics,
+  offerTier = null,
   added, onAdd, inWishlist, wishlistBusy, onWishlist,
 }: Props) {
   // A style with no product behind it is dropped rather than rendered as a
@@ -157,6 +171,11 @@ export default function BuyBox({
             {PROMISES.payment.label}
           </span>
         </div>
+
+        {/* The paid-traffic offer, as a line rather than a dialog. Only a
+            visitor holding an entitlement sees it, and only for a product
+            with a tier - see components/Offer/OfferStrip. */}
+        <OfferStrip tier={offerTier} className="mt-4" />
       </div>
 
       {/* ── When it arrives ─────────────────────────────────────────────── */}
@@ -202,6 +221,15 @@ export default function BuyBox({
           </p>
         )}
       </div>
+
+      {/* ── Fabric, on made-to-order frames ─────────────────────────────── */}
+      {onOpenFabrics && (
+        <FabricChoice
+          collections={fabrics}
+          selected={selectedFabric}
+          onOpen={onOpenFabrics}
+        />
+      )}
 
       {/* ── Material ────────────────────────────────────────────────────── */}
       {materialPills.length > 1 && (

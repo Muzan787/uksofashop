@@ -68,8 +68,11 @@ export default function Header({ categories }: { categories: NavCategory[] }) {
   const { itemCount } = useCart();
   const pathname = usePathname();
   const { active: offerActive } = useOffer();
+  // One line at 375px. The longer version ("Your online offer is active ·
+  // SOFAEXTRA · FREE UK Mainland Delivery") wrapped to three on a phone and
+  // took 72px off the top of every ad landing page.
   const announcement = offerActive
-    ? 'Your online offer is active · SOFAEXTRA · FREE UK Mainland Delivery'
+    ? 'Offer active · code SOFAEXTRA'
     : ANNOUNCEMENT;
 
   const [scrolled, setScrolled] = useState(false);

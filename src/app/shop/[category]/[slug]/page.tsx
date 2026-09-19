@@ -5,6 +5,8 @@ import { canonicalProductPath } from '@/utils/productUrl';
 import { socialImageUrl, leadVariantImage, ogImage } from '@/utils/socialImage';
 import { productSchema, breadcrumbSchema, jsonLd } from '@/utils/schema';
 import { createClient } from '@/utils/supabase/server';
+import { createAdminClient } from '@/utils/supabase/admin';
+import type { OfferTier } from '@/types/offers';
 import { deliveryWindow } from '@/utils/delivery';
 import ProductPageClient from '../../../../components/Product/ProductPageClient';
 import { getFabricLibrary } from '@/utils/fabrics';
@@ -149,6 +151,7 @@ export default async function ProductPage(props: { params: Params, searchParams:
     group,
     related,
     fabrics,
+    offerTierRow,
   ] = await Promise.all([
     user
       ? supabase
@@ -193,7 +196,24 @@ export default async function ProductPage(props: { params: Params, searchParams:
     // The fabric range, fetched only where it can be chosen. A stocked
     // recliner pays nothing for a feature it does not have.
     product.custom_made ? getFabricLibrary() : [],
+
+    // Which offer tier this product is in, so the page can say "£30 off this
+    // sofa" to a visitor holding a paid entitlement. Service role because the
+    // tiers table has no public policy - it is a label, not a price, and the
+    // database prices the order itself whatever the page says.
+    createAdminClient()
+      .from('offer_product_tiers')
+      .select('tier')
+      .eq('product_id', product.id)
+      .maybeSingle()
+      .then(r => r.data),
   ]);
+
+  const offerTier: OfferTier | null =
+    offerTierRow?.tier === 'ELECTRIC' || offerTierRow?.tier === 'ROMA' ||
+    offerTierRow?.tier === 'STANDARD' || offerTierRow?.tier === 'EXCLUDED'
+      ? offerTierRow.tier
+      : null;
 
   const initialWishlistState = Boolean(wishlistItem);
 
@@ -374,6 +394,7 @@ export default async function ProductPage(props: { params: Params, searchParams:
       currentSubgroup={product.subgroup_label}
       initialVariantId={initialVariantId}
       fabrics={fabrics}
+      offerTier={offerTier}
     />
     </>
   );

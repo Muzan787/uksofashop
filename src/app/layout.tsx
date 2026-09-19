@@ -111,12 +111,18 @@ export const metadata: Metadata = {
   // Next serves the manifest.ts route at /manifest.webmanifest; '/manifest.json'
   // was a 404, so no browser ever read it.
   manifest: '/manifest.webmanifest',
+  // The header's sofa mark on ember, at every size a browser asks for. The
+  // .ico is what most browsers request at /favicon.ico without being told -
+  // it was a 404 that served the full not-found page (115 KB) to every
+  // visitor. The Apple icon is the 180px square iOS wants for a home-screen
+  // bookmark; iOS rounds its corners itself.
   icons: {
     icon: [
+      { url: '/favicon.ico', sizes: '16x16 32x32 48x48' },
       { url: '/icon.svg', type: 'image/svg+xml' },
       { url: '/icon-192x192.png', type: 'image/png', sizes: '192x192' },
     ],
-    apple: [{ url: '/icon-192x192.png', type: 'image/png', sizes: '192x192' }],
+    apple: [{ url: '/apple-touch-icon.png', type: 'image/png', sizes: '180x180' }],
   },
   keywords: "sofa UK, corner sofa, fabric sofa, recliner sofa, cash on delivery sofas, custom fabric sofa",
   openGraph: {

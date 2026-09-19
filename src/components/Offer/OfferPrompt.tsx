@@ -1,35 +1,24 @@
 'use client'
+// src/components/Offer/OfferPrompt.tsx
+//
+// The offer sheet. It used to open by itself the moment a paid visitor's
+// entitlement was confirmed - a scroll-locking dialog over the product they
+// had just tapped an ad to see, with the cookie question behind it. Two in
+// three closed it unread (86 of 131 in its first fortnight). Since
+// 2026-09-19 it opens only when asked: the product page's OfferStrip says
+// the real figure in one line under the price and dispatches
+// OFFER_OPEN_EVENT when tapped, and the header's announcement bar carries
+// the code everywhere else. Nothing about the entitlement itself changed -
+// the discount still comes off at checkout whether or not this is ever seen.
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Check, Copy, Truck, Wallet } from 'lucide-react'
-import { usePathname } from 'next/navigation'
 import Modal from '@/components/UI/Modal'
-import { OFFER_PUBLIC_CODE } from '@/utils/offers/constants'
+import { OFFER_OPEN_EVENT, OFFER_PUBLIC_CODE } from '@/utils/offers/constants'
 import { trackOfferAction } from '@/utils/tracking'
-import { CONSENT_CHANGED_EVENT, getConsent } from '@/utils/consent'
 import { useOffer } from './OfferProvider'
 
-const EXCLUDED_PREFIXES = [
-  '/checkout',
-  '/account',
-  '/admin',
-  '/track-order',
-  '/confirm-order',
-  '/login',
-  '/signup',
-  '/review',
-  '/privacy',
-  '/cookies',
-  '/terms',
-  '/delivery-returns',
-  '/contact',
-]
-
-function promptAllowed(pathname: string): boolean {
-  return !EXCLUDED_PREFIXES.some(prefix => pathname === prefix || pathname.startsWith(`${prefix}/`))
-}
-
-function OfferContent({ onCopied }: { onCopied: () => void }) {
+function OfferContent({ amount, onCopied }: { amount: number | null; onCopied: () => void }) {
   const [copied, setCopied] = useState(false)
 
   const copy = async () => {
@@ -51,7 +40,7 @@ function OfferContent({ onCopied }: { onCopied: () => void }) {
         Your online sofa offer is active
       </p>
       <h3 className="m-0 mt-2 font-display text-h3 font-semibold leading-tight text-ink-900">
-        Extra savings on selected sofas
+        {amount ? `£${amount} off this sofa` : 'Extra savings on selected sofas'}
       </h3>
 
       <div className="mt-4 flex flex-col gap-2 rounded-md border border-calico-300 bg-calico-100/60 p-3.5">
@@ -80,59 +69,33 @@ function OfferContent({ onCopied }: { onCopied: () => void }) {
       </div>
 
       <p className="m-0 mt-3 text-caption leading-relaxed text-ink-500">
-        We&apos;ll apply the best available sofa saving automatically at checkout. The code stays shareable if you want to keep it handy.
+        It comes off automatically at checkout - nothing to type. The code is here in case you want to pass it on.
       </p>
     </div>
   )
 }
 
 export default function OfferPrompt() {
-  const pathname = usePathname() ?? '/'
   const { active, startedAt } = useOffer()
   const [open, setOpen] = useState(false)
-  const [consentResolved, setConsentResolved] = useState(false)
-  const shownThisMount = useRef(new Set<string>())
-  const shownEventThisMount = useRef(new Set<string>())
+  const [amount, setAmount] = useState<number | null>(null)
 
-  // Do not stack the paid-offer dialog on top of the cookie question. The offer
-  // is not conditional on accepting advertising cookies; it simply waits until
-  // the visitor has answered either way, then appears as the one active dialog.
+  // Opened on request only. The strip sends the product's figure along so
+  // the sheet can lead with it; anything else that asks gets the generic line.
   useEffect(() => {
-    const update = () => {
-      const resolved = getConsent() !== null
-      setConsentResolved(resolved)
-      if (!resolved) setOpen(false)
+    const onOpen = (e: Event) => {
+      const detail = (e as CustomEvent<{ amount?: number }>).detail
+      setAmount(typeof detail?.amount === 'number' && detail.amount > 0 ? detail.amount : null)
+      setOpen(true)
+      // The ledger's "shown" now means "opened by the visitor", which is the
+      // more useful number anyway.
+      if (startedAt) trackOfferAction('offer_prompt_shown', startedAt)
     }
-    update()
-    window.addEventListener(CONSENT_CHANGED_EVENT, update)
-    return () => window.removeEventListener(CONSENT_CHANGED_EVENT, update)
-  }, [])
+    window.addEventListener(OFFER_OPEN_EVENT, onOpen)
+    return () => window.removeEventListener(OFFER_OPEN_EVENT, onOpen)
+  }, [startedAt])
 
-  useEffect(() => {
-    if (!active || !startedAt || !consentResolved || !promptAllowed(pathname)) return
-
-    const version = startedAt
-    const key = `uksofashop_offer_prompt_seen:${version}`
-    if (shownThisMount.current.has(version)) return
-
-    try {
-      if (localStorage.getItem(key)) return
-    } catch {
-      // Keep the in-memory guard below even if storage is unavailable.
-    }
-
-    shownThisMount.current.add(version)
-    try { localStorage.setItem(key, '1') } catch {}
-    queueMicrotask(() => setOpen(true))
-  }, [active, startedAt, consentResolved, pathname])
-
-  useEffect(() => {
-    if (!open || !startedAt || shownEventThisMount.current.has(startedAt)) return
-    shownEventThisMount.current.add(startedAt)
-    trackOfferAction('offer_prompt_shown', startedAt)
-  }, [open, startedAt])
-
-  if (!open) return null
+  if (!open || !active) return null
 
   const title = 'Your online sofa offer is active'
   const close = () => {
@@ -148,7 +111,7 @@ export default function OfferPrompt() {
   // view; Modal keeps a 16px edge gap and a 420px maximum width instead.
   return (
     <Modal title={title} onClose={close} size="sm" hideTitle>
-      <OfferContent onCopied={copied} />
+      <OfferContent amount={amount} onCopied={copied} />
     </Modal>
   )
 }

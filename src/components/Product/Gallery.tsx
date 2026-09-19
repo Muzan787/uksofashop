@@ -9,9 +9,8 @@ import { productTransitionName } from '@/components/Motion/productTransition';
 import { usePointerFine } from '@/components/Motion/usePointerFine';
 import { blurDataURL, sized } from '@/utils/cloudinary';
 import ColourSwatches from './ColourSwatches';
-import FabricChoice from './FabricChoice';
 import { useDialog } from '@/components/UI/useDialog';
-import type { Fabric, FabricCollection, GalleryImage, Swatch } from './types';
+import type { GalleryImage, Swatch } from './types';
 import { useReducedMotionSafe } from '@/components/Motion/useReducedMotionSafe';
 
 
@@ -24,11 +23,6 @@ interface Props {
   onSelectColor: (color: string) => void;
   /** Appears in the alt text so each photo describes what it actually shows. */
   material: string;
-  /** Made-to-order products only. Empty elsewhere, and the block is not drawn. */
-  fabrics?: FabricCollection[];
-  selectedFabric?: Fabric | null;
-  /** Opens the fabric picker, which the page renders - see FabricDialog. */
-  onOpenFabrics?: () => void;
 }
 
 /**
@@ -102,7 +96,6 @@ const MAGNIFY_WIDTH = 1120;
  */
 export default function Gallery({
   productId, title, images, swatches, selectedColor, onSelectColor, material,
-  fabrics = [], selectedFabric = null, onOpenFabrics,
 }: Props) {
   const fine = usePointerFine();
   const reduced = Boolean(useReducedMotionSafe());
@@ -447,17 +440,6 @@ export default function Gallery({
         onSelect={onSelectColor}
         onPreview={setPreview}
       />
-
-      {/* The fabric the sofa gets BUILT in, which on a made-to-order frame is a
-          different question from which colourway we happen to have photographed
-          - see the note in FabricChoice. */}
-      {onOpenFabrics && (
-        <FabricChoice
-          collections={fabrics}
-          selected={selectedFabric}
-          onOpen={onOpenFabrics}
-        />
-      )}
 
       {lightbox && (
         <Lightbox

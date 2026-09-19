@@ -17,17 +17,18 @@ interface Props {
 /**
  * The fabric control, on made-to-order products only.
  *
- * It sits beside <ColourSwatches> rather than inside it, and the two are
- * labelled differently on purpose. The swatch row is "Colour" and means the
- * colourways we have photographed - picking one changes the photograph above.
- * This is "Fabric" and means what the sofa will actually be built in - picking
- * one changes the order, and cannot change the photograph, because there isn't
- * one of this frame in that fabric and inventing it would be a lie the customer
- * only discovers on delivery day.
+ * It lives in the buy box, between the size and the price's call to action,
+ * where the material pills stand on a stocked product - because on a
+ * made-to-order frame this IS the material choice. It used to sit under the
+ * photographs, ahead of the title and the price, which on a phone put "Choose
+ * from 70 fabrics" on screen before the customer knew what the sofa was
+ * called or what it cost (moved 2026-09-19).
  *
- * On the Verona range the distinction currently costs nothing, because each
- * frame has exactly one photographed colourway, so ColourSwatches renders
- * nothing at all and this is the only colour control on the page.
+ * "Fabric" means what the sofa will actually be built in - picking one changes
+ * the order, and cannot change the photograph, because there isn't one of this
+ * frame in that fabric and inventing it would be a lie the customer only
+ * discovers on delivery day. The photographs above are the colourways we
+ * happen to have shot.
  *
  * Closed by default. Sixty-nine swatches is a decision, not a glance, and it
  * belongs behind a deliberate tap - the same reasoning as "See Dimensions"
@@ -39,7 +40,7 @@ export default function FabricChoice({ collections, selected, onOpen }: Props) {
   const total = collections.reduce((n, c) => n + c.fabrics.length, 0);
 
   return (
-    <div className="mt-5">
+    <div>
       <p className="eyebrow m-0 mb-2.5 text-ink-500">
         Fabric
         {selected && (

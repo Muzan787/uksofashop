@@ -9,6 +9,7 @@
 // fetched twice.
 
 import { createClient } from '@/utils/supabase/server'
+import type { PublicClient } from '@/utils/supabase/public'
 import type { FabricCollection } from '@/components/Product/types'
 import type { BuildTeaser } from '@/components/Home/BuildYourOwn'
 
@@ -30,8 +31,9 @@ interface FrameRow {
   product_variants: { image_url: string | null; priority: number | null }[] | null
 }
 
-export async function getBuildTeaser(library: FabricCollection[]): Promise<BuildTeaser> {
-  const supabase = await createClient()
+/** `client`: see getFabricLibrary - the same escape hatch for a cached caller. */
+export async function getBuildTeaser(library: FabricCollection[], client?: PublicClient): Promise<BuildTeaser> {
+  const supabase = client ?? await createClient()
   const { data } = await supabase
     .from('products')
     .select('slug, title, base_price, size_label, product_variants(image_url, priority)')
