@@ -97,7 +97,7 @@ const PER_PAGE = 20
  * chronological list buries the two or three that need doing today under
  * everything already delivered.
  */
-const NEEDS_ATTENTION = ['pending_cod', 'confirmed']
+const NEEDS_ATTENTION = ['pending_cod', 'confirmed', 'processing']
 
 const FILTERS = [
   { key: 'attention', label: 'Needs attention' },
@@ -110,6 +110,49 @@ const FILTERS = [
   { key: 'cancelled', label: 'Cancelled' },
 ] as const
 
+const STATUS_RANK: Record<string, number> = {
+  pending_cod: 0,
+  confirmed: 1,
+  processing: 2,
+  shipped: 3,
+  delivered: 4,
+}
+
+const NEXT_STATUS: Record<string, { value: string; label: string }> = {
+  pending_cod: { value: 'confirmed', label: 'Confirm order' },
+  confirmed: { value: 'processing', label: 'Start processing' },
+  processing: { value: 'shipped', label: 'Mark shipped' },
+  shipped: { value: 'delivered', label: 'Mark delivered' },
+}
+
+type OperationalOrder = {
+  status?: string | null
+  confirmed_at?: string | null
+  processing_at?: string | null
+  shipped_at?: string | null
+  delivered_at?: string | null
+}
+
+function furthestRecordedStage(order: OperationalOrder): { status: string; label: string; at: string } | null {
+  const stages = [
+    { status: 'confirmed', label: 'Confirmed', at: order.confirmed_at },
+    { status: 'processing', label: 'Processing', at: order.processing_at },
+    { status: 'shipped', label: 'Shipped', at: order.shipped_at },
+    { status: 'delivered', label: 'Delivered', at: order.delivered_at },
+  ]
+  return stages.reduce<{ status: string; label: string; at: string } | null>(
+    (latest, stage) => stage.at ? { ...stage, at: stage.at } : latest,
+    null,
+  )
+}
+
+function recordedStageAheadOfStatus(order: OperationalOrder): { status: string; label: string; at: string } | null {
+  if (!order.status || order.status === 'cancelled') return null
+  const recorded = furthestRecordedStage(order)
+  if (!recorded) return null
+  return (STATUS_RANK[recorded.status] ?? -1) > (STATUS_RANK[order.status] ?? -1) ? recorded : null
+}
+
 type SearchParams = Promise<{ status?: string; page?: string }>
 
 export default async function AdminOrdersPage(props: { searchParams: SearchParams }) {
@@ -121,6 +164,40 @@ export default async function AdminOrdersPage(props: { searchParams: SearchParam
   // reaching range() as NaN.
   const page = /^\d+$/.test(sp.page ?? '') ? Math.max(1, parseInt(sp.page!, 10)) : 1
   const from = (page - 1) * PER_PAGE
+
+  // Lightweight operational overview for workload cards and filter counts.
+  // It intentionally excludes customer details and line items.
+  const { data: overviewRows } = await supabase
+    .from('orders')
+    .select('status, total_amount, preferred_delivery_date')
+    .limit(5000)
+
+  type OverviewRow = {
+    status: string | null
+    total_amount: number | null
+    preferred_delivery_date: string | null
+  }
+
+  const overview = (overviewRows ?? []) as OverviewRow[]
+  const statusCounts = overview.reduce<Record<string, number>>((counts, row) => {
+    const key = row.status ?? 'pending_cod'
+    counts[key] = (counts[key] ?? 0) + 1
+    return counts
+  }, {})
+  const attentionCount = NEEDS_ATTENTION.reduce((sum, key) => sum + (statusCounts[key] ?? 0), 0)
+  const openStatuses = new Set(['pending_cod', 'confirmed', 'processing', 'shipped'])
+  const openValue = overview
+    .filter(row => openStatuses.has(row.status ?? 'pending_cod'))
+    .reduce((sum, row) => sum + Number(row.total_amount ?? 0), 0)
+  const selectedDeliveryDates = overview.filter(
+    row => openStatuses.has(row.status ?? 'pending_cod') && row.preferred_delivery_date,
+  ).length
+
+  const countForFilter = (key: string): number => {
+    if (key === 'all') return overview.length
+    if (key === 'attention') return attentionCount
+    return statusCounts[key] ?? 0
+  }
 
   // This used to select every order ever placed, with all their line items and
   // nested product rows, on every load. Paged now, and counted server-side.
@@ -194,6 +271,7 @@ export default async function AdminOrdersPage(props: { searchParams: SearchParam
   }))
 
   const total = count ?? 0
+  const overallTotal = overview.length
   const lastPage = Math.max(1, Math.ceil(total / PER_PAGE))
   const href = (s: string, p = 1) => `/admin/orders?status=${s}${p > 1 ? `&page=${p}` : ''}`
 
@@ -202,11 +280,37 @@ export default async function AdminOrdersPage(props: { searchParams: SearchParam
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h1 className="text-2xl lg:text-3xl font-bold text-stone-900 tracking-tight">Order Management</h1>
         <span className="text-sm text-stone-500">
-          {total} {total === 1 ? 'order' : 'orders'}
+          {overallTotal} total · {total} in this view
         </span>
       </div>
 
       <NewWhatsAppOrder variants={pickerVariants} fabrics={pickerFabrics} />
+
+      {/* At-a-glance workload. These are operational counts, not ad reporting. */}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <Link href={href('attention')} className="rounded-md border border-amber-200 bg-amber-50 p-4 transition hover:border-amber-300">
+          <p className="m-0 text-[10px] font-bold uppercase tracking-[0.18em] text-amber-700">Needs attention</p>
+          <p className="m-0 mt-2 text-2xl font-bold text-stone-900">{attentionCount}</p>
+          <p className="m-0 mt-1 text-xs text-stone-600">Pending, confirmed or processing</p>
+        </Link>
+        <Link href={href('attention')} className="rounded-md border border-stone-200 bg-white p-4 transition hover:border-stone-300">
+          <p className="m-0 text-[10px] font-bold uppercase tracking-[0.18em] text-stone-500">Open order value</p>
+          <p className="m-0 mt-2 text-2xl font-bold text-stone-900">£{openValue.toFixed(2)}</p>
+          <p className="m-0 mt-1 text-xs text-stone-500">Excludes delivered and cancelled</p>
+        </Link>
+        <Link href={href('processing')} className="rounded-md border border-blue-200 bg-blue-50 p-4 transition hover:border-blue-300">
+          <p className="m-0 text-[10px] font-bold uppercase tracking-[0.18em] text-blue-700">Processing</p>
+          <p className="m-0 mt-2 text-2xl font-bold text-stone-900">{statusCounts.processing ?? 0}</p>
+          <p className="m-0 mt-1 text-xs text-stone-600">Preparing for dispatch</p>
+        </Link>
+        <Link href={href('shipped')} className="rounded-md border border-indigo-200 bg-indigo-50 p-4 transition hover:border-indigo-300">
+          <p className="m-0 text-[10px] font-bold uppercase tracking-[0.18em] text-indigo-700">In transit</p>
+          <p className="m-0 mt-2 text-2xl font-bold text-stone-900">{statusCounts.shipped ?? 0}</p>
+          <p className="m-0 mt-1 text-xs text-stone-600">
+            {selectedDeliveryDates} open {selectedDeliveryDates === 1 ? 'order has' : 'orders have'} a preferred date
+          </p>
+        </Link>
+      </div>
 
       {/* Status filter */}
       <div className="flex gap-2 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden">
@@ -220,7 +324,12 @@ export default async function AdminOrdersPage(props: { searchParams: SearchParam
                 : 'bg-white text-stone-600 border border-stone-200 hover:border-stone-300'
             }`}
           >
-            {f.label}
+            <span>{f.label}</span>
+            <span className={`ml-1.5 rounded-full px-1.5 py-0.5 text-[10px] ${
+              status === f.key ? 'bg-white/15 text-white' : 'bg-stone-100 text-stone-500'
+            }`}>
+              {countForFilter(f.key)}
+            </span>
           </Link>
         ))}
       </div>
@@ -295,6 +404,21 @@ export default async function AdminOrdersPage(props: { searchParams: SearchParam
                 )}
               </div>
             </div>
+
+            {recordedStageAheadOfStatus(order) && (
+              <div className="mb-4 flex items-start gap-2 rounded-sm border border-amber-300 bg-amber-50 px-3 py-2.5 text-xs leading-relaxed text-amber-900">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>
+                  <strong>Status history needs a check.</strong>{' '}
+                  {recordedStageAheadOfStatus(order)!.label} was recorded
+                  {dualTime(recordedStageAheadOfStatus(order)!.at) ? (
+                    <> on {dualTime(recordedStageAheadOfStatus(order)!.at)!.uk} UK</>
+                  ) : null},
+                  but the current status is {String(order.status).replace('_', ' ')}.
+                  Use the next-step button below to restore the operational state, or keep it only if the rollback was intentional.
+                </span>
+              </div>
+            )}
 
             {/* Customer Details */}
             <div className="bg-stone-50 rounded-sm p-4 space-y-3 mb-4">
@@ -545,40 +669,66 @@ export default async function AdminOrdersPage(props: { searchParams: SearchParam
               </div>
             </details>
 
-            {/* Mobile-Optimized Status Update Form */}
-            <div className="mt-auto pt-4 border-t border-stone-100">
-              <form action={async (formData) => {
-                  "use server"
-                  await updateOrderStatus(formData)
-                }} 
-                className="flex flex-col sm:flex-row gap-2"
-              >
-                <input type="hidden" name="orderId" value={order.id} />
-                <select 
-                  name="status" 
-                  defaultValue={order.status ?? 'pending_cod'}
-                  className="flex-1 text-sm border-2 border-stone-200 rounded-sm p-3 bg-white focus:ring-0 focus:border-orange-500 outline-none font-medium text-stone-700"
+            {/* The normal path is one deliberate next-step button. The full
+                dropdown remains available below for corrections and cancellations,
+                but is no longer the easiest way to accidentally move backwards. */}
+            <div className="mt-auto border-t border-stone-100 pt-4">
+              {NEXT_STATUS[order.status ?? 'pending_cod'] ? (
+                <form action={async (formData) => {
+                    "use server"
+                    await updateOrderStatus(formData)
+                  }}
                 >
-                  <option value="pending_cod">Pending (COD)</option>
-                  <option value="confirmed">Confirmed</option>
-                  <option value="processing">Processing</option>
-                  <option value="shipped">Shipped</option>
-                  <option value="delivered">Delivered</option>
-                  <option value="cancelled">Cancelled</option>
-                </select>
-                {/* Only read when status is set to cancelled - see updateOrderStatus.
-                    Left visible regardless of the selected status rather than
-                    shown/hidden with client JS, since this form has none. */}
-                <input
-                  type="text"
-                  name="cancellationReason"
-                  placeholder="Reason, if cancelling"
-                  className="flex-1 text-sm border-2 border-stone-200 rounded-sm p-3 bg-white focus:ring-0 focus:border-orange-500 outline-none"
-                />
-                <button type="submit" className="bg-stone-900 text-white p-3 rounded-sm text-sm font-bold hover:bg-stone-800 active:scale-[0.98] transition">
-                  Update
-                </button>
-              </form>
+                  <input type="hidden" name="orderId" value={order.id} />
+                  <input type="hidden" name="status" value={NEXT_STATUS[order.status ?? 'pending_cod'].value} />
+                  <button
+                    type="submit"
+                    className="flex w-full items-center justify-center gap-2 rounded-sm bg-stone-900 p-3 text-sm font-bold text-white transition hover:bg-stone-800 active:scale-[0.99]"
+                  >
+                    {NEXT_STATUS[order.status ?? 'pending_cod'].label}
+                    <span aria-hidden="true">→</span>
+                  </button>
+                </form>
+              ) : (
+                <p className="m-0 rounded-sm bg-stone-50 px-3 py-2.5 text-center text-xs font-semibold text-stone-500">
+                  {order.status === 'cancelled' ? 'Cancelled order — no next operational step.' : 'Order workflow complete.'}
+                </p>
+              )}
+
+              <details className="group/status mt-2 rounded-sm border border-stone-200 bg-white">
+                <summary className="cursor-pointer list-none px-3 py-2.5 text-center text-xs font-bold text-stone-600 transition hover:bg-stone-50 hover:text-stone-900">
+                  Change status manually or cancel
+                </summary>
+                <form action={async (formData) => {
+                    "use server"
+                    await updateOrderStatus(formData)
+                  }}
+                  className="flex flex-col gap-2 border-t border-stone-200 p-3 sm:flex-row"
+                >
+                  <input type="hidden" name="orderId" value={order.id} />
+                  <select
+                    name="status"
+                    defaultValue={order.status ?? 'pending_cod'}
+                    className="flex-1 rounded-sm border-2 border-stone-200 bg-white p-3 text-sm font-medium text-stone-700 outline-none focus:border-orange-500 focus:ring-0"
+                  >
+                    <option value="pending_cod">Pending (COD)</option>
+                    <option value="confirmed">Confirmed</option>
+                    <option value="processing">Processing</option>
+                    <option value="shipped">Shipped</option>
+                    <option value="delivered">Delivered</option>
+                    <option value="cancelled">Cancelled</option>
+                  </select>
+                  <input
+                    type="text"
+                    name="cancellationReason"
+                    placeholder="Reason, if cancelling"
+                    className="flex-1 rounded-sm border-2 border-stone-200 bg-white p-3 text-sm outline-none focus:border-orange-500 focus:ring-0"
+                  />
+                  <button type="submit" className="rounded-sm bg-stone-700 p-3 text-sm font-bold text-white transition hover:bg-stone-800 active:scale-[0.98]">
+                    Apply correction
+                  </button>
+                </form>
+              </details>
             </div>
             
           </div>
