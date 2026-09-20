@@ -5,6 +5,7 @@ import { Package, Inbox, MapPin, User, Truck, CalendarDays, Clock3, Radio, Alert
 import { updateOrderStatus } from '@/app/actions/orders'
 import DirectPrintButton from './DirectPrintButton'
 import CopyOrderButton from './CopyOrderButton'
+import DeleteOrderButton from './DeleteOrderButton'
 import MetaConversionButton from './MetaConversionButton'
 import NewWhatsAppOrder from './NewWhatsAppOrder'
 import Link from 'next/link'
@@ -728,6 +729,12 @@ export default async function AdminOrdersPage(props: { searchParams: SearchParam
                     Apply correction
                   </button>
                 </form>
+                {/* Below the correction form, inside the same fold, so it is
+                    two deliberate taps away and never next to the WhatsApp
+                    or print buttons. */}
+                <div className="border-t border-stone-200 p-3">
+                  <DeleteOrderButton orderId={order.id} reference={order.id.substring(0, 8).toUpperCase()} />
+                </div>
               </details>
             </div>
             

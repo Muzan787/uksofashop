@@ -72,6 +72,7 @@ export default function NewWhatsAppOrder({
   const [postcode, setPostcode] = useState('')
   const [notes, setNotes] = useState('')
   const [delivery, setDelivery] = useState('')
+  const [deliveryDate, setDeliveryDate] = useState('')
   const [whatsappReference, setWhatsappReference] = useState('')
   const [matchByTime, setMatchByTime] = useState(false)
   const [contactDate, setContactDate] = useState('')
@@ -158,6 +159,7 @@ export default function NewWhatsAppOrder({
       postcode,
       specialInstructions: notes,
       deliveryCharge: delivery.trim() === '' ? 0 : Number(delivery),
+      preferredDeliveryDate: deliveryDate || undefined,
       items,
       whatsappReference: whatsappReference.trim() || undefined,
       contactTime:
@@ -208,9 +210,12 @@ export default function NewWhatsAppOrder({
             WhatsApp order
           </h2>
           <p className="mt-1 text-xs leading-relaxed text-stone-500">
-            Saves as <strong>pending</strong>, like a website order. Mark it confirmed
-            once they have agreed. Advertising is a separate deliberate step: the order
-            card then gives you a button to send the Purchase event to Meta.
+            Behaves exactly like a website order: saves as <strong>pending</strong>, emails
+            the customer their receipt with the confirm link (if you enter an email), and
+            emails you the new-order alert with the WhatsApp button that sends them the
+            same link. Every status change emails from then on. Advertising stays a
+            separate deliberate step: the order card gives you a button to send the
+            Purchase event to Meta.
           </p>
         </div>
         <button
@@ -456,7 +461,7 @@ export default function NewWhatsAppOrder({
           )}
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-3">
           <div>
             <label className={label} htmlFor="wa-delivery">Delivery charge agreed</label>
             <input
@@ -466,6 +471,21 @@ export default function NewWhatsAppOrder({
               value={delivery}
               onChange={e => setDelivery(e.target.value)}
               placeholder="0.00"
+            />
+          </div>
+          <div>
+            {/* The day agreed in the chat, if one was. Any day from today: the
+                website's four-day lead is for customers choosing unaided, and
+                this is a day the shop has already said yes to. It shows on the
+                order card, in the emails and in the copy-to-WhatsApp text. */}
+            <label className={label} htmlFor="wa-delivery-date">Delivery day agreed</label>
+            <input
+              id="wa-delivery-date"
+              type="date"
+              className={field}
+              value={deliveryDate}
+              min={new Date().toISOString().slice(0, 10)}
+              onChange={e => setDeliveryDate(e.target.value)}
             />
           </div>
           <div>

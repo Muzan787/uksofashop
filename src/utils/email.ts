@@ -56,11 +56,15 @@ const totalsTable = (
     ? row(`Offer${promotionCode ? ` · ${esc(promotionCode)}` : ''}`, `−£${discountAmount.toFixed(2)}`)
     : '';
 
+  // A WhatsApp order carries one agreed delivery figure rather than the
+  // website's free-plus-extras; printing "FREE" above it would contradict it.
+  const agreed = (breakdown?.lines ?? []).some(l => l.key === 'agreed');
+
   return `
     <table role="presentation" style="width: 100%; border-collapse: collapse; margin: 0;">
       ${row('Your order', `£${itemsSubtotal.toFixed(2)}`)}
       ${offer}
-      ${row('Delivery (UK Mainland, ground floor)', 'FREE')}
+      ${agreed ? '' : row('Delivery (UK Mainland, ground floor)', 'FREE')}
       ${extras}
       <tr>
         <td style="padding: 12px 0 0 0; border-top: 1px solid #e7e5e4; color: #1c1917; font-size: 14px; font-weight: bold;">Total due on delivery</td>

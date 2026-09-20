@@ -22,15 +22,21 @@
 // anyone who is not an admin before it reads a thing. See the migration
 // 20260904120000_whatsapp_orders.sql for the reasoning in full.
 //
-// NO EMAIL IS SENT. The website flow emails a confirmation because the customer
-// has just typed their details into a form and left. Here the shop is already
-// mid-conversation with them on WhatsApp, which is a better channel than an
-// email they did not ask for - and the confirmation email carries a link that
-// CONFIRMS the order, which is not something to hand out unprompted.
+// THE SAME EMAILS AS A WEBSITE ORDER. Muaz asked (2026-09-20) for an order
+// entered here to behave exactly as one from the checkout: it lands as
+// pending_cod, the customer gets the receipt with the confirm link (when
+// there is an email to send it to), and the shop gets the new-order email
+// with the WhatsApp button that carries the same link - so the customer's
+// yes is on record in the chat either way. Every later status change then
+// emails through updateOrderStatus like any other order.
 
 import { z } from 'zod'
+import { after } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/utils/supabase/server'
+import { sendOrderConfirmation, sendAdminOrderNotification } from '@/utils/email'
+import { isValidAgreedDeliveryDate } from '@/utils/delivery'
+import type { DeliveryBreakdown } from '@/constants/delivery'
 import { isAdmin } from '@/utils/auth'
 import { isValidUkMobile, UK_MOBILE_ERROR } from '@/utils/phone'
 import { isValidWhatsAppReference } from '@/utils/attribution/whatsapp'
@@ -69,6 +75,15 @@ const schema = z.object({
   specialInstructions: z.string().trim().max(1000).optional(),
   /** One negotiated figure. There is no extras matrix on a phone call. */
   deliveryCharge: z.number().nonnegative().max(10_000),
+  /**
+   * The delivery day agreed in the chat, YYYY-MM-DD, or empty. Any day from
+   * today to a year ahead - the website's four-day lead is for customers
+   * choosing unaided, not for a day the shop has agreed.
+   */
+  preferredDeliveryDate: z.string().trim().optional().transform(v => (v ? v : undefined)).refine(
+    v => v === undefined || isValidAgreedDeliveryDate(v),
+    { error: 'The delivery day must be today or later, and within a year.' },
+  ),
   items: z.array(itemSchema).min(1, 'Add at least one sofa.'),
   /**
    * Optional. Most WhatsApp sales still won't carry one - direct WhatsApp,
@@ -284,11 +299,16 @@ export async function createWhatsAppOrder(input: ManualOrderInput): Promise<Manu
     // treats an unmatched reference as a no-op, so this only avoids sending
     // it a value that could never match anything.
     p_whatsapp_reference: attribution.reference,
+    p_preferred_delivery_date: v.preferredDeliveryDate ?? null,
   })
 
   if (error || !data) {
     console.error('place_manual_order failed:', error)
     const message = error?.message ?? ''
+
+    if (message.includes('DELIVERY_DATE_PAST') || message.includes('DELIVERY_DATE_TOO_FAR')) {
+      return { error: 'The delivery day must be today or later, and within a year.' }
+    }
 
     if (message.includes('NOT_AUTHORISED')) {
       return { error: 'You are not authorised to take orders.' }
@@ -305,9 +325,42 @@ export async function createWhatsAppOrder(input: ManualOrderInput): Promise<Manu
     return { error: 'Could not save the order. Please try again.' }
   }
 
-  const order = data as unknown as { id: string; total_amount: number }
+  const order = data as unknown as { id: string; total_amount: number; items_subtotal: number; delivery_total: number }
+  const shortCode = order.id.substring(0, 8).toUpperCase()
 
   revalidatePath('/admin/orders')
+
+  // The two emails a website order sends, after the response so a slow relay
+  // never holds up the form. The delivery figure is one agreed number, shown
+  // as its own line (see totalsTable in utils/email.ts). The customer's copy
+  // needs an address to go to; the shop's always goes, because its WhatsApp
+  // button is how the confirm link reaches a customer with no email.
+  const deliveryTotal = Number(order.delivery_total ?? 0)
+  const breakdown: DeliveryBreakdown = {
+    lines: deliveryTotal > 0 ? [{ key: 'agreed', label: 'Delivery (as agreed)', amount: deliveryTotal }] : [],
+    total: deliveryTotal,
+  }
+  const preferredDeliveryDate = v.preferredDeliveryDate ?? null
+  after(async () => {
+    try {
+      await Promise.all([
+        v.customerEmail
+          ? sendOrderConfirmation(
+              v.customerEmail, v.customerName, shortCode, order.id,
+              Number(order.total_amount), Number(order.items_subtotal), breakdown,
+              0, null, preferredDeliveryDate,
+            )
+          : Promise.resolve(),
+        sendAdminOrderNotification(
+          v.customerName, v.customerEmail || 'no email given', v.customerPhone, shortCode, order.id,
+          Number(order.total_amount), Number(order.items_subtotal), breakdown,
+          0, null, preferredDeliveryDate,
+        ),
+      ])
+    } catch (err) {
+      console.error(`Failed to send order emails for WhatsApp order ${shortCode}`, err)
+    }
+  })
 
   // Deliberately NOT reported to Meta here.
   //
@@ -320,7 +373,7 @@ export async function createWhatsAppOrder(input: ManualOrderInput): Promise<Manu
   return {
     success: true,
     // The short reference, as the rest of the site uses it.
-    orderId: order.id.substring(0, 8).toUpperCase(),
+    orderId: shortCode,
     total: Number(order.total_amount),
     attributionMatch: attribution.match,
     contactTimeSearched: attribution.searchedTime,

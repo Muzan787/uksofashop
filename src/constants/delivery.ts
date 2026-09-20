@@ -73,7 +73,8 @@ export function upstairsFee(floor: number, hasLift: boolean): number {
 }
 
 export interface DeliveryBreakdownLine {
-  key: 'upstairs' | 'assembly' | 'sofaRemoval'
+  /** 'agreed' is the one negotiated figure on a WhatsApp order, in place of the extras. */
+  key: 'upstairs' | 'assembly' | 'sofaRemoval' | 'agreed'
   label: string
   detail?: string
   amount: number

@@ -1277,6 +1277,8 @@ export type Database = {
           p_special_instructions: string
           // Optional. See 20260906160000_manual_order_whatsapp_reference.sql.
           p_whatsapp_reference?: string | null
+          // Optional. See 20260920100000_manual_order_delivery_date.sql.
+          p_preferred_delivery_date?: string | null
         }
         Returns: Json
       }

@@ -6,6 +6,7 @@ import { revalidatePath } from 'next/cache'
 import { reportOrderConversion } from '@/utils/orderConversions'
 import { sendOrderStatusUpdate, sendAdminOrderStatusNotification } from '@/utils/email'
 import { requireAdmin } from '@/utils/auth'
+import { createAdminClient } from '@/utils/supabase/admin'
 import type { TrackedOrder } from '@/types/orders'
 
 /**
@@ -80,43 +81,54 @@ export async function updateOrderStatus(formData: FormData) {
   }
 
   // --- TRIGGER EMAILS ---
-  if (order && order.customer_email) {
-    try {
-      const shortCode = orderId.substring(0, 8).toUpperCase()
-      const postcode = extractPostcode(order.shipping_address)
+  //
+  // Two independent sends. The customer's update needs an email address; a
+  // WhatsApp order often has none, and it used to take the shop's own
+  // WhatsApp prompt down with it - so an order with only a phone number got
+  // no nudge at any stage. The prompt goes whenever there is a number.
+  if (order) {
+    const shortCode = orderId.substring(0, 8).toUpperCase()
 
-      // 1. Send the automated generic update to the customer
-      const { trustpilotInvited } = await sendOrderStatusUpdate(
-        order.customer_email,
-        order.customer_name,
-        orderId,
-        newStatus,
-        postcode
-      )
+    // 1. The customer's update, when there is somewhere to send it.
+    if (order.customer_email) {
+      try {
+        const postcode = extractPostcode(order.shipping_address)
+        const { trustpilotInvited } = await sendOrderStatusUpdate(
+          order.customer_email,
+          order.customer_name,
+          orderId,
+          newStatus,
+          postcode
+        )
 
-      // The delivered email went to Trustpilot's invitation service as well,
-      // so this customer is being asked for a review. Stamp the order so the
-      // review-request cron (api/cron/review-requests) does not ask a second
-      // time three days later. One customer, one ask.
-      if (trustpilotInvited) {
-        await supabase
-          .from('orders')
-          .update({ review_request_sent_at: new Date().toISOString() })
-          .eq('id', orderId)
-          .is('review_request_sent_at', null)
+        // The delivered email went to Trustpilot's invitation service as well,
+        // so this customer is being asked for a review. Stamp the order so the
+        // review-request cron (api/cron/review-requests) does not ask a second
+        // time three days later. One customer, one ask.
+        if (trustpilotInvited) {
+          await supabase
+            .from('orders')
+            .update({ review_request_sent_at: new Date().toISOString() })
+            .eq('id', orderId)
+            .is('review_request_sent_at', null)
+        }
+      } catch (err) {
+        console.error('Failed to send the customer status email', err)
       }
+    }
 
-      // 2. Send the highly-personalized WhatsApp prompt to the Admin
-      if (order.customer_phone) {
+    // 2. The shop's WhatsApp prompt for this stage, whenever there is a number.
+    if (order.customer_phone) {
+      try {
         await sendAdminOrderStatusNotification(
           order.customer_name,
           order.customer_phone,
           shortCode,
           newStatus
         )
+      } catch (err) {
+        console.error('Failed to send the admin status notification', err)
       }
-    } catch (err) {
-      console.error('Failed to send status update emails', err)
     }
   }
 
@@ -195,6 +207,49 @@ export async function sendOrderConversion(formData: FormData) {
   }
 
   revalidatePath('/admin/orders')
+  return { success: true }
+}
+
+/**
+ * Delete an order outright - line items, its tracking rows, the lot.
+ *
+ * For test orders and mistakes, not for orders that went wrong: those are
+ * cancelled with a reason, so the record of what happened survives. There is
+ * no undo, which is why the button that calls this asks twice.
+ *
+ * Service role, because attribution_actions, conversion_events and
+ * google_offline_conversions have no admin write policy of their own and
+ * their foreign keys are NO ACTION - the order cannot go until they have.
+ * Leads and reviews that pointed at the order are set null by their own
+ * foreign keys; a WhatsApp enquiry that converted into it is unlinked here.
+ */
+export async function deleteOrder(orderId: string): Promise<{ success: true } | { error: string }> {
+  await requireAdmin()
+  if (!/^[0-9a-f-]{36}$/i.test(orderId)) return { error: 'That order id is not valid.' }
+
+  const db = createAdminClient()
+  const steps = [
+    db.from('attribution_actions').delete().eq('order_id', orderId),
+    db.from('conversion_events').delete().eq('order_id', orderId),
+    db.from('google_offline_conversions').delete().eq('order_id', orderId),
+    db.from('whatsapp_enquiries').update({ converted_order_id: null }).eq('converted_order_id', orderId),
+  ]
+  for (const step of steps) {
+    const { error } = await step
+    if (error) {
+      console.error('deleteOrder: could not clear a dependent row', error)
+      return { error: 'Could not delete the order: a linked record refused. Nothing was removed.' }
+    }
+  }
+
+  const { error } = await db.from('orders').delete().eq('id', orderId)
+  if (error) {
+    console.error('deleteOrder failed', error)
+    return { error: 'Could not delete the order.' }
+  }
+
+  revalidatePath('/admin/orders')
+  revalidatePath('/admin')
   return { success: true }
 }
 

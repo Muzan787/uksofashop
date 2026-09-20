@@ -138,6 +138,20 @@ export function isValidPreferredDeliveryDate(value: string, now: Date = new Date
   return value >= earliestPreferredDeliveryDate(now) && value <= latestPreferredDeliveryDate(now)
 }
 
+/**
+ * The looser rule for a day the SHOP agrees - on the phone or in a WhatsApp
+ * chat - and records in the admin panel: not in the past, within a year. The
+ * four-day lead is for a customer choosing unaided on the website;
+ * place_manual_order applies this rule, not that one.
+ */
+export function isValidAgreedDeliveryDate(value: string, now: Date = new Date()): boolean {
+  if (!ISO_DATE.test(value)) return false
+  const parsed = new Date(`${value}T00:00:00Z`)
+  if (Number.isNaN(parsed.getTime()) || isoDate(parsed) !== value) return false
+  const today = londonToday(now)
+  return value >= isoDate(today) && value <= isoDate(addDays(today, 365))
+}
+
 const FULL_DAY = new Intl.DateTimeFormat('en-GB', { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long' })
 const FULL_DAY_YEAR = new Intl.DateTimeFormat('en-GB', { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 
