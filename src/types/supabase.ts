@@ -1263,6 +1263,20 @@ export type Database = {
         Args: { p_token: string }
         Returns: Json
       }
+      update_order_details: {
+        Args: {
+          p_order_id: string
+          p_customer_name: string
+          p_customer_email: string | null
+          p_customer_phone: string
+          p_shipping_address: string
+          p_special_instructions: string
+          p_preferred_delivery_date: string | null
+          p_delivery_total: number
+          p_items: Json
+        }
+        Returns: Json
+      }
       place_manual_order: {
         Args: {
           // text, and the column is nullable: an order taken on WhatsApp

@@ -9,6 +9,10 @@ export interface AdminOrderVariantDisplay {
 }
 
 export interface AdminOrderItemDisplay {
+  /** The row id, so an edit can say which line it is correcting. */
+  id?: string
+  variant_id?: string | null
+  fabric_id?: string | null
   quantity: number
   price_at_time_of_purchase: number
   fabric_code?: string | null
@@ -45,5 +49,7 @@ export interface AdminOrderDisplay {
   sofa_removal_seats?: number | null
   /** YYYY-MM-DD the customer asked for at checkout, or null for as soon as possible. */
   preferred_delivery_date?: string | null
+  special_instructions?: string | null
+  delivery_total?: number | null
   order_items: AdminOrderItemDisplay[]
 }

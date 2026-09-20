@@ -6,6 +6,7 @@ import { updateOrderStatus } from '@/app/actions/orders'
 import DirectPrintButton from './DirectPrintButton'
 import CopyOrderButton from './CopyOrderButton'
 import DeleteOrderButton from './DeleteOrderButton'
+import EditOrderForm from './EditOrderForm'
 import MetaConversionButton from './MetaConversionButton'
 import NewWhatsAppOrder from './NewWhatsAppOrder'
 import Link from 'next/link'
@@ -207,7 +208,7 @@ export default async function AdminOrdersPage(props: { searchParams: SearchParam
     .select(`
       *,
       order_items (
-        id, quantity, price_at_time_of_purchase,
+        id, variant_id, fabric_id, quantity, price_at_time_of_purchase,
         fabric_code, fabric_name, fabric_collection, customisation,
         product_variants ( sku, color, products ( title ) )
       )
@@ -503,8 +504,9 @@ export default async function AdminOrdersPage(props: { searchParams: SearchParam
               })}
             </div>
 
-            {/* Quick Actions (WhatsApp & Print) */}
-            <div className="flex gap-2 mb-4">
+            {/* Quick Actions (WhatsApp, copy, print, edit). Wraps so the edit
+                form, when open, takes a full line under the buttons. */}
+            <div className="mb-4 flex flex-wrap gap-2">
               {/* Hidden when the stored number is not a UK mobile, rather than
                   rendering a wa.me link that goes nowhere. */}
               {whatsAppLink(order.customer_phone) && (
@@ -523,6 +525,8 @@ export default async function AdminOrdersPage(props: { searchParams: SearchParam
               <CopyOrderButton order={order} />
 
               <DirectPrintButton order={order} />
+
+              <EditOrderForm order={order} variants={pickerVariants} fabrics={pickerFabrics} />
 
             </div>
 

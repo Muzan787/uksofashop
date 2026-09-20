@@ -7,6 +7,8 @@ import { reportOrderConversion } from '@/utils/orderConversions'
 import { sendOrderStatusUpdate, sendAdminOrderStatusNotification } from '@/utils/email'
 import { requireAdmin } from '@/utils/auth'
 import { createAdminClient } from '@/utils/supabase/admin'
+import { z } from 'zod'
+import { isValidUkMobile, UK_MOBILE_ERROR } from '@/utils/phone'
 import type { TrackedOrder } from '@/types/orders'
 
 /**
@@ -208,6 +210,86 @@ export async function sendOrderConversion(formData: FormData) {
 
   revalidatePath('/admin/orders')
   return { success: true }
+}
+
+// ─── Editing an order ─────────────────────────────────────────────────────────
+
+const editLineSchema = z.object({
+  /** The existing line's id, so its /build customisation survives the edit. */
+  item_id: z.string().uuid().nullish(),
+  variant_id: z.string().uuid(),
+  quantity: z.number().int().min(1).max(99),
+  unit_price: z.number().nonnegative().max(1_000_000),
+  fabric_id: z.string().uuid().nullish(),
+})
+
+const editSchema = z.object({
+  orderId: z.string().uuid(),
+  customerName: z.string().trim().min(2, 'Full name must be at least 2 characters.'),
+  customerEmail: z.union([z.string().trim().email('That email address is not valid.'), z.literal('')]),
+  customerPhone: z.string().trim().refine(isValidUkMobile, UK_MOBILE_ERROR),
+  shippingAddress: z.string().trim().min(6, 'Please give a delivery address.'),
+  postcode: z.string().trim().min(5, 'Please give a valid UK postcode.').max(16),
+  specialInstructions: z.string().trim().max(1000).optional(),
+  /** YYYY-MM-DD or empty. Any date: an old order may legitimately carry a day that has passed. */
+  preferredDeliveryDate: z.union([z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Choose a valid date.'), z.literal('')]),
+  deliveryTotal: z.number().nonnegative().max(10_000),
+  items: z.array(editLineSchema).min(1, 'An order needs at least one line.'),
+})
+
+export type EditOrderInput = z.input<typeof editSchema>
+
+/**
+ * Change an existing order from the admin panel - customer, address, notes,
+ * the agreed delivery day and charge, the lines. Silent on purpose: no
+ * status change, no email, no conversion event; only the record changes.
+ * The database function recomputes the totals and swaps the lines in one
+ * transaction (see 20260920120000_update_order_details.sql).
+ */
+export async function updateOrderDetails(input: EditOrderInput): Promise<{ success: true; total: number } | { error: string }> {
+  await requireAdmin()
+
+  const parsed = editSchema.safeParse(input)
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? 'Please check the order details.' }
+  }
+  const v = parsed.data
+
+  const supabase = await createClient()
+  const { data, error } = await supabase.rpc('update_order_details', {
+    p_order_id: v.orderId,
+    p_customer_name: v.customerName,
+    p_customer_email: v.customerEmail || null,
+    p_customer_phone: v.customerPhone,
+    // Postcode on the end, as every other writer stores it - tracking and
+    // conversion matching both read it back from there.
+    p_shipping_address: `${v.shippingAddress.replace(/[,\s]+$/, '')}, ${v.postcode.toUpperCase()}`,
+    p_special_instructions: v.specialInstructions || '',
+    p_preferred_delivery_date: v.preferredDeliveryDate || null,
+    p_delivery_total: v.deliveryTotal,
+    p_items: v.items.map(i => ({
+      item_id: i.item_id ?? null,
+      variant_id: i.variant_id,
+      quantity: i.quantity,
+      unit_price: i.unit_price,
+      fabric_id: i.fabric_id ?? null,
+    })),
+  })
+
+  if (error || !data) {
+    console.error('update_order_details failed:', error)
+    const message = error?.message ?? ''
+    if (message.includes('NOT_AUTHORISED')) return { error: 'You are not authorised to edit orders.' }
+    if (message.includes('NOT_FOUND')) return { error: 'That order no longer exists.' }
+    if (message.includes('UNAVAILABLE_ITEMS')) return { error: 'One of those sofas could not be found in the catalogue.' }
+    if (message.includes('UNAVAILABLE_FABRIC')) return { error: 'One of those fabrics could not be found.' }
+    return { error: 'Could not save the changes. Please try again.' }
+  }
+
+  revalidatePath('/admin/orders')
+  revalidatePath('/admin')
+  const result = data as unknown as { total_amount: number }
+  return { success: true, total: Number(result.total_amount) }
 }
 
 /**

@@ -24,7 +24,7 @@ const money = (n: unknown) => `£${Number(n ?? 0).toFixed(2)}`
  * exist, hence the second attempt at a bare trailing postcode. Anything we
  * can't recognise stays in the address line rather than being dropped.
  */
-function splitAddress(raw: string): { address: string; postcode: string | null } {
+export function splitAddress(raw: string): { address: string; postcode: string | null } {
   const flat = (raw || '').replace(/\s*\n\s*/g, ', ').replace(/\s+/g, ' ').trim()
 
   const parts = flat.split(',')
