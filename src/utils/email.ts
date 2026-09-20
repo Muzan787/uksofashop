@@ -960,3 +960,131 @@ export async function sendCheckoutReminder(email: string, basket: unknown) {
     html: generateEmailHTML(content),
   })
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 14. The shop: Monday's funnel digest
+//
+// Sent by /api/cron/weekly-digest. Every figure is last week beside the week
+// before, with the change written out, so the owner can read whether a
+// change to the site worked without opening a dashboard. To the shop's
+// mailbox and the owner's Gmail, like the lead reminders.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface DigestWeek {
+  sessions: number
+  visitors: number
+  metaLandings: number
+  metaConsented: number
+  googleLandings: number
+  productViews: number
+  addToCart: number
+  checkoutStarted: number
+  websiteOrders: number
+  whatsappOrders: number
+  orderValue: number
+  whatsappTaps: number
+  callTaps: number
+  topLandingPages: { path: string; count: number }[]
+}
+
+export async function sendWeeklyDigest(
+  range: { from: Date; to: Date },
+  week: DigestWeek,
+  before: DigestWeek,
+) {
+  const to = process.env.ADMIN_EMAIL || SUPPORT_EMAIL
+
+  const day = (d: Date) => d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'Europe/London' })
+  // The range is [from, to); the last day shown is the day before `to`.
+  const lastDay = new Date(range.to.getTime() - 24 * 60 * 60 * 1000)
+  const title = `Week of ${day(range.from)} – ${day(lastDay)}`
+
+  const pct = (n: number, of: number) => (of > 0 ? `${Math.round((n / of) * 100)}%` : '–')
+  const money = (n: number) => `£${Math.round(n).toLocaleString('en-GB')}`
+
+  // "+12", "−3", or "–" when both weeks were zero. Colour says direction;
+  // the number says how much. No colour when nothing moved.
+  const delta = (now: number, prev: number) => {
+    const d = now - prev
+    if (d === 0) return '<span style="color:#a8a29e;">–</span>'
+    const colour = d > 0 ? '#15803d' : '#b91c1c'
+    return `<span style="color:${colour}; font-weight:600;">${d > 0 ? '+' : '−'}${Math.abs(d).toLocaleString('en-GB')}</span>`
+  }
+
+  const row = (label: string, now: string, prev: string, change: string, note = '') => `
+    <tr>
+      <td style="padding: 8px 0; border-bottom: 1px solid #f0ede8; color: #1c1917; font-size: 14px;">${label}${note ? ` <span style="color:#a8a29e; font-size:12px;">${note}</span>` : ''}</td>
+      <td style="padding: 8px 8px; border-bottom: 1px solid #f0ede8; color: #1c1917; font-size: 15px; font-weight: bold; text-align: right; white-space: nowrap;">${now}</td>
+      <td style="padding: 8px 8px; border-bottom: 1px solid #f0ede8; color: #78716c; font-size: 13px; text-align: right; white-space: nowrap;">${prev}</td>
+      <td style="padding: 8px 0 8px 8px; border-bottom: 1px solid #f0ede8; font-size: 13px; text-align: right; white-space: nowrap;">${change}</td>
+    </tr>`
+
+  const n = (v: number) => v.toLocaleString('en-GB')
+  const section = (heading: string) => `
+    <tr>
+      <td colspan="4" style="padding: 18px 0 6px 0; color: #78716c; font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; font-weight: bold;">${heading}</td>
+    </tr>`
+
+  const landing = week.topLandingPages.length
+    ? week.topLandingPages.map(p => `
+        <tr>
+          <td style="padding: 5px 0; color: #57534e; font-size: 13px; font-family: monospace;">${esc(p.path)}</td>
+          <td style="padding: 5px 0; color: #1c1917; font-size: 13px; text-align: right; white-space: nowrap;">${n(p.count)}</td>
+        </tr>`).join('')
+    : '<tr><td style="padding: 5px 0; color: #a8a29e; font-size: 13px;">No Meta landings recorded.</td></tr>'
+
+  const content = `
+    <div style="text-align: left;">
+      <div style="display: inline-block; background-color: #fef9f0; color: #d4871a; padding: 6px 14px; border-radius: 6px; font-weight: bold; font-size: 11px; margin-bottom: 20px; letter-spacing: 0.1em; text-transform: uppercase;">
+        Weekly digest
+      </div>
+      <h2 style="margin: 0 0 6px 0; font-size: 22px; color: #1c1917;">${esc(title)}</h2>
+      <p style="margin: 0 0 8px 0; color: #78716c; font-size: 13px;">Last week, the week before, and the change. Read from the site's own records, not from Meta or Google.</p>
+
+      <table role="presentation" style="width: 100%; border-collapse: collapse;">
+        <tr>
+          <td></td>
+          <td style="padding: 4px 8px; color: #a8a29e; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; text-align: right;">Last week</td>
+          <td style="padding: 4px 8px; color: #a8a29e; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; text-align: right;">Before</td>
+          <td style="padding: 4px 0 4px 8px; color: #a8a29e; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; text-align: right;">Change</td>
+        </tr>
+
+        ${section('Traffic')}
+        ${row('Sessions', n(week.sessions), n(before.sessions), delta(week.sessions, before.sessions))}
+        ${row('Visitors', n(week.visitors), n(before.visitors), delta(week.visitors, before.visitors))}
+        ${row('Landed from a Meta ad', n(week.metaLandings), n(before.metaLandings), delta(week.metaLandings, before.metaLandings))}
+        ${row('…of which accepted cookies', `${n(week.metaConsented)} (${pct(week.metaConsented, week.metaLandings)})`, `${n(before.metaConsented)} (${pct(before.metaConsented, before.metaLandings)})`, delta(week.metaConsented, before.metaConsented), 'what the Pixel could see')}
+        ${row('Landed from a Google ad', n(week.googleLandings), n(before.googleLandings), delta(week.googleLandings, before.googleLandings))}
+
+        ${section('Funnel')}
+        ${row('Product views', n(week.productViews), n(before.productViews), delta(week.productViews, before.productViews))}
+        ${row('Added to cart', `${n(week.addToCart)} (${pct(week.addToCart, week.productViews)})`, `${n(before.addToCart)} (${pct(before.addToCart, before.productViews)})`, delta(week.addToCart, before.addToCart), 'of product views')}
+        ${row('Started checkout', `${n(week.checkoutStarted)} (${pct(week.checkoutStarted, week.addToCart)})`, `${n(before.checkoutStarted)} (${pct(before.checkoutStarted, before.addToCart)})`, delta(week.checkoutStarted, before.checkoutStarted), 'of add-to-carts')}
+        ${row('Website orders', `${n(week.websiteOrders)} (${pct(week.websiteOrders, week.checkoutStarted)})`, `${n(before.websiteOrders)} (${pct(before.websiteOrders, before.checkoutStarted)})`, delta(week.websiteOrders, before.websiteOrders), 'of checkouts started')}
+        ${row('WhatsApp orders entered', n(week.whatsappOrders), n(before.whatsappOrders), delta(week.whatsappOrders, before.whatsappOrders))}
+        ${row('Order value', money(week.orderValue), money(before.orderValue), delta(Math.round(week.orderValue), Math.round(before.orderValue)), 'excluding cancelled')}
+
+        ${section('Contact')}
+        ${row('WhatsApp taps', n(week.whatsappTaps), n(before.whatsappTaps), delta(week.whatsappTaps, before.whatsappTaps))}
+        ${row('Phone taps', n(week.callTaps), n(before.callTaps), delta(week.callTaps, before.callTaps))}
+
+        ${section('Where Meta ads landed')}
+      </table>
+      <table role="presentation" style="width: 100%; border-collapse: collapse;">
+        ${landing}
+      </table>
+
+      <p style="margin: 24px 0 0 0; color: #a8a29e; font-size: 12px; line-height: 1.6;">
+        Sent every Monday morning by the website. Cookie consent decides what Meta can see, so "accepted cookies" is the ceiling on every number in Ads Manager.
+      </p>
+    </div>
+  `
+
+  await deliver({
+    from: sender(),
+    to,
+    bcc: [OWNER_GMAIL],
+    subject: `Weekly digest: ${title} - ${week.websiteOrders + week.whatsappOrders} orders, ${week.metaLandings} Meta landings`,
+    html: generateEmailHTML(content),
+  })
+}
