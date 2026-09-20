@@ -2,7 +2,7 @@
 'use server'
 
 import { createClient } from '@/utils/supabase/server'
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, updateTag } from 'next/cache'
 import { adminGuard, requireAdmin } from '@/utils/auth'
 import { pickCanonicalCategorySlug } from '@/utils/productUrl'
 import { z } from 'zod'
@@ -143,6 +143,10 @@ export async function addProduct(formData: FormData, variants: VariantInput[]) {
   }
 
   revalidatePath('/admin/inventory')
+  // The cached storefront reads (homepage, product pages) pick the change up
+  // now rather than at their five-minute mark.
+  updateTag('home')
+  updateTag('product')
   return { success: true }
 }
 
@@ -162,6 +166,10 @@ export async function deleteProduct(formData: FormData) {
   if (error) return { error: 'Failed to delete product.' }
 
   revalidatePath('/admin/inventory')
+  // The cached storefront reads (homepage, product pages) pick the change up
+  // now rather than at their five-minute mark.
+  updateTag('home')
+  updateTag('product')
   revalidatePath('/')
   revalidatePath('/shop/[category]', 'layout')
 }
@@ -176,6 +184,10 @@ export async function activateProduct(formData: FormData) {
   await supabase.from('products').update({ is_active: true }).eq('id', productId)
 
   revalidatePath('/admin/inventory')
+  // The cached storefront reads (homepage, product pages) pick the change up
+  // now rather than at their five-minute mark.
+  updateTag('home')
+  updateTag('product')
   revalidatePath('/admin')
   revalidatePath('/')
 }
@@ -257,6 +269,10 @@ export async function updateProduct(formData: FormData, variants: VariantInput[]
   }
 
   revalidatePath('/admin/inventory')
+  // The cached storefront reads (homepage, product pages) pick the change up
+  // now rather than at their five-minute mark.
+  updateTag('home')
+  updateTag('product')
   revalidatePath(`/shop/${categoryIds}/${slug}`) 
   return { success: true }
 }
