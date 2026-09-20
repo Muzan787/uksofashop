@@ -4,6 +4,10 @@
 export interface TrackedOrderItem {
   quantity: number
   price_at_time_of_purchase: number
+  /** The fabric a made-to-order sofa was ordered in. Null on stocked sofas. */
+  fabric_code?: string | null
+  fabric_name?: string | null
+  fabric_collection?: string | null
   product_variants: {
     color: string | null
     products: { title: string } | null

@@ -22,6 +22,7 @@ import { updateOrderDetails } from '@/app/actions/orders'
 import type { AdminOrderDisplay } from '@/types/adminOrders'
 import { splitAddress } from './CopyOrderButton'
 import type { PickerFabric, PickerVariant } from './NewWhatsAppOrder'
+import { describeFinish } from '@/utils/orderFinish'
 
 interface Line {
   itemId: string | null
@@ -42,7 +43,10 @@ function linesFrom(order: AdminOrderDisplay): Line[] {
   return (order.order_items ?? []).map(item => ({
     itemId: item.id ?? null,
     variantId: item.variant_id ?? '',
-    fallbackLabel: [item.product_variants?.products?.title, item.product_variants?.color]
+    fallbackLabel: [
+      item.product_variants?.products?.title,
+      describeFinish({ ...item, color: item.product_variants?.color }).label,
+    ]
       .filter(Boolean)
       .join(' · ') || 'Item',
     quantity: Number(item.quantity) || 1,

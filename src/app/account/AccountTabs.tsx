@@ -17,7 +17,8 @@ import { useReducedMotionSafe } from '@/components/Motion/useReducedMotionSafe'
 export interface AccountOrderItem {
   title: string
   slug: string | null
-  color: string | null
+  /** "Chenille Mink (CH02)" for a made-to-order sofa, the colourway for a stocked one. */
+  finish: string | null
   image: string | null
   quantity: number
   price: number
@@ -342,7 +343,7 @@ function OrderCard({ order }: { order: AccountOrder }) {
                         {item.title}
                       </Link>
                     ) : item.title}
-                    {item.color && <span className="text-ink-500"> · {item.color}</span>}
+                    {item.finish && <span className="text-ink-500"> · {item.finish}</span>}
                   </span>
                   <span className="shrink-0 font-data font-semibold tabular-nums text-ink-900">
                     £{item.price.toFixed(2)}

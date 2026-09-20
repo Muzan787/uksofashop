@@ -643,8 +643,13 @@ export default async function AdminOrdersPage(props: { searchParams: SearchParam
                   <div key={item.id} className="flex justify-between items-center text-sm py-2 border-b border-stone-100 last:border-0">
                     <div className="flex flex-col">
                       <span className="font-semibold text-stone-800">{item.quantity}x {item.product_variants?.products?.title}</span>
+                      {/* The variant colour is the photograph; once a fabric
+                          is chosen it is not printed, so the line reads as
+                          one colour, not two - see utils/orderFinish.ts. */}
                       <span className="text-stone-500 text-xs">
-                        {item.product_variants?.color} • SKU: {item.product_variants?.sku}
+                        {[!item.fabric_code && item.product_variants?.color, `SKU: ${item.product_variants?.sku}`]
+                          .filter(Boolean)
+                          .join(' • ')}
                       </span>
                       {/* What it actually gets built in. The code is the one
                           the purchase order to R&S needs. */}

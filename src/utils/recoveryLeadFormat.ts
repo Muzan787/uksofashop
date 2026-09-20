@@ -63,8 +63,10 @@ export function recoveryBasketLines(value: unknown): RecoveryLine[] {
         ? Number(item.unit_price_gbp)
         : null
 
+    // A chosen fabric is the colour; the variant's colour is only the photo
+    // it was chosen from, and is left out so the line reads as one colour.
     const fabric = [item.fabric_collection, item.fabric_name].filter(Boolean).join(' ')
-    const detail = [item.color, fabric || item.material].filter(Boolean).join(' ') || null
+    const detail = (fabric ? fabric : [item.color, item.material].filter(Boolean).join(' ')) || null
 
     return {
       title: item.product_title || 'Sofa',

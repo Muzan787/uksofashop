@@ -3,6 +3,7 @@
 import { Printer } from 'lucide-react'
 import type { AdminOrderDisplay, AdminOrderItemDisplay } from '@/types/adminOrders'
 import { asBuildSnapshot, describeBuild } from '@/types/build'
+import { describeFinish } from '@/utils/orderFinish'
 
 /** The note is built by string interpolation, so anything a customer typed is escaped. */
 const esc = (v: unknown) =>
@@ -293,11 +294,12 @@ export default function DirectPrintButton({ order }: { order: AdminOrderDisplay 
                     <td>
                       <div class="item-title">${item.product_variants?.products?.title}</div>
                       <div class="item-meta">
-                        <span>Color: <strong>${esc(item.product_variants?.color)}</strong></span>
+                        ${item.fabric_code
+                          ? `<span>Fabric: <strong>${esc(describeFinish(item).label ?? '')}</strong> (${esc(item.fabric_code)})</span>`
+                          : `<span>Color: <strong>${esc(item.product_variants?.color)}</strong></span>`}
                         <span>&bull;</span>
                         <span>SKU: ${esc(item.product_variants?.sku)}</span>
                       </div>
-                      ${item.fabric_code ? `<div class="item-meta"><span>Fabric: <strong>${esc([item.fabric_collection, item.fabric_name].filter(Boolean).join(' '))}</strong> (${esc(item.fabric_code)})</span></div>` : ''}
                       ${describeBuild(asBuildSnapshot(item.customisation)).map(line => `<div class="item-meta"><span>${esc(line.label)}: <strong>${esc(line.value)}</strong></span></div>`).join('')}
                     </td>
                     <td class="center" style="font-weight: 600; color: #1c1917; vertical-align: middle;">${item.quantity}</td>

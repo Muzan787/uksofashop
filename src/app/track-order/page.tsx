@@ -12,6 +12,7 @@ import { STATUS } from '@/utils/orderStatus'
 import { PHONE_DISPLAY, PHONE_HREF } from '@/constants/contact'
 import { usePhoneClick } from '@/utils/attribution/usePhoneClick'
 import { formatPreferredDeliveryDate } from '@/utils/delivery'
+import { finishText } from '@/utils/orderFinish'
 
 /**
  * Where is it.
@@ -224,8 +225,8 @@ function Result({ order }: { order: TrackedOrder }) {
               <span className="min-w-0 text-ink-700">
                 <span className="mr-2 font-data font-bold tabular-nums text-ink-900">{item.quantity}×</span>
                 {item.product_variants?.products?.title ?? 'Product'}
-                {item.product_variants?.color && (
-                  <span className="text-ink-500"> · {item.product_variants.color}</span>
+                {finishText({ ...item, color: item.product_variants?.color }) && (
+                  <span className="text-ink-500"> · {finishText({ ...item, color: item.product_variants?.color })}</span>
                 )}
               </span>
               <span className="shrink-0 font-data font-semibold tabular-nums text-ink-900">

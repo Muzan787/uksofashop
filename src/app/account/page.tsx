@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 import AccountTabs, { type AccountOrder, type AccountReview, type AccountWishlistItem } from './AccountTabs'
 import { logout } from '@/app/actions/auth'
 import { canonicalProductPath } from '@/utils/productUrl'
+import { finishText } from '@/utils/orderFinish'
 import { LogOut } from 'lucide-react'
 
 export const metadata: Metadata = {
@@ -34,6 +35,7 @@ export default async function AccountPage() {
       order_items (
         quantity,
         price_at_time_of_purchase,
+        fabric_code, fabric_name, fabric_collection,
         product_variants (
           color,
           image_url,
@@ -95,7 +97,9 @@ export default async function AccountPage() {
       return {
         title: product?.title ?? 'Product',
         slug: product?.slug ?? null,
-        color: variant?.color ?? null,
+        // The fabric it was ordered in, or the colourway for a stocked sofa -
+        // never both, see utils/orderFinish.ts.
+        finish: finishText({ ...i, color: variant?.color }) || null,
         image: variant?.image_url ?? null,
         quantity: i.quantity,
         price: Number(i.price_at_time_of_purchase ?? 0),

@@ -12,6 +12,7 @@ import { isValidUkPostcode, normalisePostcode } from '@/utils/postcode'
 import type { AdminOrderDisplay, AdminOrderItemDisplay } from '@/types/adminOrders'
 import { asBuildSnapshot, describeBuild } from '@/types/build'
 import { formatPreferredDeliveryDate } from '@/utils/delivery'
+import { finishText } from '@/utils/orderFinish'
 
 /** Every UK Mainland order, whatever it is. There is no per-order estimate. */
 const DELIVERY_WINDOW = '2-4 days'
@@ -50,13 +51,15 @@ export function splitAddress(raw: string): { address: string; postcode: string |
 function itemBlock(item: AdminOrderItemDisplay): string {
   const lines = [
     `${item.quantity}x ${item.product_variants?.products?.title ?? 'Item'}`,
-    [item.product_variants?.color, item.product_variants?.sku && `SKU: ${item.product_variants.sku}`]
+    // The photo colourway, only when no fabric was chosen - a made-to-order
+    // sofa is built in the fabric below, and "Grey" above "Chenille Mink"
+    // reads as two instructions.
+    [!item.fabric_code && item.product_variants?.color, item.product_variants?.sku && `SKU: ${item.product_variants.sku}`]
       .filter(Boolean)
       .join(' • '),
     // The fabric it gets built in, when one was chosen. Losing this on the way
     // into a chat is how a made-to-order sofa gets built in the wrong colour.
-    item.fabric_code &&
-      `Fabric: ${[item.fabric_collection, item.fabric_name].filter(Boolean).join(' ')} (${item.fabric_code})`,
+    item.fabric_code && `Fabric: ${finishText(item)}`,
     // Everything the customer chose on /build, one line each. Same words the
     // customer read on the summary screen and the basket.
     ...describeBuild(asBuildSnapshot(item.customisation)).map(line => `${line.label}: ${line.value}`),
