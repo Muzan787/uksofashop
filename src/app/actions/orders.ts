@@ -140,6 +140,7 @@ export async function updateOrderStatus(formData: FormData) {
   // "Send Purchase" / "Send Delivered" action after the relevant status exists.
 
   revalidatePath('/admin/orders')
+  revalidatePath('/admin/meta')
   return { success: true }
 }
 
@@ -209,6 +210,7 @@ export async function sendOrderConversion(formData: FormData) {
   }
 
   revalidatePath('/admin/orders')
+  revalidatePath('/admin/meta')
   return { success: true }
 }
 
@@ -287,6 +289,7 @@ export async function updateOrderDetails(input: EditOrderInput): Promise<{ succe
   }
 
   revalidatePath('/admin/orders')
+  revalidatePath('/admin/meta')
   revalidatePath('/admin')
   const result = data as unknown as { total_amount: number }
   return { success: true, total: Number(result.total_amount) }
@@ -331,6 +334,7 @@ export async function deleteOrder(orderId: string): Promise<{ success: true } | 
   }
 
   revalidatePath('/admin/orders')
+  revalidatePath('/admin/meta')
   revalidatePath('/admin')
   return { success: true }
 }
@@ -352,6 +356,7 @@ export async function confirmCustomerOrder(orderId: string) {
   // Refresh the confirmation page and admin panel to show the new status
   revalidatePath(`/confirm-order/${orderId}`)
   revalidatePath('/admin/orders')
+  revalidatePath('/admin/meta')
   return { success: true }
 }
 
