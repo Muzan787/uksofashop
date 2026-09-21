@@ -338,7 +338,7 @@ export default async function AdminOrdersPage(props: { searchParams: SearchParam
 
       <div className="space-y-4">
         {orders?.map((order) => (
-          <div key={order.id} className="bg-white rounded-md p-5 shadow-sm border border-stone-200 flex flex-col">
+          <div id={order.id} key={order.id} className="bg-white rounded-md p-5 shadow-sm border border-stone-200 flex flex-col scroll-mt-6">
             
             {/* Operational header: reference, source, money, state and dual clocks. */}
             <div className="mb-4 flex flex-col gap-3 border-b border-stone-100 pb-4 sm:flex-row sm:items-start sm:justify-between">
