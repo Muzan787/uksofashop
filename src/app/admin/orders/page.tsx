@@ -346,17 +346,24 @@ export default async function AdminOrdersPage(props: { searchParams: SearchParam
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="m-0 text-xs font-mono text-stone-500">#{order.id.split('-')[0].toUpperCase()}</p>
                   <SourceBadge source={order.source} />
-                  {order.utm_source === 'meta' && (
-                    <span className="rounded-pill border border-blue-200 bg-blue-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-blue-700">
+                  {(order.utm_source === 'meta' || manualAcquisition(order).source === 'meta') && (
+                    <span
+                      title={manualAcquisition(order).source === 'meta'
+                        ? (manualAcquisition(order).note ?? 'Staff-confirmed acquisition source')
+                        : 'Tracked Meta acquisition source'}
+                      className="rounded-pill border border-blue-200 bg-blue-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-blue-700"
+                    >
                       Meta attributed
                     </span>
                   )}
-                  {order.utm_source !== 'meta' && manualAcquisition(order).source === 'meta' && (
-                    <span
-                      title={manualAcquisition(order).note ?? 'Staff-confirmed acquisition source'}
-                      className="rounded-pill border border-sky-200 bg-sky-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-sky-700"
-                    >
-                      Meta · staff confirmed
+                  {order.purchase_event_sent_at && (
+                    <span className="rounded-pill border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-700">
+                      Meta purchase sent
+                    </span>
+                  )}
+                  {order.delivered_event_sent_at && (
+                    <span className="rounded-pill border border-green-200 bg-green-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-green-700">
+                      Meta delivery sent
                     </span>
                   )}
                   {order.utm_campaign === 'offer-test' && (
