@@ -2,12 +2,13 @@
 // src/components/Admin/AdminSidebarClient.tsx
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, ShoppingCart, Package, Tags, LogOut, Star, Palette, UsersRound, Clapperboard } from 'lucide-react'
+import { LayoutDashboard, ShoppingCart, Package, Tags, LogOut, Star, Palette, UsersRound, Clapperboard, Radio } from 'lucide-react'
 import { logout } from '@/app/actions/auth'
 
 const navItems = [
   { href: '/admin',            icon: LayoutDashboard, label: 'Home' },
   { href: '/admin/orders',     icon: ShoppingCart,    label: 'Orders' },
+  { href: '/admin/meta',       icon: Radio,           label: 'Meta' },
   { href: '/admin/leads',      icon: UsersRound,      label: 'Leads' },
   { href: '/admin/inventory',  icon: Package,         label: 'Inventory' },
   { href: '/admin/categories', icon: Tags,            label: 'Categories' },
