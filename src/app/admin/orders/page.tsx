@@ -346,11 +346,18 @@ export default async function AdminOrdersPage(props: { searchParams: SearchParam
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="m-0 text-xs font-mono text-stone-500">#{order.id.split('-')[0].toUpperCase()}</p>
                   <SourceBadge source={order.source} />
-                  {(order.utm_source === 'meta' || manualAcquisition(order).source === 'meta') && (
+                  {(order.utm_source === 'meta' ||
+                    manualAcquisition(order).source === 'meta' ||
+                    order.purchase_event_sent_at ||
+                    order.delivered_event_sent_at) && (
                     <span
-                      title={manualAcquisition(order).source === 'meta'
-                        ? (manualAcquisition(order).note ?? 'Staff-confirmed acquisition source')
-                        : 'Tracked Meta acquisition source'}
+                      title={
+                        manualAcquisition(order).source === 'meta'
+                          ? (manualAcquisition(order).note ?? 'Staff-confirmed Meta acquisition source')
+                          : order.utm_source === 'meta'
+                            ? 'Tracked Meta acquisition source'
+                            : 'A Meta conversion signal has been sent for this order; raw acquisition tracking may be missing.'
+                      }
                       className="rounded-pill border border-blue-200 bg-blue-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-blue-700"
                     >
                       Meta attributed
