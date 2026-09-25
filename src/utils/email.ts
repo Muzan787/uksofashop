@@ -262,8 +262,12 @@ export async function sendOrderConfirmation(
 ) {
   // A receipt that carries the confirm link. The shop also sends the same
   // link on WhatsApp (see sendAdminOrderNotification) so the yes is on record
-  // in the chat; either tap confirms the order, and the phone call that
-  // follows is to arrange delivery.
+  // in the chat; either tap opens the order for checking, and the phone call
+  // that follows is to arrange delivery.
+  //
+  // The link no longer confirms by being opened (2026-09-25). It shows the
+  // whole order and asks for a button press, so the wording here promises a
+  // read rather than a done deal - see app/confirm-order/[id]/page.tsx.
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
   const confirmLink = `${siteUrl}/confirm-order/${fullOrderId}`;
   const firstName = (name || '').trim().split(/\s+/)[0] || 'there';
@@ -277,7 +281,7 @@ export async function sendOrderConfirmation(
       
       <h2 style="margin: 0 0 16px 0; font-size: 24px; color: #1c1917;">Thank you, ${esc(firstName)}!</h2>
       <p style="color: #57534e; line-height: 1.6; font-size: 15px; margin-bottom: 32px;">
-        We have your order. Please confirm it with the button below - we will send the same link on WhatsApp too - and once it is confirmed one of our team will ring you to arrange a delivery day. Nothing is charged now - you pay in cash or by bank transfer once the sofa is in the room.
+        We have your order. The button below opens it in full - the address, the fabric and the amount to have ready - so you can check it over and confirm it. We will send the same link on WhatsApp too. Once it is confirmed one of our team will ring you to arrange a delivery day. Nothing is charged now - you pay in cash or by bank transfer once the sofa is in the room.
       </p>
       
       <div style="background-color: #fafaf9; border: 1px solid #e7e5e4; padding: 24px; border-radius: 10px; margin-bottom: 32px;">
@@ -294,7 +298,7 @@ export async function sendOrderConfirmation(
       </div>
 
       <a href="${confirmLink}" style="background-color: #0c0c0b; color: #ffffff; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">
-        Confirm my order
+        Check and confirm my order
       </a>
       <p style="margin: 20px 0 0 0; color: #78716c; font-size: 12px; line-height: 1.6;">
         <a href="${trackLink}" style="color: #78716c; text-decoration: underline;">Track your order</a> · Need to change anything? Reply to this email or message us on WhatsApp on ${esc(PHONE_DISPLAY)}.
@@ -335,12 +339,16 @@ export async function sendAdminOrderNotification(
   // customer confirms the order by tapping the link from WhatsApp, so the
   // yes is on record in the chat; the phone call that follows is to arrange
   // delivery, not to confirm. (It was briefly a hello without the link.)
+  //
+  // Since 2026-09-25 the link opens the order for checking and confirms only
+  // on a button press, which is also what stops WhatsApp's own link preview
+  // fetch from confirming the order before the customer reads the message.
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
   const confirmLink = `${siteUrl}/confirm-order/${fullOrderId}`;
   const waFirstName = (customerName || '').trim().split(/\s+/)[0] || 'there';
   const waUrl = whatsAppLink(
     customerPhone,
-    `Hi ${waFirstName}, thanks for your order (#${shortCode}) with UK Sofa Shop. Please confirm it by tapping this link: ${confirmLink}
+    `Hi ${waFirstName}, thanks for your order (#${shortCode}) with UK Sofa Shop. Tap this link to check the details and confirm it: ${confirmLink}
 
 Once it is confirmed we will ring you to arrange delivery.`,
   );
@@ -388,6 +396,90 @@ Once it is confirmed we will ring you to arrange delivery.`,
     from: sender(),
     to: adminEmail,
     subject: `Action Required: New Order Received (#${shortCode})`,
+    html: generateEmailHTML(content),
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 4b. Admin: the customer has confirmed their own order
+//
+// Sent once, the first time an order goes pending_cod -> confirmed from the
+// customer's own tap on /confirm-order/[id]. Nothing announced that before:
+// the order simply changed colour in the admin panel, which is no use to
+// somebody who is not looking at the admin panel.
+//
+// NOT sent when the shop confirms the order itself from the order card. That
+// path is a human already sitting in front of the order, and mailing them
+// about a button they just pressed is noise - see updateOrderStatus.
+//
+// The action here is the phone call. The customer has said yes and is now
+// waiting to be rung about a delivery day, so the button is the call, and the
+// WhatsApp button under it is for when they do not pick up.
+// ─────────────────────────────────────────────────────────────────────────────
+export async function sendAdminOrderConfirmedNotification(
+  customerName: string,
+  customerPhone: string,
+  shortCode: string,
+  totalAmount: number,
+  shippingAddress: string,
+  /** The day they asked for, YYYY-MM-DD, or null for as soon as possible. */
+  preferredDeliveryDate: string | null = null,
+) {
+  const adminEmail = process.env.ADMIN_EMAIL;
+  if (!adminEmail) return;
+
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+  const firstName = (customerName || '').trim().split(/\s+/)[0] || 'there';
+  // null when the number is not a UK mobile, so the button is hidden rather
+  // than rendered as a dead link.
+  const waUrl = whatsAppLink(
+    customerPhone,
+    `Hi ${firstName}, thanks for confirming your order (#${shortCode}) with UK Sofa Shop. When is a good time to ring you about a delivery day?`,
+  );
+
+  const content = `
+    <div style="text-align: left;">
+      <div style="display: inline-block; background-color: #edf1e9; color: #465241; padding: 6px 14px; border-radius: 6px; font-weight: bold; font-size: 11px; margin-bottom: 24px; letter-spacing: 0.1em; text-transform: uppercase;">
+        Confirmed by customer
+      </div>
+
+      <h2 style="margin: 0 0 16px 0; font-size: 22px; color: #1c1917;">${esc(customerName)} has confirmed order #${shortCode}</h2>
+      <p style="color: #57534e; line-height: 1.6; font-size: 15px;">
+        They have read the order back and pressed confirm, so the details below are the ones they agreed to. Next step is ours: ring them and agree a delivery day.
+      </p>
+
+      <div style="background-color: #fafaf9; border-left: 3px solid #465241; padding: 20px; margin: 24px 0;">
+        <p style="margin: 0 0 4px 0; color: #78716c; font-size: 11px; text-transform: uppercase; font-weight: bold;">Order Reference</p>
+        <p style="margin: 0 0 16px 0; font-size: 20px; font-weight: bold; font-family: monospace;">${shortCode}</p>
+
+        <p style="margin: 0 0 4px 0; color: #78716c; font-size: 11px; text-transform: uppercase; font-weight: bold;">Customer Phone</p>
+        <p style="margin: 0 0 16px 0; font-size: 16px; font-weight: bold;">${esc(customerPhone)}</p>
+
+        <p style="margin: 0 0 4px 0; color: #78716c; font-size: 11px; text-transform: uppercase; font-weight: bold;">Requested delivery day</p>
+        <p style="margin: 0 0 16px 0; font-size: 16px; font-weight: bold;">${preferredDeliveryDate ? esc(formatPreferredDeliveryDate(preferredDeliveryDate)) : 'As soon as possible'}</p>
+
+        <p style="margin: 0 0 4px 0; color: #78716c; font-size: 11px; text-transform: uppercase; font-weight: bold;">Delivering to</p>
+        <p style="margin: 0 0 16px 0; font-size: 14px; line-height: 1.5;">${esc(shippingAddress)}</p>
+
+        <p style="margin: 0 0 4px 0; color: #78716c; font-size: 11px; text-transform: uppercase; font-weight: bold;">Amount to Collect</p>
+        <p style="margin: 0; font-size: 20px; font-weight: bold; color: #d4871a;">£${totalAmount.toFixed(2)}</p>
+      </div>
+
+      <a href="tel:${esc(customerPhone.replace(/[^0-9+]/g, ''))}" style="background-color: #0c0c0b; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px; display: inline-block; margin-top: 4px;">Call ${esc(firstName)} now</a>
+      ${waUrl ? `<a href="${waUrl}" style="background-color: #25D366; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px; display: inline-block; margin: 4px 0 0 8px;">Or message on WhatsApp</a>` : ''}
+
+      <div style="margin-top: 32px; text-align: center;">
+        <a href="${siteUrl}/admin/orders" style="color: #a8a29e; font-size: 12px; text-decoration: underline;">
+          Open this order in the Admin Dashboard
+        </a>
+      </div>
+    </div>
+  `;
+
+  await deliver({
+    from: sender(),
+    to: adminEmail,
+    subject: `Confirmed: ${customerName} confirmed order #${shortCode} — ring to arrange delivery`,
     html: generateEmailHTML(content),
   });
 }

@@ -3,13 +3,15 @@
 
 import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { redirect } from 'next/navigation'
+import { after } from 'next/server'
 import { reportOrderConversion } from '@/utils/orderConversions'
-import { sendOrderStatusUpdate, sendAdminOrderStatusNotification } from '@/utils/email'
+import { sendOrderStatusUpdate, sendAdminOrderStatusNotification, sendAdminOrderConfirmedNotification } from '@/utils/email'
 import { requireAdmin } from '@/utils/auth'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { z } from 'zod'
 import { isValidUkMobile, UK_MOBILE_ERROR } from '@/utils/phone'
-import type { TrackedOrder } from '@/types/orders'
+import type { ConfirmationOrder, TrackedOrder } from '@/types/orders'
 
 /**
  * Pull the postcode off the end of a stored shipping address.
@@ -339,25 +341,93 @@ export async function deleteOrder(orderId: string): Promise<{ success: true } | 
   return { success: true }
 }
 
-export async function confirmCustomerOrder(orderId: string) {
+/** What the confirm button's form reports back. Null once it has worked. */
+export type ConfirmOrderState = { error: string } | null
+
+/**
+ * The customer confirming their own order, from the button on
+ * /confirm-order/[id].
+ *
+ * On POST, never on GET. The page used to confirm the order by being loaded,
+ * which meant the confirmation could be given by whatever pre-fetched the link
+ * - a mail provider's scanner, a security appliance, WhatsApp drawing a
+ * preview card - rather than by the customer reading the order. Same reasoning
+ * as newsletter double opt-in; see actions/newsletter-confirm.ts.
+ *
+ * confirm_order is guarded on pending_cod, so this is safe to press twice and
+ * cannot move an order backwards out of processing, shipped or cancelled.
+ *
+ * A confirmation that actually moves the order emails the shop, because
+ * nothing else announces it - the admin panel just changes colour, which is no
+ * help to somebody who is not looking at it. The shop is NOT emailed when it
+ * confirms an order itself from the order card; see the note on
+ * sendAdminOrderConfirmedNotification.
+ *
+ * Conversion reporting stays deliberately manual: an admin sends the Purchase
+ * signal from the order card. A customer tapping a link never trains Meta.
+ */
+export async function confirmCustomerOrder(
+  _previous: ConfirmOrderState,
+  formData: FormData,
+): Promise<ConfirmOrderState> {
+  const orderId = String(formData.get('orderId') ?? '')
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(orderId)) {
+    return { error: 'That link is not valid. Please open the link we sent you, or message us on WhatsApp.' }
+  }
+
   const supabase = await createClient()
+
+  // Read before writing. confirm_order returns the order in its POST-update
+  // state, so the only way to tell a real confirmation from somebody opening
+  // their link again a week later is to look first - and the shop's email
+  // must go out on the tap that moved the order, not on every revisit.
+  // It also saves a second round trip: this read carries everything the email
+  // needs. Two taps inside the same second could still send twice; a duplicate
+  // notification is a far smaller problem than a missed one.
+  const { data: before } = await supabase.rpc('order_for_confirmation', { p_order_id: orderId })
+  const order = before as unknown as ConfirmationOrder | null
+  const wasAwaiting = order?.status === 'pending_cod'
 
   const { error } = await supabase.rpc('confirm_order', { p_order_id: orderId })
 
   if (error) {
-    return { error: 'Failed to confirm order. Please contact support.' }
+    console.error('confirmCustomerOrder failed', error)
+    return { error: 'We could not confirm your order just then. Please try again — or message us on WhatsApp and we will confirm it for you.' }
   }
 
-  // confirm_order atomically performs pending_cod -> confirmed and stamps the
-  // first confirmed_at inside the database transaction. Conversion reporting is
-  // intentionally NOT automatic: an admin must explicitly send the Purchase
-  // signal from the order card after reviewing the order.
+  // Tell the shop, after the customer's redirect has gone out. The order is
+  // committed by now, so a slow mail server delays a notification rather than
+  // the page the customer is waiting on.
+  if (wasAwaiting && order) {
+    after(async () => {
+      try {
+        await sendAdminOrderConfirmedNotification(
+          order.customer_name,
+          order.customer_phone,
+          orderId.substring(0, 8).toUpperCase(),
+          Number(order.total_amount),
+          order.shipping_address,
+          order.preferred_delivery_date,
+        )
+      } catch (err) {
+        // The confirmation itself is safe; this only loses the nudge.
+        console.error(`Could not tell the shop that order ${orderId} was confirmed`, err)
+      }
+    })
+  }
 
-  // Refresh the confirmation page and admin panel to show the new status
   revalidatePath(`/confirm-order/${orderId}`)
   revalidatePath('/admin/orders')
+  // The conversion centre lists what is eligible for a Purchase signal, and a
+  // just-confirmed order has become eligible.
   revalidatePath('/admin/meta')
-  return { success: true }
+  revalidatePath('/admin')
+
+  // Redirect rather than rely on the action's own re-render: the page has to
+  // come back in its confirmed state whatever happens, and `?confirmed=1` is
+  // what lets it thank them for confirming rather than simply report that the
+  // order is confirmed, which is what a later visit to the same link sees.
+  redirect(`/confirm-order/${orderId}?confirmed=1`)
 }
 
 /**

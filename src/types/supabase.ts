@@ -1251,6 +1251,11 @@ export type Database = {
         }[]
       }
       is_admin: { Args: never; Returns: boolean }
+      /** Reads an order for /confirm-order/[id]. Confirms nothing. */
+      order_for_confirmation: {
+        Args: { p_order_id: string }
+        Returns: Json
+      }
       newsletter_confirm: {
         Args: { p_token: string }
         Returns: Json
