@@ -5,6 +5,7 @@ import { trustpilotInviteBcc, trustpilotInviteLink } from '@/constants/trustpilo
 import { formatPreferredDeliveryDate } from '@/utils/delivery';
 import { PHONE_DISPLAY, SUPPORT_EMAIL, ORDERS_EMAIL, OWNER_GMAIL, whatsAppHref } from '@/constants/contact';
 import { gbp, recoveryBasketLines, recoveryBasketTotal, recoveryReminderEmail } from '@/utils/recoveryLeadFormat';
+import { formatSwatchForCopy, swatchCodes, type SwatchCopyLine } from '@/utils/swatchText';
 
 /**
  * Escapes a value before it goes into an email's HTML.
@@ -246,6 +247,38 @@ const generateEmailHTML = (content: string) => `
 </html>
 `;
 
+// ─────────────────────────────────────────────────────────────────────────────
+//  2b. "SEND THIS ON" — the admin block that saves a trip to the admin panel
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// Asked for as a copy button in the email, matching the one on the order card.
+// An email cannot have one: no mail client runs JavaScript, so there is no
+// button anywhere in an inbox that can write to a clipboard. What an email CAN
+// do is two things that get to the same place, and between them they are fewer
+// taps than the admin panel ever was:
+//
+//   THE BLOCK. Exactly the text the copy button copies, in a <pre> so that a
+//   long-press inside it offers Select All → Copy without catching any of the
+//   surrounding message. Works in every client, including the ones that strip
+//   everything else.
+//
+//   THE BUTTON. wa.me with a `text` and no number opens WhatsApp with the whole
+//   thing already typed and asks which chat to put it in - so forwarding an
+//   order is tap, pick the customer, send. Nothing is copied at all.
+//
+// The two are deliberately redundant. A very long order makes a very long URL,
+// and if a client ever refuses one the block above it still does the job.
+function forwardBlock(text: string, heading: string): string {
+  return `
+      <div style="margin: 28px 0 0 0;">
+        <p style="margin: 0 0 8px 0; color: #78716c; font-size: 11px; text-transform: uppercase; font-weight: bold; letter-spacing: 0.08em;">${heading}</p>
+        <pre style="margin: 0; padding: 16px; background-color: #fafaf9; border: 1px solid #e7e5e4; border-radius: 8px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; line-height: 1.55; color: #1c1917; white-space: pre-wrap; word-break: break-word;">${esc(text)}</pre>
+        <a href="https://wa.me/?text=${encodeURIComponent(text)}" style="background-color: #25D366; color: #ffffff; padding: 12px 22px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px; display: inline-block; margin-top: 12px;">Send this on WhatsApp</a>
+        <p style="margin: 8px 0 0 0; color: #a8a29e; font-size: 11px;">Opens WhatsApp with the text above already written — pick the chat and send. Or press and hold the block to copy it.</p>
+      </div>
+  `;
+}
+
 // 3. Customer: Order Confirmation
 export async function sendOrderConfirmation(
   email: string,
@@ -328,6 +361,13 @@ export async function sendAdminOrderNotification(
   promotionCode: string | null = null,
   /** The day the customer asked for, YYYY-MM-DD, or null for as soon as possible. */
   preferredDeliveryDate: string | null = null,
+  /**
+   * The order as plain text, from formatOrderForCopy - the same block the copy
+   * button on the order card produces. Optional because the sender has to read
+   * the placed order back to build it, and a failed read should cost the block
+   * rather than the whole notification.
+   */
+  copyText: string | null = null,
 ) {
   const adminEmail = process.env.ADMIN_EMAIL;
   if (!adminEmail) return;
@@ -383,7 +423,9 @@ Once it is confirmed we will ring you to arrange delivery.`,
       </div>
 
       ${waUrl ? `<a href="${waUrl}" style="background-color: #25D366; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px; display: inline-block; margin-top: 16px;">Ask Customer to Confirm Order</a>` : `<p style="margin-top: 16px; color: #a8a29e; font-size: 12px;">No WhatsApp button: that phone number is not a UK mobile.</p>`}
-      
+
+      ${copyText ? forwardBlock(copyText, 'The whole order, to pass on') : ''}
+
       <div style="margin-top: 32px; text-align: center;">
         <a href="${siteUrl}/admin/orders" style="color: #a8a29e; font-size: 12px; text-decoration: underline;">
           Or view this order in the Admin Dashboard
@@ -855,14 +897,9 @@ export async function sendReviewRequest(
 //  FREE FABRIC SAMPLES
 // ─────────────────────────────────────────────────────────────────────────────
 
-interface SwatchLine {
-  code: string
-  name: string
-  collection: string
-}
-
-/** The codes as one line, which is the whole picking list: "CH04, PL17, MB08". */
-const swatchCodes = (items: SwatchLine[]) => items.map(i => i.code).join(', ')
+// The line, the picking list and the copy block are all swatchText.ts now, so
+// the admin screen and this email cannot disagree about any of the three.
+type SwatchLine = SwatchCopyLine
 
 const swatchRows = (items: SwatchLine[]) =>
   items
@@ -942,6 +979,18 @@ export async function sendAdminSwatchNotification(
         <p style="margin: 0 0 8px 0; color: #78716c;"><strong>Phone:</strong> ${esc(phone) || 'Not given'}</p>
         <p style="margin: 0; color: #78716c;"><strong>Post to:</strong> ${esc(address)}, ${esc(postcode)}</p>
       </div>
+
+      ${forwardBlock(
+        formatSwatchForCopy({
+          customerName: name,
+          customerEmail: email,
+          customerPhone: phone || null,
+          postcode,
+          shippingAddress: address,
+          items,
+        }),
+        'The whole request, to pass on',
+      )}
     </div>
   `
 

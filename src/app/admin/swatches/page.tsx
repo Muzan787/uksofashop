@@ -5,6 +5,7 @@ import { Inbox, Mail, MapPin, Package, Phone, User } from 'lucide-react'
 import { setSwatchStatus } from '@/app/actions/swatch-admin'
 import { whatsAppLink } from '@/utils/phone'
 import Link from 'next/link'
+import SwatchActions from './SwatchActions'
 
 export const metadata: Metadata = { title: 'Swatch requests' }
 
@@ -169,6 +170,29 @@ export default async function AdminSwatchesPage(props: { searchParams: SearchPar
                   <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-stone-400" />
                   {r.shipping_address}, <strong>{r.postcode}</strong>
                 </p>
+              </div>
+
+              {/* Chase and copy. Under the details rather than beside the
+                  status buttons at the foot: those two change the record,
+                  these two only open something, and mixing the reversible
+                  with the irreversible in one row is how a Cancel gets
+                  pressed. */}
+              <div className="mt-4 border-t border-stone-100 pt-4">
+                <SwatchActions
+                  request={{
+                    customerName: r.customer_name,
+                    customerEmail: r.customer_email,
+                    customerPhone: r.customer_phone,
+                    postcode: r.postcode,
+                    shippingAddress: r.shipping_address,
+                    createdAt: r.created_at,
+                    items: r.swatch_request_items.map(i => ({
+                      code: i.fabric_code,
+                      name: i.fabric_name,
+                      collection: i.fabric_collection,
+                    })),
+                  }}
+                />
               </div>
 
               <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-stone-100 pt-4">

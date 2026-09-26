@@ -23,6 +23,8 @@ import {
   isValidWhatsAppReference,
 } from '@/utils/attribution/whatsapp'
 import { isDeterministicCheckoutWhatsAppMatch } from '@/utils/attribution/checkoutLinkage'
+import { formatOrderForCopy } from '@/utils/orderText'
+import type { AdminOrderDisplay } from '@/types/adminOrders'
 import type { BuildSnapshot } from '@/types/build'
 
 /** What the browser is allowed to tell us: what was ordered, never what it costs. */
@@ -100,6 +102,43 @@ const itemsSchema = z.array(z.object({
   fabric_id: z.string().uuid().nullish(),
   customisation: customisationSchema.nullish(),
 })).min(1, 'Your cart is empty.')
+
+/**
+ * The order read back in the shape the admin panel's copy button works from,
+ * rendered to the plain-text block the new-order email carries.
+ *
+ * The same columns and joins /admin/orders selects, narrowed to the ones
+ * formatOrderForCopy actually reads - this runs on every order placed, and
+ * `*` on a table that grows columns is how a hot path quietly gets expensive.
+ *
+ * Returns null on any failure. The block is a convenience bolted onto a
+ * notification; losing it must never cost the notification.
+ */
+async function orderCopyText(orderId: string): Promise<string | null> {
+  try {
+    const { data, error } = await createAdminClient()
+      .from('orders')
+      .select(`
+        id, created_at, customer_name, customer_email, customer_phone,
+        shipping_address, items_subtotal, total_amount, discount_amount,
+        promotion_code, fee_upstairs, fee_assembly, fee_sofa_removal,
+        sofa_removal_seats, preferred_delivery_date,
+        order_items (
+          id, variant_id, fabric_id, quantity, price_at_time_of_purchase,
+          fabric_code, fabric_name, fabric_collection, customisation,
+          product_variants ( sku, color, products ( title ) )
+        )
+      `)
+      .eq('id', orderId)
+      .single()
+
+    if (error || !data) return null
+    return formatOrderForCopy(data as unknown as AdminOrderDisplay)
+  } catch (err) {
+    console.error('Could not build the order copy block', err)
+    return null
+  }
+}
 
 interface PlacedOrder {
   id: string
@@ -308,6 +347,16 @@ export async function placeOrder(
   // awaits sat between the customer clicking Place Order and seeing it work.
   after(async () => {
     try {
+      // The order as the admin panel's copy button would render it, so the
+      // notification can carry the same block and Muaz can forward an order
+      // out of his inbox rather than opening the panel to copy it.
+      //
+      // Read back rather than assembled from the basket that came in: the
+      // titles and the prices that matter are the ones the database settled
+      // on, and a block that disagrees with the order record is worse than no
+      // block. A failed read costs the block and nothing else.
+      const copyText = await orderCopyText(order.id)
+
       await Promise.all([
         sendOrderConfirmation(
           customerEmail, customerName, shortCode, order.id,
@@ -320,6 +369,7 @@ export async function placeOrder(
           Number(order.total_amount), Number(order.items_subtotal), breakdown,
           Number(order.discount_amount), order.promotion_code,
           preferredDeliveryDate ?? null,
+          copyText,
         ),
       ])
     } catch (err) {
