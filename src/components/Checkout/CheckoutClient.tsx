@@ -1235,7 +1235,7 @@ export default function CheckoutClient() {
 
         <div className={`grid gap-4 ${step === 'success' ? 'grid-cols-1' : 'lg:grid-cols-[1fr_340px]'}`}>
           <div
-            className={`rounded-md border border-calico-300 bg-calico-50 p-4 shadow-e1 transition-[opacity,transform] duration-base ease-out-expo sm:p-6 ${
+            className={`min-w-0 rounded-md border border-calico-300 bg-calico-50 p-4 shadow-e1 transition-[opacity,transform] duration-base ease-out-expo sm:p-6 ${
               step === 'success' ? 'mx-auto max-w-[520px]' : ''
             } ${
               visible
