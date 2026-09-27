@@ -85,6 +85,8 @@ export default function ProductGridClient({
               href={card.href}
               image={card.image}
               secondaryImage={card.secondaryImage}
+              variantId={card.variantId}
+              listId="shop_grid"
               reviewCount={card.reviewCount}
               averageRating={card.averageRating}
               swatches={card.swatches}

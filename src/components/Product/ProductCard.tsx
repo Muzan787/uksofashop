@@ -1,7 +1,8 @@
 'use client';
 // src/components/Product/ProductCard.tsx
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { emitGoogleEvent, googleNavigationId } from '@/utils/googleMeasurement';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Star } from 'lucide-react';
@@ -20,6 +21,8 @@ export interface CardSwatch {
 
 export interface ProductCardData {
   id: string;
+  variantId?: string;
+  listId?: string;
   title: string;
   slug: string;
   /** The price to display, including any variant adjustment the caller applies. */
@@ -65,10 +68,33 @@ const MAX_SWATCHES = 5;
  * of a flat grey box.
  */
 export default function ProductCard({
-  id, title, price, href, image, secondaryImage, badge, badges,
+  id, variantId, listId='catalogue', title, price, href, image, secondaryImage, badge, badges,
   reviewCount, averageRating, swatches = [], transition = true, delayMs = 0,
 }: ProductCardData) {
   const [swatchImage, setSwatchImage] = useState<string | null>(null);
+  const article=useRef<HTMLElement>(null);
+  useEffect(()=>{
+    if(!variantId) return;
+    // ViewTransitions handles navigation at document capture and stops
+    // propagation. Observe at that same boundary without altering navigation.
+    const select=(event:MouseEvent)=>{
+      const anchor=event.target instanceof Element ? event.target.closest('a') : null;
+      if(anchor && article.current?.contains(anchor)) emitGoogleEvent('select_item',{currency:'GBP',value:price,items:[{item_id:variantId,item_name:title,price,quantity:1}]},{list_id:listId});
+    };
+    document.addEventListener('click',select,true);
+    return ()=>document.removeEventListener('click',select,true);
+  },[variantId,title,price,listId]);
+  useEffect(()=>{
+    if(!article.current || !variantId) return;
+    let timer:ReturnType<typeof setTimeout>|undefined;
+    const observer=new IntersectionObserver(entries=>{
+      if(entries[0]?.intersectionRatio>=0.5) {
+        if(!timer) timer=setTimeout(()=>{emitGoogleEvent('view_item_list',{currency:'GBP',value:price,items:[{item_id:variantId,item_name:title,price,quantity:1}]},{list_id:listId},`list:${googleNavigationId()}:${listId}:${variantId}`);},1000);
+      } else {clearTimeout(timer);timer=undefined;}
+    },{threshold:0.5});
+    observer.observe(article.current);
+    return ()=>{clearTimeout(timer);observer.disconnect();};
+  },[variantId,title,price,listId]);
 
   const shown = swatches.slice(0, MAX_SWATCHES);
   const extra = swatches.length - shown.length;
@@ -76,6 +102,7 @@ export default function ProductCard({
 
   return (
     <article
+      ref={article}
       className="group relative hover-card"
       data-cursor="view"
       style={delayMs ? { animation: `fadeUp var(--dur-base) var(--ease-out-expo) ${delayMs}ms both` } : undefined}

@@ -6,6 +6,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { after } from 'next/server'
 import { reportOrderConversion } from '@/utils/orderConversions'
+import { reportGooglePurchase } from '@/utils/googleServer'
 import { sendOrderStatusUpdate, sendAdminOrderStatusNotification, sendAdminOrderConfirmedNotification } from '@/utils/email'
 import { requireAdmin } from '@/utils/auth'
 import { createAdminClient } from '@/utils/supabase/admin'
@@ -83,6 +84,7 @@ export async function updateOrderStatus(formData: FormData) {
   if (error) {
     return { error: 'Failed to update order status.' }
   }
+  if (patch.confirmed_at) after(()=>reportGooglePurchase(orderId))
 
   // --- TRIGGER EMAILS ---
   //
@@ -400,6 +402,7 @@ export async function confirmCustomerOrder(
   // the page the customer is waiting on.
   if (wasAwaiting && order) {
     after(async () => {
+      await reportGooglePurchase(orderId)
       try {
         await sendAdminOrderConfirmedNotification(
           order.customer_name,

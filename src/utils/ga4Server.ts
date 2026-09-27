@@ -39,6 +39,8 @@ export interface Ga4Event {
   clientId: string
   name: string
   params: Record<string, unknown>
+  timestampMicros?: number
+  consent?: {ad_user_data:'granted'|'denied';ad_personalization:'granted'|'denied'}
 }
 
 /**
@@ -53,11 +55,11 @@ export function clientIdFromGaCookie(cookieValue: string | null | undefined): st
 }
 
 /** Never throws: a reporting failure must not affect the order behind it. */
-export async function sendGa4Event(event: Ga4Event): Promise<void> {
-  if (!isGa4ServerConfigured()) return
+export async function sendGa4Event(event: Ga4Event): Promise<'transport_accepted'|'failed'|'disabled'> {
+  if (!isGa4ServerConfigured()) return 'disabled'
   // Production gate (utils/trackingEnv.ts) - see the matching note in
   // utils/metaCapi.ts.
-  if (!isServerTrackingEnabled()) return
+  if (!isServerTrackingEnabled()) return 'disabled'
 
   const url =
     `https://www.google-analytics.com/mp/collect` +
@@ -72,7 +74,9 @@ export async function sendGa4Event(event: Ga4Event): Promise<void> {
         client_id: event.clientId,
         // Without this GA4 treats a server event as a new session and the
         // engagement metrics for the visit are distorted.
-        non_personalized_ads: false,
+        non_personalized_ads: event.consent ? event.consent.ad_personalization !== 'granted' : false,
+        ...(event.timestampMicros ? {timestamp_micros:event.timestampMicros} : {}),
+        ...(event.consent ? {consent:{ad_user_data:event.consent.ad_user_data.toUpperCase(),ad_personalization:event.consent.ad_personalization.toUpperCase()}} : {}),
         events: [{ name: event.name, params: event.params }],
       }),
     })
@@ -82,8 +86,11 @@ export async function sendGa4Event(event: Ga4Event): Promise<void> {
     // use the DebugView endpoint if an event does not appear in GA4.
     if (!res.ok) {
       console.error(`GA4 MP ${event.name} rejected (${res.status})`)
+      return 'failed'
     }
+    return 'transport_accepted'
   } catch (err) {
     console.error(`GA4 MP ${event.name} failed to send`, err)
+    return 'failed'
   }
 }

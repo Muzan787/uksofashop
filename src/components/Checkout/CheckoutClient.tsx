@@ -48,6 +48,7 @@ import DeliveryDateField from './DeliveryDateField'
 import CheckoutRecoveryOptIn from './CheckoutRecoveryOptIn'
 import TrustBox from '@/components/UI/TrustBox'
 import { useOffer } from '@/components/Offer/OfferProvider'
+import { emitGoogleOrder, emitGoogleEvent, googleBasket, GOOGLE_GTM_ENABLED, GOOGLE_GTM_QA_ENABLED } from '@/utils/googleMeasurement'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 import type { Step } from './Steps'
@@ -582,6 +583,7 @@ function DetailsStep({
 
     submitInFlight.current = true
     setPending(true)
+    emitGoogleEvent('add_shipping_info',googleBasket(toTrackedItems(cartItems).map(i=>({item_id:i.variantId,item_name:i.title,price:i.price,quantity:i.quantity})),offerDiscount),{surface:'checkout',step:'mainland_accepted'})
 
     setMetaIdentity({
       email: form.customerEmail,
@@ -602,6 +604,7 @@ function DetailsStep({
         setPending(false)
         submitInFlight.current = false
       } else if (res?.success) {
+        emitGoogleOrder(res.googleReceipt)
         trackOrderPlaced(res.orderId, res.total, toTrackedItems(cartItems))
         clearCart()
         onSuccess(res.orderId, form.postcode.toUpperCase(), res.total, form.preferredDeliveryDate || null)
@@ -1173,6 +1176,8 @@ export default function CheckoutClient() {
   const goNext = () => {
     if (cartItems.length > 0) {
       trackInitiateCheckout(toTrackedItems(cartItems), totalAmount)
+      emitGoogleEvent('begin_checkout',googleBasket(toTrackedItems(cartItems).map(i=>({item_id:i.variantId,item_name:i.title,price:i.price,quantity:i.quantity})),effectiveDiscount))
+      emitGoogleEvent('checkout_progress',undefined,{surface:'checkout',step:'cart_accepted'})
     }
     transition('details', 'forward')
   }
@@ -1230,7 +1235,7 @@ export default function CheckoutClient() {
 
         <div className={`grid gap-4 ${step === 'success' ? 'grid-cols-1' : 'lg:grid-cols-[1fr_340px]'}`}>
           <div
-            className={`rounded-md border border-calico-300 bg-calico-50 p-4 shadow-e1 transition-[opacity,transform] duration-base ease-out-expo sm:p-6 ${
+            className={`min-w-0 rounded-md border border-calico-300 bg-calico-50 p-4 shadow-e1 transition-[opacity,transform] duration-base ease-out-expo sm:p-6 ${
               step === 'success' ? 'mx-auto max-w-[520px]' : ''
             } ${
               visible
@@ -1260,7 +1265,7 @@ export default function CheckoutClient() {
             )}
             {step === 'success' && (
               <>
-                <AdsPurchaseConversion reference={orderId} total={orderAmount} />
+                {!GOOGLE_GTM_ENABLED && !GOOGLE_GTM_QA_ENABLED && <AdsPurchaseConversion reference={orderId} total={orderAmount} />}
                 <SuccessStep orderId={orderId} postcode={orderPostcode} amount={orderAmount} preferredDeliveryDate={orderDeliveryDate} />
               </>
             )}

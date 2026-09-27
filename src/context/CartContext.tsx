@@ -4,6 +4,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { CartItem } from '@/app/actions/checkout'
 import type { BuildSpec } from '@/types/build'
+import { emitGoogleEvent } from '@/utils/googleMeasurement'
 
 export interface DisplayCartItem extends CartItem {
   /**
@@ -153,11 +154,18 @@ export function CartProvider({ children }: { children: ReactNode }) {
     })
   }
 
-  const removeFromCart = (key: string) =>
+  const removeFromCart = (key: string) => {
+    const item=cartItems.find(i=>lineKey(i)===key)
+    if(item) emitGoogleEvent('remove_from_cart',{currency:'GBP',value:item.price*item.quantity,
+      items:[{item_id:item.variant_id,item_name:item.title,price:item.price,quantity:item.quantity}]})
     setCartItems(prev => prev.filter(i => lineKey(i) !== key))
+  }
 
   const updateQuantity = (key: string, qty: number) => {
     if (qty < 1) { removeFromCart(key); return }
+    const item=cartItems.find(i=>lineKey(i)===key)
+    if(item && item.quantity!==qty) emitGoogleEvent(qty>item.quantity?'add_to_cart':'remove_from_cart',
+      {currency:'GBP',value:item.price*Math.abs(qty-item.quantity),items:[{item_id:item.variant_id,item_name:item.title,price:item.price,quantity:Math.abs(qty-item.quantity)}]})
     setCartItems(prev =>
       prev.map(i => lineKey(i) === key ? { ...i, quantity: qty } : i)
     )

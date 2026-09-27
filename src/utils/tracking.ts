@@ -28,6 +28,7 @@ import { META_PIXEL_ID, META_PIXEL_READY_EVENT } from '@/utils/consentMode'
 import { getConsent } from '@/utils/consent'
 import { normaliseUkMobile } from '@/utils/phone'
 import { isBrowserTrackingEnabled } from '@/utils/trackingEnv'
+import { GOOGLE_DATALAYER_ENABLED, emitGoogleEvent, googleNavigationId, type GoogleCommerce, type GoogleEvent } from './googleMeasurement'
 
 const CURRENCY = 'GBP'
 
@@ -216,6 +217,19 @@ export function setMetaIdentity(who: MetaIdentity): void {
  */
 function ga(event: string, params: Record<string, unknown>): void {
   if (typeof window === 'undefined') return
+  if (GOOGLE_DATALAYER_ENABLED) {
+    // The committed receipt owns order_placed and its single Ads tag separately.
+    if (event === 'conversion' || event === 'order_placed') return
+    if (event==='begin_checkout') return // The checkout owner supplies its current offer-adjusted basket.
+    if (['view_item','add_to_cart'].includes(event)) {
+      const c = params as unknown as GoogleCommerce
+      emitGoogleEvent(event as GoogleEvent, c, {}, event === 'view_item'
+        ? `view:${googleNavigationId()}:${c.items?.[0]?.item_id}:${c.value}` : undefined)
+    } else if (event === 'whatsapp_click' || event === 'phone_click') {
+      emitGoogleEvent(event, undefined, {item_id:typeof params.item_id==='string'?params.item_id:undefined})
+    }
+    return
+  }
   if (!isBrowserTrackingEnabled()) return
   const w = window as TagWindow
   if (typeof w.gtag !== 'function') return

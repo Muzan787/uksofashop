@@ -22,6 +22,8 @@
 import { useState, useEffect, useSyncExternalStore } from 'react';
 import { usePathname } from 'next/navigation';
 import Script from 'next/script';
+import { GOOGLE_GTM_ENABLED, GOOGLE_GTM_QA_ENABLED, GOOGLE_DATALAYER_ENABLED, emitGoogleEvent, googleNavigationId } from '@/utils/googleMeasurement';
+import { persistGoogleConsent } from '@/utils/googleConsentEvidence';
 import {
   applyGoogleConsent,
   GA_ID,
@@ -44,7 +46,7 @@ export default function TrackingScripts() {
   const [consent, setConsent] = useState<ConsentValue | null>(null);
   // Called for its re-render on navigation, which is what makes the
   // useSyncExternalStore snapshot below re-read the address bar.
-  usePathname();
+  const pathname = usePathname();
 
   /**
    * Whether the current URL carries an order uuid, a link token or a postcode.
@@ -108,6 +110,7 @@ export default function TrackingScripts() {
     };
 
     read();
+    persistGoogleConsent();
 
     window.addEventListener(CONSENT_CHANGED_EVENT, read);
     // The older event name is still dispatched by grantConsent(); listening to
@@ -119,12 +122,17 @@ export default function TrackingScripts() {
     };
   }, []);
 
+  useEffect(() => {
+    if (GOOGLE_DATALAYER_ENABLED) emitGoogleEvent('page_view', undefined, {}, `page:${googleNavigationId()}`);
+  }, [pathname]);
+
   // Production hostname gate (utils/trackingEnv.ts). Neither the Google tag
   // nor the Meta Pixel loads at all outside www.uksofashop.co.uk/
   // uksofashop.co.uk - a developer's laptop, a LAN preview and every Vercel
   // preview deployment now send nothing, rather than contributing real
   // traffic to the live ad accounts.
-  if (!productionHost) return null;
+  const qaHost = GOOGLE_GTM_QA_ENABLED && !productionHost;
+  if (!productionHost && !qaHost) return null;
 
   return (
     <>
@@ -135,7 +143,11 @@ export default function TrackingScripts() {
              Loaded with a plain <Script> rather than <GoogleAnalytics> so the
              inline config runs after our defaults; the helper component
              injects its own gtag bootstrap and would race the snippet. */}
-      <Script
+      {GOOGLE_GTM_ENABLED || qaHost ? <Script
+        id="ukss-gtm"
+        strategy="afterInteractive"
+        dangerouslySetInnerHTML={{__html:`(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s);j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','GTM-MXQ8S66N');`}}
+      /> : <><Script
         id="ga-lib"
         strategy="afterInteractive"
         src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
@@ -147,13 +159,14 @@ export default function TrackingScripts() {
           __html: `gtag('js', new Date()); gtag('config', '${GA_ID}');`,
         }}
       />
+      </>}
 
       {/* 3. Meta Pixel - only once consent is granted, and never on a URL that
              carries an order uuid, a link token or a postcode. See the note at
              the top of this file for why this one is not merely
              defaulted-denied, and `sensitive` above for why it is withheld
              entirely rather than redacted the way Google's is. */}
-      {consent === 'granted' && !sensitive && (
+      {productionHost && consent === 'granted' && !sensitive && (
         <Script
           id="meta-pixel"
           strategy="afterInteractive"

@@ -134,6 +134,9 @@ async function fillDetails(page) {
   await page.locator('[name="customerEmail"]').fill('phase-d-qa@example.com')
   await page.locator('[name="customerPhone"]').fill('07123456789')
   await page.locator('[name="shippingAddress"]').fill('1 Controlled QA Street, Blackburn')
+  // Current checkout keeps optional instructions inside a native disclosure.
+  // Open the same control a customer uses before filling its textarea.
+  await page.getByText('Add delivery instructions', { exact: true }).click()
   await page.locator('[name="specialInstructions"]').fill('Keep this instruction through postcode switching')
 }
 async function setPostcode(page, postcode) { await page.locator('input[name="postcode"]').fill(postcode) }
@@ -177,11 +180,12 @@ async function applyOffer(page, amount) {
   await page.getByLabel('Offer code').fill('SOFAEXTRA')
   await page.getByRole('button', { name: /^Apply$/ }).click()
   const confirmation = amount > 0
-    ? new RegExp(`SOFAEXTRA applied · £${amount} off`, 'i')
+    ? new RegExp(`£${amount}\\.00 has already been taken off this basket\\.`, 'i')
     : /SOFAEXTRA is recognised\. No extra cash discount applies to this basket\./i
   await page.getByText(confirmation).waitFor({ state: 'visible', timeout: 15000 })
 }
 async function setAssembly(page) {
+  await page.getByText('Need assembly, upstairs delivery or old-sofa removal?', { exact: true }).click()
   const label = page.locator('label').filter({ hasText: 'Assembly' }).first()
   const checkbox = label.locator('input[type="checkbox"]')
   assert.equal(await checkbox.count(), 1, 'Assembly checkbox missing')
@@ -199,7 +203,7 @@ async function assertStatePreserved(page, quantity = 2) {
   assert.equal(cart[0].fabric_label, 'Premium Beige')
   assert.equal(cart[0].fabric_code, 'QA-01')
   assert.equal(cart[0].quantity, quantity)
-  await page.getByText(/SOFAEXTRA applied · £50 off/i).waitFor({ state: 'visible', timeout: 3000 })
+  await page.getByText(/£50\.00 has already been taken off this basket\./i).waitFor({ state: 'visible', timeout: 3000 })
   const assembly = page.locator('label').filter({ hasText: 'Assembly' }).first().locator('input[type="checkbox"]')
   assert.equal(await assembly.isChecked(), true, 'Assembly extra was lost while switching delivery state')
 }
@@ -227,6 +231,9 @@ async function assertCartReadabilityUndo(page) {
 }
 async function assertNoHorizontalOverflow(page, width) {
   const { sw, cw } = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth }))
+  if (sw > cw + 1) {
+    console.error('Overflow elements:', await page.evaluate(() => [...document.querySelectorAll('body *')].map(el => ({ tag: el.tagName, className: el.className, text: el.textContent?.slice(0, 120), left: el.getBoundingClientRect().left, right: el.getBoundingClientRect().right })).filter(el => el.right > document.documentElement.clientWidth + 1 && el.left >= 0).slice(0, 15)))
+  }
   assert.ok(sw <= cw + 1, `${width}px horizontal overflow: ${sw} > ${cw}`)
 }
 async function assertFabClearsBar(page, width) {
