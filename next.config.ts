@@ -14,10 +14,14 @@ const isProduction = process.env.NODE_ENV === 'production'
 const googleTrackingPreviewQA = process.env.VERCEL_ENV === 'preview' &&
   process.env.VERCEL_GIT_COMMIT_REF === 'codex/google-tracking-phase2b'
 
+const googleTrackingProduction = process.env.VERCEL_ENV === 'production'
+
 const nextConfig: NextConfig = {
   reactCompiler: true,
   ...(googleTrackingPreviewQA ? {
     env: { NEXT_PUBLIC_GOOGLE_TRACKING_MODE: 'gtm-qa' },
+  } : googleTrackingProduction ? {
+    env: { NEXT_PUBLIC_GOOGLE_TRACKING_MODE: 'gtm-v1' },
   } : {}),
 
   /**
