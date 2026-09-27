@@ -25,7 +25,8 @@ export function googleSafeUrl(raw: string): string {
   try {
     const url = new URL(raw, 'https://www.uksofashop.co.uk')
     if (!['http:','https:'].includes(url.protocol)) return ''
-    if (!['uksofashop.co.uk','www.uksofashop.co.uk','localhost','127.0.0.1'].includes(url.hostname)) return `${url.origin}/`
+    const ownQAPreview=GOOGLE_GTM_QA_ENABLED && /^uksofashop-[a-z0-9-]+-muzan787s-projects\.vercel\.app$/i.test(url.hostname)
+    if (!ownQAPreview && !['uksofashop.co.uk','www.uksofashop.co.uk','localhost','127.0.0.1'].includes(url.hostname)) return `${url.origin}/`
     const path = url.pathname.replace(/\/[0-9a-f]{8}-[0-9a-f-]{27,}(?=\/|$)/gi,'/[id]')
       .replace(/\/(confirm-order|review|newsletter|track-order|admin|account|auth)(?:\/.*)?$/i,'/$1')
     if (!/^\/[a-z0-9\-/_%.[\]]*$/i.test(path) || /%40|@|%2b/i.test(path)) return `${url.origin}/[private]`

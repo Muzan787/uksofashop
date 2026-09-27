@@ -74,6 +74,17 @@ export default function ProductCard({
   const [swatchImage, setSwatchImage] = useState<string | null>(null);
   const article=useRef<HTMLElement>(null);
   useEffect(()=>{
+    if(!variantId) return;
+    // ViewTransitions handles navigation at document capture and stops
+    // propagation. Observe at that same boundary without altering navigation.
+    const select=(event:MouseEvent)=>{
+      const anchor=event.target instanceof Element ? event.target.closest('a') : null;
+      if(anchor && article.current?.contains(anchor)) emitGoogleEvent('select_item',{currency:'GBP',value:price,items:[{item_id:variantId,item_name:title,price,quantity:1}]},{list_id:listId});
+    };
+    document.addEventListener('click',select,true);
+    return ()=>document.removeEventListener('click',select,true);
+  },[variantId,title,price,listId]);
+  useEffect(()=>{
     if(!article.current || !variantId) return;
     let timer:ReturnType<typeof setTimeout>|undefined;
     const observer=new IntersectionObserver(entries=>{
@@ -92,7 +103,6 @@ export default function ProductCard({
   return (
     <article
       ref={article}
-      onClick={e=>{if(variantId && (e.target as Element).closest('a')) emitGoogleEvent('select_item',{currency:'GBP',value:price,items:[{item_id:variantId,item_name:title,price,quantity:1}]},{list_id:listId});}}
       className="group relative hover-card"
       data-cursor="view"
       style={delayMs ? { animation: `fadeUp var(--dur-base) var(--ease-out-expo) ${delayMs}ms both` } : undefined}
