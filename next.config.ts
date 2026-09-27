@@ -9,8 +9,16 @@ const withPWA = withPWAInit({
 
 const isProduction = process.env.NODE_ENV === 'production'
 
+// Bounded Phase 2C Preview QA: never selects QA mode for production or other
+// branches. All imported Google tags still require a real production event.
+const googleTrackingPreviewQA = process.env.VERCEL_ENV === 'preview' &&
+  process.env.VERCEL_GIT_COMMIT_REF === 'codex/google-tracking-phase2b'
+
 const nextConfig: NextConfig = {
   reactCompiler: true,
+  ...(googleTrackingPreviewQA ? {
+    env: { NEXT_PUBLIC_GOOGLE_TRACKING_MODE: 'gtm-qa' },
+  } : {}),
 
   /**
    * View Transitions.
