@@ -48,7 +48,7 @@ import DeliveryDateField from './DeliveryDateField'
 import CheckoutRecoveryOptIn from './CheckoutRecoveryOptIn'
 import TrustBox from '@/components/UI/TrustBox'
 import { useOffer } from '@/components/Offer/OfferProvider'
-import { emitGoogleOrder, emitGoogleEvent, googleBasket, GOOGLE_GTM_ENABLED } from '@/utils/googleMeasurement'
+import { emitGoogleOrder, emitGoogleEvent, googleBasket, GOOGLE_GTM_ENABLED, GOOGLE_GTM_QA_ENABLED } from '@/utils/googleMeasurement'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 import type { Step } from './Steps'
@@ -1265,7 +1265,7 @@ export default function CheckoutClient() {
             )}
             {step === 'success' && (
               <>
-                {!GOOGLE_GTM_ENABLED && <AdsPurchaseConversion reference={orderId} total={orderAmount} />}
+                {!GOOGLE_GTM_ENABLED && !GOOGLE_GTM_QA_ENABLED && <AdsPurchaseConversion reference={orderId} total={orderAmount} />}
                 <SuccessStep orderId={orderId} postcode={orderPostcode} amount={orderAmount} preferredDeliveryDate={orderDeliveryDate} />
               </>
             )}

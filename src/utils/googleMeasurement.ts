@@ -3,6 +3,10 @@ import { getConsent } from './consent'
 import { isBrowserTrackingEnabled } from './trackingEnv'
 
 export const GOOGLE_GTM_ENABLED = process.env.NEXT_PUBLIC_GOOGLE_TRACKING_MODE === 'gtm-v1'
+// QA mode exists only for non-production hosts. It exposes the event contract
+// to Tag Assistant while the imported GTM production guard blocks every tag.
+export const GOOGLE_GTM_QA_ENABLED = process.env.NEXT_PUBLIC_GOOGLE_TRACKING_MODE === 'gtm-qa'
+export const GOOGLE_DATALAYER_ENABLED = GOOGLE_GTM_ENABLED || GOOGLE_GTM_QA_ENABLED
 export const GOOGLE_POLICY_VERSION = 'ukss-google-2026-09-27-v1'
 export type GoogleConsentState = 'granted' | 'denied'
 export const googleEvents = ['page_view','view_item','view_item_list','select_item','add_to_cart',
@@ -63,14 +67,15 @@ export function googleNavigationId(): string {
 export function emitGoogleEvent(event: GoogleEvent, commerce?: GoogleCommerce,
   context: {surface?: string; step?: string; order_value?: number; item_id?: string; list_id?: string} = {},
   dedupeKey?: string): void {
-  if (typeof window === 'undefined' || !GOOGLE_GTM_ENABLED) return
+  if (typeof window === 'undefined' || !GOOGLE_DATALAYER_ENABLED ||
+    (GOOGLE_GTM_QA_ENABLED && isBrowserTrackingEnabled())) return
   if (commerce && !validCommerce(commerce)) return
   if (context.item_id && !UUID.test(context.item_id)) delete context.item_id
   if (context.order_value!==undefined && (!Number.isFinite(context.order_value)||context.order_value<0)) return
   if (dedupeKey && emitted.has(dedupeKey)) return
   if (dedupeKey) emitted.add(dedupeKey)
   const params = new URLSearchParams(window.location.search)
-  const qa = !isBrowserTrackingEnabled() || [...params].some(([k,v]) => /qa|debug|test|probe/i.test(k) || /offer-test|qa-test|debug|probe/i.test(v))
+  const qa = GOOGLE_GTM_QA_ENABLED || !isBrowserTrackingEnabled() || [...params].some(([k,v]) => /qa|debug|test|probe/i.test(k) || /offer-test|qa-test|debug|probe/i.test(v))
   const layer = (window as unknown as {dataLayer: unknown[]}).dataLayer ||= []
   layer.push({ecommerce:null,ukss:null})
   layer.push({event:`ukss.${event}`,ukss:{schema_version:1,environment:isBrowserTrackingEnabled()?'production':'preview',
