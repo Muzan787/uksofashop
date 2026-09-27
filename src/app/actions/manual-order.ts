@@ -1,4 +1,6 @@
 'use server'
+import { GOOGLE_GTM_ENABLED } from '@/utils/googleMeasurement'
+import { createUntypedAdminClient } from '@/utils/supabase/admin'
 
 // src/app/actions/manual-order.ts
 //
@@ -327,6 +329,10 @@ export async function createWhatsAppOrder(input: ManualOrderInput): Promise<Manu
 
   const order = data as unknown as { id: string; total_amount: number; items_subtotal: number; delivery_total: number }
   const shortCode = order.id.substring(0, 8).toUpperCase()
+  if (GOOGLE_GTM_ENABLED && attribution.reference) {
+    try { await createUntypedAdminClient().rpc('google_phase2b_attach_whatsapp',{p_order_id:order.id}) }
+    catch { /* Google evidence cannot interrupt the committed manual order. */ }
+  }
 
   revalidatePath('/admin/orders')
 

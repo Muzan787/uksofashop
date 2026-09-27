@@ -29,6 +29,8 @@ import { sendGa4Event, clientIdFromGaCookie } from '@/utils/ga4Server'
 import { SITE_URL } from '@/constants/site'
 import { isServerTrackingEnabled } from '@/utils/trackingEnv'
 import { createAdminClient } from '@/utils/supabase/admin'
+import { reportGooglePurchase } from './googleServer'
+import { GOOGLE_GTM_ENABLED } from './googleMeasurement'
 
 export type ConversionKind = 'purchase' | 'delivered'
 
@@ -61,6 +63,7 @@ export async function reportOrderConversion(
     // reports correctly later if it turns out to belong to production after
     // all - see the note on isServerTrackingEnabled for why that matters.
     if (!isServerTrackingEnabled()) return
+    if (kind === 'purchase') await reportGooglePurchase(orderId)
 
     const sentColumn = SENT_COLUMN[kind]
     // Conversion reporting is a server-side business operation, not a caller-
@@ -186,7 +189,7 @@ export async function reportOrderConversion(
 
       // GA4 only gets a purchase. A second monetary event for the same order
       // would double the revenue in the Monetisation reports.
-      kind === 'purchase' && order.ga_client_id
+      !GOOGLE_GTM_ENABLED && kind === 'purchase' && order.ga_client_id
         ? sendGa4Event({
             clientId: clientIdFromGaCookie(order.ga_client_id) ?? order.ga_client_id,
             name: 'purchase',
@@ -228,7 +231,7 @@ export async function reportOrderConversion(
         sent_at: new Date().toISOString(),
         status: 'sent' as const,
       },
-      ...(kind === 'purchase' && order.ga_client_id
+      ...(!GOOGLE_GTM_ENABLED && kind === 'purchase' && order.ga_client_id
         ? [{
             order_id: orderId,
             platform: 'ga4' as const,

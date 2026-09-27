@@ -24,6 +24,9 @@ import {
 } from '@/utils/attribution/whatsapp'
 import { isDeterministicCheckoutWhatsAppMatch } from '@/utils/attribution/checkoutLinkage'
 import { formatOrderForCopy } from '@/utils/orderText'
+import { googleOrderReceipt } from '@/utils/googleServer'
+import { GOOGLE_GTM_ENABLED, type GoogleOrderReceipt } from '@/utils/googleMeasurement'
+import { createUntypedAdminClient } from '@/utils/supabase/admin'
 import type { AdminOrderDisplay } from '@/types/adminOrders'
 import type { BuildSnapshot } from '@/types/build'
 
@@ -195,7 +198,7 @@ export async function checkDeliveryPostcode(rawPostcode: string): Promise<Delive
  */
 export type PlaceOrderResult =
   | { success?: undefined; error: string }
-  | { success: true; error?: undefined; orderId: string; total: number }
+  | { success: true; error?: undefined; orderId: string; total: number; googleReceipt?: GoogleOrderReceipt | null }
 
 export async function placeOrder(
   formData: FormData,
@@ -601,5 +604,16 @@ export async function placeOrder(
     }
   }
 
-  return { success: true, orderId: shortCode, total: Number(order.total_amount) }
+  if (GOOGLE_GTM_ENABLED) {
+    try {
+      const receiptId = z.string().uuid().safeParse(jar.get('ukss_google_consent_receipt')?.value)
+      if (receiptId.success && currentVisitorId && currentSessionId) {
+        await createUntypedAdminClient().rpc('google_phase2b_attach_consent', {
+          p_order_id:order.id,p_receipt_id:receiptId.data,p_visitor_id:currentVisitorId,p_session_id:currentSessionId,
+        })
+      }
+    } catch { /* The committed order must succeed even if Google is unavailable. */ }
+  }
+  return { success: true, orderId: shortCode, total: Number(order.total_amount),
+    ...(GOOGLE_GTM_ENABLED ? {googleReceipt:await googleOrderReceipt(order.id)} : {}) }
 }

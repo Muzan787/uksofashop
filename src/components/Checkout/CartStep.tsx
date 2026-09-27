@@ -14,6 +14,7 @@ import { blurDataURL } from '@/utils/cloudinary';
 import { describeBuild } from '@/types/build';
 import { useReducedMotionSafe } from '@/components/Motion/useReducedMotionSafe';
 import OrderOnWhatsApp from './OrderOnWhatsApp';
+import {emitGoogleEvent,googleBasket} from '@/utils/googleMeasurement';
 
 
 /** How long the row takes to collapse, and how long undo stays up. */
@@ -28,6 +29,12 @@ export default function CartStep({ onNext, discount = 0 }: {
   const { cartItems, totalAmount, addToCart, removeFromCart, updateQuantity } = useCart();
   const [collapsing, setCollapsing] = useState<string | null>(null);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const googleView=useRef(false);
+  useEffect(()=>{
+    if(googleView.current || !cartItems.length) return;
+    googleView.current=true;
+    emitGoogleEvent('view_cart',googleBasket(cartItems.map(i=>({item_id:i.variant_id,item_name:i.title,price:i.price,quantity:i.quantity})),discount));
+  },[cartItems,totalAmount,discount]);
 
   useEffect(() => {
     const pending = timers.current;

@@ -9,6 +9,7 @@
 // remove them. A withdrawal that leaves the cookies in place isn't a withdrawal,
 // so revokeConsent() deletes them and reloads the page.
 
+import { recordGoogleChoice } from './googleConsentEvidence'
 export type ConsentValue = 'granted' | 'denied'
 
 export const CONSENT_KEY = 'cookie_consent'
@@ -71,6 +72,7 @@ export function clearTrackingCookies() {
 
 export function grantConsent() {
   window.localStorage.setItem(CONSENT_KEY, 'granted')
+  recordGoogleChoice('granted', 'granted')
   window.dispatchEvent(new Event(CONSENT_GRANTED_EVENT))
   window.dispatchEvent(new Event(CONSENT_CHANGED_EVENT))
 }
@@ -81,7 +83,9 @@ export function grantConsent() {
  * the only honest way to stop them.
  */
 export function revokeConsent({ reload = true } = {}) {
+  const previous = getConsent()
   window.localStorage.setItem(CONSENT_KEY, 'denied')
+  recordGoogleChoice('denied', previous === 'granted' ? 'revoked' : 'denied')
   clearTrackingCookies()
   window.dispatchEvent(new Event(CONSENT_CHANGED_EVENT))
   if (reload) window.location.reload()
@@ -90,6 +94,7 @@ export function revokeConsent({ reload = true } = {}) {
 /** Clears the stored answer so the banner asks again. */
 export function resetConsent() {
   window.localStorage.removeItem(CONSENT_KEY)
+  recordGoogleChoice('denied', 'revoked')
   clearTrackingCookies()
   window.dispatchEvent(new Event(CONSENT_CHANGED_EVENT))
 }

@@ -11,18 +11,20 @@ import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { captureArrival } from '@/utils/attribution/capture';
 import { CONSENT_GRANTED_EVENT } from '@/utils/consent';
+import { persistGoogleConsent } from '@/utils/googleConsentEvidence';
 
 export default function AttributionBoot() {
   const pathname = usePathname();
 
   useEffect(() => {
     captureArrival();
+    persistGoogleConsent();
 
     // If the visitor grants consent after landing on a tagged ad URL, capture
     // the marketing touch immediately rather than waiting for another route
     // change. This keeps consent honest without throwing away the click when
     // the query parameters are still present.
-    const onConsentGranted = () => captureArrival();
+    const onConsentGranted = () => { captureArrival(); persistGoogleConsent(); };
     window.addEventListener(CONSENT_GRANTED_EVENT, onConsentGranted);
 
     return () => window.removeEventListener(CONSENT_GRANTED_EVENT, onConsentGranted);

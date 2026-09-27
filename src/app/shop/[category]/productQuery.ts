@@ -151,6 +151,7 @@ export async function categoryPriceRange(
 /** Everything a ProductCard needs, and nothing the client does not. */
 export interface GridCard {
   id: string
+  variantId?: string
   title: string
   slug: string
   href: string
@@ -258,6 +259,7 @@ export async function fetchProductCards(
 
     return {
       id: product.id,
+      variantId: variant?.id,
       title: product.title,
       slug: product.slug,
       href: belongsToSegment
