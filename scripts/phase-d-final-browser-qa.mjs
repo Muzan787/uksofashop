@@ -134,6 +134,9 @@ async function fillDetails(page) {
   await page.locator('[name="customerEmail"]').fill('phase-d-qa@example.com')
   await page.locator('[name="customerPhone"]').fill('07123456789')
   await page.locator('[name="shippingAddress"]').fill('1 Controlled QA Street, Blackburn')
+  // Current checkout keeps optional instructions inside a native disclosure.
+  // Open the same control a customer uses before filling its textarea.
+  await page.getByText('Add delivery instructions', { exact: true }).click()
   await page.locator('[name="specialInstructions"]').fill('Keep this instruction through postcode switching')
 }
 async function setPostcode(page, postcode) { await page.locator('input[name="postcode"]').fill(postcode) }
