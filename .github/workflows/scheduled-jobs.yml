@@ -1,0 +1,71 @@
+name: Scheduled jobs
+
+# The three crons that used to live in vercel.json.
+#
+# Vercel Cron stopped existing when the site moved to Hostinger, and Hostinger
+# ignores vercel.json, so they run from here instead. Each endpoint is a GET
+# protected by CRON_SECRET, which must be set as a repository secret under
+# Settings -> Secrets and variables -> Actions. Same value as the CRON_SECRET
+# in the Hostinger environment variables; if the two ever drift the call comes
+# back 401 and this workflow fails loudly.
+#
+# /api/cron/conversions is deliberately absent. Its Vercel entry was removed
+# when manual sending from the admin Meta page became the source of truth, and
+# the route survives only as a protected diagnostic.
+#
+# Two things to know about GitHub's scheduler: a run can be delayed by several
+# minutes under load, and scheduled workflows are disabled automatically after
+# 60 days with no repository activity. Neither matters much for a daily email,
+# but the 60-day rule is the one that will bite silently.
+
+on:
+  schedule:
+    - cron: '0 10 * * *'   # review requests,  daily 10:00 UTC
+    - cron: '30 8 * * *'   # recovery cleanup, daily 08:30 UTC
+    - cron: '0 7 * * 1'    # weekly digest,    Mondays 07:00 UTC
+  workflow_dispatch:
+    inputs:
+      job:
+        description: Which job to run now
+        required: true
+        type: choice
+        options:
+          - review-requests
+          - recovery-cleanup
+          - weekly-digest
+
+env:
+  SITE: https://www.uksofashop.co.uk
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Decide which endpoint this trigger means
+        id: pick
+        run: |
+          case "${{ github.event.schedule || format('manual-{0}', inputs.job) }}" in
+            '0 10 * * *'|manual-review-requests)  path=review-requests  ;;
+            '30 8 * * *'|manual-recovery-cleanup) path=recovery-cleanup ;;
+            '0 7 * * 1'|manual-weekly-digest)     path=weekly-digest    ;;
+            *) echo "Unrecognised trigger" >&2; exit 1 ;;
+          esac
+          echo "path=$path" >> "$GITHUB_OUTPUT"
+          echo "Running $path"
+
+      - name: Call it
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "CRON_SECRET is not set as a repository secret" >&2
+            exit 1
+          fi
+          code=$(curl -sS -o /tmp/body -w '%{http_code}' \
+            --max-time 120 --retry 2 --retry-delay 10 \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "$SITE/api/cron/${{ steps.pick.outputs.path }}")
+          echo "HTTP $code"
+          cat /tmp/body; echo
+          [ "$code" = "200" ] || exit 1
