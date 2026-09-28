@@ -11,6 +11,7 @@ import {
   OFFER_ENTITLEMENT_MAX_AGE_S,
 } from '@/utils/offers/constants'
 import { isProductionRequestHost } from '@/utils/trackingEnv'
+import { externalOrigin } from '@/utils/requestOrigin'
 
 export const dynamic = 'force-dynamic'
 
@@ -43,8 +44,13 @@ export async function GET(
   const entry = verifyOfferEntry(token)
   if (!entry) return invalid()
 
+  // requestUrl is read only for the inbound query copied below. Its ORIGIN is
+  // the internal one behind a reverse proxy, so the redirect target is built
+  // from the forwarded headers instead - otherwise this route answered a paid
+  // ad click with a Location pointing at the server's own internal address,
+  // and the visitor went nowhere. See utils/requestOrigin.
   const requestUrl = new URL(request.url)
-  const destination = new URL(entry.destination, requestUrl.origin)
+  const destination = new URL(entry.destination, externalOrigin(hdrs) ?? requestUrl.origin)
 
   // The signed destination owns its product variant. Genuine attribution
   // fields added by Meta/Google survive the clean redirect, but no inbound

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { cookies, headers } from 'next/headers'
 import { rateLimit, callerKey } from '@/utils/rateLimit'
+import { externalOrigin } from '@/utils/requestOrigin'
 import { classifyPaidLanding } from '@/utils/offers/paidTraffic'
 import { issueOfferEntitlement } from '@/utils/offers/issueEntitlement'
 import {
@@ -47,19 +48,25 @@ export async function POST(request: Request) {
   // browser Referer establishes which storefront URL initiated this request;
   // only its explicit click ids / controlled paid UTMs are classified. This is
   // not using a google.com/facebook.com referrer as financial proof.
-  const requestUrl = new URL(request.url)
+  // The origin comes from the forwarded headers, not from `request.url`.
+  // Behind a reverse proxy `request.url` carries the internal origin, so the
+  // comparison below was false for every real visitor and no paid visitor
+  // could ever qualify for an offer. See utils/requestOrigin.
+  const origin = externalOrigin(hdrs)
+  if (!origin) return json(INACTIVE_OFFER_ENTITLEMENT, 400)
+
   const refererRaw = hdrs.get('referer')
   let referer: URL
   let submitted: URL
   try {
     if (!refererRaw) return json(INACTIVE_OFFER_ENTITLEMENT, 400)
     referer = new URL(refererRaw)
-    submitted = new URL(landingPath, requestUrl.origin)
+    submitted = new URL(landingPath, origin)
   } catch {
     return json(INACTIVE_OFFER_ENTITLEMENT, 400)
   }
 
-  if (referer.origin !== requestUrl.origin || submitted.pathname !== referer.pathname) {
+  if (referer.origin !== origin || submitted.pathname !== referer.pathname) {
     return json(INACTIVE_OFFER_ENTITLEMENT, 400)
   }
 
@@ -96,7 +103,10 @@ export async function POST(request: Request) {
 
   response.cookies.set(OFFER_ENTITLEMENT_COOKIE, issued.token, {
     httpOnly: true,
-    secure: requestUrl.protocol === 'https:',
+    // From the forwarded origin, not `request.url`: behind a reverse proxy
+    // that protocol reads http, which would issue the entitlement cookie
+    // without Secure on a site served entirely over https.
+    secure: origin.startsWith('https:'),
     sameSite: 'lax',
     path: '/',
     maxAge: OFFER_ENTITLEMENT_MAX_AGE_S,

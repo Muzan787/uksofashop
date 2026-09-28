@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { cookies } from 'next/headers'
+import { cookies, headers } from 'next/headers'
+import { externalOrigin } from '@/utils/requestOrigin'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { OFFER_ENTITLEMENT_COOKIE } from '@/utils/offers/constants'
 import { INACTIVE_OFFER_ENTITLEMENT, type PublicOfferEntitlement } from '@/types/offerEntitlement'
@@ -15,23 +16,28 @@ function json(state: PublicOfferEntitlement, status = 200) {
   return response
 }
 
-function clearCookie(response: NextResponse, request: Request) {
+function clearCookie(response: NextResponse, secure: boolean) {
   response.cookies.set(OFFER_ENTITLEMENT_COOKIE, '', {
     httpOnly: true,
-    secure: new URL(request.url).protocol === 'https:',
+    secure,
     sameSite: 'lax',
     path: '/',
     maxAge: 0,
   })
 }
 
-export async function GET(request: Request) {
+export async function GET() {
   const jar = await cookies()
+  // This used to read `new URL(request.url).protocol`, which is http behind a
+  // reverse proxy - so on a live https site the clearing cookie went out
+  // WITHOUT Secure, and a cookie whose attributes do not match the original
+  // may not replace it. The entitlement could survive its own revocation.
+  const secure = (externalOrigin(await headers()) ?? 'https:').startsWith('https:')
   const parsed = tokenSchema.safeParse(jar.get(OFFER_ENTITLEMENT_COOKIE)?.value)
 
   if (!parsed.success) {
     const response = json(INACTIVE_OFFER_ENTITLEMENT)
-    if (jar.get(OFFER_ENTITLEMENT_COOKIE)) clearCookie(response, request)
+    if (jar.get(OFFER_ENTITLEMENT_COOKIE)) clearCookie(response, secure)
     return response
   }
 
@@ -50,7 +56,7 @@ export async function GET(request: Request) {
   const expiresAt = data?.expires_at ? Date.parse(data.expires_at) : Number.NaN
   if (!data || data.revoked_at || !Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
     const response = json(INACTIVE_OFFER_ENTITLEMENT)
-    clearCookie(response, request)
+    clearCookie(response, secure)
     return response
   }
 

@@ -14,7 +14,23 @@ export async function POST(req:Request) {
   const done=(status=204)=>new NextResponse(null,{status})
   if(!GOOGLE_GTM_ENABLED || !isServerTrackingEnabled()) return done()
   const h=await headers()
-  if(!isProductionRequestHost(h.get('host')) || !h.get('origin') || new URL(req.url).origin!==h.get('origin')) return done(403)
+  // Same-origin assertion, made from headers the proxy actually forwards.
+  //
+  // This used to compare `new URL(req.url).origin` against the Origin header.
+  // `req.url` is rebuilt from the address the server is bound to, not the one
+  // the visitor typed, so behind a reverse proxy - Vercel's edge did not do
+  // this, Hostinger's does - its origin is the internal one and the comparison
+  // could never be true. Every consent receipt was refused with a 403 and the
+  // table stopped filling, silently, because the browser never reports it.
+  //
+  // The Host header does survive the proxy: the apex->www redirect in
+  // next.config.ts matches on it and works. So both the host the request
+  // arrived on and the host the browser says it came from are checked against
+  // the production allowlist, which is the assertion this line always meant.
+  // Browsers set Origin on cross-site POSTs and will not let a page forge it,
+  // so this is the same CSRF guarantee without depending on req.url.
+  const originHost=(()=>{const o=h.get('origin');if(!o)return null;try{return new URL(o).host}catch{return null}})()
+  if(!isProductionRequestHost(h.get('host')) || !isProductionRequestHost(originHost)) return done(403)
   if(!rateLimit(callerKey(h,'google-consent'),60,60_000).ok) return done(429)
   if(Number(h.get('content-length')||0)>4096) return done(413)
   let raw:unknown
