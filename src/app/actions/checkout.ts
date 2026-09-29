@@ -128,7 +128,7 @@ async function orderCopyText(orderId: string): Promise<string | null> {
         sofa_removal_seats, preferred_delivery_date, special_instructions,
         order_items (
           id, variant_id, fabric_id, quantity, price_at_time_of_purchase,
-          fabric_code, fabric_name, fabric_collection, customisation,
+          fabric_code, fabric_name, fabric_collection, customisation, custom_title,
           product_variants ( sku, color, products ( title ) )
         )
       `)

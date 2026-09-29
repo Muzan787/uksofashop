@@ -227,6 +227,13 @@ const editLineSchema = z.object({
   quantity: z.number().int().min(1).max(99),
   unit_price: z.number().nonnegative().max(1_000_000),
   fabric_id: z.string().uuid().nullish(),
+  /**
+   * The name for a line the catalogue cannot name. The edit form always sends
+   * it, empty included - an empty one clears a name rather than leaving a
+   * wrong one on the order. Omitted entirely, the database leaves the line's
+   * name alone, so an older caller cannot wipe it.
+   */
+  custom_title: z.string().trim().max(120).optional(),
 })
 
 const editSchema = z.object({
@@ -279,6 +286,7 @@ export async function updateOrderDetails(input: EditOrderInput): Promise<{ succe
       quantity: i.quantity,
       unit_price: i.unit_price,
       fabric_id: i.fabric_id ?? null,
+      ...(i.custom_title === undefined ? {} : { custom_title: i.custom_title }),
     })),
   })
 

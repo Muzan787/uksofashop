@@ -57,6 +57,12 @@ const itemSchema = z.object({
    */
   unit_price: z.number().nonnegative().max(1_000_000).nullable(),
   fabric_id: z.string().uuid().nullish(),
+  /**
+   * A name for something built to order, where the catalogue has none. Null
+   * on a normal line, and then the product's own title is used. The variant
+   * is still required: it prices the line and it is what every report counts.
+   */
+  custom_title: z.string().trim().max(120).nullish(),
 })
 
 const schema = z.object({
@@ -293,6 +299,7 @@ export async function createWhatsAppOrder(input: ManualOrderInput): Promise<Manu
       quantity: i.quantity,
       unit_price: i.unit_price,
       fabric_id: i.fabric_id ?? null,
+      custom_title: i.custom_title || null,
     })),
     p_delivery_charge: v.deliveryCharge,
     p_source: 'whatsapp',

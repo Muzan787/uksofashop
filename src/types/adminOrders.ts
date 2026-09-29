@@ -18,6 +18,12 @@ export interface AdminOrderItemDisplay {
   fabric_code?: string | null
   fabric_name?: string | null
   fabric_collection?: string | null
+  /**
+   * A name typed when the order was taken, for something built to order that
+   * the catalogue does not name. Where it is set it replaces the product
+   * title everywhere - see utils/orderItemTitle.ts.
+   */
+  custom_title?: string | null
   /** The /build specification, where the line came from there - jsonb, so
    *  narrowed with asBuildSnapshot() before it is read. See types/build.ts. */
   customisation?: unknown

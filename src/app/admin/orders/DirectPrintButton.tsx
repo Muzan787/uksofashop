@@ -4,6 +4,7 @@ import { Printer } from 'lucide-react'
 import type { AdminOrderDisplay, AdminOrderItemDisplay } from '@/types/adminOrders'
 import { asBuildSnapshot, describeBuild } from '@/types/build'
 import { describeFinish } from '@/utils/orderFinish'
+import { itemTitle } from '@/utils/orderItemTitle'
 
 /** The note is built by string interpolation, so anything a customer typed is escaped. */
 const esc = (v: unknown) =>
@@ -292,7 +293,7 @@ export default function DirectPrintButton({ order }: { order: AdminOrderDisplay 
                 ${activeOrder.order_items.map((item: AdminOrderItemDisplay) => `
                   <tr>
                     <td>
-                      <div class="item-title">${item.product_variants?.products?.title}</div>
+                      <div class="item-title">${esc(itemTitle(item))}</div>
                       <div class="item-meta">
                         ${item.fabric_code
                           ? `<span>Fabric: <strong>${esc(describeFinish(item).label ?? '')}</strong> (${esc(item.fabric_code)})</span>`

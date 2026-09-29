@@ -23,6 +23,7 @@ import type { AdminOrderDisplay } from '@/types/adminOrders'
 import { splitAddress } from './CopyOrderButton'
 import type { PickerFabric, PickerVariant } from './NewWhatsAppOrder'
 import { describeFinish } from '@/utils/orderFinish'
+import { itemTitle } from '@/utils/orderItemTitle'
 
 interface Line {
   itemId: string | null
@@ -32,6 +33,8 @@ interface Line {
   quantity: number
   price: string
   fabricId: string
+  /** A name of our own, for something built to order. Empty means the catalogue title. */
+  customTitle: string
 }
 
 const label = 'block text-[11px] font-bold uppercase tracking-wider text-stone-500 mb-1.5'
@@ -44,7 +47,7 @@ function linesFrom(order: AdminOrderDisplay): Line[] {
     itemId: item.id ?? null,
     variantId: item.variant_id ?? '',
     fallbackLabel: [
-      item.product_variants?.products?.title,
+      itemTitle(item),
       describeFinish({ ...item, color: item.product_variants?.color }).label,
     ]
       .filter(Boolean)
@@ -52,6 +55,7 @@ function linesFrom(order: AdminOrderDisplay): Line[] {
     quantity: Number(item.quantity) || 1,
     price: Number(item.price_at_time_of_purchase).toFixed(2),
     fabricId: item.fabric_id ?? '',
+    customTitle: item.custom_title ?? '',
   }))
 }
 
@@ -131,6 +135,9 @@ export default function EditOrderForm({
           quantity: l.quantity,
           unit_price: Number(l.price),
           fabric_id: l.fabricId || null,
+          // Always sent, empty included: an empty one clears a name that is
+          // wrong, rather than leaving the line with it forever.
+          custom_title: l.customTitle,
         })),
       })
       if ('error' in res) { setError(res.error); return }
@@ -225,7 +232,7 @@ export default function EditOrderForm({
                   </button>
                 )}
               </div>
-              <div className="mt-2 grid gap-2 sm:grid-cols-3">
+              <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                 <input
                   className={field}
                   type="number"
@@ -242,6 +249,19 @@ export default function EditOrderForm({
                   onChange={e => setLine(i, { price: e.target.value })}
                   aria-label="Price each"
                   placeholder={line.variantId && known.has(line.variantId) ? `£${priceOf(line.variantId).toFixed(2)} list` : 'Price each'}
+                />
+                {/* Empty on every normal line: the sofa above names itself.
+                    Filled in only for something built to order, and then it
+                    is the name the order, the invoice and the customer's
+                    tracking page all print. */}
+                <input
+                  className={field}
+                  value={line.customTitle}
+                  onChange={e => setLine(i, { customTitle: e.target.value })}
+                  maxLength={120}
+                  aria-label="Custom name"
+                  placeholder="Custom name (optional)"
+                  autoComplete="off"
                 />
                 {fabrics.length > 0 && (
                   <select
@@ -262,7 +282,7 @@ export default function EditOrderForm({
         </div>
         <button
           type="button"
-          onClick={() => setLines(ls => [...ls, { itemId: null, variantId: '', fallbackLabel: '', quantity: 1, price: '', fabricId: '' }])}
+          onClick={() => setLines(ls => [...ls, { itemId: null, variantId: '', fallbackLabel: '', quantity: 1, price: '', fabricId: '', customTitle: '' }])}
           className="mt-2 inline-flex items-center gap-1.5 text-xs font-bold text-stone-600 transition hover:text-stone-900"
         >
           <Plus className="h-3.5 w-3.5" />

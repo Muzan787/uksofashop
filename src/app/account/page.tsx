@@ -35,7 +35,7 @@ export default async function AccountPage() {
       order_items (
         quantity,
         price_at_time_of_purchase,
-        fabric_code, fabric_name, fabric_collection,
+        fabric_code, fabric_name, fabric_collection, custom_title,
         product_variants (
           color,
           image_url,
@@ -95,7 +95,8 @@ export default async function AccountPage() {
       const variant = one(i.product_variants)
       const product = one(variant?.products)
       return {
-        title: product?.title ?? 'Product',
+        // A line built to order carries its own name; see orderItemTitle.ts.
+        title: i.custom_title?.trim() || product?.title || 'Product',
         slug: product?.slug ?? null,
         // The fabric it was ordered in, or the colourway for a stocked sofa -
         // never both, see utils/orderFinish.ts.

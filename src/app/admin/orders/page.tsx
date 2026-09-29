@@ -15,6 +15,7 @@ import { whatsAppLink } from '@/utils/phone'
 import { asBuildSnapshot, describeBuild } from '@/types/build'
 import { trustpilotInviteLink } from '@/constants/trustpilot'
 import { formatPreferredDeliveryDate } from '@/utils/delivery'
+import { itemTitle } from '@/utils/orderItemTitle'
 
 /**
  * The WhatsApp message that asks a delivered customer for a Trustpilot
@@ -209,7 +210,7 @@ export default async function AdminOrdersPage(props: { searchParams: SearchParam
       *,
       order_items (
         id, variant_id, fabric_id, quantity, price_at_time_of_purchase,
-        fabric_code, fabric_name, fabric_collection, customisation,
+        fabric_code, fabric_name, fabric_collection, customisation, custom_title,
         product_variants ( sku, color, products ( title ) )
       )
     `, { count: 'exact' })
@@ -656,7 +657,7 @@ export default async function AdminOrdersPage(props: { searchParams: SearchParam
                 {order.order_items.map((item) => (
                   <div key={item.id} className="flex justify-between items-center text-sm py-2 border-b border-stone-100 last:border-0">
                     <div className="flex flex-col">
-                      <span className="font-semibold text-stone-800">{item.quantity}x {item.product_variants?.products?.title}</span>
+                      <span className="font-semibold text-stone-800">{item.quantity}x {itemTitle(item)}</span>
                       {/* The variant colour is the photograph; once a fabric
                           is chosen it is not printed, so the line reads as
                           one colour, not two - see utils/orderFinish.ts. */}

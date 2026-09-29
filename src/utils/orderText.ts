@@ -17,6 +17,7 @@ import type { AdminOrderDisplay, AdminOrderItemDisplay } from '@/types/adminOrde
 import { asBuildSnapshot, describeBuild } from '@/types/build'
 import { formatPreferredDeliveryDate } from '@/utils/delivery'
 import { finishText } from '@/utils/orderFinish'
+import { itemTitle } from '@/utils/orderItemTitle'
 
 /** Every UK Mainland order, whatever it is. There is no per-order estimate. */
 const DELIVERY_WINDOW = '2-4 days'
@@ -54,7 +55,7 @@ export function splitAddress(raw: string): { address: string; postcode: string |
 
 function itemBlock(item: AdminOrderItemDisplay): string {
   const lines = [
-    `${item.quantity}x ${item.product_variants?.products?.title ?? 'Item'}`,
+    `${item.quantity}x ${itemTitle(item)}`,
     // The photo colourway, only when no fabric was chosen - a made-to-order
     // sofa is built in the fabric below, and "Grey" above "Chenille Mink"
     // reads as two instructions.

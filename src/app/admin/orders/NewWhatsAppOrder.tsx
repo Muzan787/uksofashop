@@ -36,9 +36,17 @@ interface Line {
   /** Held as text, because empty is a meaningful value here and 0 is not. */
   price: string
   fabricId: string
+  /**
+   * What to call this one, when the catalogue has no name for it - a corner
+   * cut to a room, a frame copied from a photo the customer sent. Empty on a
+   * normal line, and then the chosen sofa names itself. A sofa still has to
+   * be picked either way: it is what prices the line and what the reports
+   * count. See utils/orderItemTitle.ts.
+   */
+  customTitle: string
 }
 
-const BLANK: Line = { variantId: '', quantity: 1, price: '', fabricId: '' }
+const BLANK: Line = { variantId: '', quantity: 1, price: '', fabricId: '', customTitle: '' }
 
 const label = 'block text-[11px] font-bold uppercase tracking-wider text-stone-500 mb-1.5'
 const field =
@@ -139,6 +147,7 @@ export default function NewWhatsAppOrder({
         // "charge the catalogue price".
         unit_price: l.price.trim() === '' ? null : Number(l.price),
         fabric_id: l.fabricId || null,
+        custom_title: l.customTitle.trim() || null,
       }))
 
     if (items.length === 0) {
@@ -311,7 +320,7 @@ export default function NewWhatsAppOrder({
                   )}
                 </div>
 
-                <div className="mt-2 grid gap-2 sm:grid-cols-3">
+                <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                   <input
                     className={field}
                     type="number"
@@ -330,6 +339,19 @@ export default function NewWhatsAppOrder({
                     placeholder={
                       line.variantId ? `£${priceOf(line.variantId).toFixed(2)} list` : 'Price each'
                     }
+                  />
+                  {/* Leave it empty and the sofa above names itself. Type in
+                      it and that is the name on the order card, the invoice,
+                      the block you forward and the customer's own pages -
+                      for the bespoke pieces the catalogue cannot name. */}
+                  <input
+                    className={field}
+                    value={line.customTitle}
+                    onChange={e => setLine(i, { customTitle: e.target.value })}
+                    maxLength={120}
+                    aria-label="Custom name"
+                    placeholder="Custom name (optional)"
+                    autoComplete="off"
                   />
                   {fabrics.length > 0 && (
                     <select
