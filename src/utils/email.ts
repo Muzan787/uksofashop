@@ -164,12 +164,14 @@ type Mail = Omit<nodemailer.SendMailOptions, 'from' | 'to'> & { from?: string; t
  *   invitation service would produce.
  */
 async function deliver(mail: Mail) {
+  const bcc = withOwnerCopy(mail.to, mail.cc, mail.bcc)
   const message: nodemailer.SendMailOptions = {
     from: sender(),
     replyTo: MAIL_REPLY_TO,
     ...mail,
+    ...(bcc.length ? { bcc } : {}),
     ...(usingDomainSender
-      ? { envelope: { from: SMTP_USER, to: envelopeRecipients(mail.to, mail.cc, mail.bcc) } }
+      ? { envelope: { from: SMTP_USER, to: envelopeRecipients(mail.to, mail.cc, bcc) } }
       : {}),
   }
   try {
@@ -182,6 +184,26 @@ async function deliver(mail: Mail) {
     console.warn(`[email] relay rejected From <${MAIL_FROM_ADDRESS}>, re-sending from <${SMTP_USER}>:`, (err as Error).message)
     return transporter.sendMail({ ...message, from: from.replace(MAIL_FROM_ADDRESS, SMTP_USER) })
   }
+}
+
+/**
+ * The Bcc list with the owner's Gmail added, so a copy of everything the site
+ * sends - customer confirmations, status updates, review invitations and the
+ * notifications addressed to enquiries@ - also lands in the inbox he actually
+ * carries around. Templates that set their own Bcc (the Trustpilot invitation
+ * service) keep it; the copy is added alongside.
+ *
+ * Skipped when he is already a recipient, so nothing arrives twice, and Bcc
+ * rather than Cc so a customer never sees the address.
+ */
+function withOwnerCopy(
+  to: nodemailer.SendMailOptions['to'],
+  cc: nodemailer.SendMailOptions['cc'],
+  bcc: nodemailer.SendMailOptions['bcc'],
+): string[] {
+  const kept = envelopeRecipients(bcc)
+  const already = envelopeRecipients(to, cc, bcc).some(a => a.toLowerCase() === OWNER_GMAIL.toLowerCase())
+  return already ? kept : [...kept, OWNER_GMAIL]
 }
 
 /**

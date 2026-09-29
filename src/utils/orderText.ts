@@ -97,13 +97,23 @@ export function formatOrderForCopy(order: AdminOrderDisplay): string {
       ? `Order: ${itemBlock(items[0])}`
       : ['Order:', items.map(itemBlock).join('\n\n')].join('\n')
 
+  // What the customer typed into "Add delivery instructions" at checkout, or
+  // what was noted on the order in the admin panel. It sits under the delivery
+  // line because that is what it qualifies - a gate code, a buzzer number, a
+  // "call before you set off". It was shown on the customer's confirmation
+  // page and in the edit form, but not in the block that gets forwarded on -
+  // the one place whoever is doing the delivery would actually read it.
+  const instructions = (order.special_instructions ?? '').trim()
+
   const blocks = [
     [
       `Order on ${orderDate}`,
       order.preferred_delivery_date
         ? `Delivery: requested for ${formatPreferredDeliveryDate(order.preferred_delivery_date)}`
         : `Delivery: ${DELIVERY_WINDOW}`,
-    ].join('\n'),
+      // A multi-line note keeps its line breaks; nothing is truncated.
+      instructions && `Instructions: ${instructions}`,
+    ].filter(Boolean).join('\n'),
 
     [
       `Name: ${order.customer_name}`,

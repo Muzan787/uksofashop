@@ -125,7 +125,7 @@ async function orderCopyText(orderId: string): Promise<string | null> {
         id, created_at, customer_name, customer_email, customer_phone,
         shipping_address, items_subtotal, total_amount, discount_amount,
         promotion_code, fee_upstairs, fee_assembly, fee_sofa_removal,
-        sofa_removal_seats, preferred_delivery_date,
+        sofa_removal_seats, preferred_delivery_date, special_instructions,
         order_items (
           id, variant_id, fabric_id, quantity, price_at_time_of_purchase,
           fabric_code, fabric_name, fabric_collection, customisation,
