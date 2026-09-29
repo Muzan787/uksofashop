@@ -8,7 +8,7 @@ import { ArrowLeft, Check, Package, Plus } from 'lucide-react'
 import Modal from '@/components/UI/Modal'
 import SwatchRequestForm from '@/components/Product/SwatchRequestForm'
 import { blurDataURL } from '@/utils/cloudinary'
-import { MAX_SAMPLES } from '@/constants/swatches'
+import { MAX_SAMPLES, SAMPLE_FEE } from '@/constants/swatches'
 import type { Fabric, FabricCollection } from '@/components/Product/types'
 
 /**
@@ -307,7 +307,7 @@ export function SampleBar({ sofa }: { sofa?: SampleBarSofa | null }) {
               className="hover-btn hover-btn-dark flex h-11 shrink-0 cursor-pointer items-center gap-2 rounded-pill border-0 bg-ink-900 px-5 text-body-sm font-semibold text-calico-50"
             >
               <Package aria-hidden="true" className="h-4 w-4" />
-              Post {samples.length === 1 ? 'it' : 'them'} to me, free
+              Post {samples.length === 1 ? 'it' : 'them'} to me
             </button>
           </div>
         )}
@@ -323,8 +323,9 @@ export function SampleBar({ sofa }: { sofa?: SampleBarSofa | null }) {
               </span>
               <p className="m-0 text-body-sm leading-relaxed text-ink-700">
                 <strong className="font-semibold text-ink-900">That&apos;s gone through.</strong>{' '}
-                We&apos;ll give you a ring to check we&apos;ve understood what you&apos;re after,
-                then post them. Nothing to pay, nothing to send back.
+                We&apos;ll give you a ring to take the {SAMPLE_FEE} and check we&apos;ve understood
+                what you&apos;re after, then post them. Order a sofa from us afterwards and the{' '}
+                {SAMPLE_FEE} comes off it.
               </p>
             </div>
           </div>
@@ -333,7 +334,7 @@ export function SampleBar({ sofa }: { sofa?: SampleBarSofa | null }) {
 
       {asking && !sent && (
         <Modal
-          title={`Order ${samples.length} free ${samples.length === 1 ? 'sample' : 'samples'}`}
+          title={`Order ${samples.length} ${samples.length === 1 ? 'sample' : 'samples'}`}
           onClose={() => setAsking(false)}
           size="md"
           icon={<Package aria-hidden="true" className="h-4 w-4 text-ember-700" />}

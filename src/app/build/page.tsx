@@ -33,7 +33,7 @@ import BuildClient from './BuildClient'
  * (src/constants/feet.ts), which no other page offers.
  *
  * Every choice is held in localStorage until the summary, which is what makes
- * the fabric step's "order free samples" a detour rather than an exit: the
+ * the fabric step's "order samples" a detour rather than an exit: the
  * samples page pins "Back to your build" and this page reopens on the fabric
  * step with the sofa exactly as it was left.
  */

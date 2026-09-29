@@ -63,9 +63,10 @@ export default function MadeToOrderExplained() {
 
       <h2 id="samples">Order the samples first</h2>
       <p>
-        We will post you <strong>three fabric samples, free</strong>, anywhere in the UK. Three at
-        a time is the limit, and there is no catch attached to it — you do not have to order a sofa
-        afterwards and we do not chase you.
+        We will post you <strong>up to five fabric samples for £5</strong>, anywhere in the UK, and
+        the £5 comes off your order when you buy a sofa from us — so if you go ahead, they cost you
+        nothing. Five at a time is the limit. There is no card to enter on the site: we ring you,
+        settle the £5 on that call, and post them the same day.
       </p>
       <p>
         Do this. A photograph of a fabric is a photograph taken under somebody else&rsquo;s
@@ -75,8 +76,8 @@ export default function MadeToOrderExplained() {
         settled at all on a screen.
       </p>
       <PullQuote>
-        A sofa is a ten-year decision and the samples are free and take two days. There is no
-        version of this where ordering them is the wrong move.
+        A sofa is a ten-year decision, the samples take two days, and the £5 comes back off the
+        sofa. There is no version of this where ordering them is the wrong move.
       </PullQuote>
 
       <h2 id="catch">The catch, plainly</h2>

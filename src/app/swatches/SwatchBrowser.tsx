@@ -4,6 +4,7 @@
 import { useMemo, useState } from 'react'
 import { Search, X } from 'lucide-react'
 import { SwatchTile, useSamples } from '@/components/Product/FabricSamples'
+import { MAX_SAMPLES } from '@/constants/swatches'
 import type { Fabric } from '@/components/Product/types'
 
 /**
@@ -13,7 +14,7 @@ import type { Fabric } from '@/components/Product/types'
  * paragraphs at a time, which is right for somebody who arrived with a
  * question. This is for somebody who arrived with a link — they asked for
  * swatches on WhatsApp, they were sent here, and they want to see sixty-nine
- * colours and pick three. Reading is not the job.
+ * colours and pick five. Reading is not the job.
  *
  * So the filtering is the page's only structure. Two controls, both of which
  * narrow the same grid:
@@ -142,7 +143,7 @@ export default function SwatchBrowser() {
           tapping a chip changed what is below it. */}
       <p aria-live="polite" className="m-0 mt-4 text-body-sm text-ink-500">
         {showing === total
-          ? `All ${total} colours. Tap up to three.`
+          ? `All ${total} colours. Tap up to ${MAX_SAMPLES}.`
           : `${showing} of ${total} colours.`}
         {samples.length > 0 && (
           <span className="text-ink-700">

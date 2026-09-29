@@ -1,6 +1,7 @@
 'use client';
 // src/components/Product/FabricChoice.tsx
 
+import { SAMPLE_FEE } from '@/constants/swatches';
 import Image from 'next/image';
 import { ChevronRight, Palette } from 'lucide-react';
 import { blurDataURL } from '@/utils/cloudinary';
@@ -92,7 +93,7 @@ export default function FabricChoice({ collections, selected, onOpen }: Props) {
           <span className="mt-0.5 text-caption leading-snug text-ink-500">
             {selected
               ? `${selected.code} · every fabric is the same price`
-              : 'Any colour, same price — plus 3 free samples by post'}
+              : `Any colour, same price — samples ${SAMPLE_FEE}, refunded when you order`}
           </span>
         </span>
 

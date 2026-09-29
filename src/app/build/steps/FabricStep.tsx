@@ -37,7 +37,7 @@ export default function FabricStep({ collections, design, fabricId, onSelect }: 
       <StepHeading
         eyebrow="Step 3 of 7"
         title="Choose the fabric"
-        lead={`All ${total} colours we build in, and every one of them the same price${design ? ` on the ${design.family}` : ''}. Tap a swatch to choose it, or order free samples if you'd rather hold it first.`}
+        lead={`All ${total} colours we build in, and every one of them the same price${design ? ` on the ${design.family}` : ''}. Tap a swatch to choose it, or order samples if you'd rather hold it first.`}
       />
 
       <FabricPicker

@@ -76,7 +76,7 @@ function readableList(items: SwatchCopyLine[]): string {
  * The follow-up, for the button on the admin screen.
  *
  * It names the actual fabrics rather than saying "your samples", because the
- * customer chose three of seventy a week ago and will not remember which — and
+ * customer chose five of seventy a week ago and will not remember which — and
  * because a message that proves somebody looked at their request before typing
  * it does not read as a bulk send, which is the whole difference between this
  * and marketing.

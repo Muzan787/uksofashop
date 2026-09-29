@@ -1,11 +1,11 @@
 // src/app/swatches/page.tsx
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { BookOpen, ChevronRight, MessageCircle, Package, PhoneCall, Truck } from 'lucide-react'
+import { BookOpen, ChevronRight, MessageCircle, Package, PoundSterling, RotateCcw } from 'lucide-react'
 import EditorialSchema from '@/components/Editorial/EditorialSchema'
 import { SamplesProvider, SampleBar, type SampleBarSofa } from '@/components/Product/FabricSamples'
 import { getFabricLibrary } from '@/utils/fabrics'
-import { MAX_SAMPLES } from '@/constants/swatches'
+import { MAX_SAMPLES, SAMPLE_FEE } from '@/constants/swatches'
 import WhatsAppLink from '@/components/UI/WhatsAppLink'
 import { leadVariantImage, ogImage } from '@/utils/socialImage'
 import { canonicalProductPath } from '@/utils/productUrl'
@@ -26,7 +26,7 @@ import SwatchBrowser from './SwatchBrowser'
  * squares. Neither ends with an address to post to.
  *
  * This is that link. Short enough to type into a chat, it opens on the whole
- * range, and the same three-free-samples flow the guide carries is the first
+ * range, and the same samples flow the guide carries is the first
  * thing on the page rather than the reward for reading it.
  *
  * IT IS THE SAME REQUEST, NOT A SECOND ONE. Everything below the hero is the
@@ -44,7 +44,7 @@ import SwatchBrowser from './SwatchBrowser'
  *   guide, it is four and a half thousand words, and it is what should arrive
  *   for somebody still deciding between a velvet and a flat weave.
  *
- *   /swatches answers "send me some". It is the free-samples page, its H1 and
+ *   /swatches answers "send me some". It is the samples page, its H1 and
  *   title say so, and it should arrive for somebody who has stopped reading
  *   and wants cloth in the post.
  *
@@ -81,26 +81,32 @@ import SwatchBrowser from './SwatchBrowser'
  */
 
 const DESCRIPTION =
-  `Pick up to ${MAX_SAMPLES} fabric samples and we will post them free, anywhere on the UK mainland. ` +
+  `Pick up to ${MAX_SAMPLES} fabric samples, posted anywhere on the UK mainland for ${SAMPLE_FEE} — ` +
+  `and the ${SAMPLE_FEE} comes off your order when you buy a sofa from us. ` +
   'All 70 made-to-order colours across chenille, plush velvet, crushed velvet, naple, marble and ' +
-  'PVC leather. Nothing to pay, nothing to send back.'
+  'PVC leather.'
 
 /**
- * "Sofa" earns its place now that the page is indexed: the query being chased
- * is "free sofa fabric samples", and "Order Free Fabric Samples" on its own
- * competes with every curtain and cushion retailer in the country. 30
- * characters, so the brand suffix still lands inside ~57.
+ * "Sofa" earns its place: "Order Fabric Samples" on its own competes with
+ * every curtain and cushion retailer in the country. 25 characters, so the
+ * brand suffix still lands inside ~57.
+ *
+ * "Free" came out of it when the samples stopped being free. A title that
+ * promises free samples to somebody who then reads £5 on the page is the kind
+ * of mismatch that gets a click and loses the customer, which is worse for
+ * both of us than the click was worth. The refund is the thing worth saying
+ * instead, and it leads the description.
  */
-const TITLE = 'Order Free Sofa Fabric Samples'
+const TITLE = 'Order Sofa Fabric Samples'
 
 /**
  * The H1, the trailing breadcrumb and the trailing crumb in the BreadcrumbList
- * are the same three words on purpose. Google reads a trail that disagrees
- * with the page it sits on as a mismatch, and the metadata TITLE is the wrong
- * source for it — it describes the page to somebody who has not opened it,
- * which is not what a crumb is for.
+ * are the same words on purpose. Google reads a trail that disagrees with the
+ * page it sits on as a mismatch, and the metadata TITLE is the wrong source
+ * for it — it describes the page to somebody who has not opened it, which is
+ * not what a crumb is for.
  */
-const CRUMB = 'Free fabric samples'
+const CRUMB = 'Fabric samples'
 
 export const metadata: Metadata = {
   alternates: { canonical: '/swatches' },
@@ -124,11 +130,17 @@ export const metadata: Metadata = {
   },
 }
 
-/** Three lines under the heading. Facts, not selling. */
+/**
+ * Three lines under the heading. Facts, not selling.
+ *
+ * The middle one is the price and the third is the refund, in that order,
+ * because a customer who finds out about the charge further down the page has
+ * been led rather than told.
+ */
 const PROMISES = [
-  { icon: Package, label: `${MAX_SAMPLES} samples`, detail: 'Whichever three you like' },
-  { icon: Truck, label: 'Posted free', detail: 'Anywhere on the UK mainland' },
-  { icon: PhoneCall, label: 'A quick call', detail: 'Before anything goes in the post' },
+  { icon: Package, label: `Up to ${MAX_SAMPLES} samples`, detail: 'Posted to your door' },
+  { icon: PoundSterling, label: `${SAMPLE_FEE} for the set`, detail: 'Settled on the phone, not here' },
+  { icon: RotateCcw, label: `${SAMPLE_FEE} back`, detail: 'Comes off your order when you buy' },
 ]
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>
@@ -232,8 +244,8 @@ export default async function SwatchesPage(props: { searchParams: SearchParams }
             </h1>
             <p className="m-0 mt-4 max-w-read text-lead text-calico-300">
               All {total} colours we build sofas in, and every one of them the same price. Tap up
-              to {MAX_SAMPLES} and we&apos;ll put them in the post — there&apos;s nothing to pay,
-              nothing to send back and no account to make.
+              to {MAX_SAMPLES} and we&apos;ll put them in the post. The set is {SAMPLE_FEE} — and
+              when you order a sofa from us, that {SAMPLE_FEE} comes off it.
             </p>
 
             <ul className="m-0 mt-8 grid list-none grid-cols-1 gap-4 p-0 sm:grid-cols-3">
@@ -269,9 +281,9 @@ export default async function SwatchesPage(props: { searchParams: SearchParams }
             </h2>
             <ol className="m-0 mt-6 grid list-none grid-cols-1 gap-6 p-0 sm:grid-cols-3">
               {[
-                ['Pick three', 'Tap any swatch above, then fill in where to post them.'],
-                ['We ring you', 'Two minutes, to check three shades of the same grey isn’t what you meant.'],
-                ['They arrive', 'Hold them against your own wall, in your own light, before you decide.'],
+                [`Pick up to ${MAX_SAMPLES}`, 'Tap any swatch above, then fill in where to post them.'],
+                ['We ring you', `Two minutes, to take the ${SAMPLE_FEE} and check five shades of the same grey isn’t what you meant.`],
+                ['They arrive', `Hold them against your own wall, in your own light. Order a sofa and the ${SAMPLE_FEE} comes off it.`],
               ].map(([step, detail], i) => (
                 <li key={step}>
                   <span className="font-data text-caption uppercase tracking-widest text-ember-700">

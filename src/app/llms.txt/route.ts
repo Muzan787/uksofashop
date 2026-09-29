@@ -20,6 +20,7 @@
 // same set the sitemap leaves out, for the same reason.
 
 import { SITE_URL } from '@/constants/site'
+import { MAX_SAMPLES, SAMPLE_FEE } from '@/constants/swatches'
 import { ARTICLES_BY_DATE } from '@/app/journal/articles'
 
 export const dynamic = 'force-static'
@@ -39,8 +40,8 @@ export function GET() {
 ## Buying guides
 
 - [Sofa size and measurement guide](${url('/size-guide')}): whether a sofa fits through a door, hallway or stair turn. Includes a doorway calculator.
-- [Sofa fabric guide](${url('/fabrics')}): all 70 made-to-order colours across chenille, plush velvet, crushed velvet, naple, marble and PVC leather, and how each behaves. Three free samples posted.
-- [Free fabric samples](${url('/swatches')}): the same 70 colours as a filterable picker rather than a guide, for ordering three samples posted free to the UK mainland. No account, no payment.
+- [Sofa fabric guide](${url('/fabrics')}): all 70 made-to-order colours across chenille, plush velvet, crushed velvet, naple, marble and PVC leather, and how each behaves. Up to ${MAX_SAMPLES} samples posted for ${SAMPLE_FEE}, refunded against a later order.
+- [Fabric samples](${url('/swatches')}): the same 70 colours as a filterable picker rather than a guide, for ordering up to ${MAX_SAMPLES} samples posted to the UK mainland. ${SAMPLE_FEE} for the set, settled on a phone call rather than on the site, and refunded against the order if they buy. No account.
 - [Build your own sofa](${url('/build')}): a step-by-step builder for made-to-order sofas - seats, design, fabric, feet, contrast piping and custom requests - ending in a guide price. Every build is confirmed by phone with a final quotation before it is made. Recliners cannot be customised.
 - [Sofa care and cleaning guide](${url('/care-guide')}): weekly upkeep, what to do in the first thirty seconds of a spill, and separate routines for real leather and tech leather.
 ${ARTICLES_BY_DATE.map(a => `- [${a.title}](${url(`/journal/${a.slug}`)}): ${a.description}`).join('\n')}

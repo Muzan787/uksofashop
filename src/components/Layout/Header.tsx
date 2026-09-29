@@ -16,7 +16,7 @@ import { useOffer } from '@/components/Offer/OfferProvider';
 const ANNOUNCEMENT = ANNOUNCEMENTS[0];
 
 /**
- * "Samples" rather than "Free Samples", for the same reason the row already
+ * "Samples" rather than "Fabric Samples", for the same reason the row already
  * says "Track" and not "Track Order": this bar has one line at 1024px and
  * seven entries to fit on it, and the word doing the work is the noun. The
  * drawer, which has a column to itself, spells both of them out.

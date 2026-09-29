@@ -33,7 +33,7 @@ const LINKS: { href: string; label: string; icon: LucideIcon }[] = [
   // Palette, not Package: PackageSearch is two rows below on Track Order, and
   // two parcel outlines a thumb apart is a distinction nobody makes at a
   // glance. This row is about choosing a colour anyway.
-  { href: '/swatches',    label: 'Free Samples', icon: Palette },
+  { href: '/swatches',    label: 'Fabric Samples', icon: Palette },
   { href: '/reviews',     label: 'Reviews',      icon: Star },
   { href: '/track-order', label: 'Track Order',  icon: PackageSearch },
   { href: '/contact',     label: 'Contact Us',   icon: Mail },

@@ -11,7 +11,7 @@ import PillGroup from './PillGroup';
 import { DUR, EASE } from '@/components/Motion';
 import { useReducedMotionSafe } from '@/components/Motion/useReducedMotionSafe';
 import { blurDataURL } from '@/utils/cloudinary';
-import { MAX_SAMPLES } from '@/constants/swatches';
+import { MAX_SAMPLES, SAMPLE_FEE } from '@/constants/swatches';
 import type { Fabric, FabricCollection } from './types';
 
 interface Props {
@@ -121,7 +121,7 @@ export default function FabricDialog({ collections, selectedId, productSlug, onB
 
           <p className="m-0 text-center text-caption leading-relaxed text-ink-500 sm:order-first sm:flex-1 sm:text-left">
             Build mine puts the sofa in your cart in this fabric and takes you there.
-            Samples are free, up to {MAX_SAMPLES}.
+            Samples are {SAMPLE_FEE} for up to {MAX_SAMPLES}, refunded when you order.
           </p>
         </div>
       ) : undefined}
@@ -171,7 +171,7 @@ export default function FabricDialog({ collections, selectedId, productSlug, onB
             <p className="m-0 mt-5 max-w-[46ch] text-body-sm leading-relaxed text-ink-500">
               Every sofa in this range is built to order, so this fabric costs exactly the same
               as any other. What a screen shows you is never quite the colour — order it as a
-              free sample and hold it against your own room before you decide.
+              sample and hold it against your own room before you decide.
             </p>
           </div>
         </div>

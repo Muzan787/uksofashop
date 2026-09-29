@@ -7,19 +7,25 @@ import { createClient } from '@/utils/supabase/server'
 import { sendSwatchConfirmation, sendAdminSwatchNotification } from '@/utils/email'
 import { isValidUkMobile, UK_MOBILE_ERROR } from '@/utils/phone'
 import { rateLimit, callerKey } from '@/utils/rateLimit'
+import { MAX_SAMPLES } from '@/constants/swatches'
 
 /**
- * Three fabric samples, posted free.
+ * Up to five fabric samples, £5 for the set, refunded against a later order.
  *
- * The three-at-a-time rule is enforced in the database rather than here - both
+ * The five-at-a-time rule is enforced in the database rather than here - both
  * in request_swatches() and again by a constraint trigger on the rows - because
  * a limit that only exists in a form is a limit that exists until somebody
  * opens the network tab.
  *
- * There is no per-customer cap on how often somebody may ask. That is a
- * deliberate choice: every request gets a phone call before anything is posted,
- * so a person sees each one before it costs a stamp. The rate limit below is
- * only there to stop a script emptying the sample drawer overnight.
+ * NOTHING IS CHARGED HERE, and no payment state is stored. The £5 is settled
+ * on the phone call that already came before every posting, which is also what
+ * makes it work as a brake: a request costs us a call that goes nowhere rather
+ * than a stamp and five pieces of cloth, because nothing is posted until
+ * somebody has paid. See src/constants/swatches.ts.
+ *
+ * There is still no per-customer cap on how often somebody may ask, and it
+ * matters less than it did - the fee is the cap now. The rate limit below is
+ * only there to stop a script filling the queue overnight.
  */
 
 const schema = z.object({
@@ -30,7 +36,10 @@ const schema = z.object({
   customerPhone: z.string().refine(v => v === '' || isValidUkMobile(v), UK_MOBILE_ERROR),
   postcode: z.string().min(5, 'Please enter a valid UK postcode.'),
   shippingAddress: z.string().min(10, 'Please give the full address to post these to.'),
-  fabricIds: z.array(z.string().uuid()).min(1, 'Choose at least one fabric.').max(3, 'Three samples at a time.'),
+  fabricIds: z
+    .array(z.string().uuid())
+    .min(1, 'Choose at least one fabric.')
+    .max(MAX_SAMPLES, `${MAX_SAMPLES} samples at a time.`),
 })
 
 export interface SwatchResult {
@@ -68,7 +77,7 @@ export async function requestSwatches(input: unknown): Promise<SwatchResult> {
 
   if (error) {
     const message = error.message ?? ''
-    if (message.includes('SWATCH_LIMIT')) return { error: 'Three samples at a time.' }
+    if (message.includes('SWATCH_LIMIT')) return { error: `${MAX_SAMPLES} samples at a time.` }
     if (message.includes('NO_SWATCHES')) return { error: 'Choose at least one fabric.' }
     if (message.includes('UNAVAILABLE_FABRIC')) {
       return { error: 'One of those fabrics is no longer available. Please pick another.' }

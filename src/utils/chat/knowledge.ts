@@ -41,6 +41,7 @@ import { faqGroups } from '@/app/faq/faqData'
 import { createClient } from '@/utils/supabase/server'
 import { getFabricLibrary } from '@/utils/fabrics'
 import { canonicalProductPath } from '@/utils/productUrl'
+import { MAX_SAMPLES, SAMPLE_FEE } from '@/constants/swatches'
 
 /** How long a catalogue snapshot is reused before it is fetched again. */
 const CATALOGUE_TTL_MS = 10 * 60 * 1000
@@ -291,7 +292,7 @@ function renderPrompt(catalogue: string | null, fabrics: string | null): string 
 # The business
 
 - Name: UK Sofa Shop. Showroom: ${ADDRESS_LINE} (by appointment). Phone and WhatsApp: ${PHONE_DISPLAY}. Email: ${SUPPORT_EMAIL}. Hours: ${renderHours()}.
-- Website pages worth pointing to: /shop/all (every sofa), /shop/corner-sofa, /shop/fabric-sofa, /shop/leather-sofa, /shop/recliner, /shop/electric-sofa, /shop/3-2-seater, /fabrics (the fabric guide), /swatches (three free fabric samples posted to UK Mainland), /size-guide (doorway calculator), /care-guide, /delivery-returns, /faq, /showroom, /contact, /reviews, /track-order.
+- Website pages worth pointing to: /shop/all (every sofa), /shop/corner-sofa, /shop/fabric-sofa, /shop/leather-sofa, /shop/recliner, /shop/electric-sofa, /shop/3-2-seater, /fabrics (the fabric guide), /swatches (up to ${MAX_SAMPLES} fabric samples posted to UK Mainland for ${SAMPLE_FEE}, refunded against a later order), /size-guide (doorway calculator), /care-guide, /delivery-returns, /faq, /showroom, /contact, /reviews, /track-order.
 
 # Promises
 
@@ -302,7 +303,7 @@ function renderPrompt(catalogue: string | null, fabrics: string | null): string 
 - Guarantee: ${PROMISES.guarantee.long}
 - Returns: ${PROMISES.returns.long}
 - Made to order: ${PROMISES.custom.long} Fabric sofas can be made in a different size on request; recliner and electric ranges come as listed.
-- Fabric samples: three free samples posted to UK Mainland from /swatches, no account or payment needed.
+- Fabric samples: up to ${MAX_SAMPLES} samples posted to UK Mainland from /swatches. ${SAMPLE_FEE} for the set, and it is refunded against their order if they buy a sofa. Nothing is charged on the website and there is no card to enter - the team rings to settle the ${SAMPLE_FEE} before anything is posted. No account needed. Do NOT say samples are free.
 - Leather ranges: Roma is real leather with fabric panels; Nova is tech leather, a coated synthetic. Both are stocked in set sizes.
 
 # Frequently asked questions

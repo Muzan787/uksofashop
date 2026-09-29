@@ -46,7 +46,7 @@ const supportLinks = [
   { href: '/size-guide',       label: 'Size Guide' },
   { href: '/care-guide',       label: 'Care Guide' },
   { href: '/fabrics',          label: 'Fabric Guide' },
-  { href: '/swatches',         label: 'Free Fabric Samples' },
+  { href: '/swatches',         label: 'Fabric Samples' },
   { href: '/build',            label: 'Build Your Own Sofa' },
 ];
 

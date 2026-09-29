@@ -23,7 +23,7 @@
 // conclude the opposite, which is what happened the first time this was written.
 //
 // Other facts from elsewhere:
-//   70 colours / 6 fabrics, 3 free samples   /fabrics, actions/swatches.ts
+//   70 colours / 6 fabrics, 5 samples for £5  /fabrics, actions/swatches.ts
 //   fabric made to order, leather stocked
 //   with the full 14 days                    products.custom_made, via the
 //                                            returnPolicy in utils/schema.ts
@@ -212,7 +212,7 @@ export default function FabricOrLeather() {
         </li>
         <li>
           <strong>A cold room, a hard floor, or a specific colour in mind</strong> — fabric, and use
-          the free samples.
+          the samples.
         </li>
         <li>
           <strong>A room with an awkward measurement</strong> — fabric, because it can be built to

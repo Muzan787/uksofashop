@@ -6,7 +6,7 @@ import EditorialHero from '@/components/Editorial/EditorialHero'
 import EditorialSchema from '@/components/Editorial/EditorialSchema'
 import EditorialLayout, { Note, PullQuote } from '@/components/Editorial/EditorialLayout'
 import { getFabricLibrary } from '@/utils/fabrics'
-import { MAX_SAMPLES } from '@/constants/swatches'
+import { MAX_SAMPLES, SAMPLE_FEE } from '@/constants/swatches'
 import { SamplesProvider, CollectionSwatches, SampleBar } from '@/components/Product/FabricSamples'
 
 /**
@@ -15,7 +15,7 @@ import { SamplesProvider, CollectionSwatches, SampleBar } from '@/components/Pro
  * page is the sort of drift nobody notices and nothing benefits from.
  */
 const DESCRIPTION =
-  'All 70 fabrics we build made-to-order sofas in, and how to choose between them: what chenille, plush velvet, crushed velvet, naple, marble and PVC leather each do in a real room. Three free samples posted.'
+  'All 70 fabrics we build made-to-order sofas in, and how to choose between them: what chenille, plush velvet, crushed velvet, naple, marble and PVC leather each do in a real room. Five samples posted for £5, refunded when you order.'
 
 export const metadata: Metadata = {
   alternates: { canonical: '/fabrics' },
@@ -58,7 +58,7 @@ const TOC = [
   { id: 'naple', label: 'Naple' },
   { id: 'marble', label: 'Marble' },
   { id: 'pvc-leather', label: 'PVC Leather' },
-  { id: 'samples', label: 'Three, free' },
+  { id: 'samples', label: 'Five samples' },
   { id: 'screens', label: 'Why screens lie' },
 ]
 
@@ -94,8 +94,9 @@ export default async function FabricsPage() {
             decide is which one you actually want to live with.
           </p>
           <p>
-            Tap any swatch to have it posted to you. {MAX_SAMPLES} samples, free, anywhere on the
-            UK mainland.
+            Tap any swatch to have it posted to you. Up to {MAX_SAMPLES} samples, {SAMPLE_FEE} for
+            the set, anywhere on the UK mainland — and the {SAMPLE_FEE} comes off your order when
+            you buy.
           </p>
 
           <h2 id="choosing">Start here</h2>
@@ -240,22 +241,27 @@ export default async function FabricsPage() {
           </p>
           <CollectionSwatches slug="pvc-leather" />
 
-          <h2 id="samples">Three, free, through your letterbox</h2>
+          <h2 id="samples">Five, through your letterbox</h2>
           <p>
             Tap any of the {total} swatches above and we will post you up to {MAX_SAMPLES} of
-            them, anywhere on the UK mainland. There is nothing to pay, nothing to send back, and
-            no account to make.
+            them, anywhere on the UK mainland. The set is {SAMPLE_FEE}, and when you order a sofa
+            from us that {SAMPLE_FEE} comes off your order — so if you buy, they cost you nothing
+            in the end.
           </p>
           <p>
-            We ring you before anything goes in the post. That is not a sales call — it is because
-            people quite often pick three shades of the same grey when what they actually wanted
-            was to see a grey next to a mink next to a charcoal, and two minutes on the phone
-            saves a week.
+            There is no card to enter and nothing is taken on this site. We ring you before
+            anything goes in the post, settle the {SAMPLE_FEE} on that call, and put them in the
+            post the same day.
+          </p>
+          <p>
+            That call is not a sales call. People quite often pick five shades of the same grey
+            when what they actually wanted was to see a grey next to a mink next to a charcoal,
+            and two minutes on the phone saves a week.
           </p>
           <p>
             If you already know roughly what you are after and would rather not read the rest of
-            this, the <Link href="/swatches">free samples page</Link> is the same {total} swatches
-            with a filter over them and none of the explaining.
+            this, the <Link href="/swatches">samples page</Link> is the same {total} swatches with
+            a filter over them and none of the explaining.
           </p>
 
           <Note title="Ordering without samples">
@@ -263,7 +269,8 @@ export default async function FabricsPage() {
               You can. Made-to-order sofas are built to your specification, which means they fall
               outside the 14-day change-of-mind right that applies to everything else we sell — so
               the fabric you choose is the fabric you keep. If there is any doubt at all, wait for
-              the samples. They take a few days and they cost nothing.
+              the samples. They take a few days, and the {SAMPLE_FEE} comes back off the sofa you
+              order — which makes the wrong fabric the only expensive part of this decision.
             </p>
           </Note>
 

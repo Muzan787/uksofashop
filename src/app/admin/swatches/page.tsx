@@ -6,6 +6,7 @@ import { setSwatchStatus } from '@/app/actions/swatch-admin'
 import { whatsAppLink } from '@/utils/phone'
 import Link from 'next/link'
 import SwatchActions from './SwatchActions'
+import { SAMPLE_FEE } from '@/constants/swatches'
 
 export const metadata: Metadata = { title: 'Swatch requests' }
 
@@ -142,6 +143,18 @@ export default async function AdminSwatchesPage(props: { searchParams: SearchPar
                   {r.swatch_request_items.map(i => i.fabric_code).join('  ')}
                 </p>
               </div>
+
+              {/* The money, next to the picking list rather than buried with
+                  the contact details, because taking it is the step between
+                  reading the codes and posting them - and it is the one step
+                  that was not here a week ago. */}
+              {r.status === 'pending' && (
+                <p className="m-0 mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                  <strong className="font-bold">{SAMPLE_FEE} to collect</strong> on the call.
+                  Refunded against their order if they buy — nothing goes in the post until it is
+                  paid.
+                </p>
+              )}
 
               <ul className="m-0 mt-3 flex list-none flex-wrap gap-2 p-0">
                 {r.swatch_request_items.map(i => (

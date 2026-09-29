@@ -6,6 +6,7 @@ import { Loader2, MapPin, Search, X } from 'lucide-react';
 import Field from '@/components/UI/Field';
 import { requestSwatches } from '@/app/actions/swatches';
 import { lookupAddresses, normalisePostcode } from '@/utils/postcode';
+import { SAMPLE_FEE } from '@/constants/swatches';
 import type { Fabric } from './types';
 
 interface Props {
@@ -110,9 +111,16 @@ export default function SwatchRequestForm({ samples, onRemove, onSent }: Props) 
         ))}
       </ul>
 
+      {/* The terms, on the last screen before the button, in the words the
+          confirmation email repeats. A charge a customer only learns about on
+          the phone is a charge they argue with on the phone. */}
       <p className="m-0 mt-4 text-caption leading-relaxed text-ink-500">
-        Free to anywhere on the UK mainland. Nothing to pay and nothing to send back — we&apos;ll
-        ring you once they&apos;re on their way.
+        <strong className="font-semibold text-ink-700">
+          {SAMPLE_FEE} for the set, posted anywhere on the UK mainland.
+        </strong>{' '}
+        Nothing is taken now and there is no card to enter — we ring you to settle the{' '}
+        {SAMPLE_FEE} before anything goes in the post. Order a sofa from us afterwards and the{' '}
+        {SAMPLE_FEE} comes off your order. Nothing to send back either way.
       </p>
 
       <div className="mt-5 flex flex-col gap-4">
@@ -160,7 +168,7 @@ export default function SwatchRequestForm({ samples, onRemove, onSent }: Props) 
           {errors.postcode && <p className="mt-1 text-caption text-rust-700">{errors.postcode}</p>}
           {confirmed && !errors.postcode && (
             <p className="m-0 mt-2 text-caption font-semibold text-sage-700" aria-live="polite">
-              We post free to {confirmed}
+              We post to {confirmed}
             </p>
           )}
         </div>

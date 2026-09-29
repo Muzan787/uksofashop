@@ -299,7 +299,7 @@ export default function BuildYourOwn({ teaser, context = 'home' }: Props) {
                     className="hover-btn hover-btn-dark glass-dark-panel flex h-14 items-center justify-center gap-2.5 rounded-pill px-6 text-body-sm font-semibold text-calico-50 no-underline"
                   >
                     <Package aria-hidden="true" className="h-4 w-4 text-ember-300" />
-                    Free fabric samples first
+                    Order fabric samples first
                   </Link>
                 )}
               </div>

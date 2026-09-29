@@ -6,6 +6,7 @@ import { formatPreferredDeliveryDate } from '@/utils/delivery';
 import { PHONE_DISPLAY, SUPPORT_EMAIL, ORDERS_EMAIL, OWNER_GMAIL, whatsAppHref } from '@/constants/contact';
 import { gbp, recoveryBasketLines, recoveryBasketTotal, recoveryReminderEmail } from '@/utils/recoveryLeadFormat';
 import { formatSwatchForCopy, swatchCodes, type SwatchCopyLine } from '@/utils/swatchText';
+import { SAMPLE_FEE } from '@/constants/swatches';
 
 /**
  * Escapes a value before it goes into an email's HTML.
@@ -894,7 +895,7 @@ export async function sendReviewRequest(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  FREE FABRIC SAMPLES
+//  FABRIC SAMPLES
 // ─────────────────────────────────────────────────────────────────────────────
 
 // The line, the picking list and the copy block are all swatchText.ts now, so
@@ -919,10 +920,10 @@ export async function sendSwatchConfirmation(
 ) {
   const content = `
     <div style="text-align: left;">
-      <h2 style="margin: 0 0 16px 0; font-size: 22px; color: #1c1917;">Your samples are on their way</h2>
+      <h2 style="margin: 0 0 16px 0; font-size: 22px; color: #1c1917;">We've got your sample request</h2>
       <p style="margin: 0 0 20px 0; color: #57534e; line-height: 1.6;">
-        Thanks ${esc(name)} — we're putting these in the post to you. There's nothing to pay
-        and nothing to send back.
+        Thanks ${esc(name)} — here is what you picked. We'll give you a ring to settle the
+        ${SAMPLE_FEE} and check we've understood, then these go in the post. Nothing to send back.
       </p>
 
       <table style="width: 100%; border-collapse: collapse; margin: 24px 0;">
@@ -935,9 +936,14 @@ export async function sendSwatchConfirmation(
       </p>
 
       <div style="background-color: #fefaf3; padding: 16px; border-radius: 8px; border: 1px solid #f3e2c7;">
+        <p style="margin: 0 0 10px 0; color: #1c1917; line-height: 1.6; font-size: 14px; font-weight: bold;">
+          The ${SAMPLE_FEE} comes back
+        </p>
         <p style="margin: 0; color: #57534e; line-height: 1.6; font-size: 14px;">
-          Once you've chosen, we build the sofa to order in that fabric. Give us a ring on
-          ${esc(PHONE_DISPLAY)} or just reply to this email and we'll take it from there.
+          Order a sofa from us and we take the ${SAMPLE_FEE} off it, so the samples cost you
+          nothing in the end. Once you've chosen, we build the sofa to order in that fabric —
+          give us a ring on ${esc(PHONE_DISPLAY)} or just reply to this email and we'll take it
+          from there.
         </p>
       </div>
     </div>
@@ -946,7 +952,7 @@ export async function sendSwatchConfirmation(
   await deliver({
     from: sender(),
     to: email,
-    subject: 'Your free fabric samples',
+    subject: 'Your fabric samples',
     html: generateEmailHTML(content),
   })
 }
@@ -962,7 +968,14 @@ export async function sendAdminSwatchNotification(
   const content = `
     <div style="text-align: left;">
       <h2 style="margin: 0 0 4px 0; font-size: 22px; color: #1c1917;">Swatch request</h2>
-      <p style="margin: 0 0 24px 0; color: #78716c; font-size: 14px;">Pull these and post them.</p>
+      <p style="margin: 0 0 16px 0; color: #78716c; font-size: 14px;">Ring, take the ${SAMPLE_FEE}, then pull these and post them.</p>
+
+      <div style="background-color: #fefaf3; border: 1px solid #f3e2c7; border-left: 3px solid #d4871a; padding: 12px 14px; margin: 0 0 24px 0;">
+        <p style="margin: 0; color: #57534e; font-size: 13px; line-height: 1.5;">
+          <strong style="color: #1c1917;">${SAMPLE_FEE} to collect on the call.</strong>
+          Refunded against their order if they buy — nothing goes in the post until it is paid.
+        </p>
+      </div>
 
       <div style="background-color: #1c1917; padding: 20px; border-radius: 8px; margin: 0 0 24px 0; text-align: center;">
         <p style="margin: 0 0 6px 0; color: #a8a29e; font-size: 12px; text-transform: uppercase; letter-spacing: 2px;">Picking list</p>

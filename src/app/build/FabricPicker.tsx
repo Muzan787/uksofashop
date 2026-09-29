@@ -10,6 +10,7 @@ import Modal from '@/components/UI/Modal'
 import { DUR, EASE } from '@/components/Motion'
 import { useReducedMotionSafe } from '@/components/Motion/useReducedMotionSafe'
 import { blurDataURL } from '@/utils/cloudinary'
+import { MAX_SAMPLES, SAMPLE_FEE } from '@/constants/swatches'
 import type { Fabric, FabricCollection } from '@/components/Product/types'
 
 interface Props {
@@ -22,7 +23,7 @@ interface Props {
    * animate their fills into each other.
    */
   id: string
-  /** Where "Order free samples" goes, given the fabric in view. Omit to hide the link. */
+  /** Where "Order samples" goes, given the fabric in view. Omit to hide the link. */
   samplesHref?: (fabric: Fabric | null) => string
   /** "Fabric" or "Piping colour" - names the group for assistive technology. */
   label: string
@@ -219,15 +220,16 @@ export default function FabricPicker({ collections, selectedId, onSelect, id, sa
         <div className="mt-6 flex flex-col gap-3 rounded-md border border-calico-300 bg-calico-100 p-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="m-0 text-body-sm leading-relaxed text-ink-700">
             <strong className="font-semibold text-ink-900">Not sure from a screen?</strong>{' '}
-            Order up to three free samples and we&apos;ll post them. Your build is saved — you&apos;ll
-            come straight back to this step.
+            Order up to {MAX_SAMPLES} samples and we&apos;ll post them — {SAMPLE_FEE} for the set,
+            and it comes off your order when you buy. Your build is saved, so you&apos;ll come
+            straight back to this step.
           </p>
           <Link
             href={samplesHref(selected)}
             className="hover-btn flex h-11 shrink-0 items-center justify-center gap-2 rounded-pill border border-calico-300 bg-calico-50 px-5 text-body-sm font-semibold text-ink-900 no-underline"
           >
             <Package aria-hidden="true" className="h-4 w-4" />
-            Free samples
+            Order samples
           </Link>
         </div>
       )}
@@ -246,7 +248,7 @@ export default function FabricPicker({ collections, selectedId, onSelect, id, sa
                   className="hover-btn flex h-12 items-center justify-center gap-2 rounded-pill border border-calico-300 bg-calico-50 px-6 text-body-sm font-semibold text-ink-900 no-underline"
                 >
                   <Package aria-hidden="true" className="h-4 w-4" />
-                  Order a free sample
+                  Order a sample
                 </Link>
               )}
               <button
