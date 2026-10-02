@@ -4,6 +4,7 @@
 import Link from 'next/link';
 import { Gem, MapPin, Ruler, ShieldCheck, Sparkles, Truck, Wallet } from 'lucide-react';
 import { PROMISES } from '@/constants/promises';
+import { isRomaProduct } from '@/constants/romaAvailability';
 import type { DeliveryWindow } from '@/utils/delivery';
 import AddToCart from './AddToCart';
 import DeliveryEstimate from './DeliveryEstimate';
@@ -179,7 +180,7 @@ export default function BuyBox({
       </div>
 
       {/* ── When it arrives ─────────────────────────────────────────────── */}
-      <DeliveryEstimate estimate={estimate} />
+      <DeliveryEstimate estimate={estimate} isRoma={isRomaProduct(product.title)} />
 
       {/* ── Style, where the group uses one ─────────────────────────────── */}
       {stylePills.length > 1 && (

@@ -2,6 +2,7 @@
 
 import { Truck, Wallet } from 'lucide-react';
 import { PROMISES } from '@/constants/promises';
+import { ROMA_DELIVERY_NOTICE } from '@/constants/romaAvailability';
 import type { DeliveryWindow } from '@/utils/delivery';
 
 /**
@@ -20,7 +21,7 @@ import type { DeliveryWindow } from '@/utils/delivery';
  * Both rows are rendered from PROMISES, so nothing here can drift away from
  * what the footer, checkout and delivery page say.
  */
-export default function DeliveryEstimate({ estimate }: { estimate: DeliveryWindow }) {
+export default function DeliveryEstimate({ estimate, isRoma = false }: { estimate: DeliveryWindow; isRoma?: boolean }) {
   return (
     <section
       aria-label="Delivery and payment"
@@ -32,17 +33,23 @@ export default function DeliveryEstimate({ estimate }: { estimate: DeliveryWindo
         </span>
         <div className="min-w-0">
           <p className="eyebrow text-ink-500">Free delivery</p>
-          <p className="mt-1.5 text-body font-semibold leading-snug text-ink-900">
-            Most UK Mainland: arrives{' '}
-            <time dateTime={estimate.fromISO} className="font-data font-semibold tabular-nums">
-              {estimate.label.split(' – ')[0]}
-            </time>
-            {' – '}
-            <time dateTime={estimate.toISO} className="font-data font-semibold tabular-nums">
-              {estimate.label.split(' – ')[1]}
-            </time>
-          </p>
-          <p className="mt-1 text-body-sm text-ink-500">{PROMISES.delivery.timingException}</p>
+          {isRoma ? (
+            <p className="mt-1.5 text-body-sm leading-relaxed text-ink-900">{ROMA_DELIVERY_NOTICE}</p>
+          ) : (
+            <>
+              <p className="mt-1.5 text-body font-semibold leading-snug text-ink-900">
+                Most UK Mainland: arrives{' '}
+                <time dateTime={estimate.fromISO} className="font-data font-semibold tabular-nums">
+                  {estimate.label.split(' – ')[0]}
+                </time>
+                {' – '}
+                <time dateTime={estimate.toISO} className="font-data font-semibold tabular-nums">
+                  {estimate.label.split(' – ')[1]}
+                </time>
+              </p>
+              <p className="mt-1 text-body-sm text-ink-500">{PROMISES.delivery.timingException}</p>
+            </>
+          )}
           <p className="mt-1 text-body-sm text-ink-500">{PROMISES.delivery.long}</p>
         </div>
       </div>
