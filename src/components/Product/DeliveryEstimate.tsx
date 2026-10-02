@@ -1,8 +1,11 @@
 // src/components/Product/DeliveryEstimate.tsx
 
+'use client';
+
 import { Truck, Wallet } from 'lucide-react';
+import { useParams } from 'next/navigation';
 import { PROMISES } from '@/constants/promises';
-import { ROMA_DELIVERY_NOTICE } from '@/constants/romaAvailability';
+import { isRomaProduct, ROMA_DELIVERY_NOTICE } from '@/constants/romaAvailability';
 import type { DeliveryWindow } from '@/utils/delivery';
 
 /**
@@ -21,7 +24,10 @@ import type { DeliveryWindow } from '@/utils/delivery';
  * Both rows are rendered from PROMISES, so nothing here can drift away from
  * what the footer, checkout and delivery page say.
  */
-export default function DeliveryEstimate({ estimate, isRoma = false }: { estimate: DeliveryWindow; isRoma?: boolean }) {
+export default function DeliveryEstimate({ estimate }: { estimate: DeliveryWindow }) {
+  const params = useParams<{ slug?: string }>();
+  const isRoma = isRomaProduct((params.slug ?? '').replace(/-/g, ' '));
+
   return (
     <section
       aria-label="Delivery and payment"
