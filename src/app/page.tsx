@@ -2,7 +2,7 @@
 import type { Metadata } from 'next';
 import { unstable_cache } from 'next/cache';
 import { createPublicClient } from '@/utils/supabase/public';
-import { summariseCollections } from '@/utils/collections';
+import { priceAnchors, summariseCollections } from '@/utils/collections';
 import { getFabricLibrary } from '@/utils/fabrics';
 import { getBuildTeaser } from '@/utils/buildTeaser';
 import HomeClient from '@/components/Home/HomeClient';
@@ -123,12 +123,13 @@ export default async function HomePage() {
   // "sofas", so the price anchor is the cheapest thing that is one: footstools
   // and armchairs still count towards the tile's total, they just cannot set
   // its price.
-  const notASofa = /footstool|arm\s?chair/i;
+  // The rule itself lives in utils/collections.ts now — the collections pages
+  // ask it the same question.
   const stats = new Map<string, { fromPrice: number | null; count: number }>();
   for (const row of categoryStats ?? []) {
     const price = Number(row.base_price);
     if (!Number.isFinite(price)) continue;
-    const anchors = !notASofa.test(row.title ?? '');
+    const anchors = priceAnchors(row.title);
     for (const pc of row.product_categories ?? []) {
       const id = pc.category_id;
       if (!id) continue;

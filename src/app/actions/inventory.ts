@@ -64,6 +64,19 @@ function readWasPrice(
 }
 
 /**
+ * The main collection, or null.
+ *
+ * A uuid or nothing — the select offers only ids it read from the table, so
+ * anything else is a hand-crafted post rather than a mistake, and null is the
+ * honest answer to it. The FK rejects an id that does not exist either way;
+ * this just keeps the empty option from reaching Postgres as ''.
+ */
+function readMainCollectionId(formData: FormData): string | null {
+  const raw = ((formData.get('mainCollectionId') as string | null) ?? '').trim()
+  return /^[0-9a-f-]{36}$/i.test(raw) ? raw : null
+}
+
+/**
  * products.category_id is the single canonical category that decides a
  * product's URL. product_categories says where it can be BROWSED; this says
  * where it LIVES. Without setting it, every new product lands with a null
@@ -137,6 +150,8 @@ export async function addProduct(formData: FormData, variants: VariantInput[]) {
       base_price: basePrice,
       // Display only. Null is the normal state: no strikethrough, no badge.
       was_price: wasPrice.value,
+      // Which part of the shop it shows under on /collection.
+      main_collection_id: readMainCollectionId(formData),
       description,
       specifications: parsedSpecs,
       variant_group_id: variantGroupId || null,
@@ -267,6 +282,8 @@ export async function updateProduct(formData: FormData, variants: VariantInput[]
       base_price: basePrice,
       // Display only, and cleared by emptying the field — see readWasPrice.
       was_price: wasPrice.value,
+      // Which part of the shop it shows under on /collection.
+      main_collection_id: readMainCollectionId(formData),
       description,
       specifications: parsedSpecs,
       variant_group_id: variantGroupId,

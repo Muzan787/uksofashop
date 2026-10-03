@@ -150,6 +150,36 @@ export type Database = {
           },
         ]
       }
+      main_collections: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          position: number
+          slug: string
+          standfirst: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          position?: number
+          slug: string
+          standfirst?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          position?: number
+          slug?: string
+          standfirst?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       newsletter_subscribers: {
         Row: {
           confirm_token: string
@@ -918,6 +948,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           is_featured: boolean | null
+          main_collection_id: string | null
           origin: string
           review_count: number | null
           size_label: string | null
@@ -939,6 +970,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           is_featured?: boolean | null
+          main_collection_id?: string | null
           origin?: string
           review_count?: number | null
           size_label?: string | null
@@ -960,6 +992,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           is_featured?: boolean | null
+          main_collection_id?: string | null
           origin?: string
           review_count?: number | null
           size_label?: string | null
@@ -976,6 +1009,13 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_main_collection_id_fkey"
+            columns: ["main_collection_id"]
+            isOneToOne: false
+            referencedRelation: "main_collections"
             referencedColumns: ["id"]
           },
           {

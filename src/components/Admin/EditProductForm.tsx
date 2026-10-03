@@ -7,6 +7,7 @@ import { Plus, Trash2, Loader2, ImagePlus } from 'lucide-react'
 import { Database } from '@/types/supabase'
 import { createClient } from '@/utils/supabase/client'
 import PriceFields from './PriceFields'
+import MainCollectionField from './MainCollectionField'
 
 type Category = Pick<Database['public']['Tables']['categories']['Row'], 'id' | 'name'>
 type DBVariant = Database['public']['Tables']['product_variants']['Row']
@@ -198,6 +199,9 @@ export default function EditProductForm({ product, categories }: { product: Prod
           </div>
           {/* Price now, and the optional was price it is discounted from. */}
           <PriceFields basePrice={product.base_price} wasPrice={product.was_price} />
+
+          {/* Which part of the shop it belongs to, for /collection. */}
+          <MainCollectionField value={product.main_collection_id} />
           {/* Origin drives the "Made in the UK" badge on the product page. */}
           <div>
             <label className="block text-xs font-bold text-stone-500 uppercase tracking-wider mb-2">Where is it made?</label>

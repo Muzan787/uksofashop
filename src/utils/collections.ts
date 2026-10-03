@@ -41,6 +41,22 @@ export interface CollectionSummary {
 const MAX_IMAGES = 3
 
 /**
+ * Whether a product may set a "from £x" anchor.
+ *
+ * "from £149 under Fabric Sofas" was the Lily footstool. A tile that says
+ * sofas has to be priced by one, so footstools and armchairs count towards a
+ * collection's totals but cannot set its cheapest price. The homepage worked
+ * this out first and kept the rule to itself; it is here now because the
+ * collections pages need exactly the same answer, and a second copy of the
+ * pattern is a second thing to forget.
+ */
+const NOT_A_SOFA = /footstool|arm\s?chair/i
+
+export function priceAnchors(title: string | null | undefined): boolean {
+  return !NOT_A_SOFA.test(title ?? '')
+}
+
+/**
  * Picks up to three images, preferring variety over completeness: one image
  * from each distinct product first, so a collection of four sofas shows four
  * different sofas rather than three angles of the same one. Only then does it

@@ -1,63 +1,68 @@
 // src/app/collection/page.tsx
 import { Metadata } from 'next';
 import { createClient } from '@/utils/supabase/server'
-import { summariseCollections } from '@/utils/collections';
-import CollectionCard from '@/components/Product/CollectionCard';
+import { summariseMainCollections } from '@/utils/mainCollections';
+import MainCollectionCard from '@/components/Collection/MainCollectionCard';
 import CollectionHero from '@/components/Collection/CollectionHero';
 import CollectionEmpty from '@/components/Collection/CollectionEmpty';
 import { Reveal } from '@/components/Motion';
 import { staggerDelay } from '@/components/Motion/tokens';
 
 export const metadata: Metadata = {
-  title: 'All Collections',
-  description: 'Browse our complete range of sofa collections and sets, with free UK Mainland delivery.',
+  title: 'Collections',
+  description:
+    'Imported recliners, made-to-order sofas, and what is coming next. Browse every part of the UK Sofa Shop range, with free UK Mainland delivery.',
   alternates: { canonical: '/collection' },
 };
 
-/** "6 collections · from £529", and the honest shorter versions of it. */
-function summarise(count: number, from: number | null): string {
-  if (count === 0) return 'No collections yet';
-  const sets = `${count} ${count === 1 ? 'collection' : 'collections'}`;
-  if (from === null) return sets;
-  return `${sets} · from £${Math.round(from).toLocaleString('en-GB')}`;
+/** "2 open now · 3 on the way", and the honest shorter versions of it. */
+function summarise(live: number, soon: number): string {
+  if (live === 0 && soon === 0) return 'Nothing listed yet';
+  const parts: string[] = [];
+  if (live > 0) parts.push(`${live} open now`);
+  if (soon > 0) parts.push(`${soon} on the way`);
+  return parts.join(' · ');
 }
 
 export default async function CollectionsIndexPage() {
   const supabase = await createClient();
 
-  const { data: groupsData } = await supabase
-    .from('variant_groups')
+  // One round trip. The counts, the price anchor and the collage all come off
+  // the same embedded products, so the card cannot claim thirteen designs and
+  // then price twelve of them.
+  const { data: rows } = await supabase
+    .from('main_collections')
     .select(`
       id,
-      name,
       slug,
+      name,
+      standfirst,
+      status,
+      position,
       products (
         id,
+        title,
         base_price,
         is_active,
         gallery_images,
+        variant_group_id,
         product_variants ( image_url, priority )
       )
     `)
-    .order('name', { ascending: true })
-    // Add this to sort the nested variants!
+    .order('position', { ascending: true })
     .order('priority', { referencedTable: 'products.product_variants', ascending: true });
 
-  const collectionsData = summariseCollections(groupsData);
-
-  // Counted from what is actually on the page rather than asserted, so the
-  // header cannot drift from the grid underneath it.
-  const cheapest = collectionsData.length
-    ? Math.min(...collectionsData.map(c => c.minPrice).filter(n => Number.isFinite(n) && n > 0))
-    : null;
+  const collections = summariseMainCollections(rows);
+  const live = collections.filter(c => c.status === 'live').length;
+  const soon = collections.length - live;
 
   return (
     <div className="grad-calico grain-light relative min-h-screen bg-calico-50">
       <CollectionHero
-        eyebrow="Curated sets"
-        title="Buy the whole room at once."
-        standfirst="Sofa, loveseat and armchair in the same fabric and the same frame — priced as a set and delivered in one visit."
-        summary={summarise(collectionsData.length, Number.isFinite(cheapest as number) ? cheapest : null)}
+        eyebrow="The range"
+        title="Start with the part of the shop you need."
+        standfirst="Imported recliners held in stock, sofas we build to your room, and the rooms we are opening next. Each one opens onto its ranges and every design inside them."
+        summary={summarise(live, soon)}
         trail={[
           { href: '/', label: 'Home' },
           { href: '/shop/all', label: 'Shop' },
@@ -66,23 +71,18 @@ export default async function CollectionsIndexPage() {
       />
 
       <div className="relative mx-auto max-w-shell px-4 pb-16 pt-8 sm:px-6 lg:pb-24 lg:pt-10">
-        {collectionsData.length > 0 ? (
+        {collections.length > 0 ? (
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6">
-            {collectionsData.map((collection, i) => (
-              // The shared reveal, not an inline `opacity: 0` plus a locally
-              // redeclared keyframe. That pattern renders the whole grid
-              // invisible and waits for an animation to bring it back, which is
-              // the one thing the motion vocabulary says a primitive may never
-              // do — and the keyframe it declared was already in globals.css.
+            {collections.map((collection, i) => (
               <Reveal key={collection.id} delay={staggerDelay(i)} distance={20} amount={0.12}>
-                <CollectionCard {...collection} />
+                <MainCollectionCard collection={collection} />
               </Reveal>
             ))}
           </div>
         ) : (
           <CollectionEmpty
             title="No collections available"
-            body="We are currently putting new sets together. In the meantime, every sofa is available on its own."
+            body="We are currently putting the range together. In the meantime, every sofa is available on its own."
             ctaLabel="Shop individual sofas"
           />
         )}

@@ -87,6 +87,23 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })
   })
 
+  // ── Main collections ──────────────────────────────────────────────────────
+  // Only the live ones. A coming-soon collection has no page behind it — the
+  // card on /collection is inert by design — so listing it would be inviting
+  // a crawler to a URL that renders an empty state.
+  const { data: mainCollections } = await supabase
+    .from('main_collections')
+    .select('slug, created_at')
+    .eq('status', 'live')
+
+  mainCollections?.forEach((main) => {
+    if (!main.slug) return
+    routes.push({
+      url: `${SITE_URL}/collection/${main.slug}`,
+      lastModified: new Date(main.created_at || now),
+    })
+  })
+
   // ── Collections ───────────────────────────────────────────────────────────
   const { data: collections } = await supabase
     .from('variant_groups')

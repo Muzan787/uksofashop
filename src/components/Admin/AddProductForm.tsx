@@ -7,6 +7,7 @@ import { Plus, Trash2, Loader2, ImagePlus } from 'lucide-react'
 import { Database } from '@/types/supabase'
 import { createClient } from '@/utils/supabase/client'
 import PriceFields from './PriceFields'
+import MainCollectionField from './MainCollectionField'
 
 type Category = Pick<Database['public']['Tables']['categories']['Row'], 'id' | 'name'>
 
@@ -202,6 +203,9 @@ export default function AddProductForm({ categories }: { categories: Category[] 
           </div>
           {/* Price now, and the optional was price it is discounted from. */}
           <PriceFields />
+
+          {/* Which part of the shop it belongs to, for /collection. */}
+          <MainCollectionField />
           {/* Origin drives the "Made in the UK" badge on the product page.
               Defaults to "Not specified", which shows nothing - so a product
               added without thinking about origin never makes a claim we
