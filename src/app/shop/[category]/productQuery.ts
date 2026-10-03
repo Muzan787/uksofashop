@@ -8,6 +8,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/supabase'
 import { canonicalProductPath } from '@/utils/productUrl'
+import { sale } from '@/utils/pricing'
 
 type Client = SupabaseClient<Database>
 
@@ -156,6 +157,8 @@ export interface GridCard {
   slug: string
   href: string
   price: number
+  /** Struck through on the card. Null where the product is not discounted. */
+  wasPrice: number | null
   image: string | null
   secondaryImage: string | null
   reviewCount: number | null
@@ -209,7 +212,7 @@ export async function fetchProductCards(
         // The two category relations are here for the href, not for the card:
         // see the note where it is built below. Both are joins on a query that
         // already runs, so they cost no extra round trip.
-        'id, title, slug, base_price, gallery_images, average_rating, review_count, product_variants!inner(id, image_url, material, color, color_hex, price_adjustment, priority), product_categories!inner(category_id, categories(slug)), categories!products_category_id_fkey(slug)',
+        'id, title, slug, base_price, was_price, gallery_images, average_rating, review_count, product_variants!inner(id, image_url, material, color, color_hex, price_adjustment, priority), product_categories!inner(category_id, categories(slug)), categories!products_category_id_fkey(slug)',
         { count: 'exact' },
       )
       .eq('is_active', true),
@@ -234,6 +237,10 @@ export async function fetchProductCards(
     }
 
     const image = variant?.image_url ?? null
+
+    // Both figures carry the same variant adjustment, so the percentage on the
+    // card is the product's rather than the chosen colourway's.
+    const priced = sale(product.base_price, product.was_price, variant?.price_adjustment)
 
     // The link keeps the visitor inside the category they are browsing, which
     // is what the breadcrumb on the product page then shows — but ONLY where
@@ -265,7 +272,8 @@ export async function fetchProductCards(
       href: belongsToSegment
         ? `/shop/${encodeURIComponent(categorySegment)}/${encodeURIComponent(product.slug)}`
         : canonicalProductPath(product),
-      price: product.base_price + (variant?.price_adjustment || 0),
+      price: priced.price,
+      wasPrice: priced.wasPrice,
       image,
       secondaryImage:
         product.product_variants?.find(v => v.image_url && v.image_url !== image)?.image_url

@@ -3,8 +3,9 @@ import type { Metadata } from 'next'
 import { createClient } from '@/utils/supabase/server'
 import { Plus, Edit3, EyeOff, Eye, LayoutGrid } from 'lucide-react'
 import { deleteProduct, activateProduct } from '@/app/actions/inventory'
+import { percentOff, pounds } from '@/utils/pricing'
 import Link from 'next/link'
-
+
 
 export const metadata: Metadata = { title: 'Inventory' }
 
@@ -15,7 +16,7 @@ export default async function InventoryPage() {
   const { data: products } = await supabase
     .from('products')
     .select(`
-      id, title, base_price, is_active,
+      id, title, base_price, was_price, is_active,
       product_variants ( id, color )
     `)
     .order('created_at', { ascending: false })
@@ -82,8 +83,22 @@ export default async function InventoryPage() {
 
               {/* Price & Details */}
               <div className="mb-6 space-y-1">
-                <div className="text-3xl font-black text-stone-900 tracking-tight">
-                  £{product.base_price.toFixed(2)}
+                {/* The old price and the percentage, so a sale is visible from
+                    the list rather than only inside the edit form. */}
+                <div className="flex flex-wrap items-baseline gap-x-2.5">
+                  <span className="text-3xl font-black text-stone-900 tracking-tight">
+                    £{product.base_price.toFixed(2)}
+                  </span>
+                  {product.was_price && percentOff(product.base_price, product.was_price) >= 1 && (
+                    <>
+                      <span className="text-base font-bold text-stone-400 line-through">
+                        {pounds(product.was_price)}
+                      </span>
+                      <span className="rounded-sm bg-orange-100 px-2 py-0.5 text-[11px] font-black uppercase tracking-wider text-orange-700">
+                        {percentOff(product.base_price, product.was_price)}% off
+                      </span>
+                    </>
+                  )}
                 </div>
                 <div className="text-sm text-stone-500 font-medium">
                   Made to Order • {colors.length} {colors.length === 1 ? 'Color' : 'Colors'}

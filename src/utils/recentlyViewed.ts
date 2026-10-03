@@ -18,6 +18,12 @@ export interface RecentProduct {
   href: string;
   image: string | null;
   price: number;
+  /**
+   * What it used to cost, where it is discounted. Optional on purpose: a trail
+   * written before this field existed is still a valid trail, and parse()
+   * below only drops a record for a field it cannot do without.
+   */
+  wasPrice?: number | null;
   /** When it was last looked at. Sorting key, and nothing else. */
   at: number;
 }
@@ -66,6 +72,17 @@ function parse(raw: string | null): RecentProduct[] {
         (p as RecentProduct).href.startsWith('/') &&
         typeof (p as RecentProduct).price === 'number' &&
         Number.isFinite((p as RecentProduct).price))
+      // A was price is never a reason to drop a record, so it is normalised
+      // rather than checked above: anything that is not a real figure above
+      // the price becomes null, and the card simply shows no discount. Without
+      // this, a hand-edited store could put a strikethrough on the row.
+      .map(p => ({
+        ...p,
+        wasPrice:
+          typeof p.wasPrice === 'number' && Number.isFinite(p.wasPrice) && p.wasPrice > p.price
+            ? p.wasPrice
+            : null,
+      }))
       .sort((a, b) => (b.at ?? 0) - (a.at ?? 0))
       .slice(0, STORE_LIMIT);
 

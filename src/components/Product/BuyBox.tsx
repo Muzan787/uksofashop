@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Gem, MapPin, Ruler, ShieldCheck, Sparkles, Truck, Wallet } from 'lucide-react';
 import { PROMISES } from '@/constants/promises';
 import type { DeliveryWindow } from '@/utils/delivery';
+import { percentOff, pounds } from '@/utils/pricing';
 import AddToCart from './AddToCart';
 import DeliveryEstimate from './DeliveryEstimate';
 import FabricChoice from './FabricChoice';
@@ -18,6 +19,13 @@ import type { Fabric, FabricCollection, Product, SizeVariant } from './types';
 interface Props {
   product: Product;
   price: number;
+  /**
+   * What this configuration used to cost — the product's was_price with the
+   * selected variant's adjustment added, so the percentage does not drift as
+   * the customer moves through the swatches. Null on everything not
+   * discounted, and the price then draws exactly as it always did.
+   */
+  wasPrice?: number | null;
   reviewCount: number;
   averageRating: number;
   estimate: DeliveryWindow;
@@ -104,7 +112,7 @@ function readableDimensions(specifications: Product['specifications']): string {
  * not a replacement for this one.
  */
 export default function BuyBox({
-  product, price, reviewCount, averageRating, estimate, categorySlug,
+  product, price, wasPrice = null, reviewCount, averageRating, estimate, categorySlug,
   subgroups, subgroupTitle, currentSubgroup, hrefForSubgroup,
   sizes, onCustomSize,
   materials, selectedMaterial, onSelectMaterial,
@@ -124,6 +132,13 @@ export default function BuyBox({
     label: sv.size_label,
     href: `/shop/${categorySlug}/${sv.slug}`,
   }));
+
+  // The saving, worked out from the two figures the page is already showing
+  // rather than carried separately, so the badge and the strikethrough cannot
+  // disagree. Rounds down — see utils/pricing.ts.
+  const cut = wasPrice ? percentOff(price, wasPrice) : 0;
+  const onSale = cut >= 1 && !!wasPrice;
+  const saving = onSale && wasPrice ? Math.floor(wasPrice - price) : 0;
 
   const materialPills: Pill[] = materials.map(m => ({ key: m, label: m }));
   const currentSizeLabel = sizes.find(sv => sv.slug === product.slug)?.size_label;
@@ -163,14 +178,41 @@ export default function BuyBox({
         </span>
 
         <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
-          <span className="font-display text-[34px] font-semibold leading-none tabular-nums text-ink-900">
-            £{price.toFixed(0)}
+          {/* The three figures stay together as one cluster and the
+              cash-on-delivery pill wraps below them, rather than the old price
+              being separated from the new one at 375px. */}
+          <span className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <span className="font-display text-[34px] font-semibold leading-none tabular-nums text-ink-900">
+              £{price.toFixed(0)}
+            </span>
+            {onSale && wasPrice && (
+              // <s> rather than a line-through class: a strikethrough drawn in
+              // CSS alone says nothing to a screen reader, and "Was" does.
+              <s className="font-data text-body tabular-nums text-ink-500">
+                <span className="sr-only">Was </span>
+                {pounds(wasPrice)}
+              </s>
+            )}
+            {onSale && (
+              // The tint, border and radius of the offer strip below, so the
+              // two read as the same family — but text-only, because that one
+              // already owns the tag icon.
+              <span className="inline-flex items-center rounded-pill border border-ember-500/40 bg-ember-500/[0.08] px-3 py-1 font-data text-caption font-bold uppercase tracking-wider text-ember-700">
+                {cut}% off
+              </span>
+            )}
           </span>
           <span className="btn-ember shadow-ember inline-flex items-center gap-1.5 rounded-pill bg-ember-500 px-3.5 py-2 text-caption font-semibold text-ink-900">
             <Wallet aria-hidden="true" className="h-3.5 w-3.5" />
             {PROMISES.payment.label}
           </span>
         </div>
+
+        {onSale && saving > 0 && (
+          <p className="m-0 mt-3 text-body-sm font-semibold text-ink-700">
+            You save {pounds(saving)} on this configuration.
+          </p>
+        )}
 
         {/* The paid-traffic offer, as a line rather than a dialog. Only a
             visitor holding an entitlement sees it, and only for a product

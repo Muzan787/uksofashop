@@ -17,6 +17,8 @@ interface Hit {
   title: string;
   slug: string;
   base_price: number;
+  /** Struck through beside the price. Null where there is no discount. */
+  was_price: number | null;
   image: string | null;
   href: string;
 }
@@ -311,8 +313,20 @@ export default function SearchOverlay({ open, onClose, categories, triggerRef }:
                       <span className="min-w-0 flex-1 truncate text-body font-semibold text-calico-50">
                         {hit.title}
                       </span>
-                      <span className="shrink-0 font-data text-data tabular-nums text-ember-300">
-                        {money(hit.base_price)}
+                      {/* The overlay sits on ink, so the old price is
+                          calico-300 rather than ink-500 — ink on ink would be
+                          unreadable, which is the whole reason the palette
+                          splits its muted tones by ground. */}
+                      <span className="flex shrink-0 flex-col items-end leading-tight">
+                        <span className="font-data text-data tabular-nums text-ember-300">
+                          {money(hit.base_price)}
+                        </span>
+                        {hit.was_price && hit.was_price > hit.base_price && (
+                          <s className="font-data text-caption tabular-nums text-calico-300">
+                            <span className="sr-only">Was </span>
+                            {money(hit.was_price)}
+                          </s>
+                        )}
                       </span>
                     </button>
                   </li>

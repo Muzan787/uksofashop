@@ -31,6 +31,7 @@ import { trackAddToCart, trackViewContent } from '@/utils/tracking';
 import { useWhatsAppCTA } from '@/utils/attribution/useWhatsAppCTA';
 import { usePhoneClick } from '@/utils/attribution/usePhoneClick';
 import type { DeliveryWindow } from '@/utils/delivery';
+import { sale } from '@/utils/pricing';
 import { accentVars } from './accent';
 import AddToCartFab from './AddToCartFab';
 import BuyBox from './BuyBox';
@@ -249,7 +250,9 @@ export default function ProductPageClient({
   }, [product.specifications]);
 
   const dimensions = (specs.dimensions ?? specs.Dimensions ?? '').trim();
-  const price = product.base_price + (selVariant?.price_adjustment || 0);
+  // The variant adjustment lands on BOTH figures, so a colourway that costs
+  // £40 more is still the same percentage off — see utils/pricing.ts.
+  const { price, wasPrice } = sale(product.base_price, product.was_price, selVariant?.price_adjustment ?? 0);
 
   const reviewCount = approvedReviews.length;
   const averageRating = reviewCount
@@ -470,6 +473,7 @@ export default function ProductPageClient({
               <BuyBox
                 product={product}
                 price={price}
+                wasPrice={wasPrice}
                 reviewCount={reviewCount}
                 averageRating={averageRating}
                 estimate={deliveryEstimate}
@@ -554,6 +558,7 @@ export default function ProductPageClient({
           href={`/shop/${categorySlug}/${product.slug}`}
           image={images[0]?.src ?? null}
           price={price}
+          wasPrice={wasPrice}
         />
       </div>
 

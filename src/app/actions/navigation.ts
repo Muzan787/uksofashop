@@ -68,6 +68,11 @@ export interface SearchHit {
   title: string
   slug: string
   base_price: number
+  /**
+   * products.was_price, where the product is discounted. Struck through beside
+   * the price in the overlay. Null is the normal state.
+   */
+  was_price: number | null
   image: string | null
   /**
    * The finished product URL, canonical. It used to be a bare categorySlug the
@@ -107,7 +112,7 @@ export async function searchProducts(rawTerm: string): Promise<SearchHit[]> {
   const { data } = await supabase
     .from('products')
     .select(
-      'id, title, slug, base_price, product_variants(image_url), categories!products_category_id_fkey(slug), product_categories!inner(categories(slug))',
+      'id, title, slug, base_price, was_price, product_variants(image_url), categories!products_category_id_fkey(slug), product_categories!inner(categories(slug))',
     )
     .eq('is_active', true)
     .or(`title.ilike.%${term}%,description.ilike.%${term}%`)
@@ -120,6 +125,7 @@ export async function searchProducts(rawTerm: string): Promise<SearchHit[]> {
       title: p.title as string,
       slug: p.slug as string,
       base_price: Number(p.base_price),
+      was_price: p.was_price === null || p.was_price === undefined ? null : Number(p.was_price),
       image: variants?.[0]?.image_url ?? null,
       href: canonicalProductPath({
         slug: p.slug as string,

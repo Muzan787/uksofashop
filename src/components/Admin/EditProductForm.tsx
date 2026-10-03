@@ -6,6 +6,7 @@ import { updateProduct, VariantInput } from '@/app/actions/inventory'
 import { Plus, Trash2, Loader2, ImagePlus } from 'lucide-react'
 import { Database } from '@/types/supabase'
 import { createClient } from '@/utils/supabase/client'
+import PriceFields from './PriceFields'
 
 type Category = Pick<Database['public']['Tables']['categories']['Row'], 'id' | 'name'>
 type DBVariant = Database['public']['Tables']['product_variants']['Row']
@@ -195,10 +196,8 @@ export default function EditProductForm({ product, categories }: { product: Prod
             <label className="block text-xs font-bold text-stone-500 uppercase tracking-wider mb-2">URL Slug</label>
             <input type="text" name="slug" defaultValue={product.slug} required className="w-full p-3.5 bg-stone-50 border border-stone-200 rounded-sm focus:ring-2 focus:ring-orange-500 outline-none font-medium" />
           </div>
-          <div>
-            <label className="block text-xs font-bold text-stone-500 uppercase tracking-wider mb-2">Base Price (£)</label>
-            <input type="number" step="0.01" inputMode="decimal" name="basePrice" defaultValue={product.base_price || ''} required className="w-full p-3.5 bg-stone-50 border border-stone-200 rounded-sm focus:ring-2 focus:ring-orange-500 outline-none font-bold text-lg" />
-          </div>
+          {/* Price now, and the optional was price it is discounted from. */}
+          <PriceFields basePrice={product.base_price} wasPrice={product.was_price} />
           {/* Origin drives the "Made in the UK" badge on the product page. */}
           <div>
             <label className="block text-xs font-bold text-stone-500 uppercase tracking-wider mb-2">Where is it made?</label>

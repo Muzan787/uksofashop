@@ -6,6 +6,7 @@ import { Heart } from 'lucide-react'
 import EmptyState from '@/components/UI/EmptyState'
 import WishlistGrid, { type WishlistCardItem } from '@/components/Account/WishlistGrid'
 import { canonicalProductPath } from '@/utils/productUrl'
+import { sale } from '@/utils/pricing'
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
@@ -31,6 +32,7 @@ export default async function WishlistPage() {
         title,
         slug,
         base_price,
+        was_price,
         categories!products_category_id_fkey ( slug ),
         product_categories ( categories ( slug ) ),
         product_variants ( id, color, image_url, price_adjustment, priority )
@@ -54,6 +56,10 @@ export default async function WishlistPage() {
       .sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0))
     const variant = variants[0] ?? null
 
+    // Both figures carry that variant's adjustment — see utils/pricing.ts for
+    // why the was price moves with it rather than staying put.
+    const priced = sale(product?.base_price, product?.was_price, variant?.price_adjustment)
+
     return {
       productId: row.product_id,
       title: product?.title ?? 'Unavailable product',
@@ -68,7 +74,8 @@ export default async function WishlistPage() {
         categories: product?.categories,
         product_categories: product?.product_categories,
       }),
-      price: Number(product?.base_price ?? 0) + Number(variant?.price_adjustment ?? 0),
+      price: priced.price,
+      wasPrice: priced.wasPrice,
       image: variant?.image_url ?? null,
       variantId: variant?.id ?? null,
       color: variant?.color ?? null,

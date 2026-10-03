@@ -83,7 +83,7 @@ const getProductPageData = unstable_cache(
             .from('product_categories')
             .select(`
               products (
-                id, title, slug, base_price, is_active,
+                id, title, slug, base_price, was_price, is_active,
                 product_variants ( image_url, priority )
               )
             `)
@@ -298,6 +298,7 @@ export default async function ProductPage(props: { params: Params, searchParams:
       title: p.title,
       slug: p.slug,
       base_price: p.base_price,
+      was_price: p.was_price ?? null,
       image_url: p.product_variants?.[0]?.image_url || '/placeholder.svg'
     }));
   }
@@ -308,6 +309,9 @@ export default async function ProductPage(props: { params: Params, searchParams:
     slug: product.slug,
     description: product.description,
     base_price: product.base_price,
+    // Display only. Struck through beside the price with a rounded percent
+    // off, and never part of any total — see utils/pricing.ts.
+    was_price: product.was_price ?? null,
     specifications: product.specifications as Record<string, string> | string | null,
     gallery_images: product.gallery_images as string[] | null,
     // Drives the "Made in the UK" badge. Only 'uk' shows anything.
@@ -349,6 +353,12 @@ export default async function ProductPage(props: { params: Params, searchParams:
     ? safeVariants.map(v => Number(product.base_price) + Number(v.price_adjustment ?? 0))
     : [Number(product.base_price)]
 
+  // The strikethrough, declared to crawlers as well as drawn on the page.
+  // Google reads a ListPrice above the offer price as a genuine reduction and
+  // can show the saving in the Shopping result; a page that strikes a price
+  // through visually and says nothing in its markup gets none of that.
+  const listPrice = product.was_price ? Number(product.was_price) : null
+
   const galleryImages = [
     ...safeVariants.map(v => v.image_url).filter(Boolean),
     ...((product.gallery_images as string[] | null) ?? []),
@@ -386,6 +396,7 @@ export default async function ProductPage(props: { params: Params, searchParams:
     canonicalPath: canonicalPath,
     images: galleryImages,
     prices: variantPrices,
+    listPrice,
     skus: (product.product_variants ?? []).map((v: any) => v.sku).filter(Boolean),
     origin: product.origin,
     customMade: product.custom_made,

@@ -37,6 +37,33 @@ const productSchema = z.object({
 
 
 /**
+ * The optional "was" price, read off the form and checked against the price it
+ * claims to beat.
+ *
+ * Blank is the normal answer and means no discount: the column goes back to
+ * NULL and every storefront surface draws what it drew before. A figure at or
+ * below the selling price is refused here, with a sentence the shop owner can
+ * act on, rather than being left to the CHECK constraint and Postgres's
+ * wording — see the migration for why that constraint exists anyway.
+ */
+function readWasPrice(
+  formData: FormData,
+  basePrice: number,
+): { value: number | null; error?: undefined } | { value?: undefined; error: string } {
+  const raw = ((formData.get('wasPrice') as string | null) ?? '').trim()
+  if (!raw) return { value: null }
+
+  const value = Number(raw)
+  if (!Number.isFinite(value) || value <= 0) {
+    return { error: 'Was price must be a number greater than 0, or left blank for no discount.' }
+  }
+  if (value <= basePrice) {
+    return { error: 'The was price has to be higher than the price you are selling at. Leave it blank for no discount.' }
+  }
+  return { value }
+}
+
+/**
  * products.category_id is the single canonical category that decides a
  * product's URL. product_categories says where it can be BROWSED; this says
  * where it LIVES. Without setting it, every new product lands with a null
@@ -91,6 +118,11 @@ export async function addProduct(formData: FormData, variants: VariantInput[]) {
 
   const { title, slug, categoryIds, basePrice, description, specifications, variantGroupId, sizeLabel, subgroupLabel, gallery_images, origin, customMade, isFeatured } = validatedData.data
 
+  // After the schema, because the rule it enforces is "higher than basePrice"
+  // and basePrice is only known to be a positive number once zod has said so.
+  const wasPrice = readWasPrice(formData, basePrice)
+  if (wasPrice.error) return { error: wasPrice.error }
+
   let parsedSpecs = {};
   try { parsedSpecs = JSON.parse(specifications || '{}'); } catch { }
   
@@ -103,6 +135,8 @@ export async function addProduct(formData: FormData, variants: VariantInput[]) {
       title,
       slug,
       base_price: basePrice,
+      // Display only. Null is the normal state: no strikethrough, no badge.
+      was_price: wasPrice.value,
       description,
       specifications: parsedSpecs,
       variant_group_id: variantGroupId || null,
@@ -213,6 +247,12 @@ export async function updateProduct(formData: FormData, variants: VariantInput[]
   const customMade = formData.get('customMade') === 'true'
   const isFeatured = formData.get('isFeatured') === 'true'
 
+  if (!Number.isFinite(basePrice) || basePrice <= 0) {
+    return { error: 'Base price must be greater than 0.' }
+  }
+  const wasPrice = readWasPrice(formData, basePrice)
+  if (wasPrice.error) return { error: wasPrice.error }
+
   let parsedSpecs = {};
   try { parsedSpecs = JSON.parse(specifications); } catch { }
   
@@ -225,6 +265,8 @@ export async function updateProduct(formData: FormData, variants: VariantInput[]
       title,
       slug,
       base_price: basePrice,
+      // Display only, and cleared by emptying the field — see readWasPrice.
+      was_price: wasPrice.value,
       description,
       specifications: parsedSpecs,
       variant_group_id: variantGroupId,

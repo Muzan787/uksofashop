@@ -41,6 +41,7 @@ import { faqGroups } from '@/app/faq/faqData'
 import { createClient } from '@/utils/supabase/server'
 import { getFabricLibrary } from '@/utils/fabrics'
 import { canonicalProductPath } from '@/utils/productUrl'
+import { percentOff } from '@/utils/pricing'
 import { MAX_SAMPLES, SAMPLE_FEE } from '@/constants/swatches'
 
 /** How long a catalogue snapshot is reused before it is fetched again. */
@@ -113,6 +114,8 @@ interface ProductRow {
   title: string
   slug: string
   base_price: number | string
+  /** products.was_price. Lets the assistant name the saving, not invent one. */
+  was_price: number | string | null
   description: string | null
   size_label: string | null
   subgroup_label: string | null
@@ -129,7 +132,7 @@ async function fetchProducts(): Promise<ProductRow[]> {
   const { data, error } = await supabase
     .from('products')
     .select(
-      'id, title, slug, base_price, description, size_label, subgroup_label, specifications, custom_made, origin, ' +
+      'id, title, slug, base_price, was_price, description, size_label, subgroup_label, specifications, custom_made, origin, ' +
         'categories!products_category_id_fkey(slug, name), ' +
         'product_categories(categories(slug, name)), ' +
         'product_variants(color, material, price_adjustment)',
@@ -201,8 +204,16 @@ function renderProduct(p: ProductRow): string {
   const dearest = adjustments.length ? base + Math.max(...adjustments) : base
   const price = cheapest === dearest ? pounds(base) : `from ${pounds(cheapest)} to ${pounds(dearest)}`
 
+  // The reduction, stated once in the heading so the assistant can answer "is
+  // anything in the sale" from the catalogue rather than from the live price
+  // alone. The figure is the same floor-rounded one the page prints — see
+  // utils/pricing.ts — so the chat and the product page cannot disagree.
+  const was = Number(p.was_price ?? 0)
+  const cut = Number.isFinite(was) ? percentOff(base, was) : 0
+  const reduced = cut >= 1 ? ` (reduced from ${pounds(was)}, ${cut}% off)` : ''
+
   const lines: string[] = []
-  lines.push(`### ${p.title.trim()} — ${price}`)
+  lines.push(`### ${p.title.trim()} — ${price}${reduced}`)
   lines.push(`Link: ${canonicalProductPath(p)}`)
 
   const facts: string[] = []

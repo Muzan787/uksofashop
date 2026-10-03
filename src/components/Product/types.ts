@@ -31,6 +31,13 @@ export interface Product {
   slug: string
   description: string | null
   base_price: number
+  /**
+   * What it used to cost. Display only — it is struck through beside
+   * base_price and turned into a rounded percentage, and it is never part of
+   * any total. Null on everything not discounted, which is most of the
+   * catalogue. See utils/pricing.ts.
+   */
+  was_price?: number | null
   specifications: Record<string, string> | string | null
   gallery_images?: string[] | null
   product_variants?: Variant[]
@@ -46,6 +53,8 @@ export interface SimilarProduct {
   title: string
   slug: string
   base_price: number
+  /** Display only. Null where the product is not discounted. */
+  was_price?: number | null
   image_url: string
 }
 

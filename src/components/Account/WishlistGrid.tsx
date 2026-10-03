@@ -29,6 +29,8 @@ export interface WishlistCardItem {
    */
   href: string
   price: number
+  /** Struck through on the card. Null where the product is not discounted. */
+  wasPrice?: number | null
   image: string | null
   /** The default variant, so the card can add to the cart on its own.
    *  Null for a product with no variants — the card links out instead. */
@@ -121,6 +123,7 @@ export default function WishlistGrid({ items: initial }: { items: WishlistCardIt
               title={item.title}
               slug={item.slug}
               price={item.price}
+              wasPrice={item.wasPrice ?? null}
               href={item.href}
               image={item.image}
               delayMs={Math.min(i, 5) * 70}

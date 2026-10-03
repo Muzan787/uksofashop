@@ -10,6 +10,8 @@ export interface RowItem {
   href: string;
   image: string | null;
   price: number;
+  /** Struck through on the card where the product is discounted. */
+  wasPrice?: number | null;
 }
 
 interface Props {
@@ -78,6 +80,7 @@ export default function ProductRow({ title, eyebrow, emphasise, items, transitio
                 // what it actually links with.
                 slug={item.href.split('/').pop() ?? item.id}
                 price={item.price}
+                wasPrice={item.wasPrice ?? null}
                 href={item.href}
                 image={item.image}
                 transition={transition}

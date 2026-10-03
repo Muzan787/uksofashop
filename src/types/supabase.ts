@@ -926,6 +926,7 @@ export type Database = {
           subgroup_label: string | null
           title: string
           variant_group_id: string | null
+          was_price: number | null
         }
         Insert: {
           average_rating?: number | null
@@ -946,6 +947,7 @@ export type Database = {
           subgroup_label?: string | null
           title: string
           variant_group_id?: string | null
+          was_price?: number | null
         }
         Update: {
           average_rating?: number | null
@@ -966,6 +968,7 @@ export type Database = {
           subgroup_label?: string | null
           title?: string
           variant_group_id?: string | null
+          was_price?: number | null
         }
         Relationships: [
           {

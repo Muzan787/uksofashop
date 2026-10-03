@@ -12,10 +12,13 @@ import QuoteStrip from './QuoteStrip';
 import ReviewTicker, { type HomeReview } from './ReviewTicker';
 import ClosingCta from './ClosingCta';
 import { canonicalCategory, canonicalProductPath } from '@/utils/productUrl';
+import { sale } from '@/utils/pricing';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Product {
   id: string; title: string; slug: string; base_price: number;
+  /** Struck through on the card where it is set. Display only. */
+  was_price?: number | null;
   average_rating?: number | null;
   review_count?: number | null;
   gallery_images?: string[] | null;
@@ -104,11 +107,15 @@ function toCard(product: Product) {
   // card and the breadcrumb it lands on now say the same word.
   const cat = canonicalCategory(product);
 
+  // The rail offers no variant choice, so the pair is the product's own.
+  const priced = sale(product.base_price, product.was_price);
+
   return {
     id: product.id,
     title: product.title,
     slug: product.slug,
-    price: product.base_price,
+    price: priced.price,
+    wasPrice: priced.wasPrice,
     href: canonicalProductPath(product),
     image: variants[0]?.image_url ?? null,
     secondaryImage: variants[1]?.image_url ?? product.gallery_images?.[0] ?? null,

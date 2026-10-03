@@ -18,6 +18,8 @@ interface Props {
   href: string;
   image: string | null;
   price: number;
+  /** Struck through on the card. Null where the product is not discounted. */
+  wasPrice?: number | null;
 }
 
 /**
@@ -36,7 +38,7 @@ interface Props {
  * document or the browser abandons the whole transition. Similar keeps its
  * names; this row gives them up.
  */
-export default function RecentlyViewed({ id, title, href, image, price }: Props) {
+export default function RecentlyViewed({ id, title, href, image, price, wasPrice = null }: Props) {
   const trail = useSyncExternalStore(
     subscribeRecentlyViewed,
     recentlyViewedSnapshot,
@@ -48,8 +50,8 @@ export default function RecentlyViewed({ id, title, href, image, price }: Props)
   // Primitives rather than one object prop, so this does not re-run on every
   // render of the page around it.
   useEffect(() => {
-    recordRecentlyViewed({ id, title, href, image, price });
-  }, [id, title, href, image, price]);
+    recordRecentlyViewed({ id, title, href, image, price, wasPrice });
+  }, [id, title, href, image, price, wasPrice]);
 
   const items = trail.filter(p => p.id !== id).slice(0, RECENT_LIMIT);
 
@@ -64,6 +66,7 @@ export default function RecentlyViewed({ id, title, href, image, price }: Props)
         href: p.href,
         image: p.image,
         price: p.price,
+        wasPrice: p.wasPrice ?? null,
       }))}
       transition={false}
     />

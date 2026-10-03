@@ -82,6 +82,7 @@ export default function ProductGridClient({
               title={card.title}
               slug={card.slug}
               price={card.price}
+              wasPrice={card.wasPrice}
               href={card.href}
               image={card.image}
               secondaryImage={card.secondaryImage}

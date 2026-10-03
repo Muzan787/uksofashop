@@ -186,6 +186,13 @@ export interface ProductSchemaInput {
   images: string[]
   /** Per-variant final prices. One entry means a single Offer. */
   prices: number[]
+  /**
+   * products.was_price, where the product is discounted. Declared as a
+   * ListPrice above the offer price, which is how Google is told a price is
+   * reduced — so the strikethrough on the page and the strikethrough in a
+   * Shopping result come from the same column.
+   */
+  listPrice?: number | null
   skus: string[]
   origin?: string | null
   customMade?: boolean | null
@@ -239,9 +246,31 @@ export function productSchema(p: ProductSchemaInput) {
     hasMerchantReturnPolicy: returnPolicy(!!p.customMade),
   }
 
+  /**
+   * The was price, attached to a single Offer only.
+   *
+   * An AggregateOffer has a range rather than a price, and a lone ListPrice
+   * beside lowPrice/highPrice would be a figure a crawler cannot relate to
+   * either end of it. So a product whose variants carry different adjustments
+   * declares its range and nothing else, and keeps the strikethrough as a
+   * visual claim only. In this catalogue almost every product's variants are
+   * the same price, so almost every product takes the branch below.
+   */
+  const listPrice =
+    p.listPrice && p.listPrice > low
+      ? {
+          priceSpecification: {
+            '@type': 'UnitPriceSpecification',
+            priceType: 'https://schema.org/ListPrice',
+            price: p.listPrice,
+            priceCurrency: 'GBP',
+          },
+        }
+      : {}
+
   const offers =
     low === high
-      ? { '@type': 'Offer', price: low, ...offerBase }
+      ? { '@type': 'Offer', price: low, ...offerBase, ...listPrice }
       : {
           '@type': 'AggregateOffer',
           lowPrice: low,

@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { Star } from 'lucide-react';
 import { productTransitionName } from '@/components/Motion/productTransition';
 import { blurDataURL } from '@/utils/cloudinary';
+import { percentOff } from '@/utils/pricing';
 
 export interface CardSwatch {
   id: string;
@@ -27,6 +28,12 @@ export interface ProductCardData {
   slug: string;
   /** The price to display, including any variant adjustment the caller applies. */
   price: number;
+  /**
+   * What it used to cost, with the same adjustment applied — see
+   * utils/pricing.ts. Null or absent on everything not discounted, which is
+   * most of the catalogue, and the card then draws exactly as it always did.
+   */
+  wasPrice?: number | null;
   href: string;
   image: string | null;
   /** Cross-fades in on hover when there is one. */
@@ -68,7 +75,7 @@ const MAX_SWATCHES = 5;
  * of a flat grey box.
  */
 export default function ProductCard({
-  id, variantId, listId='catalogue', title, price, href, image, secondaryImage, badge, badges,
+  id, variantId, listId='catalogue', title, price, wasPrice = null, href, image, secondaryImage, badge, badges,
   reviewCount, averageRating, swatches = [], transition = true, delayMs = 0,
 }: ProductCardData) {
   const [swatchImage, setSwatchImage] = useState<string | null>(null);
@@ -99,6 +106,12 @@ export default function ProductCard({
   const shown = swatches.slice(0, MAX_SWATCHES);
   const extra = swatches.length - shown.length;
   const hasReviews = (reviewCount ?? 0) > 0;
+
+  // The percentage is worked out here rather than passed in, so every caller
+  // only has to plumb the one extra number through its query — and so a card
+  // can never print a different figure from the product page it leads to.
+  const cut = wasPrice ? percentOff(price, wasPrice) : 0;
+  const onSale = cut >= 1;
 
   return (
     <article
@@ -157,8 +170,18 @@ export default function ProductCard({
           />
         )}
 
-        {(badge || badges?.length) && (
+        {(onSale || badge || badges?.length) && (
           <div className="absolute left-2 top-2 z-raised flex flex-col items-start gap-1">
+            {/* First in the stack, and ink with ember letterforms rather than
+                either of the two styles below it — the saving has to read as a
+                different kind of thing from a category or a size, and the
+                top-RIGHT corner is taken on the saved-items grid by the
+                remove button. */}
+            {onSale && (
+              <span className="rounded-sm bg-ink-900 px-2 py-1 font-data text-caption font-extrabold uppercase tracking-wider text-ember-300">
+                {cut}% off
+              </span>
+            )}
             {badge && (
               <span className="rounded-sm bg-ember-500 px-2 py-1 font-data text-caption font-semibold uppercase tracking-wider text-ink-900">
                 {badge}
@@ -194,8 +217,22 @@ export default function ProductCard({
         </h3>
 
         <div className="mt-1.5 flex items-center justify-between gap-2">
-          <span className="font-data text-[17px] font-semibold tabular-nums text-ink-900">
-            £{Math.round(price).toLocaleString('en-GB')}
+          {/* Wraps rather than squeezes: two cards fit across a 375px phone,
+              and "£899 £1,199" beside a rating is the one combination with no
+              room left. The old price drops to its own line there. */}
+          <span className="flex min-w-0 flex-wrap items-baseline gap-x-2">
+            <span className="font-data text-[17px] font-semibold tabular-nums text-ink-900">
+              £{Math.round(price).toLocaleString('en-GB')}
+            </span>
+            {onSale && wasPrice && (
+              // <s>, not a line-through class: "no longer accurate" is what is
+              // being said, and a strikethrough drawn only in CSS says nothing
+              // to a screen reader. The word carries it the rest of the way.
+              <s className="font-data text-caption tabular-nums text-ink-500">
+                <span className="sr-only">Was </span>
+                £{Math.round(wasPrice).toLocaleString('en-GB')}
+              </s>
+            )}
           </span>
 
           {/* Only where the product genuinely has approved reviews. */}

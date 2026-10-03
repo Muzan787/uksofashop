@@ -1,5 +1,6 @@
 // src/components/Product/Similar.tsx
 
+import { sale } from '@/utils/pricing';
 import ProductRow from './ProductRow';
 import type { SimilarProduct } from './types';
 
@@ -31,13 +32,19 @@ export default function Similar({ products, categorySlug, categoryName }: Props)
       eyebrow="More like this"
       title={`More ${name}.`}
       emphasise={`${lastWord}.`}
-      items={products.map(p => ({
-        id: p.id,
-        title: p.title,
-        href: `/shop/${categorySlug}/${p.slug}`,
-        image: p.image_url,
-        price: p.base_price,
-      }))}
+      items={products.map(p => {
+        // No variant is chosen in a rail, so the base figures are the pair —
+        // the same two the product page will open with.
+        const { price, wasPrice } = sale(p.base_price, p.was_price)
+        return {
+          id: p.id,
+          title: p.title,
+          href: `/shop/${categorySlug}/${p.slug}`,
+          image: p.image_url,
+          price,
+          wasPrice,
+        }
+      })}
     />
   );
 }

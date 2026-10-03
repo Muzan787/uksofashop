@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { canonicalProductPath } from '@/utils/productUrl'
+import { sale } from '@/utils/pricing'
 import { signOfferEntry } from '@/utils/offers/entryToken'
 
 type FeedKind = 'google' | 'meta'
@@ -19,6 +20,8 @@ interface Product {
   slug: string
   description: string | null
   base_price: number
+  /** products.was_price. Becomes g:price, with g:sale_price beneath it. */
+  was_price: number | null
   size_label: string | null
   gallery_images: string[] | null
   categories: { slug: string; name: string } | null
@@ -55,9 +58,30 @@ function variantLink(kind: FeedKind, productPath: string, variantId: string): st
   return `${BASE_URL}/offer-entry/${token}`
 }
 
+/**
+ * A discount, in the two tags Google and Meta both read.
+ *
+ * The convention is the opposite way round from the page: g:price is the
+ * ORIGINAL and g:sale_price is what it costs now, and that is what produces the
+ * struck-through price in a Shopping listing and in a Facebook catalogue ad.
+ * Putting the current price in g:price and nothing else would advertise the
+ * sofa at the sale price with no saving shown — the discount would exist on the
+ * site and nowhere in the ads that bring people to it.
+ *
+ * Without a was price this emits exactly the single g:price it always did.
+ */
+function priceTags(price: number, wasPrice: number | null): string {
+  if (wasPrice && wasPrice > price) {
+    return `<g:price>${wasPrice.toFixed(2)} GBP</g:price>
+            <g:sale_price>${price.toFixed(2)} GBP</g:sale_price>`
+  }
+  return `<g:price>${price.toFixed(2)} GBP</g:price>`
+}
+
 function itemXml(kind: FeedKind, product: Product, variant: ProductVariant): string {
   const productPath = canonicalProductPath(product)
-  const finalPrice = Number(product.base_price) + Number(variant.price_adjustment || 0)
+  const priced = sale(product.base_price, product.was_price, variant.price_adjustment)
+  const finalPrice = priced.price
   const attributes = [product.size_label, variant.color, variant.material].filter(Boolean).join(' - ')
   const variantTitle = attributes ? `${product.title} - ${attributes}` : product.title
   const imageUrl = variant.image_url || product.gallery_images?.[0] || ''
@@ -73,7 +97,7 @@ function itemXml(kind: FeedKind, product: Product, variant: ProductVariant): str
             ${additionalImages(product.gallery_images, imageUrl)}
             <g:condition>new</g:condition>
             <g:availability>in_stock</g:availability>
-            <g:price>${finalPrice.toFixed(2)} GBP</g:price>
+            ${priceTags(finalPrice, priced.wasPrice)}
             <g:brand>UK Sofa Shop</g:brand>
             <g:google_product_category>${GOOGLE_PRODUCT_CATEGORY}</g:google_product_category>
             ${product.categories?.name ? `<g:product_type><![CDATA[${product.categories.name}]]></g:product_type>` : ''}
@@ -88,6 +112,7 @@ function itemXml(kind: FeedKind, product: Product, variant: ProductVariant): str
 function fallbackItemXml(product: Product): string {
   const productPath = canonicalProductPath(product)
   const imageUrl = product.gallery_images?.[0] || ''
+  const priced = sale(product.base_price, product.was_price)
   return `
           <item>
             <g:id>${product.id}</g:id>
@@ -98,7 +123,7 @@ function fallbackItemXml(product: Product): string {
             ${additionalImages(product.gallery_images, imageUrl)}
             <g:condition>new</g:condition>
             <g:availability>in_stock</g:availability>
-            <g:price>${Number(product.base_price).toFixed(2)} GBP</g:price>
+            ${priceTags(priced.price, priced.wasPrice)}
             <g:brand>UK Sofa Shop</g:brand>
             <g:google_product_category>${GOOGLE_PRODUCT_CATEGORY}</g:google_product_category>
             ${product.categories?.name ? `<g:product_type><![CDATA[${product.categories.name}]]></g:product_type>` : ''}
@@ -118,7 +143,7 @@ export async function buildProductFeed(kind: FeedKind): Promise<Response> {
   const { data, error } = await supabase
     .from('products')
     .select(`
-      id, title, slug, description, base_price, size_label, gallery_images,
+      id, title, slug, description, base_price, was_price, size_label, gallery_images,
       categories!products_category_id_fkey ( slug, name ),
       product_categories ( categories ( slug ) ),
       product_variants ( id, sku, color, material, price_adjustment, image_url )

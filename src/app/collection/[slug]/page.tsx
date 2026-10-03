@@ -7,6 +7,7 @@ import ProductCard from '@/components/Product/ProductCard'
 import CollectionHero from '@/components/Collection/CollectionHero'
 import CollectionEmpty from '@/components/Collection/CollectionEmpty'
 import { canonicalProductPath } from '@/utils/productUrl'
+import { sale } from '@/utils/pricing'
 
 type Params = Promise<{ slug: string }>
 
@@ -84,7 +85,7 @@ export default async function CollectionPage(props: { params: Params }) {
   const { data: products } = await supabase
     .from('products')
     .select(`
-      id, title, slug, base_price, average_rating, review_count, size_label, subgroup_label,
+      id, title, slug, base_price, was_price, average_rating, review_count, size_label, subgroup_label,
       product_variants (id, image_url, color, color_hex, price_adjustment, priority),
       categories!products_category_id_fkey ( slug ),
       product_categories ( categories ( slug ) )
@@ -126,8 +127,8 @@ export default async function CollectionPage(props: { params: Params }) {
               // Extract the first variant image
               const targetVariant = product.product_variants?.[0]
               const img = targetVariant?.image_url ?? null
-              const displayPrice = product.base_price + (targetVariant?.price_adjustment || 0)
-              
+              const priced = sale(product.base_price, product.was_price, targetVariant?.price_adjustment)
+
               const swatches = (product.product_variants ?? [])
                 .filter((v) => v.color_hex)
                 .map((v) => ({
@@ -140,7 +141,8 @@ export default async function CollectionPage(props: { params: Params }) {
                   id={product.id}
                   title={product.title}
                   slug={product.slug}
-                  price={displayPrice}
+                  price={priced.price}
+                  wasPrice={priced.wasPrice}
                   // The canonical URL. This was product_categories[0] with a
                   // fallback of 'all' — the first is whichever row the join
                   // returned and need not be the canonical category, and the
