@@ -17,15 +17,19 @@
 import { priceAnchors, summariseCollections, type CollectionSummary } from '@/utils/collections'
 
 /**
- * How many active products a variant group needs before it is a range.
+ * A SUB COLLECTION IS A VARIANT GROUP. One to one, whatever its size.
  *
- * Eight groups in this catalogue hold exactly one product, left over from sets
- * that were planned and never filled out. Counting them as ranges on the card
- * and then not drawing them as ranges on the page — see splitCollectionMembers
- * — is the kind of drift this file exists to prevent, so the threshold is
- * stated once and both ends read it.
+ * This file briefly held a threshold — a group needed two products before it
+ * counted — on the reasoning that a group of one is a design rather than a
+ * range. That was the wrong call to make here. The variant group is the shop's
+ * own statement about what belongs together, and a Bishop U-shape that comes
+ * in one size is still its own sub collection, not a loose sofa. The database
+ * now guarantees every active product has a group, so the threshold had
+ * nothing left to decide anyway.
+ *
+ * What remains of the old split is the ungrouped case, which should not occur
+ * — see splitCollectionMembers.
  */
-export const MIN_RANGE_SIZE = 2
 
 /** 'live' links through. 'coming_soon' is named, blurred and inert. */
 export type MainCollectionStatus = 'live' | 'coming_soon'
@@ -42,9 +46,8 @@ export interface MainCollectionProduct {
   base_price: number
   is_active?: boolean | null
   gallery_images?: string[] | null
+  /** The sub collection. Set on every active product — see rangeKey. */
   variant_group_id?: string | null
-  /** The range's own name, where it has one. Only the first word is used. */
-  variant_groups?: { name: string } | { name: string }[] | null
   product_variants?: { image_url?: string | null }[] | null
 }
 
@@ -64,6 +67,11 @@ export interface MainCollectionSummary {
   name: string
   standfirst: string | null
   status: MainCollectionStatus
+  /**
+   * The shop's own ordering, carried through so a coming-soon card can pick a
+   * palette that is distinct from its neighbours' — see MainCollectionCard.
+   */
+  position: number
   /** Active designs in it. 0 on everything not open yet. */
   productCount: number
   /** Distinct variant groups among those designs. */
@@ -99,27 +107,22 @@ function photographsOf(p: MainCollectionProduct): string[] {
 }
 
 /**
- * Which range a product belongs to, for the purpose of showing variety.
+ * Which sub collection a product belongs to: its variant group, full stop.
  *
- * The variant group id is not enough on its own. "Lily Footstool" has no group
- * — it is one product, so nobody ever made it a set — and keying on the id
- * alone made it a range of its own, which put a Lily corner sofa and a Lily
- * footstool in the same nine-picture sheet under the heading "all different".
- * They are the same range to anyone looking at them.
+ * This was briefly a first-word-of-the-title heuristic, because "Sims
+ * Footstool" had no group and keying on the id alone made it a sub collection
+ * of its own — putting a Sims corner sofa and a Sims footstool in the same
+ * nine-picture sheet under the heading "all different". Guessing at the data
+ * was the wrong half of that problem to fix. The footstool is in the Sims
+ * group now, as is every other loose product, so the key is the real thing
+ * again and the sheet is right because the catalogue is.
  *
- * So the key is the first word of the range's name, or of the product's own
- * title where it has no range. That heuristic is already load-bearing in this
- * codebase — the product page sorts its "more like this" rail by comparing
- * exactly this — and it is how the catalogue is actually named: Verona,
- * Ashton, Lily, Roma.
+ * The fallback is the product id. It should never be reached — a migration
+ * put every active product in a group — and if it ever is, the product shows
+ * as its own sub collection rather than silently merging with another.
  */
 function rangeKey(p: MainCollectionProduct): string {
-  const group = Array.isArray(p.variant_groups) ? p.variant_groups[0] : p.variant_groups
-  const name = group?.name ?? p.title ?? p.id
-  const first = name.trim().split(/\s+/)[0]?.toLowerCase().replace(/[^a-z0-9]/g, '')
-  // A title that is punctuation or empty falls back to the id, so two unnamed
-  // products never collapse into one bucket.
-  return first || `solo:${p.id}`
+  return p.variant_group_id ?? `ungrouped:${p.id}`
 }
 
 /**
@@ -212,14 +215,10 @@ export function summariseMainCollections(
       .map(p => Number(p.base_price))
       .filter(n => Number.isFinite(n) && n > 0)
 
-    // Counted the way the collection's own page draws them: a group holding
-    // one product is a design, not a range. See MIN_RANGE_SIZE.
-    const perGroup = new Map<string, number>()
-    for (const p of active) {
-      if (!p.variant_group_id) continue
-      perGroup.set(p.variant_group_id, (perGroup.get(p.variant_group_id) ?? 0) + 1)
-    }
-    const rangeCount = [...perGroup.values()].filter(n => n >= MIN_RANGE_SIZE).length
+    // One card per variant group on the collection's own page, so one per
+    // variant group in the count here. rangeKey gives an ungrouped product a
+    // key of its own, which is what the page would draw for it too.
+    const rangeCount = new Set(active.map(rangeKey)).size
 
     const live = row.status === 'live' && active.length > 0
 
@@ -229,6 +228,7 @@ export function summariseMainCollections(
       name: row.name,
       standfirst: row.standfirst,
       status: live ? 'live' : 'coming_soon',
+      position: row.position,
       productCount: active.length,
       setCount: rangeCount,
       fromPrice: prices.length ? Math.min(...prices) : null,
@@ -273,20 +273,19 @@ export interface MainCollectionMember extends MainCollectionProduct {
 }
 
 /**
- * Splits a collection's products into the ranges they belong to and the
- * designs that stand alone.
+ * A collection's sub collections — one per variant group — and, if the data
+ * ever drifts, whatever is left over.
  *
- * Deliberately NOT "ranges, then every design again underneath". Listing all
- * fifty-one made-to-order sofas below the thirteen ranges they are already
- * inside shows the same Verona fourteen times and makes the page a wall. A
- * range is opened for its sizes; what is left over is shown on its own,
- * because otherwise there is no way to reach it from here at all.
+ * Deliberately NOT "sub collections, then every design again underneath".
+ * Listing all fifty-eight made-to-order sofas below the fifteen groups they
+ * are already inside shows the same Verona fourteen times and makes the page a
+ * wall. A sub collection is opened for its sizes.
  *
- * A group holding ONE active product is not a range, whatever the admin panel
- * calls it. Eight of them exist, left over from sets that were planned and
- * never filled out, and each was drawing a collage card promising "1 piece in
- * the set" that opened a page with one sofa on it. Those are shown as the
- * design they are.
+ * `singles` should always come back empty: a migration put every active
+ * product in a group, and the admin form has carried the picker since. It
+ * stays because "appears nowhere" is the wrong way to fail — a product that
+ * loses its group shows up as its own card rather than dropping off the page
+ * silently, which is also how it would be counted on the card that led here.
  */
 export function splitCollectionMembers(members: MainCollectionMember[]): {
   sets: CollectionSummary[]
@@ -311,16 +310,10 @@ export function splitCollectionMembers(members: MainCollectionMember[]): {
     else grouped.set(m.variant_group_id, { ...group, products: [m] })
   }
 
-  const ranges = [...grouped.values()].filter(g => {
-    if (g.products.length >= MIN_RANGE_SIZE) return true
-    singles.push(...g.products)
-    return false
-  })
-
-  // Through the same summariser the flat collections page used, so a range
-  // card here and a range card there cannot price the same set differently.
+  // Through the same summariser the flat collections page used, so a sub
+  // collection card here and one there cannot price the same set differently.
   const sets = summariseCollections(
-    ranges.map(g => ({
+    [...grouped.values()].map(g => ({
       id: g.id,
       name: g.name,
       slug: g.slug,

@@ -73,21 +73,73 @@ function Panel({ src, className, hero = false, delayMs = 0 }: PanelProps) {
  * cannot 404, and it still scales on hover the way a real panel does — which
  * is the point, because this card has to feel alive while going nowhere.
  */
-const WASHES = [
-  'radial-gradient(60% 70% at 30% 30%, var(--color-ember-500) 0%, transparent 70%), radial-gradient(70% 80% at 75% 70%, var(--color-indigo-700) 0%, transparent 72%)',
-  'radial-gradient(75% 85% at 65% 35%, var(--color-ember-300) 0%, transparent 70%)',
-  'radial-gradient(80% 90% at 35% 70%, var(--color-indigo-300) 0%, transparent 74%)',
+/**
+ * One palette per collection, not one shared by all three.
+ *
+ * Three cards running the same three gradients in the same order came out
+ * identical, which made the bottom row read as one thing repeated rather than
+ * as three rooms we have not opened yet. Each palette is a different corner of
+ * the ramp — amber, indigo, sage — so the cards are visibly distinct at a
+ * glance while all three are plainly the same treatment.
+ *
+ * Three palettes for three coming-soon collections; a fourth would cycle, and
+ * at that point it wants a fourth palette rather than a repeat.
+ */
+/**
+ * Each palette leads with its LIGHT tone.
+ *
+ * Built first from the -700s, and under a 22px blur at 70% over calico they
+ * all collapsed towards the same grey: indigo-700 and sage-700 are both dark
+ * and desaturated, so two of the three cards still read as the same card. The
+ * -300s are the ramp's "text on dark grounds" tones — light and saturated
+ * enough to survive the blur — so each palette leads with one and keeps its
+ * deep tone as the accent underneath.
+ */
+const PALETTES: string[][] = [
+  // Amber — warm, the brand's own.
+  [
+    'radial-gradient(66% 76% at 32% 30%, var(--color-ember-300) 0%, transparent 72%), radial-gradient(70% 80% at 78% 72%, var(--color-ember-500) 0%, transparent 72%)',
+    'radial-gradient(80% 88% at 64% 34%, var(--color-ember-300) 0%, transparent 72%)',
+    'radial-gradient(84% 92% at 36% 72%, var(--color-ember-500) 0%, transparent 74%)',
+  ],
+  // Indigo — cool, the panel tint.
+  [
+    'radial-gradient(66% 76% at 28% 34%, var(--color-indigo-300) 0%, transparent 72%), radial-gradient(72% 82% at 74% 68%, var(--color-indigo-700) 0%, transparent 74%)',
+    'radial-gradient(80% 88% at 68% 30%, var(--color-indigo-300) 0%, transparent 72%)',
+    'radial-gradient(84% 92% at 32% 74%, var(--color-indigo-700) 0%, transparent 74%)',
+  ],
+  // Sage — green, the positive tone.
+  [
+    'radial-gradient(66% 76% at 34% 28%, var(--color-sage-300) 0%, transparent 72%), radial-gradient(74% 84% at 72% 74%, var(--color-sage-700) 0%, transparent 74%)',
+    'radial-gradient(80% 88% at 62% 36%, var(--color-sage-300) 0%, transparent 72%)',
+    'radial-gradient(84% 92% at 38% 70%, var(--color-sage-700) 0%, transparent 74%)',
+  ],
 ];
 
-function WashPanel({ className, index }: { className: string; index: number }) {
+/**
+ * Keyed on the collection's position, not on a hash of its slug.
+ *
+ * A hash was the first attempt and it does not do the one thing being asked
+ * for: "dining-sets" and "wardrobes" both landed on the indigo palette, so two
+ * of the three cards came out identical again. Position is the shop's own
+ * ordering, it is stable across renders and deploys, and consecutive rows get
+ * consecutive palettes by construction — which is exactly the guarantee a hash
+ * cannot give.
+ */
+function paletteFor(position: number): string[] {
+  const i = ((position % PALETTES.length) + PALETTES.length) % PALETTES.length;
+  return PALETTES[i];
+}
+
+function WashPanel({ className, index, palette }: { className: string; index: number; palette: string[] }) {
   return (
     <div className={`relative overflow-hidden bg-calico-200 ${className}`}>
       {/* Inset by a quarter so the blur has somewhere to bleed to and the cell
           edge stays crisp. */}
       <span
         aria-hidden="true"
-        className="absolute -inset-1/4 opacity-70 blur-[22px] transition-transform duration-settle ease-out-expo group-hover:scale-110"
-        style={{ backgroundImage: WASHES[index % WASHES.length], transitionDelay: `${(index % 5) * 25}ms` }}
+        className="absolute -inset-1/4 opacity-85 blur-[22px] transition-transform duration-settle ease-out-expo group-hover:scale-110"
+        style={{ backgroundImage: palette[index % palette.length], transitionDelay: `${(index % 5) * 25}ms` }}
       />
       {/* The smudge of a thing that is not there yet. Deliberately a bare
           shape rather than an icon: a blurred sofa behind a card that says
@@ -109,13 +161,14 @@ function WashPanel({ className, index }: { className: string; index: number }) {
  * fill them. Neither of the two live collections goes near that, but a sixth
  * one on its first day will.
  */
-function Mosaic({ images, comingSoon }: { images: string[]; comingSoon: boolean }) {
+function Mosaic({ images, comingSoon, position }: { images: string[]; comingSoon: boolean; position: number }) {
   if (comingSoon) {
+    const palette = paletteFor(position);
     return (
       <div className="grid aspect-[4/3] w-full grid-cols-4 grid-rows-3 gap-0.5 bg-calico-50">
-        <WashPanel className="col-span-2 row-span-2" index={0} />
+        <WashPanel className="col-span-2 row-span-2" index={0} palette={palette} />
         {Array.from({ length: MOSAIC_IMAGES - 1 }, (_, i) => (
-          <WashPanel key={i} className="col-span-1 row-span-1" index={i + 1} />
+          <WashPanel key={i} className="col-span-1 row-span-1" index={i + 1} palette={palette} />
         ))}
       </div>
     );
@@ -193,7 +246,7 @@ function Face({ collection, comingSoon }: { collection: MainCollectionSummary; c
   return (
     <>
       <div className="relative">
-        <Mosaic images={collection.images} comingSoon={comingSoon} />
+        <Mosaic images={collection.images} comingSoon={comingSoon} position={collection.position} />
         {comingSoon && (
           <span className="absolute left-3 top-3 rounded-pill border border-calico-50/25 bg-ink-900/70 px-3 py-1 font-data text-caption font-semibold uppercase tracking-wider text-calico-50 backdrop-blur-sm">
             Coming soon

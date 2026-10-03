@@ -46,7 +46,6 @@ export default async function CollectionsIndexPage() {
         is_active,
         gallery_images,
         variant_group_id,
-        variant_groups ( name ),
         product_variants ( image_url, priority )
       )
     `)
