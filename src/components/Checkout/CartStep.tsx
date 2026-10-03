@@ -9,6 +9,7 @@ import { ArrowLeft, ArrowRight, Minus, Plus, ShoppingBag, Trash2, Truck } from '
 import EmptyState from '@/components/UI/EmptyState';
 import toast from 'react-hot-toast';
 import { PROMISES } from '@/constants/promises';
+import { isRomaProduct, ROMA_CART_NOTICE } from '@/constants/romaAvailability';
 import { useCart, lineKey, type DisplayCartItem } from '@/context/CartContext';
 import { blurDataURL } from '@/utils/cloudinary';
 import { describeBuild } from '@/types/build';
@@ -79,6 +80,12 @@ export default function CartStep({ onNext, discount = 0 }: {
       <p className="eyebrow mb-4 text-ember-700">
         {cartItems.length} {cartItems.length === 1 ? 'item' : 'items'} in your cart
       </p>
+
+      {cartItems.some(item => isRomaProduct(item.title)) && (
+        <p className="mb-4 rounded-md border border-calico-300 bg-calico-50 p-4 text-body-sm leading-relaxed text-ink-900">
+          {ROMA_CART_NOTICE}
+        </p>
+      )}
 
       <ul className="m-0 flex list-none flex-col gap-3 p-0">
         {cartItems.map(item => (

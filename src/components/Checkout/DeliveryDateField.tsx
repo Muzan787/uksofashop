@@ -27,6 +27,8 @@ import {
   PREFERRED_DELIVERY_MIN_DAYS,
 } from '@/utils/delivery'
 import { PROMISES } from '@/constants/promises'
+import { useCart } from '@/context/CartContext'
+import { isRomaProduct } from '@/constants/romaAvailability'
 
 interface Props {
   /** YYYY-MM-DD, or '' for as soon as possible. */
@@ -39,6 +41,8 @@ interface Props {
 }
 
 export default function DeliveryDateField({ value, onChange, choosing, onChoosing, error }: Props) {
+  const { cartItems } = useCart()
+  const hasRoma = cartItems.some(item => isRomaProduct(item.title))
   const min = earliestPreferredDeliveryDate()
   const max = latestPreferredDeliveryDate()
   const chosen = value && isValidPreferredDeliveryDate(value) ? formatPreferredDeliveryDate(value) : null
@@ -64,7 +68,7 @@ export default function DeliveryDateField({ value, onChange, choosing, onChoosin
           <Clock aria-hidden="true" className={`h-4 w-4 shrink-0 ${!choosing ? 'text-ember-700' : 'text-ink-500'}`} />
           <span className="min-w-0">
             <span className="block text-body-sm font-semibold text-ink-900">As soon as possible</span>
-            <span className="block text-caption text-ink-500">{PROMISES.delivery.timingShort}</span>
+            <span className="block text-caption text-ink-500">{hasRoma ? 'Roma models: approximately 10–14 days, subject to confirmation' : PROMISES.delivery.timingShort}</span>
           </span>
         </button>
 
@@ -78,7 +82,7 @@ export default function DeliveryDateField({ value, onChange, choosing, onChoosin
           <CalendarDays aria-hidden="true" className={`h-4 w-4 shrink-0 ${choosing ? 'text-ember-700' : 'text-ink-500'}`} />
           <span className="min-w-0">
             <span className="block text-body-sm font-semibold text-ink-900">Choose a day</span>
-            <span className="block text-caption text-ink-500">Any day from {PREFERRED_DELIVERY_MIN_DAYS} days ahead</span>
+            <span className="block text-caption text-ink-500">{hasRoma ? 'Requested date subject to Roma availability' : <>Any day from {PREFERRED_DELIVERY_MIN_DAYS} days ahead</>}</span>
           </span>
         </button>
       </div>
@@ -108,7 +112,9 @@ export default function DeliveryDateField({ value, onChange, choosing, onChoosin
             <p className="mt-1 text-caption text-rust-700">{error}</p>
           ) : (
             <p id="preferredDeliveryDate-hint" className="m-0 mt-2 text-caption leading-relaxed text-ink-500">
-              {chosen
+              {hasRoma
+                ? <>Roma models take approximately 10–14 days. {chosen && <>Your requested date is <strong className="font-semibold text-ink-900">{chosen}</strong>. </>}We’ll confirm availability and delivery timing before dispatch.</>
+                : chosen
                 ? <>Requested for <strong className="font-semibold text-ink-900">{chosen}</strong>. We ring beforehand to agree the time slot.</>
                 : <>Earliest is {formatPreferredDeliveryDate(min)}. Weekends are fine. We ring beforehand to agree the time slot.</>}
             </p>
