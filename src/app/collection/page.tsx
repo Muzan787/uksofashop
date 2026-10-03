@@ -46,6 +46,7 @@ export default async function CollectionsIndexPage() {
         is_active,
         gallery_images,
         variant_group_id,
+        variant_groups ( name ),
         product_variants ( image_url, priority )
       )
     `)
@@ -74,7 +75,9 @@ export default async function CollectionsIndexPage() {
         {collections.length > 0 ? (
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6">
             {collections.map((collection, i) => (
-              <Reveal key={collection.id} delay={staggerDelay(i)} distance={20} amount={0.12}>
+              // h-full so the card can fill the grid row rather than sitting
+              // at its own content height — see the note on FRAME.
+              <Reveal key={collection.id} delay={staggerDelay(i)} distance={20} amount={0.12} className="h-full">
                 <MainCollectionCard collection={collection} />
               </Reveal>
             ))}

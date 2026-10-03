@@ -33,12 +33,18 @@ export type MainCollectionStatus = 'live' | 'coming_soon'
 /** The product fields a main-collection card needs, and nothing else. */
 export interface MainCollectionProduct {
   id: string
-  /** Only so a footstool cannot set the collection's "from" price. */
+  /**
+   * Two jobs: keeping a footstool from setting the collection's "from" price,
+   * and naming the range a product with no variant group belongs to — see
+   * rangeKey.
+   */
   title?: string | null
   base_price: number
   is_active?: boolean | null
   gallery_images?: string[] | null
   variant_group_id?: string | null
+  /** The range's own name, where it has one. Only the first word is used. */
+  variant_groups?: { name: string } | { name: string }[] | null
   product_variants?: { image_url?: string | null }[] | null
 }
 
@@ -68,31 +74,122 @@ export interface MainCollectionSummary {
   images: string[]
 }
 
-const MAX_IMAGES = 3
+/**
+ * Nine, not three.
+ *
+ * A set card shows three because a set is three or four sizes of one sofa, and
+ * a fourth photograph of the same frame says nothing. A main collection is
+ * thirteen recliners or fifty-one made-to-order frames, and the one thing its
+ * card has to carry is how much is in there — so it is a contact sheet: one
+ * lead photograph and eight more, each from a different RANGE.
+ *
+ * MainCollectionCard lays out exactly this many and falls back to the
+ * three-panel collage below it, so the two numbers are in step.
+ */
+export const MOSAIC_IMAGES = 9
+
+const MAX_IMAGES = MOSAIC_IMAGES
+
+/** Every photograph a design has, lead variant first, gallery behind it. */
+function photographsOf(p: MainCollectionProduct): string[] {
+  return [
+    ...(p.product_variants ?? []).map(v => v.image_url),
+    ...(p.gallery_images ?? []),
+  ].filter((url): url is string => Boolean(url))
+}
 
 /**
- * One photograph per design before a second from any of them, so a collection
- * of thirteen recliners shows three different recliners rather than three
- * angles of the first. Same rule as the set card — see utils/collections.ts.
+ * Which range a product belongs to, for the purpose of showing variety.
+ *
+ * The variant group id is not enough on its own. "Lily Footstool" has no group
+ * — it is one product, so nobody ever made it a set — and keying on the id
+ * alone made it a range of its own, which put a Lily corner sofa and a Lily
+ * footstool in the same nine-picture sheet under the heading "all different".
+ * They are the same range to anyone looking at them.
+ *
+ * So the key is the first word of the range's name, or of the product's own
+ * title where it has no range. That heuristic is already load-bearing in this
+ * codebase — the product page sorts its "more like this" rail by comparing
+ * exactly this — and it is how the catalogue is actually named: Verona,
+ * Ashton, Lily, Roma.
+ */
+function rangeKey(p: MainCollectionProduct): string {
+  const group = Array.isArray(p.variant_groups) ? p.variant_groups[0] : p.variant_groups
+  const name = group?.name ?? p.title ?? p.id
+  const first = name.trim().split(/\s+/)[0]?.toLowerCase().replace(/[^a-z0-9]/g, '')
+  // A title that is punctuation or empty falls back to the id, so two unnamed
+  // products never collapse into one bucket.
+  return first || `solo:${p.id}`
+}
+
+/**
+ * ONE PHOTOGRAPH PER RANGE BEFORE A SECOND FROM ANY OF THEM.
+ *
+ * Taking one per DESIGN is not the same thing and was not enough. Verona has
+ * fourteen sizes and Ashton ten, so nine different designs off the top of
+ * Made-To-Order were nine photographs of the same two sofas at slightly
+ * different widths — a contact sheet whose whole job is to say "look how much
+ * is in here", saying the opposite.
+ *
+ * So the products are bucketed by variant group and the picker goes round the
+ * buckets rather than down the list: the first nine images come from nine
+ * different ranges where there are nine, and from as many as exist where there
+ * are fewer. A product belonging to no group is its own bucket, because that
+ * is exactly what it is — a one-off design, as distinct from a Verona as a
+ * Malibu is.
+ *
+ * Deeper rounds work the same way: round two takes the second design of each
+ * range, round three the third, so Imported Sofas — which has only five
+ * buckets to fill nine slots — still spreads them as widely as it can instead
+ * of emptying one range before starting the next.
  */
 function pickImages(products: MainCollectionProduct[]): string[] {
+  const buckets = new Map<string, MainCollectionProduct[]>()
+  for (const p of products) {
+    const key = rangeKey(p)
+    const bucket = buckets.get(key)
+    if (bucket) bucket.push(p)
+    else buckets.set(key, [p])
+  }
+
+  // Each range's photographs, already interleaved across its own designs: the
+  // lead shot of every Verona size first, then their second shots. So even a
+  // card drawing twice from one range does not draw the same sofa twice.
+  //
+  // Sofas lead within a range. A footstool photographed on its own is a weak
+  // picture in a sheet selling sofas, and it is a range's cheapest row so it
+  // can easily sort first — priceAnchors is the same test that stops it
+  // setting the "from" price.
+  const queues = [...buckets.values()].map(bucket => {
+    const ordered = [...bucket].sort(
+      (a, b) => Number(priceAnchors(b.title)) - Number(priceAnchors(a.title)),
+    )
+    const queue: string[] = []
+    const deepest = Math.max(...ordered.map(p => photographsOf(p).length), 0)
+    for (let round = 0; round < deepest; round++) {
+      for (const p of ordered) {
+        const url = photographsOf(p)[round]
+        if (url) queue.push(url)
+      }
+    }
+    return queue
+  })
+
   const chosen: string[] = []
   const seen = new Set<string>()
+  const deepest = Math.max(...queues.map(q => q.length), 0)
 
-  const take = (url: string | null | undefined) => {
-    if (!url || seen.has(url) || chosen.length >= MAX_IMAGES) return
-    chosen.push(url)
-    seen.add(url)
+  for (let round = 0; round < deepest && chosen.length < MAX_IMAGES; round++) {
+    for (const queue of queues) {
+      if (chosen.length >= MAX_IMAGES) break
+      const url = queue[round]
+      if (!url || seen.has(url)) continue
+      chosen.push(url)
+      seen.add(url)
+    }
   }
 
-  for (const p of products) take(p.product_variants?.[0]?.image_url ?? p.gallery_images?.[0])
-  for (const p of products) {
-    if (chosen.length >= MAX_IMAGES) break
-    for (const v of p.product_variants ?? []) take(v.image_url)
-    for (const img of p.gallery_images ?? []) take(img)
-  }
-
-  return chosen.slice(0, MAX_IMAGES)
+  return chosen
 }
 
 /**
