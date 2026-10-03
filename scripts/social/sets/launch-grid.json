@@ -22,17 +22,17 @@
   },
   {
     "format": "carousel-cover",
-    "product": "lily-high-back-5-seater-corner-2c2",
+    "product": "sims-high-back-5-seater-corner-2c2",
     "variant": "Beige",
     "headline": "One corner.|*Four* fabrics.",
-    "body": "Grey, black, navy and beige — swipe to see the Lily in all four",
+    "body": "Grey, black, navy and beige — swipe to see the Sims in all four",
     "count": "5"
   },
   {
     "format": "spec",
-    "product": "lily-high-back-armed-u-shape",
+    "product": "sims-high-back-armed-u-shape",
     "variant": "Beige",
-    "headline": "Lily U-Shape",
+    "headline": "Sims U-Shape",
     "eyebrow": "High Back · Armed U-Shape"
   },
   {
@@ -48,11 +48,11 @@
     "eyebrow": "Scattered Back · 5 Seater Corner"
   },
   {
-    "_": "The Lily carousel's inner slides, 2-5, one per fabric.",
+    "_": "The Sims carousel's inner slides, 2-5, one per fabric.",
     "format": "full-bleed",
-    "product": "lily-high-back-5-seater-corner-2c2",
+    "product": "sims-high-back-5-seater-corner-2c2",
     "variant": "Grey",
-    "headline": "Lily Sofa",
+    "headline": "Sims Sofa",
     "eyebrow": "Grey",
     "count": "5",
     "index": "2",
@@ -60,9 +60,9 @@
   },
   {
     "format": "full-bleed",
-    "product": "lily-high-back-5-seater-corner-2c2",
+    "product": "sims-high-back-5-seater-corner-2c2",
     "variant": "Black",
-    "headline": "Lily Sofa",
+    "headline": "Sims Sofa",
     "eyebrow": "Black",
     "count": "5",
     "index": "3",
@@ -70,9 +70,9 @@
   },
   {
     "format": "full-bleed",
-    "product": "lily-high-back-5-seater-corner-2c2",
+    "product": "sims-high-back-5-seater-corner-2c2",
     "variant": "Navy Blue",
-    "headline": "Lily Sofa",
+    "headline": "Sims Sofa",
     "eyebrow": "Navy Blue",
     "count": "5",
     "index": "4",
@@ -80,9 +80,9 @@
   },
   {
     "format": "full-bleed",
-    "product": "lily-high-back-5-seater-corner-2c2",
+    "product": "sims-high-back-5-seater-corner-2c2",
     "variant": "Beige",
-    "headline": "Lily Sofa",
+    "headline": "Sims Sofa",
     "eyebrow": "Beige",
     "count": "5",
     "index": "5"

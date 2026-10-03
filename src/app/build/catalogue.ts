@@ -90,7 +90,7 @@ const TAGLINES: Record<string, string> = {
   verona: 'The plain, honest one — a tall supportive back and a woven cloth built for everyday family use.',
   salone: 'Clean square arms, piped cushions and a low, boxy line. The modern one.',
   ashton: 'Deep-buttoned Chesterfield arms in plush velvet, with a back that holds you up.',
-  lily: 'Vertical channel stitching across the arms and base — soft, tailored, a little glamorous.',
+  sims: 'Vertical channel stitching across the arms and base — soft, tailored, a little glamorous.',
   malibu: 'Scroll arms with antique studs, a button-tufted base and turned wooden feet. The traditional one.',
   bishop: 'Our biggest single piece — a full U with loose scatter-back cushions for the whole family.',
 }
@@ -112,7 +112,7 @@ function sizeKeyFor(sizeLabel: string | null, title: string): string | null {
     return null
   }
   // No label at all. The one such product today is the Bishop, whose title
-  // says what it is; the Lily footstool is deliberately not a sofa.
+  // says what it is; the Sims footstool is deliberately not a sofa.
   const t = title.toLowerCase()
   if (t.includes('u shaped') || t.includes('u-shape')) return 'u-shape'
   return null

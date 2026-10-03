@@ -43,7 +43,7 @@ const MAX_IMAGES = 3
 /**
  * Whether a product may set a "from £x" anchor.
  *
- * "from £149 under Fabric Sofas" was the Lily footstool. A tile that says
+ * "from £149 under Fabric Sofas" was the Sims footstool. A tile that says
  * sofas has to be priced by one, so footstools and armchairs count towards a
  * collection's totals but cannot set its cheapest price. The homepage worked
  * this out first and kept the rule to itself; it is here now because the

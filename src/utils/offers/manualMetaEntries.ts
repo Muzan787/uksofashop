@@ -24,13 +24,13 @@ export const MANUAL_META_ENTRIES = [
       { slug: 'verona-product', destination: '/shop/corner-sofa/verona-high-back-5-seater-corner-2c2' },
     ],
   },
-  { ad: 'A06', slug: 'a06-lily-u-shape', destination: '/shop/corner-sofa/lily-high-back-armed-u-shape' },
+  { ad: 'A06', slug: 'a06-lily-u-shape', destination: '/shop/corner-sofa/sims-high-back-armed-u-shape' },
   { ad: 'A07', slug: 'a07-free-mainland-delivery', destination: '/delivery-returns' },
   {
     ad: 'A08', slug: 'a08-lily-custom-choice', destination: '/fabrics',
     cards: [
-      { slug: 'lily-beige', destination: '/shop/corner-sofa/lily-high-back-armed-u-shape' },
-      { slug: 'lily-cream', destination: '/shop/corner-sofa/lily-high-back-armed-u-shape' },
+      { slug: 'lily-beige', destination: '/shop/corner-sofa/sims-high-back-armed-u-shape' },
+      { slug: 'lily-cream', destination: '/shop/corner-sofa/sims-high-back-armed-u-shape' },
       { slug: 'custom-options', destination: '/fabrics' },
     ],
   },
@@ -46,7 +46,7 @@ export const MANUAL_META_ENTRIES = [
     cards: [
       { slug: 'roma-3-2', destination: '/shop/recliner/roma-recliner-manual-3-and-2' },
       { slug: 'verona-corner', destination: '/shop/corner-sofa/verona-high-back-5-seater-corner-2c2' },
-      { slug: 'lily-u-shape', destination: '/shop/corner-sofa/lily-high-back-armed-u-shape' },
+      { slug: 'lily-u-shape', destination: '/shop/corner-sofa/sims-high-back-armed-u-shape' },
     ],
   },
   { ad: 'A11', slug: 'a11-malibu-3-2', destination: '/shop/3-2-seater/malibu-high-back-3and2-seater' },

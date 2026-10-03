@@ -7,7 +7,7 @@
 //   npm run social -- --product verona-high-back-3and2-seater
 //   npm run social -- --product verona-high-back-3and2-seater --format spec
 //   npm run social -- --format quote --quote "Built to be *sat on*." --attribution "Our workshop"
-//   npm run social -- --product lily-high-back-u-shape --format carousel-cover --headline "Five ways to|fill a corner" --count 6
+//   npm run social -- --product sims-high-back-u-shape --format carousel-cover --headline "Five ways to|fill a corner" --count 6
 //   npm run social -- --product roma-recliner-corner --format split --before Grey --after Teal
 //   npm run social -- --product hannah-electric-corner --format panorama      # the pinned row, three tiles
 //   npm run social -- --set scripts/social/sets/launch-grid.json             # a whole grid at once

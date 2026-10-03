@@ -61,21 +61,21 @@ WhatsApp 07476 616022 · uksofashop.co.uk
 
 #UKSofaShop #MalibuSofa #HighBackSofa #MadeToOrderSofa #SofaUK
 
-### 06 · Lily corner carousel (five slides)
+### 06 · Sims corner carousel (five slides)
 
 One corner. Four fabrics.
 
-The Lily 5 Seater Corner in plush velvet — grey, black, navy and beige. Swipe to see all four. £749, made to order, every cushion included.
+The Sims 5 Seater Corner in plush velvet — grey, black, navy and beige. Swipe to see all four. £749, made to order, every cushion included.
 
 Free UK Mainland delivery, brought to your ground floor.
 
 WhatsApp 07476 616022 · uksofashop.co.uk
 
-#UKSofaShop #LilySofa #CornerSofa #VelvetSofa #MadeToOrderSofa #SofaUK
+#UKSofaShop #SimsSofa #CornerSofa #VelvetSofa #MadeToOrderSofa #SofaUK
 
-### 07 · Lily U-Shape spec
+### 07 · Sims U-Shape spec
 
-The numbers on the Lily Armed U-Shape.
+The numbers on the Sims Armed U-Shape.
 
 High back, plush velvet, 240 × 300 × 180cm, 95cm tall, 90cm deep. All cushions included. £949, made to order.
 
@@ -83,7 +83,7 @@ Cash on delivery — pay when it arrives.
 
 WhatsApp 07476 616022 · uksofashop.co.uk
 
-#UKSofaShop #LilySofa #UShapedSofa #VelvetSofa #SofaUK
+#UKSofaShop #SimsSofa #UShapedSofa #VelvetSofa #SofaUK
 
 ### 08 · Quote — Any colour. Any fabric. Made to order.
 
@@ -231,23 +231,23 @@ WhatsApp 07476 616022 · uksofashop.co.uk
 
 ---
 
-## Lily High Back
+## Sims High Back
 
 ### 01 · Quote
 
 Plush velvet. A back you can lean on.
 
-The Lily High Back: four shapes from £749, made to order in grey, black, navy or beige velvet, every cushion included.
+The Sims High Back: four shapes from £749, made to order in grey, black, navy or beige velvet, every cushion included.
 
 Free UK Mainland delivery. 1-year frame guarantee.
 
 WhatsApp 07476 616022 · uksofashop.co.uk
 
-#UKSofaShop #LilySofa #VelvetSofa #HighBackSofa #MadeToOrderSofa #SofaUK
+#UKSofaShop #SimsSofa #VelvetSofa #HighBackSofa #MadeToOrderSofa #SofaUK
 
 ### 02 · Spec
 
-The Lily High Back 3+2 set, by the numbers.
+The Sims High Back 3+2 set, by the numbers.
 
 3 seater 195cm long, 2 seater 168cm, both 95cm tall and 90cm deep. Plush velvet, all cushions included. £749 for the pair, made to order.
 
@@ -255,39 +255,39 @@ Cash on delivery — nothing upfront.
 
 WhatsApp 07476 616022 · uksofashop.co.uk
 
-#UKSofaShop #LilySofa #VelvetSofa #SofaSet #SofaUK
+#UKSofaShop #SimsSofa #VelvetSofa #SofaSet #SofaUK
 
 ### 03 · Carousel (five slides)
 
 Four shapes, four velvets.
 
-Swipe through the Lily High Back: 3+2 set in grey £749, 5 seater corner in navy £749, U-shape in black £879, armed U-shape in beige £949. Every shape comes in every colour, made to order.
+Swipe through the Sims High Back: 3+2 set in grey £749, 5 seater corner in navy £749, U-shape in black £879, armed U-shape in beige £949. Every shape comes in every colour, made to order.
 
 Free UK Mainland delivery, and 14 days to change your mind.
 
 WhatsApp 07476 616022 · uksofashop.co.uk
 
-#UKSofaShop #LilySofa #VelvetSofa #CornerSofa #UShapedSofa #MadeToOrderSofa
+#UKSofaShop #SimsSofa #VelvetSofa #CornerSofa #UShapedSofa #MadeToOrderSofa
 
 ---
 
-## Lily Scattered Back
+## Sims Scattered Back
 
 ### 01 · Quote
 
 Loose cushions in plush velvet. Sink in.
 
-The Lily Scattered Back: a 3+2 set or a five-seater corner, £699 either way, made to order in grey, black, navy or beige.
+The Sims Scattered Back: a 3+2 set or a five-seater corner, £699 either way, made to order in grey, black, navy or beige.
 
 Free UK Mainland delivery. 1-year frame guarantee.
 
 WhatsApp 07476 616022 · uksofashop.co.uk
 
-#UKSofaShop #LilySofa #ScatterBackSofa #VelvetSofa #MadeToOrderSofa
+#UKSofaShop #SimsSofa #ScatterBackSofa #VelvetSofa #MadeToOrderSofa
 
 ### 02 · Spec
 
-The Lily Scattered Back 3+2 set, by the numbers.
+The Sims Scattered Back 3+2 set, by the numbers.
 
 3 seater 195cm long, 2 seater 168cm, both 90cm tall and 90cm deep. Plush velvet, all cushions included. £699 for the pair, made to order.
 
@@ -295,19 +295,19 @@ Cash on delivery — pay when it arrives.
 
 WhatsApp 07476 616022 · uksofashop.co.uk
 
-#UKSofaShop #LilySofa #VelvetSofa #SofaSet #SofaUK
+#UKSofaShop #SimsSofa #VelvetSofa #SofaSet #SofaUK
 
 ### 03 · Carousel (nine slides)
 
 Two shapes, four velvets, every pairing.
 
-Swipe through the Lily Scattered Back — the 3+2 set and the five-seater corner in grey, black, navy and beige. £699 whichever you choose, made to order.
+Swipe through the Sims Scattered Back — the 3+2 set and the five-seater corner in grey, black, navy and beige. £699 whichever you choose, made to order.
 
 Free UK Mainland delivery, and 14 days to change your mind.
 
 WhatsApp 07476 616022 · uksofashop.co.uk
 
-#UKSofaShop #LilySofa #ScatterBackSofa #CornerSofa #VelvetSofa #MadeToOrderSofa
+#UKSofaShop #SimsSofa #ScatterBackSofa #CornerSofa #VelvetSofa #MadeToOrderSofa
 
 ---
 

@@ -149,8 +149,29 @@ never real, because the strings were duplicated across a dozen files.
 
 ## Deploying
 
-Hosted on Vercel; pushes to `master` deploy.
+Hosted on **Hostinger** since 29 September 2026. Pushes to `master` deploy, but
+not instantly — allow a few minutes, and check the live page rather than
+assuming the push landed. `vercel.json` is still in the tree and is dead; it is
+kept only so the history of the move stays readable.
+
+Three things moved with the host and are now maintained by hand:
+
+| What | Where it lives now |
+| --- | --- |
+| Environment variables | Hostinger's panel — that is the source of truth. The `.env*` files are gitignored and local only, so adding a variable to one does nothing in production until it is set in the panel too. |
+| Cron jobs | `.github/workflows/scheduled-jobs.yml` — review requests, recovery cleanup, weekly digest. Vercel Cron stopped existing with the move. Each is a GET guarded by `CRON_SECRET`, held both as a GitHub Actions secret and as a Hostinger variable; if the two drift the call 401s and the workflow fails loudly. |
+| Build settings | Hostinger's panel. There is no `vercel.json` equivalent under version control. |
+
+Because a deploy is not instant and nothing announces it, the honest way to
+confirm one is to fetch something only the new build contains. Note that
+server-rendered React separates adjacent text nodes with comment markers, so a
+string like `10% off` written as `{n}% off` never appears contiguously in the
+HTML — grep for a fragment, not the whole phrase.
+
+Schema changes are the exception to "push and wait": apply the migration first,
+then push. The code selects columns the migration adds, so the deploy is
+harmless against a newer database and breaks against an older one.
 
 The apex domain must redirect to `www`. There is a backstop redirect in
-`next.config.ts`, but set www as the primary domain in **Project → Settings →
-Domains** so it happens at the edge.
+`next.config.ts`, and the apex should also be pointed at `www` in Hostinger's
+DNS so it happens before the request reaches the app.

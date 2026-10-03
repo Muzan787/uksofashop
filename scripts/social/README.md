@@ -8,7 +8,7 @@ straight from Supabase, so a post needs nothing but a slug.
 ```bash
 npm run social -- --product verona-high-back-3and2-seater
 npm run social -- --product verona-high-back-3and2-seater --format spec
-npm run social -- --product lily-high-back-u-shape --format carousel-cover --headline "Five ways to|fill a corner" --count 6
+npm run social -- --product sims-high-back-u-shape --format carousel-cover --headline "Five ways to|fill a corner" --count 6
 npm run social -- --format quote --quote "A sofa is heavy. Nothing about it should *bounce*." --attribution "The workshop"
 npm run social -- --product roma-recliner-corner --format split --before Grey --after Teal
 npm run social -- --list

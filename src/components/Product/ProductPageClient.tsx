@@ -180,7 +180,7 @@ export default function ProductPageClient({
   //
   // A made-to-order frame is built in whichever of the 70 fabrics the
   // customer picks in the dialog, and its variant rows are only the colourways
-  // we happen to have photographed - Lily in grey, black, navy and beige. A
+  // we happen to have photographed - Sims in grey, black, navy and beige. A
   // colour swatch there was a second, misleading choice that changed nothing
   // about what got built. Muaz asked (2026-09-18) for those photographs to be
   // treated as the gallery instead: every colourway in one swipeable strip,

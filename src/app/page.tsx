@@ -119,7 +119,7 @@ export default async function HomePage() {
     categories, categoryStats, featuredProducts, groupsData, sofaCount, reviewRows, buildTeaser,
   } = await getHomeData();
 
-  // "from £149" under Fabric Sofas was the Lily footstool. The tile says
+  // "from £149" under Fabric Sofas was the Sims footstool. The tile says
   // "sofas", so the price anchor is the cheapest thing that is one: footstools
   // and armchairs still count towards the tile's total, they just cannot set
   // its price.
