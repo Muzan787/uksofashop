@@ -57,11 +57,11 @@ export interface Article {
 export const ARTICLES: Article[] = [
   {
     slug: 'sofa-jargon-explained',
-    title: 'Sofa Jargon Explained: 2c2, High-Back, Scatter-Back and the Rest',
+    title: 'Sofa Jargon Explained: 2c2 and High-Back',
     heading: 'What the labels mean',
     eyebrow: 'Buying guide',
     description:
-      'What 2c2, 2c1, high-back, scatter-back and 3+2 actually mean, and whether a settee and a sofa are different things. The words UK sofa shops use, including ours, in plain English.',
+      'What 2c2, 2c1, high-back, scatter-back and 3+2 actually mean - the words UK sofa shops use, including ours, in plain English.',
     lede: 'Every trade has words it forgets are not ordinary words. Ours are on the labels of the sofas we sell, so here they are in English.',
     published: '2026-09-03',
     updated: '2026-09-03',
@@ -77,11 +77,11 @@ export const ARTICLES: Article[] = [
   },
   {
     slug: 'made-to-order-explained',
-    title: 'Made to Order, Explained: Your Size, Your Fabric, and the Catch',
+    title: 'Made-to-Order Sofas, Explained',
     heading: 'Made to your size',
     eyebrow: 'How we work',
     description:
-      'What you can actually change on a made-to-order sofa, how the 70-colour fabric library and the paid-then-refunded samples work, and the one real trade-off: made-to-measure is exempt from the 14-day right to change your mind.',
+      'What you can actually change on a made-to-order sofa, how the 70-colour fabric library works, and the one real trade-off on your right to change your mind.',
     lede: 'Our fabric sofas are built after you order rather than picked off a shelf. That buys you the size and the colour. It costs you something too, and this is the honest version of both.',
     published: '2026-09-03',
     updated: '2026-09-03',
@@ -97,11 +97,11 @@ export const ARTICLES: Article[] = [
   },
   {
     slug: 'cash-on-delivery-explained',
-    title: 'Cash on Delivery, Explained: How Paying on the Doorstep Works',
+    title: 'Cash on Delivery Sofas, Explained',
     heading: 'Paying on the doorstep',
     eyebrow: 'How we work',
     description:
-      'No deposit, no card, no finance: you pay for the sofa when it reaches your house, in cash or by bank transfer. What to have ready on the day, what the optional extras cost, and what happens if something is wrong.',
+      'No deposit, no card, no finance - you pay when the sofa reaches your house, in cash or by bank transfer. What to have ready, and what the extras cost.',
     lede: 'You pay nothing until the sofa is at your door and you have looked at it. Here is exactly how that works on the day, including the parts that catch people out.',
     published: '2026-09-03',
     updated: '2026-09-16',
@@ -117,11 +117,11 @@ export const ARTICLES: Article[] = [
   },
   {
     slug: 'whats-inside-a-sofa',
-    title: "What's Inside a Sofa: Frames, Springs, Foam and What Actually Lasts",
+    title: "What's Inside a Sofa: Frames and Springs",
     heading: "What's inside it",
     eyebrow: 'Buying guide',
     description:
-      'Frames, suspension and foam decide whether a sofa lasts. What hardwood, plywood, serpentine springs and foam density actually mean, and how to judge a sofa in a showroom in two minutes.',
+      'What hardwood, plywood, serpentine springs and foam density actually mean, and how to judge whether a sofa will last in a showroom in two minutes.',
     lede:
       'You can judge about a fifth of a sofa by looking at it. The frame, the springs and the foam are the parts that decide how long it lasts, and all three are hidden by the time you meet it.',
     published: '2026-09-04',
@@ -139,11 +139,11 @@ export const ARTICLES: Article[] = [
   },
   {
     slug: 'measuring-for-a-corner-sofa',
-    title: 'Measuring for a Corner Sofa: The Two Walls, the Depth and the Hand',
+    title: 'How to Measure for a Corner Sofa',
     heading: 'Measuring for a corner',
     eyebrow: 'Before you order',
     description:
-      'A corner sofa is two lengths, not one, and its depth eats into both walls. How to measure the two runs, choose between 2c1 and 1c2, and tape out the footprint before you order.',
+      'A corner sofa is two lengths, not one, and its depth eats into both walls. How to measure both runs and choose between 2c1 and 1c2 before you order.',
     lede:
       'The shape most often measured wrong, and not because anyone was careless — a corner is two sofas at a right angle, so most instincts about measuring one give the wrong answer twice.',
     published: '2026-09-04',
@@ -161,11 +161,11 @@ export const ARTICLES: Article[] = [
   },
   {
     slug: 'delivery-day-preparation',
-    title: 'Sofa Delivery Day: How to Prepare, and What It Costs to Get Wrong',
+    title: 'Sofa Delivery Day: How to Prepare',
     heading: 'Getting ready for the van',
     eyebrow: 'Before it arrives',
     description:
-      'Book the extras at checkout because they cannot be added at the door, protect a confirmed slot because missing one is £50, clear the route, and move the old sofa out first. A delivery day checklist.',
+      'Book the extras at checkout because they cannot be added at the door, protect your slot, clear the route, move the old sofa out. A delivery day checklist.',
     lede:
       'Most deliveries that go badly were decided days earlier, by something nobody thought to do. None of it is dramatic and all of it is avoidable.',
     published: '2026-09-04',
@@ -188,7 +188,7 @@ export const ARTICLES: Article[] = [
     heading: 'Fabric or leather',
     eyebrow: 'Buying guide',
     description:
-      'Decided by household rather than by material: children, dogs, cats, allergies, cold rooms. Plus what tech leather actually is, and the two practical differences that have nothing to do with the surface.',
+      'Decided by household rather than by material: children, dogs, cats, allergies, cold rooms. Plus what tech leather actually is, and how the two really differ.',
     lede:
       'The first real decision of a sofa purchase, usually made on a photograph — the one input that tells you nothing. Both look good in a picture; they behave completely differently in a house.',
     published: '2026-09-04',

@@ -53,6 +53,9 @@ const STATIC_PATHS = [
   '/terms',
   '/privacy',
   '/cookies',
+  // The HTML sitemap. Indexable, and it was the only indexable route missing
+  // from both this array and its own canonical tag.
+  '/sitemap',
 ]
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {

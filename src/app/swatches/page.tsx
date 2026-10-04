@@ -7,7 +7,8 @@ import { SamplesProvider, SampleBar, type SampleBarSofa } from '@/components/Pro
 import { getFabricLibrary } from '@/utils/fabrics'
 import { MAX_SAMPLES, SAMPLE_FEE } from '@/constants/swatches'
 import WhatsAppLink from '@/components/UI/WhatsAppLink'
-import { leadVariantImage, ogImage } from '@/utils/socialImage'
+import { leadVariantImage } from '@/utils/socialImage'
+import { pageMetadata } from '@/utils/pageMetadata'
 import { canonicalProductPath } from '@/utils/productUrl'
 import { createClient } from '@/utils/supabase/server'
 import { getBuildTeaser } from '@/utils/buildTeaser'
@@ -80,11 +81,12 @@ import SwatchBrowser from './SwatchBrowser'
  * ignored - the canonical stays /swatches.
  */
 
+// Was 240 characters. It named all six fabrics and was cut off before any of
+// them; the six names are in /fabrics' description, which is the page that
+// ranks for them. What survives here is the offer, which is this page's job.
 const DESCRIPTION =
-  `Pick up to ${MAX_SAMPLES} fabric samples, posted anywhere on the UK mainland for ${SAMPLE_FEE} — ` +
-  `and the ${SAMPLE_FEE} comes off your order when you buy a sofa from us. ` +
-  'All 70 made-to-order colours across chenille, plush velvet, crushed velvet, naple, marble and ' +
-  'PVC leather.'
+  `Pick up to ${MAX_SAMPLES} fabric samples from all 70 made-to-order sofa colours, ` +
+  `posted anywhere on the UK mainland for ${SAMPLE_FEE} — refunded when you order.`
 
 /**
  * "Sofa" earns its place: "Order Fabric Samples" on its own competes with
@@ -108,27 +110,14 @@ const TITLE = 'Order Sofa Fabric Samples'
  */
 const CRUMB = 'Fabric samples'
 
-export const metadata: Metadata = {
-  alternates: { canonical: '/swatches' },
+// The card stays the site-wide room shot rather than a swatch photograph.
+// One square of velvet cropped to 1200x630 reads as a colour block of unknown
+// purpose in a chat window; the room shot at least says "sofas".
+export const metadata: Metadata = pageMetadata({
   title: TITLE,
   description: DESCRIPTION,
-  openGraph: {
-    type: 'website',
-    url: '/swatches',
-    title: `${TITLE} | UK Sofa Shop`,
-    description: DESCRIPTION,
-    // The site-wide card rather than a swatch photograph. One square of velvet
-    // cropped to 1200x630 reads as a colour block of unknown purpose in a chat
-    // window; the room shot at least says "sofas".
-    images: [ogImage('/og-image.jpg', 'UK Sofa Shop')],
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: `${TITLE} | UK Sofa Shop`,
-    description: DESCRIPTION,
-    images: ['/og-image.jpg'],
-  },
-}
+  path: '/swatches',
+})
 
 /**
  * Three lines under the heading. Facts, not selling.

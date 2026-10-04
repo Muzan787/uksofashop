@@ -1,5 +1,6 @@
 // src/app/faq/page.tsx
 import type { Metadata } from 'next'
+import { pageMetadata } from '@/utils/pageMetadata'
 import Link from 'next/link'
 import { Phone } from 'lucide-react'
 import EditorialHero from '@/components/Editorial/EditorialHero'
@@ -9,12 +10,14 @@ import { breadcrumbSchema, jsonLd, SITE_URL } from '@/utils/schema'
 import { PHONE_DISPLAY } from '@/constants/contact'
 import PhoneLink from '@/components/UI/PhoneLink'
 
-export const metadata: Metadata = {
-  title: 'Frequently Asked Questions',
+export const metadata: Metadata = pageMetadata({
+  title: 'Sofa Delivery, Payment & Returns FAQs',
+  // Was 167 characters and cut off after "guarantee" in results. The dropped
+  // clause ("Answers for UK Mainland customers") said nothing the rest did not.
   description:
-    'Delivery times, cash and bank transfer on delivery, assembly and old sofa removal, our 1-year frame guarantee, and how returns work. Answers for UK Mainland customers.',
-  alternates: { canonical: '/faq' },
-}
+    'Delivery times, paying cash or by bank transfer on the doorstep, assembly, old sofa removal, our 1-year frame guarantee, and how returns work.',
+  path: '/faq',
+})
 
 // FAQPage markup. Google restricted FAQ rich results to government and health
 // sites in 2023, so this will not produce a dropdown in UK results for a

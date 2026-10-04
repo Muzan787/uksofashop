@@ -42,7 +42,15 @@ export interface CategoryCopy {
    * budget before Google starts truncating.
    */
   title: string
-  /** ~150 characters. Distinct per category - that is the whole point. */
+  /**
+   * 120-160 characters. Distinct per category - that is the whole point.
+   *
+   * Four of these interpolated DELIVERY_TIMING and ran to 232-244 characters,
+   * which Google cut off mid-clause: the delivery promise was the part that
+   * got dropped, so the long timing string bought nothing and cost the end of
+   * every sentence. Timing belongs in `body`, where there is room for the
+   * Wales and Scotland exception that makes it true.
+   */
   description: string
   /** The H2 introducing the copy under the grid. */
   heading: string
@@ -72,7 +80,7 @@ export const CATEGORY_COPY: Record<string, CategoryCopy> = {
   'fabric-sofa': {
     title: 'Fabric Sofas Made to Your Own Size',
     description:
-      `Fabric sofas made to order in your choice of 70 colours across chenille, velvet and more. Free UK Mainland delivery, paid on arrival. ${DELIVERY_TIMING}`,
+      'Fabric sofas made to order in your choice of 70 colours across chenille, velvet and more. Free UK Mainland delivery, most orders in 2-4 working days.',
     heading: 'About our fabric sofas',
     body: [
       'Our fabric sofas are made to order rather than pulled off a shelf, which means three things are yours to decide: the size, the shape and the cloth. If your alcove is 214cm and every sofa you have found is 220cm, that is a solvable problem here.',
@@ -85,7 +93,7 @@ export const CATEGORY_COPY: Record<string, CategoryCopy> = {
   'leather-sofa': {
     title: 'Leather Sofas & Leather Sofa Sets',
     description:
-      `Leather sofas and 3+2 leather sofa sets that wipe clean in seconds. Free UK Mainland delivery, and you pay when it arrives. ${DELIVERY_TIMING}`,
+      'Leather sofas and 3+2 leather sofa sets that wipe clean in seconds. Free UK Mainland delivery, and you pay when it arrives on the doorstep.',
     heading: 'Leather, and who it suits',
     body: [
       'Leather is the practical choice, which is not how it is usually sold. A spilled drink on leather is a cloth and ten seconds; on an untreated woven fabric it can be permanent. If you have young children, a dog, or a habit of eating on the sofa, this is the category to start in.',
@@ -111,7 +119,7 @@ export const CATEGORY_COPY: Record<string, CategoryCopy> = {
   'electric-sofa': {
     title: 'Electric Recliner Sofas',
     description:
-      `Electric recliner sofas and power reclining sofa sets, reclining at the touch of a button. Free UK Mainland delivery, cash on delivery. ${DELIVERY_TIMING}`,
+      'Electric recliner sofas and power reclining sofa sets, reclining at the touch of a button. Free UK Mainland delivery and cash on delivery.',
     heading: 'How electric recliners differ',
     body: [
       'An electric recliner uses a motor rather than your own weight, so it goes back at the touch of a button and stops wherever you let go. That matters more than it sounds. A manual recliner needs a firm push through the back of the seat, and for anyone with a bad shoulder, a bad back, reduced grip, or simply less strength than they used to have, that push is the reason a manual one ends up never being used.',
@@ -124,13 +132,34 @@ export const CATEGORY_COPY: Record<string, CategoryCopy> = {
   '3-2-seater': {
     title: '3+2 Seater Sofa Sets',
     description:
-      `A three seater and a two seater together - the usual answer for a family living room. Free UK Mainland delivery, cash on delivery. ${DELIVERY_TIMING}`,
+      'A three seater and a two seater together - the usual answer for a family living room. Free UK Mainland delivery and cash on delivery.',
     heading: 'Why a 3+2 rather than a corner',
     body: [
       'A 3+2 set is a three-seater and a two-seater bought together and upholstered to match. It seats five, and it is the arrangement most UK living rooms end up with, for a reason worth spelling out: two separate sofas can face each other, sit at right angles, or move to opposite walls, and they can be rearranged again next year. A [corner sofa](/shop/corner-sofa) commits you to one layout on the day it arrives.',
       'Two pieces are also easier to get into the house than one long L-shape, which is the single most common cause of a delivery that goes wrong. If your hallway has a tight turn or a narrow front door, a 3+2 is the safer shape - though it is still worth running both pieces through the calculator on the [size guide](/size-guide).',
       'What you give up is floor efficiency. Two arms sit in the middle of the room where a corner unit would have a continuous seat, so a 3+2 seats slightly fewer people in the same square metres and leaves less usable lounging length.',
       `Fabric sets are made to order in your own size and any of the 70 colours in the [fabric library](/fabrics); leather sets are stocked in set sizes. Either way delivery is free to UK Mainland, both pieces are brought to a ground-floor room of your choice, and you pay cash or by bank transfer on the doorstep. ${DELIVERY_TIMING} A 1-year guarantee covers frame and springs on both pieces.`,
+    ],
+  },
+
+  // Written 2026-10-04. This category had five active products and no entry
+  // here, which meant /shop/u-shaped-sofa went out with the generic fallback
+  // description - the one near-identical template sentence this whole file
+  // exists to replace - and no prose under the grid at all, because
+  // CategoryCopy only renders when there is an entry to render.
+  //
+  // The armed/armless distinction below is real and in the catalogue: Salone
+  // and Sims each ship a U-shape both ways.
+  'u-shaped-sofa': {
+    title: 'U-Shaped Sofas & U-Shape Corner Sofas',
+    description:
+      'U-shaped sofas that seat a whole family, made to order in your own size and any of 70 colours. Free UK Mainland delivery and cash on delivery.',
+    heading: 'Choosing a U-shaped sofa',
+    body: [
+      'A U-shape is a long back with a return at each end, so it seats more people than a corner sofa of the same back length and it faces inward rather than along a wall. That second part is the reason to buy one: a U-shape makes the seating the room instead of lining the edge of it, which works in an open-plan space where there is no wall to push furniture against.',
+      'It is also the shape that needs the most measuring, because it is three runs rather than two - the back and both returns - and the returns are what decide whether a doorway or a coffee table still works once it is in. Tape the whole footprint out on the floor before you order, and put the longest single piece through the calculator on the [size guide](/size-guide); a U-shape arrives in sections, but no section gets shorter than the back.',
+      'Two versions, and the difference matters more than it looks. An armed U-shape has a full arm at each end, which gives you something to lean against and closes the shape off. An armless one leaves both returns open, so each end works as a chaise you can stretch out along and the whole thing reads lower and longer. Neither is better; they suit different rooms, and the product photographs show which is which.',
+      `Fabric U-shapes are made to order, so the size follows your room rather than the other way round, and the colour comes from the [70-fabric library](/fabrics) - chenille, plush velvet, crushed velvet, naple, marble and PVC leather. Delivery is free to any UK Mainland address, brought to the ground floor or a ground-floor room of your choice, and paid in cash or by bank transfer on the doorstep. ${DELIVERY_TIMING} A 1-year guarantee covers the frame and springs.`,
     ],
   },
 

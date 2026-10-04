@@ -1,5 +1,6 @@
 // src/app/about/page.tsx
 import type { Metadata } from 'next'
+import { pageMetadata } from '@/utils/pageMetadata'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Banknote, MapPin, Shield, Truck } from 'lucide-react'
@@ -18,11 +19,11 @@ import VideoStrip from '@/components/UI/VideoStrip'
 const DESCRIPTION =
   'A Blackburn furniture shop selling sofas with free UK Mainland delivery and cash on delivery. Who we are and how we work.'
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: 'About Us',
   description: DESCRIPTION,
-  alternates: { canonical: '/about' },
-}
+  path: '/about',
+})
 
 const WORKSHOP =
   'https://res.cloudinary.com/dmlna04yk/image/upload/v1782255171/Home-Page-Furniture-Background-Image-2_cgmd50.jpg'
@@ -62,6 +63,7 @@ export default async function AboutPage() {
         path="/about"
         updated="2026-08-28"
         description={DESCRIPTION}
+        image={WORKSHOP}
       />
       <EditorialHero
         eyebrow="Who we are"

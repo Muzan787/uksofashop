@@ -1,5 +1,6 @@
 // src/app/journal/page.tsx
 import type { Metadata } from 'next'
+import { pageMetadata } from '@/utils/pageMetadata'
 import Link from 'next/link'
 import { ArrowRight, PenTool } from 'lucide-react'
 import EditorialHero from '@/components/Editorial/EditorialHero'
@@ -14,14 +15,14 @@ import { ARTICLES_BY_DATE } from './articles'
 const DESCRIPTION =
   'Notes on choosing, measuring and paying for a sofa. What the labels on a sofa actually mean, how made-to-order works, and how paying on the doorstep works.'
 
-export const metadata: Metadata = {
-  alternates: { canonical: '/journal' },
+export const metadata: Metadata = pageMetadata({
   title: 'The Journal',
   description: DESCRIPTION,
+  path: '/journal',
   // The noindex that used to live here is gone, and so is the line in
-  // sitemap.ts that contradicted it. There are three articles now; the page
+  // sitemap.ts that contradicted it. There are seven articles now; the page
   // has something to index.
-}
+})
 
 const DATE = new Intl.DateTimeFormat('en-GB', {
   day: 'numeric',

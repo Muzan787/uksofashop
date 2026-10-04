@@ -15,6 +15,8 @@ const ACCENT = 'var(--color-ember-500)'      // fills: buttons, rules, icons, ba
 
 export const metadata: Metadata = {
   title: 'Unsubscribe',
+  // As on the confirm page: without this it inherited the homepage description.
+  description: 'Unsubscribe from the UK Sofa Shop newsletter.',
   robots: { index: false, follow: false },
 }
 

@@ -140,11 +140,29 @@ function shippingDetails() {
   return {
     '@type': 'OfferShippingDetails',
     shippingRate: { '@type': 'MonetaryAmount', value: 0, currency: 'GBP' },
+    // KNOWN OVERSTATEMENT, and deliberately left as one. ISO 3166-1 "GB" is
+    // the United Kingdom, which includes Northern Ireland - and NI, the Isle
+    // of Man, the Channel Islands, the Scottish islands, the Isle of Wight and
+    // the Isles of Scilly are all CUSTOM_QUOTE rather than free, per
+    // classifyDeliveryPostcode in src/utils/postcode.ts.
+    //
+    // schema.org can express the exclusion (a second OfferShippingDetails with
+    // doesNotShip and a DefinedRegion of postalCodePrefix values), but whether
+    // Google reads postalCodePrefix here is not something this repo can verify,
+    // and a shippingDetails block Google rejects loses the valid free-delivery
+    // signal along with it. The exclusion therefore belongs in Merchant Centre's
+    // own shipping settings, where it is expressible and testable. See the
+    // matching note in src/utils/catalog/productFeed.ts.
     shippingDestination: { '@type': 'DefinedRegion', addressCountry: 'GB' },
     deliveryTime: {
       '@type': 'ShippingDeliveryTime',
       handlingTime: { '@type': 'QuantitativeValue', minValue: 0, maxValue: 1, unitCode: 'DAY' },
-      transitTime: { '@type': 'QuantitativeValue', minValue: 2, maxValue: 4, unitCode: 'DAY' },
+      // 2-4 working days on most of UK Mainland, 5-7 on some Wales and
+      // Scotland postcodes - so the range is 2-7. It said 2-4, which is the
+      // headline figure rather than the whole promise, and a delivery estimate
+      // in a Shopping result that the order then misses is the one kind of
+      // inaccuracy Google acts on. PROMISES.delivery.timingLong is the source.
+      transitTime: { '@type': 'QuantitativeValue', minValue: 2, maxValue: 7, unitCode: 'DAY' },
     },
   }
 }
@@ -157,8 +175,15 @@ function shippingDetails() {
  * they're marked as not permitted rather than claiming a window we don't offer.
  * Faulty goods are a separate matter and aren't covered by this property.
  *
- * returnShippingFeesAmount is omitted on purpose: the customer arranges their
- * own carriage, so there is no fixed figure to state.
+ * ON returnFees. This said ReturnShippingFees, which schema.org defines as
+ * "there is a shipping cost of X" and which REQUIRES returnShippingFeesAmount
+ * alongside it. There is no such figure here - the customer books their own
+ * carrier - so the amount was omitted and the pair was incomplete, which is a
+ * validation error rather than a silent omission.
+ *
+ * ReturnFeesCustomerResponsibility is the member that means exactly this:
+ * returns must be paid for, and are the responsibility of, the customer. It
+ * takes no amount, so the policy is now both complete and true.
  */
 function returnPolicy(customMade: boolean) {
   if (customMade) {
@@ -174,7 +199,7 @@ function returnPolicy(customMade: boolean) {
     returnPolicyCategory: 'https://schema.org/MerchantReturnFiniteReturnWindow',
     merchantReturnDays: 14,
     returnMethod: 'https://schema.org/ReturnByMail',
-    returnFees: 'https://schema.org/ReturnShippingFees',
+    returnFees: 'https://schema.org/ReturnFeesCustomerResponsibility',
   }
 }
 
@@ -237,10 +262,17 @@ export function productSchema(p: ProductSchemaInput) {
     itemCondition: 'https://schema.org/NewCondition',
     url: abs(p.canonicalPath),
     seller: { '@id': `${SITE_URL}/#organization` },
-    // Cash or bank transfer on delivery only.
+    // Cash or bank transfer on delivery only. COD is a real member of
+    // schema.org's PaymentMethod enumeration, so it is given as the URL rather
+    // than as a PaymentMethod node named "Cash on Delivery" - a free-text name
+    // is not an enumeration member and nothing resolves it. There is no member
+    // for a bank transfer taken at the door (ByBankTransferInAdvance says "in
+    // advance", which is the opposite of this shop's terms), so that one stays
+    // a named node, which is the correct way to express a method the
+    // vocabulary does not cover.
     acceptedPaymentMethod: [
-      { '@type': 'PaymentMethod', name: 'Cash on Delivery' },
-      { '@type': 'PaymentMethod', name: 'Bank Transfer on Delivery' },
+      'https://schema.org/COD',
+      { '@type': 'PaymentMethod', name: 'Bank transfer on delivery' },
     ],
     shippingDetails: shippingDetails(),
     hasMerchantReturnPolicy: returnPolicy(!!p.customMade),
@@ -391,7 +423,23 @@ export interface EditorialSchemaInput {
    * means, and dating one implies an archive that does not exist.
    */
   published?: string
+  /**
+   * A representative image, absolute or site-root-relative.
+   *
+   * Every node this builder produced was imageless, which Google reports on
+   * each one of the ten Articles the site publishes - seven Journal pieces plus
+   * the fabric, size and care guides. `image` is the property an article
+   * result is illustrated from, and without it a piece that ranks is rendered
+   * as a line of text beside competitors with a photograph.
+   *
+   * Defaults to the site card, which is a photographed room rather than a
+   * logo, so a page that has no picture of its own still has a usable one.
+   */
+  image?: string
 }
+
+/** The site-wide social card, used when a page names no image of its own. */
+const DEFAULT_EDITORIAL_IMAGE = '/og-image.jpg'
 
 export function editorialSchema(e: EditorialSchemaInput) {
   const type = e.type ?? 'Article'
@@ -407,6 +455,7 @@ export function editorialSchema(e: EditorialSchemaInput) {
     // as two publishers.
     publisher: { '@id': `${SITE_URL}/#organization` },
     isPartOf: { '@id': `${SITE_URL}/#website` },
+    image: abs(e.image ?? DEFAULT_EDITORIAL_IMAGE),
   }
 
   // headline is the Article-specific property and Google reads it in place of

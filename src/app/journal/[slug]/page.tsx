@@ -7,6 +7,7 @@ import { ArrowRight } from 'lucide-react'
 import EditorialHero from '@/components/Editorial/EditorialHero'
 import EditorialSchema from '@/components/Editorial/EditorialSchema'
 import EditorialLayout, { LastUpdated } from '@/components/Editorial/EditorialLayout'
+import { pageMetadata } from '@/utils/pageMetadata'
 import { ARTICLES, ARTICLES_BY_DATE, findArticle } from '../articles'
 import { ARTICLE_BODIES } from '../articles/bodies'
 
@@ -28,24 +29,19 @@ export async function generateMetadata(props: { params: Params }): Promise<Metad
   // itself is what returns the 404.
   if (!article) return { title: 'Article Not Found' }
 
-  return {
+  // Through the helper, which is what guarantees the card carries an image.
+  // This block set `openGraph` by hand and omitted `images`, and because Next
+  // replaces the parent openGraph object wholesale rather than merging into it,
+  // that did not inherit the site card - it emitted no og:image at all. Every
+  // article shared on WhatsApp or LinkedIn was a bare line of text.
+  return pageMetadata({
     title: article.title,
     description: article.description,
-    alternates: { canonical: `/journal/${article.slug}` },
-    openGraph: {
-      type: 'article',
-      title: article.title,
-      description: article.description,
-      url: `/journal/${article.slug}`,
-      publishedTime: article.published,
-      modifiedTime: article.updated,
-    },
-    twitter: {
-      card: 'summary_large_image',
-      title: article.title,
-      description: article.description,
-    },
-  }
+    path: `/journal/${article.slug}`,
+    type: 'article',
+    publishedTime: article.published,
+    modifiedTime: article.updated,
+  })
 }
 
 export default async function ArticlePage(props: { params: Params }) {

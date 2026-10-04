@@ -1,17 +1,23 @@
 // src/app/sitemap/page.tsx
 import { Metadata } from 'next';
+import { pageMetadata } from '@/utils/pageMetadata';
 import Link from 'next/link';
 import { Map, ChevronRight } from 'lucide-react';
 import { createClient } from '@/utils/supabase/server';
 import { canonicalProductPath } from '@/utils/productUrl';
+import EditorialSchema from '@/components/Editorial/EditorialSchema';
 
 const ACCENT = 'var(--color-ember-500)';      // fills: buttons, rules, icons, badges
 const ACCENT_TEXT = 'var(--color-ember-700)'; // letterforms on a light ground
 
-export const metadata: Metadata = {
+// This page is indexable and had no canonical at all, so /sitemap was the one
+// indexable route on the site with nothing declaring its own address - and it
+// was missing from sitemap.ts as well. Both are fixed; it is in STATIC_PATHS now.
+export const metadata: Metadata = pageMetadata({
   title: 'Sitemap',
-  description: 'Navigate the complete directory of UK Sofa Shop, including all sofa collections, guides, and store policies.',
-};
+  description: 'Every page on UK Sofa Shop in one list: all sofa categories and products, the buying guides, and the store policies.',
+  path: '/sitemap',
+});
 
 export default async function HTMLSitemapPage() {
   const supabase = await createClient();
@@ -98,7 +104,19 @@ export default async function HTMLSitemapPage() {
 
   return (
     <div className="min-h-screen bg-calico-50">
-      
+      {/* The last indexable route with no page-level type. The trailing crumb
+          is "Site Map" because that is the H1 as rendered - the metadata title
+          is "Sitemap", and a trail that disagrees with the page it sits on is
+          read as a mismatch. */}
+      <EditorialSchema
+        type="WebPage"
+        headline="Sitemap"
+        current="Site Map"
+        path="/sitemap"
+        updated="2026-10-04"
+        description="Every page on UK Sofa Shop in one list: all sofa categories and products, the buying guides, and the store policies."
+      />
+
       {/* ════ HERO SECTION ════ */}
       <div className="bg-ink-900 border-b-2" style={{ borderColor: ACCENT }}>
         <div className="max-w-shell mx-auto px-4 sm:px-6 lg:px-8 section-y text-center">
