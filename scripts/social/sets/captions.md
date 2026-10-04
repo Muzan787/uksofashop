@@ -13,7 +13,7 @@ are kept to a handful and put on their own lines at the foot.
 
 Talk to a person.
 
-WhatsApp or call 07476 616022, email uksofashop.co.uk@gmail.com, or find every sofa at uksofashop.co.uk. We answer ourselves — no bots, no ticket numbers.
+WhatsApp or call 07476 616022, email enquiries@uksofashop.co.uk, or find every sofa at uksofashop.co.uk. We answer ourselves — no bots, no ticket numbers.
 
 Free UK Mainland delivery · Cash on delivery · 1-year frame guarantee · 14 days to change your mind
 

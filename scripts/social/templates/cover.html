@@ -1,0 +1,171 @@
+<!-- cover
+     The page cover: Facebook, Google Business, WhatsApp Business, anywhere a
+     wide banner is asked for. The real logo file sits at the top, so this is
+     the one template that does not draw the Mill & Velvet lockup.
+
+     Two things decide the layout:
+
+     1. Facebook shows a cover at 2.63:1 on a desktop and crops it to roughly
+        16:9 on a phone, which takes a slice off each side. Everything that
+        has to be read therefore lives inside .cv-safe — the central 68% —
+        and the outer thirds carry nothing but photograph.
+
+     2. On a desktop the profile picture and the page name sit over the
+        bottom-left corner, so the foot of that corner is left empty.
+
+     The accent here is #A14E30, sampled from the logo PNG itself rather than
+     taken from tokens.css. Ember 500 beside that logo reads as two ambers;
+     until the logo is redrawn in the brand amber, the cover follows the logo
+     rather than the other way round. -->
+<style>
+  .cv {
+    --logo-copper: #A14E30;
+
+    /* Everything is sized off --cv-scale rather than off the canvas height,
+       so one template serves both shapes. At Facebook's 2.63:1 the height is
+       the binding dimension; on a 16:9 cover the width is, and sizing off
+       height there would blow the type up by a third. The safe column widens
+       too, because the 68% is Facebook's phone crop and nothing else's. */
+    --cv-scale: var(--canvas-h);
+    --cv-safe: 68%;
+    padding: 0;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .cv-photo { position: absolute; inset: 0; }
+  .cv-photo img { width: 100%; height: 100%; object-fit: cover; }
+
+  /* Calico over the photograph: near-solid through the middle so the type
+     reads, thinning at the left and right edges so a desktop still sees the
+     room. Those edges are what a phone crops away. */
+  .cv-veil {
+    position: absolute; inset: 0;
+    background:
+      linear-gradient(90deg,
+        color-mix(in srgb, var(--color-calico-100) 34%, transparent) 0%,
+        color-mix(in srgb, var(--color-calico-100) 92%, transparent) 22%,
+        var(--color-calico-100) 38%,
+        var(--color-calico-100) 62%,
+        color-mix(in srgb, var(--color-calico-100) 92%, transparent) 78%,
+        color-mix(in srgb, var(--color-calico-100) 34%, transparent) 100%);
+  }
+
+  /* A breath of warmth along the foot, the same light-on-a-floor the rest of
+     the system uses. */
+  .cv-glow {
+    position: absolute; left: 10%; right: 10%; bottom: -14%; height: 40%;
+    background: radial-gradient(closest-side ellipse,
+      color-mix(in srgb, var(--logo-copper) 22%, transparent) 0%,
+      transparent 100%);
+  }
+
+  .cv-safe {
+    position: relative;
+    width: var(--cv-safe);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .cv-logo {
+    height: calc(var(--cv-scale) * 0.30);
+    width: auto;
+  }
+
+  .cv-rule {
+    width: calc(var(--cv-scale) * 0.19);
+    height: 4px;
+    border-radius: var(--radius-pill);
+    background: var(--logo-copper);
+    margin-top: calc(var(--cv-scale) * 0.04);
+  }
+
+  .cv-line {
+    margin-top: calc(var(--cv-scale) * 0.04);
+    font-family: var(--font-display);
+    font-optical-sizing: auto;
+    font-weight: 500;
+    font-size: calc(var(--cv-scale) * 0.062);
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    color: var(--color-ink-900);
+    text-wrap: balance;
+  }
+  .cv-line .accent { color: var(--logo-copper); }
+
+  .cv-promises {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: calc(var(--cv-scale) * 0.04);
+    color: var(--color-ink-500);
+    font-size: calc(var(--cv-scale) * 0.027);
+    white-space: nowrap;
+    font-weight: 500;
+    line-height: 1;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  .cv-promises span { padding: 0 calc(var(--cv-scale) * 0.022); }
+  .cv-promises span + span { border-left: 2px solid var(--color-calico-300); }
+
+  .cv-contact {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: calc(var(--cv-scale) * 0.012) calc(var(--cv-scale) * 0.034);
+    margin-top: calc(var(--cv-scale) * 0.045);
+    font-family: var(--font-data);
+    font-size: calc(var(--cv-scale) * 0.038);
+    line-height: 1;
+    letter-spacing: 0;
+    color: var(--color-ink-900);
+    font-variant-numeric: tabular-nums;
+  }
+  .cv-contact b {
+    font-weight: 500;
+    color: var(--logo-copper);
+  }
+  .cv-contact .dot {
+    width: 8px; height: 8px; flex: none;
+    border-radius: var(--radius-pill);
+    background: var(--logo-copper);
+  }
+
+  /* Anything squarer than 2:1 is not a Facebook cover, so the width decides. */
+  @media (max-aspect-ratio: 2/1) {
+    .cv {
+      --cv-scale: calc(var(--canvas-w) / 2.63);
+      --cv-safe: 84%;
+    }
+  }
+</style>
+
+<div class="post ground-light cv">
+  <div class="cv-photo"><img src="{{image}}" alt=""></div>
+  <div class="cv-veil"></div>
+  <div class="cv-glow"></div>
+
+  <div class="cv-safe">
+    <img class="cv-logo" src="{{logo}}" alt="UK Sofa Shop">
+    <div class="cv-rule"></div>
+
+    <h1 class="cv-line">{{{headline}}}</h1>
+
+    <div class="cv-promises">
+      {{#each promises}}<span>{{label}}</span>{{/each}}
+    </div>
+
+    <div class="cv-contact">
+      <span><b>WhatsApp</b> {{phone}}</span>
+      <span class="dot"></span>
+      <span>{{site}}</span>
+      <span class="dot"></span>
+      <span>{{email}}</span>
+    </div>
+  </div>
+</div>

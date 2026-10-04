@@ -43,7 +43,7 @@ import { PROMISES } from '../../src/constants/promises.ts'
 import { PHONE_DISPLAY, SUPPORT_EMAIL } from '../../src/constants/contact.ts'
 import { SITE_URL } from '../../src/constants/site.ts'
 
-const FORMATS = ['full-bleed', 'quote', 'spec', 'carousel-cover', 'split', 'panorama'] as const
+const FORMATS = ['full-bleed', 'quote', 'spec', 'carousel-cover', 'split', 'panorama', 'cover'] as const
 type Format = (typeof FORMATS)[number]
 
 // Instagram crops every grid thumbnail to 3:4, so 3:4 is the post. A 4:5
@@ -54,6 +54,10 @@ const SIZES = {
   feed: { width: 1080, height: 1350 },
   square: { width: 1080, height: 1080 },
   story: { width: 1080, height: 1920 },
+  // Page covers. Facebook renders a cover at 2.63:1 and crops it towards 16:9
+  // on a phone; "cover-wide" is the 16:9 one every other profile asks for.
+  cover: { width: 1640, height: 624 },
+  'cover-wide': { width: 1920, height: 1080 },
 } as const
 type SizeName = keyof typeof SIZES
 
@@ -74,12 +78,14 @@ Formats
   carousel-cover   display headline over a photograph well, with a slide counter and swipe cue
   split            two photographs stacked with an ember rule between — needs --before
   panorama         the pinned row: welcome | photograph | get in touch, as three tiles to post right-to-left
+  cover            a page cover carrying the real logo, the promises and how to get in touch
 
 Options
   --product, -p    product slug (required for every format except quote)
   --format, -f     one of the formats above                    default: full-bleed
   --ground         light | ink                                  default: light (quote: ink)
-  --size           portrait (3:4) | feed (4:5) | square | story default: portrait, 1080x1440
+  --size           portrait (3:4) | feed (4:5) | square | story | cover | cover-wide
+                                                               default: portrait, 1080x1440 (cover: 1640x624)
   --variant        which colour's photograph to use             default: the lead variant
   --image          any image URL instead of the product's       (a generated room scene, say)
   --headline       *word* for an ember accent, | or \\n for a line break
@@ -145,7 +151,7 @@ function resolveOptions(flags: Flags, fromJson: Record<string, unknown>): Option
   if (ground !== 'light' && ground !== 'ink') {
     throw new Error(`--ground must be light or ink, not "${ground}".`)
   }
-  const size = pick('size') ?? 'portrait'
+  const size = pick('size') ?? (format === 'cover' ? 'cover' : 'portrait')
   if (!(size in SIZES)) {
     throw new Error(`--size must be one of ${Object.keys(SIZES).join(', ')}, not "${size}".`)
   }
@@ -315,6 +321,26 @@ async function buildData(
         beforeLabel: opts.beforeLabel ?? before.label ?? 'Before',
         afterLabel: opts.afterLabel ?? (opts.after ? after.label : undefined) ?? 'After',
         headline: richText(opts.headline ? breaks(opts.headline) : undefined),
+      }
+    }
+
+    case 'cover': {
+      // The one template that uses the logo file rather than drawing the
+      // lockup, so the cover matches the profile picture beside it.
+      const logo = await readFile(path.join(SOCIAL_DIR, 'assets', 'logo.png'))
+      const p = need()
+      const { url } = resolveImage(p, opts.image ?? opts.variant)
+      // Short enough to sit on one line at this height, long enough to stay
+      // true: "mainland" and "frame" are the words that keep the promise honest.
+      const promises = [PROMISES.delivery.short, PROMISES.payment.label, PROMISES.guarantee.short, PROMISES.returns.label]
+      return {
+        logo: `data:image/png;base64,${logo.toString('base64')}`,
+        image: cloudinaryFill(url, canvas.width, canvas.height),
+        headline: richText(breaks(opts.headline ?? 'Sofas made to order — your shape, your fabric, *your colour*')),
+        promises: promises.map(label => ({ label })),
+        phone: PHONE_DISPLAY,
+        site: siteHost(),
+        email: SUPPORT_EMAIL,
       }
     }
 
