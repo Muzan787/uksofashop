@@ -5,6 +5,7 @@ import { createClient } from '@/utils/supabase/server'
 import { summariseMainCollections } from '@/utils/mainCollections';
 import MainCollectionCard from '@/components/Collection/MainCollectionCard';
 import CollectionHero from '@/components/Collection/CollectionHero';
+import EditorialSchema from '@/components/Editorial/EditorialSchema';
 import CollectionEmpty from '@/components/Collection/CollectionEmpty';
 import { Reveal } from '@/components/Motion';
 import { staggerDelay } from '@/components/Motion/tokens';
@@ -59,6 +60,21 @@ export default async function CollectionsIndexPage() {
 
   return (
     <div className="grad-calico grain-light relative min-h-screen bg-calico-50">
+      {/* The crumbs mirror CollectionHero's `trail` below exactly. A
+          BreadcrumbList that disagrees with the trail on screen is read as a
+          mismatch, which is worse than no markup. */}
+      <EditorialSchema
+        type="CollectionPage"
+        headline="Collections"
+        current="Collections"
+        path="/collection"
+        updated="2026-09-18"
+        description="Imported recliners, made-to-order sofas, and what is coming next. Browse every part of the UK Sofa Shop range, with free UK Mainland delivery."
+        crumbs={[
+          { name: 'Home', path: '/' },
+          { name: 'Shop', path: '/shop/all' },
+        ]}
+      />
       <CollectionHero
         eyebrow="The range"
         title="Start with the part of the shop you need."

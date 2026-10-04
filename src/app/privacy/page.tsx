@@ -4,6 +4,7 @@ import { pageMetadata } from '@/utils/pageMetadata'
 import Link from 'next/link'
 import EditorialHero from '@/components/Editorial/EditorialHero'
 import EditorialLayout, { LastUpdated } from '@/components/Editorial/EditorialLayout'
+import EditorialSchema from '@/components/Editorial/EditorialSchema'
 import { SUPPORT_EMAIL } from '@/constants/contact'
 
 export const metadata: Metadata = pageMetadata({
@@ -29,6 +30,14 @@ const TOC = [
 export default function PrivacyPage() {
   return (
     <div className="min-h-screen bg-calico-50">
+      <EditorialSchema
+        type="WebPage"
+        headline="Privacy Policy"
+        current="Privacy policy"
+        path="/privacy"
+        updated={LAST_UPDATED}
+        description="What personal data UK Sofa Shop collects, why we hold it, how long we keep it, and how to ask us to delete it."
+      />
       <EditorialHero
         eyebrow="Legal"
         title="Privacy policy"

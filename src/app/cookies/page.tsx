@@ -4,6 +4,7 @@ import { pageMetadata } from '@/utils/pageMetadata'
 import Link from 'next/link'
 import EditorialHero from '@/components/Editorial/EditorialHero'
 import EditorialLayout, { LastUpdated } from '@/components/Editorial/EditorialLayout'
+import EditorialSchema from '@/components/Editorial/EditorialSchema'
 import CookiePreferences from '@/components/UI/CookiePreferences'
 import { SUPPORT_EMAIL } from '@/constants/contact'
 
@@ -119,6 +120,14 @@ function Table({ entries, caption }: { entries: Entry[]; caption: string }) {
 export default function CookiesPage() {
   return (
     <div className="min-h-screen bg-calico-50">
+      <EditorialSchema
+        type="WebPage"
+        headline="Cookie Policy"
+        current="Cookies"
+        path="/cookies"
+        updated={LAST_UPDATED}
+        description="Exactly which cookies and browser storage UK Sofa Shop uses, what each one is for, and how to change your choice at any time."
+      />
       <EditorialHero
         eyebrow="Policies"
         title="Cookies"

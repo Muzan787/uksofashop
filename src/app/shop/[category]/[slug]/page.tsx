@@ -409,9 +409,13 @@ export default async function ProductPage(props: { params: Params, searchParams:
     skus: (product.product_variants ?? []).map((v: any) => v.sku).filter(Boolean),
     origin: product.origin,
     customMade: product.custom_made,
-    width: dims.width,
-    depth: dims.depth,
-    height: dims.height,
+    // Suppressed on a multi-piece record. A 3+2 set writes both sofas into one
+    // dimensions field, so the parsed numbers are the first piece's - true of
+    // that sofa, false as the set's own width. The diagram still draws them;
+    // Product markup does not claim them. See components/Product/dimensions.ts.
+    ...(dims.multiPiece
+      ? {}
+      : { width: dims.width, depth: dims.depth, height: dims.height }),
     materials: distinct(safeVariants.map(v => v.material)),
     colors: distinct(safeVariants.map(v => v.color)),
     // Only genuine approved reviews reach this - see the filter above.

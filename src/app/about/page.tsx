@@ -63,6 +63,7 @@ export default async function AboutPage() {
         path="/about"
         updated="2026-08-28"
         description={DESCRIPTION}
+        image={WORKSHOP}
       />
       <EditorialHero
         eyebrow="Who we are"

@@ -88,6 +88,7 @@ export default async function ShowroomPage() {
         path="/showroom"
         updated="2026-08-28"
         description={DESCRIPTION}
+        image={PHOTOGRAPH}
       />
       {/* The FurnitureStore schema for this address is emitted site-wide from
           the root layout — a second copy here would be a duplicate entity. */}
