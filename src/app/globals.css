@@ -1126,8 +1126,34 @@ html.entrance .brand-entrance__rule {
   pointer-events: none;
 }
 
+/* The drift itself, and the shadow that answers it.
+
+   These two have to stay on the same period or the effect inverts into
+   something worse than no animation at all: a shadow breathing out of time
+   with the object above it reads as two unrelated things moving, not as one
+   object at a distance from a floor.
+
+   ease-in-out-quart is the ramp's "anything that leaves and returns", and over
+   nine seconds it holds at the top and bottom of the travel and moves quickly
+   between them — which is what makes it read as weight being carried rather
+   than as a loop playing.
+
+   The shadow is a SEPARATE class rather than being folded into
+   .contact-shadow, because that one is also used under the static card on the
+   build-your-own board, and a shadow pulsing under something that is not
+   moving is exactly the sticker effect all of this exists to avoid.
+
+   Reduced motion is handled globally - see the prefers-reduced-motion block
+   near the top of this file, which caps duration AND iteration count, so an
+   infinite drift ends rather than strobing. */
 .float-slow {
-  /* Static. See the note at the head of this section. */
+  animation: float-slow 9s var(--ease-in-out-quart) infinite;
+  will-change: transform;
+}
+
+.contact-breathe {
+  animation: contact-breathe 9s var(--ease-in-out-quart) infinite;
+  will-change: transform, opacity;
 }
 
 @keyframes float-slow {

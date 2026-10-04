@@ -7,7 +7,7 @@ import { ArrowRight } from 'lucide-react';
 import { Magnetic, Parallax, Reveal, SplitText } from '@/components/Motion';
 import { PROMISES } from '@/constants/promises';
 import { HOME_ART, hasArt } from '@/constants/homeArt';
-import { blurDataURL, darkened } from '@/utils/cloudinary';
+import { blurDataURL, darkened, trimmed } from '@/utils/cloudinary';
 
 interface Props {
   /** The sofa in the photograph — a real product, not a stock room. */
@@ -18,6 +18,12 @@ interface Props {
   productHref?: string | null;
   /** Its price, for the chip pinned to the stage. */
   fromPrice?: number | null;
+  /**
+   * What that price used to be, where the sofa in the photograph is reduced.
+   * Struck through beside it on the chip. Null on everything not discounted —
+   * see utils/pricing.ts.
+   */
+  wasPrice?: number | null;
   /** How many sofas are live right now. */
   sofaCount: number;
 }
@@ -80,9 +86,14 @@ interface Props {
 
 const money = (n: number) => `£${Math.round(n).toLocaleString('en-GB')}`;
 
-export default function Hero({ image, productTitle, productHref, fromPrice, sofaCount }: Props) {
+export default function Hero({ image, productTitle, productHref, fromPrice, wasPrice, sofaCount }: Props) {
   const cutout = hasArt(HOME_ART.heroSofa) ? HOME_ART.heroSofa : null;
   const room = hasArt(HOME_ART.heroRoom) ? HOME_ART.heroRoom : null;
+
+  // Guarded rather than trusted: a was price at or below the live one would
+  // put a strikethrough on the hero claiming a saving that is not there.
+  const reduced =
+    typeof fromPrice === 'number' && typeof wasPrice === 'number' && wasPrice > fromPrice;
 
   /*
    * WHY THE HEIGHT IS NOT 100svh.
@@ -131,7 +142,7 @@ export default function Hero({ image, productTitle, productHref, fromPrice, sofa
       />
 
       {/* ── 4. The stage ─────────────────────────────────────────────────── */}
-      <div className="relative mx-auto flex w-full max-w-shell flex-1 flex-col gap-5 px-4 pb-3 pt-20 sm:px-6 lg:grid lg:grid-cols-[1.04fr_1fr] lg:items-center lg:gap-12 lg:pb-10 lg:pt-28">
+      <div className="relative mx-auto flex w-full max-w-shell flex-1 flex-col gap-2 px-4 pb-1 pt-[4.25rem] sm:px-6 lg:grid lg:grid-cols-[1.04fr_1fr] lg:items-center lg:gap-12 lg:pb-10 lg:pt-28">
         {/* ── Copy ──────────────────────────────────────────────────────── */}
         <div className="shrink-0">
           {/* The live badge. A real count of real products, not a claim. */}
@@ -160,7 +171,7 @@ export default function Hero({ image, productTitle, productHref, fromPrice, sofa
             emphasise="beautiful."
             emphasisClassName="text-shimmer font-light italic"
             amount={0.1}
-            className="mt-5 max-w-[11ch] font-display text-display-xl font-semibold text-calico-50 lg:text-display-l"
+            className="mt-4 max-w-[11ch] font-display text-display-xl font-semibold text-calico-50 lg:text-display-l"
           />
 
           {/* Two lines on a phone, and it has to stay two.
@@ -171,14 +182,14 @@ export default function Hero({ image, productTitle, productHref, fromPrice, sofa
               same sentence runs to three lines on a 375px phone, and the sofa
               loses 27px it cannot spare. */}
           <Reveal delay={0.25} distance={16} amount={0.1}>
-            <p className="mt-4 max-w-[44ch] text-body text-calico-300 sm:text-lead">
+            <p className="mt-3 max-w-[44ch] text-body text-calico-300 sm:text-lead">
               Fabric sofas made to your size. Delivered free. Pay on arrival.
             </p>
           </Reveal>
 
           {/* ── The actions ─────────────────────────────────────────────── */}
           <Reveal delay={0.35} distance={16} amount={0.1}>
-            <div className="mt-7 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
+            <div className="mt-5 flex flex-col items-stretch gap-2.5 sm:flex-row sm:items-center">
               <Magnetic className="w-full sm:w-auto">
                 <Link
                   href="/shop/all"
@@ -232,7 +243,23 @@ export default function Hero({ image, productTitle, productHref, fromPrice, sofa
             Bleeding it to both edges gains 32px and, more importantly, makes it
             the full width of the screen — which is what a hero product shot has
             to be. The section clips, so nothing overflows the page. */}
-        <div className="relative -mx-4 min-h-[170px] flex-1 sm:mx-0 lg:min-h-0 lg:aspect-[5/4]">
+        {/* THE BOX IS THE SHAPE OF THE SOFA, not whatever is left over.
+            It used to be `flex-1`, so it took every pixel the copy did not and
+            the cut-out — bottom-aligned inside it — left the difference as a
+            band of empty stage between the buttons and the sofa. 272px of box
+            holding 213px of sofa is 59px of nothing, and no amount of tightening
+            the copy above closes it, because the gap grows by exactly as much as
+            the copy gives up.
+            Sized to the TRIMMED asset's ratio instead (1254×714 after e_trim —
+            see utils/cloudinary), so there is no slack to leave. The sofa now
+            starts where "Shop by collection" ends, and the spotlight, the
+            contact shadow and the price chip all ride up with it because every
+            one of them is positioned against this box. Any leftover height falls
+            to the bottom of the column, under the sofa, where the floating
+            WhatsApp button already lives.
+            Replacing HOME_ART.heroSofa with a differently-shaped photograph
+            means changing this ratio to match it. */}
+        <div className="relative -mx-4 aspect-[1254/714] sm:-mx-6 lg:mx-0 lg:aspect-[5/4]">
           <Parallax speed={0.1} className="absolute inset-0">
             {/* The pool of light it stands in. Wider than the sofa and centred
                 low, so the brightest part of it is under the seat rather than
@@ -245,7 +272,7 @@ export default function Hero({ image, productTitle, productHref, fromPrice, sofa
             {cutout ? (
               <div className="float-slow absolute inset-0">
                 <Image
-                  src={cutout}
+                  src={trimmed(cutout)}
                   alt={productTitle ? `${productTitle} sofa` : 'Sofa'}
                   fill
                   priority
@@ -282,7 +309,7 @@ export default function Hero({ image, productTitle, productHref, fromPrice, sofa
             {/* The contact shadow, inside the pool. */}
             <span
               aria-hidden="true"
-              className="contact-shadow bottom-[3%] left-1/2 h-[9%] w-[74%] -translate-x-1/2"
+              className="contact-shadow contact-breathe bottom-[3%] left-1/2 h-[9%] w-[74%] -translate-x-1/2"
             />
 
             {/* What it costs, pinned to the object rather than buried in a
@@ -299,17 +326,32 @@ export default function Hero({ image, productTitle, productHref, fromPrice, sofa
             {typeof fromPrice === 'number' && productHref && (
               <Link
                 href={productHref}
-                aria-label={
-                  productTitle
-                    ? `${productTitle}, from ${money(fromPrice)}`
-                    : `From ${money(fromPrice)}`
-                }
-                className="glass-dark-panel hover-btn hover-btn-dark absolute right-4 top-0 flex items-center gap-2.5 rounded-pill py-2.5 pl-4 pr-3 no-underline sm:right-0 lg:bottom-[10%] lg:top-auto"
+                aria-label={[
+                  productTitle ?? 'This sofa',
+                  reduced ? `now ${money(fromPrice)}, was ${money(wasPrice!)}` : `from ${money(fromPrice)}`,
+                ].join(', ')}
+                /* Left of the sofa, level with the footstool, so the arrow
+                   runs into the product rather than away from it.
+                   It was top right, which was the right answer when the sofa
+                   was small and bottom-aligned: the top of the stage was the
+                   empty half, and the floating WhatsApp button owns the bottom
+                   right of a phone screen. Now that the cut-out fills the
+                   stage there is no empty half, so the chip sits ON the
+                   photograph, and the left is the side WhatsApp does not take. */
+                className="glass-dark-panel hover-btn hover-btn-dark absolute bottom-[26%] left-4 z-raised flex items-center gap-2.5 rounded-pill py-2.5 pl-4 pr-3 no-underline sm:left-6 lg:bottom-[22%] lg:left-0"
               >
-                <span className="eyebrow text-calico-300">From</span>
+                {/* "From" is a range; a sofa with a was price is one figure
+                    reduced to another, and saying both at once would be two
+                    different claims in one chip. */}
+                <span className="eyebrow text-calico-300">{reduced ? 'Now' : 'From'}</span>
                 <span className="font-data text-body font-semibold tabular-nums text-calico-50">
                   {money(fromPrice)}
                 </span>
+                {reduced && (
+                  <s className="font-data text-caption tabular-nums text-calico-300">
+                    {money(wasPrice!)}
+                  </s>
+                )}
                 <ArrowRight aria-hidden="true" className="h-4 w-4 text-ember-300" />
               </Link>
             )}

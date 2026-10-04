@@ -6,6 +6,7 @@ import { priceAnchors, summariseCollections } from '@/utils/collections';
 import { getFabricLibrary } from '@/utils/fabrics';
 import { getBuildTeaser } from '@/utils/buildTeaser';
 import HomeClient from '@/components/Home/HomeClient';
+import { HERO_PRODUCT_SLUG } from '@/constants/homeArt';
 import { organizationSchema, webSiteSchema, jsonLd } from '@/utils/schema';
 
 // The title deliberately repeats the layout default rather than using the
@@ -41,6 +42,7 @@ const getHomeData = unstable_cache(
       { data: groupsData },
       { count: sofaCount },
       { data: reviewRows },
+      heroProduct,
       fabricLibrary,
     ] = await Promise.all([
       // Categories
@@ -98,6 +100,22 @@ const getHomeData = unstable_cache(
         .order('created_at', { ascending: false })
         .limit(12),
 
+      // The sofa the hero photograph is of, pinned by slug so an upload cannot
+      // move it — see HERO_PRODUCT_SLUG. Same shape as the featured read above,
+      // because the hero reads the same fields off it. Resolves to null when
+      // the pin is unset or names something inactive, and the hero then falls
+      // back to the first featured product exactly as it used to.
+      HERO_PRODUCT_SLUG
+        ? supabase
+            .from('products')
+            .select('id, title, slug, base_price, was_price, gallery_images, average_rating, review_count, product_variants(id, image_url, color, color_hex, price_adjustment, priority), categories!products_category_id_fkey(slug, name), product_categories(categories(slug, name))')
+            .eq('slug', HERO_PRODUCT_SLUG)
+            .eq('is_active', true)
+            .order('priority', { referencedTable: 'product_variants', ascending: true })
+            .maybeSingle()
+            .then(r => r.data)
+        : Promise.resolve(null),
+
       // The fabric library, for the "build your own" board's count.
       getFabricLibrary(supabase),
     ]);
@@ -108,7 +126,7 @@ const getHomeData = unstable_cache(
     // needs the library.
     const buildTeaser = await getBuildTeaser(fabricLibrary, supabase);
 
-    return { categories, categoryStats, featuredProducts, groupsData, sofaCount, reviewRows, buildTeaser };
+    return { categories, categoryStats, featuredProducts, groupsData, sofaCount, reviewRows, heroProduct, buildTeaser };
   },
   ['uksofashop-home-data-v1'],
   { revalidate: 300, tags: ['home'] },
@@ -116,7 +134,7 @@ const getHomeData = unstable_cache(
 
 export default async function HomePage() {
   const {
-    categories, categoryStats, featuredProducts, groupsData, sofaCount, reviewRows, buildTeaser,
+    categories, categoryStats, featuredProducts, groupsData, sofaCount, reviewRows, heroProduct, buildTeaser,
   } = await getHomeData();
 
   // "from £149" under Fabric Sofas was the Sims footstool. The tile says
@@ -148,7 +166,9 @@ export default async function HomePage() {
     productCount: stats.get(cat.id)?.count ?? 0,
   })) ?? [];
 
-  const productsData = (featuredProducts ?? []).map(product => ({
+  // The card's variant shape: image_url is undefined rather than null, because
+  // that is what <Image src> will accept.
+  const toCardShape = <T extends { product_variants?: { id: string; image_url: string | null; color: string | null; color_hex: string | null }[] | null }>(product: T) => ({
     ...product,
     product_variants: (product.product_variants ?? []).map(variant => ({
       id: variant.id,
@@ -156,7 +176,9 @@ export default async function HomePage() {
       color: variant.color,
       color_hex: variant.color_hex,
     })),
-  }));
+  });
+
+  const productsData = (featuredProducts ?? []).map(toCardShape);
 
   const collectionsData = summariseCollections(groupsData);
 
@@ -179,6 +201,9 @@ export default async function HomePage() {
       <HomeClient
         categories={categoriesData}
         products={productsData}
+        // The pinned sofa the hero is a photograph of. Null falls the hero
+        // back to the first featured product — see HERO_PRODUCT_SLUG.
+        heroProduct={heroProduct ? toCardShape(heroProduct) : null}
         collections={collectionsData}
         sofaCount={sofaCount ?? 0}
         reviews={reviews}

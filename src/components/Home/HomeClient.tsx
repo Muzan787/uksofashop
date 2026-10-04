@@ -31,6 +31,12 @@ interface Product {
 interface Props {
   categories: CategoryTile[];
   products: Product[];
+  /**
+   * The sofa the hero photograph is of, pinned by slug so uploading a new
+   * product cannot silently re-point the hero's link and price at it. Null
+   * falls back to the first of `products` — see HERO_PRODUCT_SLUG.
+   */
+  heroProduct?: Product | null;
   collections: HomeCollection[];
   sofaCount: number;
   reviews: HomeReview[];
@@ -129,10 +135,15 @@ function toCard(product: Product) {
 }
 
 // ─── Main export ──────────────────────────────────────────────────────────────
-export default function HomeClient({ categories, products, collections, sofaCount, reviews, buildTeaser }: Props) {
-  const lead = products[0] ?? null;
-  // Same product as the first card in the rail below, so the same URL — see
-  // the note in toCard.
+export default function HomeClient({ categories, products, heroProduct, collections, sofaCount, reviews, buildTeaser }: Props) {
+  // The pinned sofa where there is one, and otherwise the first card in the
+  // rail below. It used to be only the latter, which made the hero's link and
+  // price follow whatever was uploaded last while the photograph above them
+  // stayed put — see HERO_PRODUCT_SLUG.
+  const lead = heroProduct ?? products[0] ?? null;
+  const leadPrice = lead ? sale(lead.base_price, lead.was_price) : null;
+  // Built the same way the rail builds its hrefs, so the hero and a card for
+  // the same sofa can never name different URLs — see the note in toCard.
   const leadHref = lead ? canonicalProductPath(lead) : null;
 
   return (
@@ -141,7 +152,10 @@ export default function HomeClient({ categories, products, collections, sofaCoun
         image={lead?.product_variants?.[0]?.image_url ?? null}
         productTitle={lead?.title ?? null}
         productHref={leadHref}
-        fromPrice={lead?.base_price ?? null}
+        // The lead product is the first card in the rail below — featured
+        // first, then newest — so the chip prices the sofa in the photograph.
+        fromPrice={leadPrice?.price ?? null}
+        wasPrice={leadPrice?.wasPrice ?? null}
         sofaCount={sofaCount}
       />
 

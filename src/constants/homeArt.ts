@@ -25,6 +25,24 @@
 //   · Photographic. Real fabric with real weave, real dust in the light.
 //     Nothing that looks like a 3D render or an illustration.
 
+/**
+ * THE SOFA THE HERO PHOTOGRAPH IS OF.
+ *
+ * The hero used to price whatever came first out of the homepage query —
+ * featured, then newest — which meant the chip under the cut-out followed the
+ * catalogue around. Upload a sofa and the hero quietly started advertising it,
+ * while the photograph above it went on showing something else entirely.
+ *
+ * Pinning it here keeps the picture and the price the same sofa. It sits
+ * beside heroSofa deliberately: the two are one decision, and changing the
+ * photograph without changing this is the bug it exists to prevent.
+ *
+ * Set it to null to go back to "whatever is featured and newest". A slug that
+ * does not match an active product falls back to the same thing rather than
+ * leaving the hero without a price — see src/app/page.tsx.
+ */
+export const HERO_PRODUCT_SLUG: string | null = 'verona-scattered-back-family-set';
+
 /** A slot is either a Cloudinary URL or null. Never an empty string. */
 type ArtSlot = string | null;
 
@@ -36,7 +54,7 @@ export interface HomeArt {
 }
 
 // export interface HomeArt {
-//   heroSofa: "https://res.cloudinary.com/dmlna04yk/image/upload/v1787871185/heroSofa_oyigb4.png";
+//   heroSofa: "https://res.cloudinary.com/dmlna04yk/image/upload/v1787871185/heroSofa_ocp0s5.png";
 //   heroRoom: "https://res.cloudinary.com/dmlna04yk/image/upload/v1787871184/heroRoom_lr9z1y.png";
 //   statsTexture: "https://res.cloudinary.com/dmlna04yk/image/upload/v1787871194/statsTexture_mc6hcz.png";
 //   closingRoom: "https://res.cloudinary.com/dmlna04yk/image/upload/v1787871184/closingRoom_jmajgr.png";
@@ -67,7 +85,7 @@ export const HOME_ART: HomeArt = {
   // shadow baked into the image, no reflection, no props, no plants, no
   // people, no watermark, no text. Clean alpha edge around the legs.
   // ───────────────────────────────────────────────────────────────────────
-  heroSofa: "https://res.cloudinary.com/dmlna04yk/image/upload/v1787871185/heroSofa_oyigb4.png",
+  heroSofa: "https://res.cloudinary.com/dmlna04yk/image/upload/v1787871185/heroSofa_ocp0s5.png",
 
   // ═══════════════════════════════════════════════════════════════════════
   //  2. THE HERO ROOM  —  depth behind the aurora

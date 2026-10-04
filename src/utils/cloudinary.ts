@@ -52,6 +52,26 @@ export function darkened(url: string, brightness = -34, contrast = 12): string {
   return url.replace('/upload/', `/upload/e_brightness:${brightness},e_contrast:${contrast}/`);
 }
 
+/**
+ * Crops the empty space off a cut-out.
+ *
+ * A PNG cut out on a transparent ground is almost never tight to its subject.
+ * The hero sofa is a case in point: the file is 1254×1254, and 540px of that —
+ * 43% of the image — is transparent padding above and below a sofa that is
+ * actually 1254×714. `object-contain` cannot know that, so it fits the SQUARE
+ * to the box and the sofa renders at the box's height while 91px of width sits
+ * unused on either side. On a phone that is the difference between a sofa 284px
+ * wide and one that fills the screen.
+ *
+ * e_trim removes the uniform border at the source, so what arrives is the
+ * subject and nothing else. It changes the delivered aspect ratio, which is the
+ * whole point — size the box for the trimmed shape, not the file.
+ */
+export function trimmed(url: string): string {
+  if (!transformable(url)) return url;
+  return url.replace('/upload/', '/upload/e_trim/');
+}
+
 // ─── Video ───────────────────────────────────────────────────────────────────
 //
 // A clip uploaded from the admin panel arrives as a Cloudinary VIDEO resource,
