@@ -1,5 +1,6 @@
 // src/app/collection/page.tsx
 import { Metadata } from 'next';
+import { pageMetadata } from '@/utils/pageMetadata';
 import { createClient } from '@/utils/supabase/server'
 import { summariseMainCollections } from '@/utils/mainCollections';
 import MainCollectionCard from '@/components/Collection/MainCollectionCard';
@@ -8,12 +9,12 @@ import CollectionEmpty from '@/components/Collection/CollectionEmpty';
 import { Reveal } from '@/components/Motion';
 import { staggerDelay } from '@/components/Motion/tokens';
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: 'Collections',
   description:
     'Imported recliners, made-to-order sofas, and what is coming next. Browse every part of the UK Sofa Shop range, with free UK Mainland delivery.',
-  alternates: { canonical: '/collection' },
-};
+  path: '/collection',
+});
 
 /** "2 open now · 3 on the way", and the honest shorter versions of it. */
 function summarise(live: number, soon: number): string {

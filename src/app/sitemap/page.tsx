@@ -1,5 +1,6 @@
 // src/app/sitemap/page.tsx
 import { Metadata } from 'next';
+import { pageMetadata } from '@/utils/pageMetadata';
 import Link from 'next/link';
 import { Map, ChevronRight } from 'lucide-react';
 import { createClient } from '@/utils/supabase/server';
@@ -8,10 +9,14 @@ import { canonicalProductPath } from '@/utils/productUrl';
 const ACCENT = 'var(--color-ember-500)';      // fills: buttons, rules, icons, badges
 const ACCENT_TEXT = 'var(--color-ember-700)'; // letterforms on a light ground
 
-export const metadata: Metadata = {
+// This page is indexable and had no canonical at all, so /sitemap was the one
+// indexable route on the site with nothing declaring its own address - and it
+// was missing from sitemap.ts as well. Both are fixed; it is in STATIC_PATHS now.
+export const metadata: Metadata = pageMetadata({
   title: 'Sitemap',
-  description: 'Navigate the complete directory of UK Sofa Shop, including all sofa collections, guides, and store policies.',
-};
+  description: 'Every page on UK Sofa Shop in one list: all sofa categories and products, the buying guides, and the store policies.',
+  path: '/sitemap',
+});
 
 export default async function HTMLSitemapPage() {
   const supabase = await createClient();

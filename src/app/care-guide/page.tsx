@@ -1,5 +1,6 @@
 // src/app/care-guide/page.tsx
 import type { Metadata } from 'next'
+import { pageMetadata } from '@/utils/pageMetadata'
 import Link from 'next/link'
 import { Phone } from 'lucide-react'
 import EditorialHero from '@/components/Editorial/EditorialHero'
@@ -16,11 +17,11 @@ import PhoneLink from '@/components/UI/PhoneLink'
 const DESCRIPTION =
   'How to keep a fabric or leather sofa looking right: weekly upkeep, what to do about a spill in the first thirty seconds, and the products that will ruin it.'
 
-export const metadata: Metadata = {
-  alternates: { canonical: '/care-guide' },
+export const metadata: Metadata = pageMetadata({
   title: 'Sofa Care & Cleaning Guide',
   description: DESCRIPTION,
-}
+  path: '/care-guide',
+})
 
 const TOC = [
   { id: 'basics', label: 'The three basics' },

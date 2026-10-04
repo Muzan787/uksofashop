@@ -1,16 +1,17 @@
 // src/app/privacy/page.tsx
 import type { Metadata } from 'next'
+import { pageMetadata } from '@/utils/pageMetadata'
 import Link from 'next/link'
 import EditorialHero from '@/components/Editorial/EditorialHero'
 import EditorialLayout, { LastUpdated } from '@/components/Editorial/EditorialLayout'
 import { SUPPORT_EMAIL } from '@/constants/contact'
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: 'Privacy Policy',
   description:
     'What personal data UK Sofa Shop collects, why we hold it, how long we keep it, and how to ask us to delete it.',
-  alternates: { canonical: '/privacy' },
-}
+  path: '/privacy',
+})
 
 const LAST_UPDATED = '2026-09-16'
 

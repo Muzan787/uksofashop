@@ -5,6 +5,7 @@
 // structured data. A client component can render a <script> tag, but the schema
 // belongs with the metadata rather than in the middle of a form's state.
 import type { Metadata } from 'next'
+import { pageMetadata } from '@/utils/pageMetadata'
 import EditorialSchema from '@/components/Editorial/EditorialSchema'
 
 /**
@@ -14,11 +15,11 @@ import EditorialSchema from '@/components/Editorial/EditorialSchema'
 const DESCRIPTION =
   'Call 07476 616022 or email us about a sofa, a delivery, or whether something will fit. Mon–Fri 9am–6pm, Sat 10am–4pm, based in Blackburn.'
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: 'Contact Us',
   description: DESCRIPTION,
-  alternates: { canonical: '/contact' },
-}
+  path: '/contact',
+})
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (

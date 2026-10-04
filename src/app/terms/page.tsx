@@ -1,15 +1,16 @@
 // src/app/terms/page.tsx
 import type { Metadata } from 'next'
+import { pageMetadata } from '@/utils/pageMetadata'
 import Link from 'next/link'
 import EditorialHero from '@/components/Editorial/EditorialHero'
 import EditorialLayout, { LastUpdated } from '@/components/Editorial/EditorialLayout'
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: 'Terms & Conditions',
   description:
     'Our terms of sale: pricing, payment on delivery, delivery to UK Mainland, and your 14-day right to cancel.',
-  alternates: { canonical: '/terms' },
-}
+  path: '/terms',
+})
 
 /**
  * Set by hand, on purpose.

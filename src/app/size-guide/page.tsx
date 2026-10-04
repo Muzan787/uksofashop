@@ -1,5 +1,6 @@
 // src/app/size-guide/page.tsx
 import type { Metadata } from 'next'
+import { pageMetadata } from '@/utils/pageMetadata'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import EditorialHero from '@/components/Editorial/EditorialHero'
@@ -17,11 +18,11 @@ import { canonicalProductPath } from '@/utils/productUrl'
 const DESCRIPTION =
   'Work out whether a sofa will fit through your door before you order. A doorway calculator, how to measure, and a free fit check from our delivery team.'
 
-export const metadata: Metadata = {
-  alternates: { canonical: '/size-guide' },
+export const metadata: Metadata = pageMetadata({
   title: 'Sofa Size & Measurement Guide',
   description: DESCRIPTION,
-}
+  path: '/size-guide',
+})
 
 const TOC = [
   { id: 'calculator', label: 'Doorway calculator' },
