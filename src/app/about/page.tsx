@@ -6,6 +6,7 @@ import { Banknote, MapPin, Shield, Truck } from 'lucide-react'
 import EditorialHero from '@/components/Editorial/EditorialHero'
 import EditorialSchema from '@/components/Editorial/EditorialSchema'
 import EditorialLayout, { PullQuote } from '@/components/Editorial/EditorialLayout'
+import { ADDRESS } from '@/constants/contact'
 import { blurDataURL } from '@/utils/cloudinary'
 import { getWarehouseVideos } from '@/utils/videos'
 import VideoStrip from '@/components/UI/VideoStrip'
@@ -46,7 +47,7 @@ const PROMISES = [
   {
     icon: MapPin,
     title: 'A real address',
-    body: 'Unit 02, Waverledge Street, Blackburn. You can come and sit on one before you decide.',
+    body: `${ADDRESS.street}, ${ADDRESS.locality}. You can come and sit on one before you decide.`,
   },
 ]
 

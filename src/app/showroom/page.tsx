@@ -7,7 +7,7 @@ import EditorialHero from '@/components/Editorial/EditorialHero'
 import EditorialSchema from '@/components/Editorial/EditorialSchema'
 import EditorialLayout, { Note, PullQuote } from '@/components/Editorial/EditorialLayout'
 import { blurDataURL } from '@/utils/cloudinary'
-import { PHONE_DISPLAY, PHONE_HREF, SUPPORT_EMAIL } from '@/constants/contact'
+import { ADDRESS, ADDRESS_LINE, PHONE_DISPLAY, PHONE_HREF, SUPPORT_EMAIL } from '@/constants/contact'
 import WhatsAppLink from '@/components/UI/WhatsAppLink'
 import PhoneLink from '@/components/UI/PhoneLink'
 import VideoStrip from '@/components/UI/VideoStrip'
@@ -19,7 +19,7 @@ import { getWarehouseVideos } from '@/utils/videos'
  * page is the sort of drift nobody notices and nothing benefits from.
  */
 const DESCRIPTION =
-  'See our sofas in person at our Blackburn showroom, Unit 02 Waverledge Street, BB6 7LS. Visits are by appointment — call, WhatsApp or email to book a time.'
+  `See our sofas in person at our ${ADDRESS.locality} showroom, ${ADDRESS.street}, ${ADDRESS.postcode}. Visits are by appointment — call, WhatsApp or email to book a time.`
 
 export const metadata: Metadata = {
   alternates: { canonical: '/showroom' },
@@ -27,15 +27,13 @@ export const metadata: Metadata = {
   description: DESCRIPTION,
 }
 
-/** The address, in one place, so the map link and the schema cannot disagree. */
-const ADDRESS = {
-  line1: 'Unit 02, Waverledge Street',
-  town: 'Blackburn',
-  postcode: 'BB6 7LS',
-}
-const ADDRESS_QUERY = encodeURIComponent(
-  `${ADDRESS.line1}, ${ADDRESS.town}, ${ADDRESS.postcode}`,
-)
+/* The address is NOT redeclared here.
+   It was — a local { line1, town, postcode } under a comment claiming it was
+   "in one place, so the map link and the schema cannot disagree". It was a
+   SECOND one place: constants/contact.ts already held the same street, so
+   changing the unit number meant knowing to find both. The map links, the
+   schema and the printed lines all read the shared one now. */
+const ADDRESS_QUERY = encodeURIComponent(ADDRESS_LINE)
 
 /** Centred on the postcode. The bbox is roughly 700m across. */
 const OSM_EMBED =
@@ -119,9 +117,9 @@ export default async function ShowroomPage() {
                 </p>
                 <address className="mt-4 not-italic">
                   <span className="block font-display text-h3 font-semibold leading-snug text-ink-900">
-                    {ADDRESS.line1}
+                    {ADDRESS.street}
                   </span>
-                  <span className="mt-1 block text-body text-ink-700">{ADDRESS.town}</span>
+                  <span className="mt-1 block text-body text-ink-700">{ADDRESS.locality}</span>
                   <span className="mt-1 block font-data text-body font-bold tracking-[0.08em] text-ink-900">
                     {ADDRESS.postcode}
                   </span>
@@ -189,7 +187,7 @@ export default async function ShowroomPage() {
                     has answered the consent banner. */}
                 <iframe
                   src={OSM_EMBED}
-                  title={`Map showing ${ADDRESS.line1}, ${ADDRESS.town} ${ADDRESS.postcode}`}
+                  title={`Map showing ${ADDRESS_LINE}`}
                   loading="lazy"
                   referrerPolicy="no-referrer-when-downgrade"
                   className="block h-[320px] w-full border-0 sm:h-[380px]"

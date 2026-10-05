@@ -6,7 +6,7 @@ import { submitContactForm } from '@/app/actions/contact'
 import Field, { SubmitButton } from '@/components/UI/Field'
 import Link from 'next/link'
 
-import { PHONE_HREF, PHONE_DISPLAY, SUPPORT_EMAIL } from '@/constants/contact'
+import { ADDRESS_LINE, PHONE_HREF, PHONE_DISPLAY, SUPPORT_EMAIL } from '@/constants/contact'
 import { useWhatsAppCTA } from '@/utils/attribution/useWhatsAppCTA'
 import { usePhoneClick } from '@/utils/attribution/usePhoneClick'
 const ACCENT = 'var(--color-ember-500)'      // fills: buttons, rules, icons, badges
@@ -15,7 +15,7 @@ const ACCENT_TEXT = 'var(--color-ember-700)' // letterforms on a light ground
 const CONTACT_INFO = [
   { icon: Phone,  label: 'Phone',    value: PHONE_DISPLAY,              sub: 'Mon–Fri 9am–6pm, Sat 10am–4pm', href: PHONE_HREF },
   { icon: Mail,   label: 'Email',    value: SUPPORT_EMAIL,                    sub: 'We reply within 24 hours',       href: `mailto:${SUPPORT_EMAIL}` },
-  { icon: MapPin, label: 'Showroom', value: 'Unit 02, Waverledge Street, Blackburn, BB6 7LS',     sub: 'Visit us by appointment',        href: null },
+  { icon: MapPin, label: 'Showroom', value: ADDRESS_LINE,                     sub: 'Visit us by appointment',        href: null },
   { icon: Clock,  label: 'Hours',    value: 'Mon–Fri 9am–6pm',            sub: 'Saturday 10am–4pm',              href: null },
 ]
 

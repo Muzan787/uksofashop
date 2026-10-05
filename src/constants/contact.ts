@@ -57,7 +57,7 @@ export const ORDERS_EMAIL = 'orders@uksofashop.co.uk'
 export const OWNER_GMAIL = 'uksofashop.co.uk@gmail.com'
 
 export const ADDRESS = {
-  street: 'Unit 02, Waverledge Street',
+  street: 'Unit 04, Waverledge Street',
   locality: 'Blackburn',
   postcode: 'BB6 7LS',
   country: 'GB',
