@@ -19,6 +19,7 @@
 // /signup, /track-order, /careers and /journal's noindexed neighbours - the
 // same set the sitemap leaves out, for the same reason.
 
+import { ADDRESS } from '@/constants/contact'
 import { SITE_URL } from '@/constants/site'
 import { MAX_SAMPLES, SAMPLE_FEE } from '@/constants/swatches'
 import { ARTICLES_BY_DATE } from '@/app/journal/articles'
@@ -68,7 +69,7 @@ ${ARTICLES_BY_DATE.map(a => `- [${a.title}](${url(`/journal/${a.slug}`)}): ${a.d
 ## About
 
 - [About UK Sofa Shop](${url('/about')})
-- [Blackburn showroom](${url('/showroom')}): Unit 02, Waverledge Street, Blackburn BB6 7LS. By appointment.
+- [Blackburn showroom](${url('/showroom')}): ${ADDRESS.street}, ${ADDRESS.locality} ${ADDRESS.postcode}. By appointment.
 - [Contact](${url('/contact')}): 07476 616022, Mon-Fri 9am-6pm, Sat 10am-4pm.
 - [Customer reviews](${url('/reviews')})
 
