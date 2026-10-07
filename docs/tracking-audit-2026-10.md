@@ -248,19 +248,39 @@ design.**
 This is not a bug to fix, it is a number to know. Do not treat GA4 Monetisation
 as your revenue report. The `orders` table is the truth.
 
-### 4. `TRACKING_ENV` is still unset on Hostinger
+### 4. `TRACKING_ENV` is one variable with a very wide blast radius
 
-The entire server pipeline is gated on:
+**Correction to an earlier draft of this document, which said this was unset.**
+It is set. The Hostinger panel carries `TRACKING_ENV` and no longer carries
+`VERCEL_ENV`, and GTM is live on the site — which can only happen when the
+build saw `production`. Nothing to do here; this is now a warning, not a task.
+
+The reason it matters is that **three separate systems hang off this one
+string**, and two of them are not obvious:
 
 ```ts
+// trackingEnv.ts — runtime: Meta CAPI, GA4 Measurement Protocol, offline staging
 (process.env.TRACKING_ENV ?? process.env.VERCEL_ENV) === 'production'
+
+// next.config.ts — BUILD time: decides the entire browser Google setup
+const trackingEnv = process.env.TRACKING_ENV ?? process.env.VERCEL_ENV
+...googleTrackingProduction ? { env: { NEXT_PUBLIC_GOOGLE_TRACKING_MODE: 'gtm-v1' } } : {}
 ```
 
-The evidence above proves the fallback is currently carrying it. But it is named
-after a host you left on 29 September. **One rebuild without `VERCEL_ENV` and
-every Meta CAPI send, every GA4 purchase and every staged conversion stops
-silently — no error anywhere.** Setting `TRACKING_ENV=production` in the
-Hostinger panel takes a minute.
+So if that value is ever anything but exactly `production` — a typo, a capital
+letter, a trailing space, or the variable being dropped — then on the next
+build, all at once and with no error anywhere:
+
+- GTM stops loading. The site falls back to plain gtag, and **every `ukss.*`
+  ecommerce event stops being pushed at all** (`GOOGLE_DATALAYER_ENABLED` goes
+  false), so GA4 drops to page views only.
+- Meta CAPI stops sending.
+- GA4 Measurement Protocol stops sending.
+- `google_offline_conversions` stops being staged.
+
+`NEXT_PUBLIC_GOOGLE_TRACKING_MODE` is **derived** from it and must never be set
+by hand in the panel — doing so would not override `next.config.ts`, and would
+read as a second, disagreeing source of truth.
 
 ---
 
@@ -360,7 +380,7 @@ That is the sharpest drop in the funnel and the one worth investigating next —
 | # | Action | Why |
 |---|---|---|
 | 1 | Check the GTM container for `ukss.*` tags (§6) | Decides whether GA4 has any ecommerce data at all |
-| 2 | Set `TRACKING_ENV=production` on Hostinger | Removes a silent single point of failure |
+| 2 | Confirm `TRACKING_ENV` is exactly `production` | It is set; a typo in it silently disables all four systems in §5.4 |
 | 3 | Persist Meta CAPI responses to a table | You currently cannot tell if Meta is accepting anything |
 | 4 | Compare Meta Events Manager Purchase count against 38 | One-off check while #3 is built |
 | 5 | Investigate the place-order → order drop (66 → 17) | Larger than any tracking gain |
