@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 }
 
 /** Set by hand. See the note in src/app/terms/page.tsx. */
-const LAST_UPDATED = '2026-08-27'
+const LAST_UPDATED = '2026-10-05'
 
 interface Entry {
   name: string
@@ -45,6 +45,52 @@ const essential: Entry[] = [
   },
 ]
 
+/**
+ * First-party ids this site sets itself, on arrival.
+ *
+ * These were missing from this page entirely, which was the real problem:
+ * five cookies set on every visit and named nowhere. They are listed in their
+ * own group rather than folded into either of the other two, because neither
+ * description would have been true — they are not needed for the site to
+ * work, and they are not "only set if you accept".
+ *
+ * The two touch cookies are deleted when consent is withdrawn (see
+ * TRACKING_COOKIE_PREFIXES in src/utils/consent.ts). The three ids are not,
+ * and the table says so rather than leaving it to be discovered.
+ */
+const firstParty: Entry[] = [
+  {
+    name: 'uksofashop_vid',
+    type: 'Cookie (ours)',
+    purpose: 'A random id for this browser, so repeat visits can be counted as one person rather than several. It is not linked to your name unless you place an order.',
+    duration: 'Up to 400 days',
+  },
+  {
+    name: 'uksofashop_sid',
+    type: 'Cookie (ours)',
+    purpose: 'Groups the pages you look at in one sitting into a single visit. Resets after 30 minutes of inactivity.',
+    duration: '30 minutes',
+  },
+  {
+    name: 'uksofashop_aid',
+    type: 'Cookie (ours)',
+    purpose: 'Marks one arrival at the site, so a second visit from a different advert later the same day is counted separately.',
+    duration: '30 minutes',
+  },
+  {
+    name: 'uksofashop_ft',
+    type: 'Cookie (ours)',
+    purpose: 'Records how you first found us — the advert, search or link you arrived through. Lets us tell which adverts actually lead to orders. Deleted if you withdraw consent.',
+    duration: 'Up to 400 days',
+  },
+  {
+    name: 'uksofashop_lt',
+    type: 'Cookie (ours)',
+    purpose: 'The same, for the most recent way you reached us rather than the first. Deleted if you withdraw consent.',
+    duration: 'Up to 400 days',
+  },
+]
+
 /** Only ever set if you choose "Accept all". */
 const optional: Entry[] = [
   {
@@ -70,6 +116,7 @@ const optional: Entry[] = [
 const TOC = [
   { id: 'choice', label: 'Your choice' },
   { id: 'essential', label: 'Essential' },
+  { id: 'first-party', label: 'Our own measurement' },
   { id: 'optional', label: 'Analytics and ads' },
   { id: 'browser', label: 'Managing them yourself' },
 ]
@@ -146,6 +193,23 @@ export default function CookiesPage() {
         </p>
 
         <Table entries={essential} caption="Essential cookies and browser storage, which cannot be turned off" />
+
+        <h2 id="first-party">Our own measurement</h2>
+        <p>
+          These five are set by us rather than by anybody else, they stay on this site, and
+          nothing in them is shared with Google or Meta as a cookie. They are what let us tell
+          whether an advert we paid for led to an order, instead of guessing.
+        </p>
+        <p>
+          Being straight about these: they are set when you arrive, not after you answer the
+          question above. We have taken the view that an id that counts visits and remembers which
+          advert you came from is measurement of our own site rather than third-party tracking.
+          You can disagree — if you choose “Essential only”, the two that record how you found us
+          are deleted along with the Google and Meta ones, and you can clear the rest in your
+          browser at any time.
+        </p>
+
+        <Table entries={firstParty} caption="First-party cookies this site sets on arrival" />
 
         <h2 id="optional">Analytics and advertising — only if you say yes</h2>
         <p>

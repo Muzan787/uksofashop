@@ -1,5 +1,6 @@
 // src/constants/categorySeo.ts
 import { PROMISES } from '@/constants/promises'
+import { FABRIC_COLLECTION_COUNT, FABRIC_COLOUR_COUNT } from '@/constants/swatches'
 
 const DELIVERY_TIMING = PROMISES.delivery.timingLong
 //
@@ -64,7 +65,7 @@ export const CATEGORY_COPY: Record<string, CategoryCopy> = {
     body: [
       'A corner sofa earns its place by seating more people in the same floor area than two separate sofas would, and by giving a room a defined edge instead of a gap behind the furniture. It is the shape most people end up with in a rectangular living room, and the shape most likely to be measured wrong.',
       'The measurement that matters is not the room. It is the doorway, the hallway and the turn at the bottom of the stairs, because a corner unit arrives in pieces but each piece is still the length of one arm. Our [size guide](/size-guide) has a calculator that takes your doorway width and tells you what goes through it, and it is worth two minutes before you order rather than after.',
-      'Fabric corner sofas here are made to order, so the size can follow your room rather than the other way round, and the colour is yours to pick from the [70-fabric library](/fabrics) - chenille, plush velvet, crushed velvet, naple, marble and PVC leather. Leather corners are stocked in set sizes and go out sooner.',
+      `Fabric corner sofas here are made to order, so the size can follow your room rather than the other way round, and the colour is yours to pick from the [${FABRIC_COLOUR_COUNT}-fabric library](/fabrics) - chenille, plush velvet, crushed velvet, naple, marble and PVC leather. Leather corners are stocked in set sizes and go out sooner.`,
       `Every corner sofa is delivered free to a UK Mainland address, brought to the ground floor or a ground-floor room of your choice, and paid for in cash or by bank transfer on the doorstep. ${DELIVERY_TIMING} Nothing upfront. It carries a 1-year guarantee on the frame and springs.`,
     ],
   },
@@ -72,12 +73,12 @@ export const CATEGORY_COPY: Record<string, CategoryCopy> = {
   'fabric-sofa': {
     title: 'Fabric Sofas Made to Your Own Size',
     description:
-      `Fabric sofas made to order in your choice of 70 colours across chenille, velvet and more. Free UK Mainland delivery, paid on arrival. ${DELIVERY_TIMING}`,
+      `Fabric sofas made to order in your choice of ${FABRIC_COLOUR_COUNT} colours across chenille, velvet and more. Free UK Mainland delivery, paid on arrival. ${DELIVERY_TIMING}`,
     heading: 'About our fabric sofas',
     body: [
       'Our fabric sofas are made to order rather than pulled off a shelf, which means three things are yours to decide: the size, the shape and the cloth. If your alcove is 214cm and every sofa you have found is 220cm, that is a solvable problem here.',
-      'There are 70 colours across six fabrics, and they behave differently rather than just looking different. Chenille is the hard-wearing everyday choice with a soft, slightly nubby surface. Plush velvet has a deep even pile and reads as the expensive one. Crushed velvet catches the light and hides very little. Naple and marble carry their pattern in the weave itself. PVC leather wipes clean in seconds, which matters with small children. The [fabric library](/fabrics) explains each one properly and shows all 70 colours side by side.',
-      'Because a made-to-order sofa is built to your specification, it is the standard exemption from the 14-day right to change your mind under the Consumer Contracts Regulations - we cannot resell a sofa cut to your alcove. Faults are a separate matter entirely, and covered by the 1-year frame guarantee. The [delivery and returns page](/delivery-returns) sets out exactly where that line sits.',
+      `There are ${FABRIC_COLOUR_COUNT} colours across ${FABRIC_COLLECTION_COUNT} fabrics, and they behave differently rather than just looking different. Chenille is the hard-wearing everyday choice with a soft, slightly nubby surface. Plush velvet has a deep even pile and reads as the expensive one. Crushed velvet catches the light and hides very little. Naple and marble carry their pattern in the weave itself. PVC leather wipes clean in seconds, which matters with small children. The [fabric library](/fabrics) explains each one properly and shows all ${FABRIC_COLOUR_COUNT} colours side by side.`,
+      'Picking the cloth is part of ordering one of these, so the sofa is built to your specification and falls under the standard exemption from the 14-day right to change your mind - we cannot resell a sofa cut to your alcove in a colour you chose. The stocked ranges, sold in set sizes and finishes, carry the full 14 days. Faults are a separate matter entirely, and covered by the 1-year frame guarantee. The [delivery and returns page](/delivery-returns) sets out exactly where that line sits.',
       `Delivery is free to UK Mainland and you pay cash or by bank transfer when it arrives. ${DELIVERY_TIMING} Fabric needs a little care to stay looking new; the [care guide](/care-guide) covers the first thirty seconds of a spill, which is the part that decides the outcome.`,
     ],
   },
@@ -89,9 +90,9 @@ export const CATEGORY_COPY: Record<string, CategoryCopy> = {
     heading: 'Leather, and who it suits',
     body: [
       'Leather is the practical choice, which is not how it is usually sold. A spilled drink on leather is a cloth and ten seconds; on an untreated woven fabric it can be permanent. If you have young children, a dog, or a habit of eating on the sofa, this is the category to start in.',
-      'Worth being precise about what "leather" means here, because the trade often is not. Two ranges, two genuinely different materials. The Roma is real leather blended with fabric panels: a hide, so it takes marks where you sit and gets darker and softer there, and it wants conditioning every six to twelve months. The Nova is tech leather - a coated synthetic that is breathable, scratch-resistant and wipes clean, holds its colour indefinitely, and should never be conditioned. Neither is better than the other; they suit different houses, which [fabric or leather](/journal/fabric-or-leather) works through properly.',
+      'Worth being precise about what "leather" means here, because the trade often is not. The Roma is real leather blended with fabric panels: a hide, so it takes marks where you sit and gets darker and softer there, and it wants conditioning every six to twelve months. The Nova, Orlando and Oxford ranges are tech leather - a coated synthetic that is breathable, scratch-resistant and wipes clean, holds its colour indefinitely, and should never be conditioned. Neither is better than the other; they suit different houses, which [fabric or leather](/journal/fabric-or-leather) works through properly.',
       'What leather asks in return is that you keep it away from five things that will ruin it - direct radiator heat, sunlight, baby wipes, household cleaning spray, and anything containing alcohol. The [care guide](/care-guide) names them and says what to use instead.',
-      `Leather sofas here are stocked in set sizes rather than made to order, so they come with the full 14-day right to change your mind. Delivery is free across UK Mainland, cash or bank transfer on the doorstep. ${DELIVERY_TIMING} A 1-year guarantee covers the frame and springs. Check the doorway first with the [size guide](/size-guide): a leather three-seater does not give under pressure the way a fabric one does.`,
+      `Most of the leather here is stocked in set sizes, and comes with the full 14-day right to change your mind; the faux-leather Oakland is made to order, and the product page says so. Delivery is free across UK Mainland, cash or bank transfer on the doorstep. ${DELIVERY_TIMING} A 1-year guarantee covers the frame and springs. Check the doorway first with the [size guide](/size-guide): a leather three-seater does not give under pressure the way a fabric one does.`,
     ],
   },
 
@@ -130,7 +131,7 @@ export const CATEGORY_COPY: Record<string, CategoryCopy> = {
       'A 3+2 set is a three-seater and a two-seater bought together and upholstered to match. It seats five, and it is the arrangement most UK living rooms end up with, for a reason worth spelling out: two separate sofas can face each other, sit at right angles, or move to opposite walls, and they can be rearranged again next year. A [corner sofa](/shop/corner-sofa) commits you to one layout on the day it arrives.',
       'Two pieces are also easier to get into the house than one long L-shape, which is the single most common cause of a delivery that goes wrong. If your hallway has a tight turn or a narrow front door, a 3+2 is the safer shape - though it is still worth running both pieces through the calculator on the [size guide](/size-guide).',
       'What you give up is floor efficiency. Two arms sit in the middle of the room where a corner unit would have a continuous seat, so a 3+2 seats slightly fewer people in the same square metres and leaves less usable lounging length.',
-      `Fabric sets are made to order in your own size and any of the 70 colours in the [fabric library](/fabrics); leather sets are stocked in set sizes. Either way delivery is free to UK Mainland, both pieces are brought to a ground-floor room of your choice, and you pay cash or by bank transfer on the doorstep. ${DELIVERY_TIMING} A 1-year guarantee covers frame and springs on both pieces.`,
+      `Fabric sets are made to order in your own size and any of the ${FABRIC_COLOUR_COUNT} colours in the [fabric library](/fabrics); leather sets are stocked in set sizes. Either way delivery is free to UK Mainland, both pieces are brought to a ground-floor room of your choice, and you pay cash or by bank transfer on the doorstep. ${DELIVERY_TIMING} A 1-year guarantee covers frame and springs on both pieces.`,
     ],
   },
 
@@ -141,7 +142,7 @@ export const CATEGORY_COPY: Record<string, CategoryCopy> = {
     heading: 'Everything in one place',
     body: [
       'This is the whole catalogue, filterable by style, fabric, colour and price. If you already know the shape you want, the faster route is [corner sofas](/shop/corner-sofa), [3+2 sets](/shop/3-2-seater), [recliners](/shop/recliner), [electric recliners](/shop/electric-sofa), [fabric sofas](/shop/fabric-sofa) or [leather sofas](/shop/leather-sofa).',
-      'Two decisions do most of the work. The first is fabric or leather: fabric is warmer to sit on, comes in 70 colours and can be made to your own size, while leather wipes clean in seconds and copes better with children and pets. The [fabric library](/fabrics) covers the first properly.',
+      `Two decisions do most of the work. The first is fabric or leather: fabric is warmer to sit on, comes in ${FABRIC_COLOUR_COUNT} colours and can be made to your own size, while leather wipes clean in seconds and copes better with children and pets. The [fabric library](/fabrics) covers the first properly.`,
       'The second is whether it fits, and it is the one people skip. Almost every delivery that goes wrong goes wrong at the front door rather than in the room, and almost all of those were preventable with a tape measure. The [size guide](/size-guide) has a calculator for exactly this.',
       `However you get there: free delivery to any UK Mainland address, brought to the ground floor or a ground-floor room of your choice, and paid for in cash or by bank transfer when it arrives rather than upfront. ${DELIVERY_TIMING} A 1-year guarantee covers the frame and springs. You can also see everything in person at the Blackburn [showroom](/showroom), by appointment.`,
     ],

@@ -3,7 +3,9 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import EditorialHero from '@/components/Editorial/EditorialHero'
 import EditorialLayout, { LastUpdated } from '@/components/Editorial/EditorialLayout'
-import { SUPPORT_EMAIL } from '@/constants/contact'
+import {
+  ADDRESS_LINE, PHONE_DISPLAY, PHONE_HREF, SUPPORT_EMAIL, traderIdentityLine,
+} from '@/constants/contact'
 
 export const metadata: Metadata = {
   title: 'Privacy Policy',
@@ -26,6 +28,8 @@ const TOC = [
 ]
 
 export default function PrivacyPage() {
+  const traderIdentity = traderIdentityLine()
+
   return (
     <div className="min-h-screen bg-calico-50">
       <EditorialHero
@@ -38,10 +42,13 @@ export default function PrivacyPage() {
 
       <EditorialLayout toc={TOC}>
         <p>
-          UK Sofa Shop is the data controller for the information described here. We collect as
-          little as we can get away with, we do not sell any of it, and everything below is what
-          actually happens rather than what a template says.
+          UK Sofa Shop, {ADDRESS_LINE}, is the data controller for the information described here.
+          You can reach us at <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a> or on{' '}
+          <a href={PHONE_HREF}>{PHONE_DISPLAY}</a>. We collect as little as we can get away with,
+          we do not sell any of it, and everything below is what actually happens rather than what
+          a template says.
         </p>
+        {traderIdentity && <p className="fine">{traderIdentity}</p>}
 
         <h2 id="collect">1. What we collect</h2>
         <p>

@@ -39,7 +39,7 @@ export const PROMISES = {
     label: '14-Day Returns',
     sub: 'Change your mind',
     short: '14 days to change your mind',
-    long: 'You have 14 days from delivery to change your mind, under the Consumer Contracts Regulations. Made-to-measure sofas are the standard exemption, because we cannot resell a sofa built to your specification.',
+    long: 'You have 14 days from delivery to change your mind, under the Consumer Contracts Regulations. The exemption is for sofas personalised to your own choice of fabric, size or layout, because we cannot resell one built to your specification.',
   },
   custom: {
     label: 'Made to Order',
@@ -74,6 +74,31 @@ export const TRUST_POINTS = [
   PROMISES.customGlobal,
   PROMISES.guarantee,
 ] as const
+
+/**
+ * The cancellation notice, written once.
+ *
+ * Shown wherever a customer is about to commit to a personalised sofa, and
+ * nowhere else. The test for "personalised" lives in
+ * src/utils/cancellationRights.ts; this is only the wording.
+ *
+ * `warning` is the point-of-sale wording, used both at the checkout and on a
+ * made-to-order product page. Both describe an order that genuinely IS
+ * personalised: "Add to cart" on a made-to-order sofa opens the fabric
+ * picker and will not proceed without a choice — see handleAdd in
+ * ProductPageClient.tsx — so there is no way to buy one of these without
+ * specifying it, and the exemption really does attach to every one.
+ *
+ * `test` is for the legal pages, which have to say where the line falls
+ * across the whole catalogue. The stocked ranges keep the full 14 days.
+ */
+export const CANCELLATION = {
+  warning:
+    'Because this is built to the fabric you chose, it is made to your specification, and the 14-day right to change your mind does not apply — that is the standard exemption under the Consumer Contracts Regulations. Faulty or damaged items are covered exactly as normal.',
+  /** For the legal pages, where the test itself has to be stated. */
+  test:
+    'The exemption covers sofas personalised to your own choice — the fabric you pick from the library, a size or layout we change for you, or anything else built to your specification. Our stocked ranges, sold in set sizes and finishes, carry the full 14-day right.',
+} as const
 
 /** Shared meta description, used by the root layout and the manifest. */
 export const META_DESCRIPTION =

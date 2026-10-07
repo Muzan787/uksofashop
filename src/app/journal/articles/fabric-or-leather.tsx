@@ -30,6 +30,7 @@
 
 import Link from 'next/link'
 import { Note, PullQuote } from '@/components/Editorial/EditorialLayout'
+import { FABRIC_COLOUR_COUNT } from '@/constants/swatches'
 
 export default function FabricOrLeather() {
   return (
@@ -50,7 +51,7 @@ export default function FabricOrLeather() {
         Worth being precise, because the trade often is not.
       </p>
       <p>
-        <strong>Our fabric sofas</strong> are made to order in any of 70 colours across six
+        <strong>Our fabric sofas</strong> are made to order in any of {FABRIC_COLOUR_COUNT} colours across six
         materials — chenille, plush velvet, crushed velvet, naple, marble and PVC leather — all at
         the same price. The <Link href="/fabrics">fabric guide</Link> covers what each one does.
       </p>

@@ -34,6 +34,8 @@ function postalAddress() {
     '@type': 'PostalAddress',
     streetAddress: ADDRESS.street,
     addressLocality: ADDRESS.locality,
+    // The county. Local results weight it, and it was simply absent.
+    addressRegion: ADDRESS.region,
     postalCode: ADDRESS.postcode,
     addressCountry: ADDRESS.country,
   }
@@ -178,7 +180,7 @@ function returnPolicy(customMade: boolean) {
   }
 }
 
-export interface ProductSchemaInput {
+interface ProductSchemaInput {
   productId?: string
   title: string
   description?: string | null

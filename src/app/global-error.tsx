@@ -9,6 +9,12 @@
 //
 // Only fires when the root layout itself throws. error.tsx handles everything
 // below it and keeps the site's chrome.
+//
+// The one import is constants/contact, which is plain string literals with no
+// dependencies of its own - safe even here, and better than a second copy of
+// the phone number that can drift from the real one.
+
+import { PHONE_DISPLAY, PHONE_HREF } from '@/constants/contact'
 
 export default function GlobalError({
   error,
@@ -57,7 +63,7 @@ export default function GlobalError({
 
           <p style={{ fontSize: 'var(--text-body)', lineHeight: 1.65, color: 'var(--color-ink-500)', margin: '0 0 24px' }}>
             Sorry — the site failed to load. Please try again in a moment, or call
-            us on <a href="tel:+447476616022" style={{ color: 'var(--color-ember-700)', fontWeight: 600 }}>07476 616022</a> and
+            us on <a href={PHONE_HREF} style={{ color: 'var(--color-ember-700)', fontWeight: 600 }}>{PHONE_DISPLAY}</a> and
             we will help you directly.
           </p>
 

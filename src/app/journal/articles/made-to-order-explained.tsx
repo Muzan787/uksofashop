@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { Note, PullQuote } from '@/components/Editorial/EditorialLayout'
+import { FABRIC_COLOUR_COUNT } from '@/constants/swatches'
 
 export default function MadeToOrderExplained() {
   return (
@@ -46,9 +47,9 @@ export default function MadeToOrderExplained() {
         </p>
       </Note>
 
-      <h2 id="fabric">The 70 colours</h2>
+      <h2 id="fabric">The {FABRIC_COLOUR_COUNT} colours</h2>
       <p>
-        Every made-to-order sofa can be built in any fabric in the library: 70 colours across six
+        Every made-to-order sofa can be built in any fabric in the library: {FABRIC_COLOUR_COUNT} colours across six
         materials — chenille, plush velvet, crushed velvet, naple, marble and PVC leather.
       </p>
       <p>

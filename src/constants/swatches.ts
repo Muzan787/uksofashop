@@ -31,8 +31,25 @@
  */
 export const MAX_SAMPLES = 5;
 
+/**
+ * The size of the fabric library, as the storefront quotes it.
+ *
+ * Verified against the database: 70 active rows in `fabrics`, across six
+ * rows in `fabric_collections` (Plush Soft Velvet 17, Chenille 12, Crushed
+ * Velvet 12, Naple 11, Marble 9, PVC Leather 9).
+ *
+ * These are constants rather than a live count on purpose - the number
+ * appears in metadata, in llms.txt and in prose on six pages, and none of
+ * those can wait on a query. But it did appear as a bare "70" in fourteen
+ * places, so adding a colour meant fourteen edits and the first one anybody
+ * forgot would be a false claim. Change these two when the library changes,
+ * and check the figure above still matches.
+ */
+export const FABRIC_COLOUR_COUNT = 70;
+export const FABRIC_COLLECTION_COUNT = 6;
+
 /** Pounds, for the set - not per sample. */
-export const SAMPLE_FEE_GBP = 5;
+const SAMPLE_FEE_GBP = 5;
 
 /** How the fee is written wherever a customer reads it. */
 export const SAMPLE_FEE = `£${SAMPLE_FEE_GBP}`;

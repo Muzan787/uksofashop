@@ -21,7 +21,7 @@
 
 import { ADDRESS } from '@/constants/contact'
 import { SITE_URL } from '@/constants/site'
-import { MAX_SAMPLES, SAMPLE_FEE } from '@/constants/swatches'
+import { FABRIC_COLOUR_COUNT, MAX_SAMPLES, SAMPLE_FEE } from '@/constants/swatches'
 import { ARTICLES_BY_DATE } from '@/app/journal/articles'
 
 export const dynamic = 'force-static'
@@ -35,14 +35,14 @@ export function GET() {
 > and recliners across UK Mainland. Delivery is free; most UK Mainland orders arrive
 > in 2-4 working days, while some Wales and Scotland postcodes take 5-7. Payment
 > is cash or bank transfer on the doorstep rather than upfront. Fabric sofas
-> are made to order in the customer's own size and any of 70 colours; leather
+> are made to order in the customer's own size and any of ${FABRIC_COLOUR_COUNT} colours; leather
 > sofas are stocked in set sizes.
 
 ## Buying guides
 
 - [Sofa size and measurement guide](${url('/size-guide')}): whether a sofa fits through a door, hallway or stair turn. Includes a doorway calculator.
-- [Sofa fabric guide](${url('/fabrics')}): all 70 made-to-order colours across chenille, plush velvet, crushed velvet, naple, marble and PVC leather, and how each behaves. Up to ${MAX_SAMPLES} samples posted for ${SAMPLE_FEE}, refunded against a later order.
-- [Fabric samples](${url('/swatches')}): the same 70 colours as a filterable picker rather than a guide, for ordering up to ${MAX_SAMPLES} samples posted to the UK mainland. ${SAMPLE_FEE} for the set, settled on a phone call rather than on the site, and refunded against the order if they buy. No account.
+- [Sofa fabric guide](${url('/fabrics')}): all ${FABRIC_COLOUR_COUNT} made-to-order colours across chenille, plush velvet, crushed velvet, naple, marble and PVC leather, and how each behaves. Up to ${MAX_SAMPLES} samples posted for ${SAMPLE_FEE}, refunded against a later order.
+- [Fabric samples](${url('/swatches')}): the same ${FABRIC_COLOUR_COUNT} colours as a filterable picker rather than a guide, for ordering up to ${MAX_SAMPLES} samples posted to the UK mainland. ${SAMPLE_FEE} for the set, settled on a phone call rather than on the site, and refunded against the order if they buy. No account.
 - [Build your own sofa](${url('/build')}): a step-by-step builder for made-to-order sofas - seats, design, fabric, feet, contrast piping and custom requests - ending in a guide price. Every build is confirmed by phone with a final quotation before it is made. Recliners cannot be customised.
 - [Sofa care and cleaning guide](${url('/care-guide')}): weekly upkeep, what to do in the first thirty seconds of a spill, and separate routines for real leather and tech leather.
 ${ARTICLES_BY_DATE.map(a => `- [${a.title}](${url(`/journal/${a.slug}`)}): ${a.description}`).join('\n')}
@@ -59,7 +59,7 @@ ${ARTICLES_BY_DATE.map(a => `- [${a.title}](${url(`/journal/${a.slug}`)}): ${a.d
 
 - [All sofas](${url('/shop/all')})
 - [Corner sofas](${url('/shop/corner-sofa')})
-- [Fabric sofas](${url('/shop/fabric-sofa')}): made to order, own size, 70 colours.
+- [Fabric sofas](${url('/shop/fabric-sofa')}): made to order, own size, ${FABRIC_COLOUR_COUNT} colours.
 - [Leather sofas](${url('/shop/leather-sofa')}): Roma is real leather with fabric panels; Nova is tech leather, a coated synthetic. Stocked sizes.
 - [Recliner sofas](${url('/shop/recliner')})
 - [Electric recliner sofas](${url('/shop/electric-sofa')})

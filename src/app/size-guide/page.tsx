@@ -8,6 +8,7 @@ import EditorialLayout, { Note, PullQuote } from '@/components/Editorial/Editori
 import DoorwayCalculator, { type CalculatorProduct } from './DoorwayCalculator'
 import FitCheckForm from './FitCheckForm'
 import { canonicalProductPath } from '@/utils/productUrl'
+import { PHONE_DISPLAY, PHONE_HREF } from '@/constants/contact'
 
 /**
  * Said once, used twice: as the meta description, and as the description on
@@ -158,7 +159,7 @@ export default async function SizeGuidePage() {
         </div>
 
         <p className="fine">
-          Prefer to talk? Call <a href="tel:+447476616022">07476 616022</a>, Mon–Fri 9am–6pm and
+          Prefer to talk? Call <a href={PHONE_HREF}>{PHONE_DISPLAY}</a>, Mon–Fri 9am–6pm and
           Sat 10am–4pm, or <Link href="/contact">send us a message</Link>.
         </p>
       </EditorialLayout>

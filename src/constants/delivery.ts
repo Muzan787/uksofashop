@@ -11,8 +11,20 @@
 // calculation, so a drift between the two fails loudly at checkout rather than
 // quietly charging the wrong amount.
 
-/** Base delivery to a UK Mainland ground floor. Free, with no order threshold. */
-export const DELIVERY_BASE = 0
+
+/**
+ * Charged when a confirmed delivery slot is missed and the journey has to be
+ * made again. Not computed by place_order, because it is never part of the
+ * order total - it is billed afterwards, if it happens at all.
+ *
+ * It lives here because three surfaces quote it (the terms, the charges table
+ * on /delivery-returns, and the checkout) and it was written out by hand in
+ * each of them. Under reg 40 of the Consumer Contracts Regulations an
+ * additional charge needs the customer's express agreement BEFORE they are
+ * bound, which is why the checkout now states it rather than only the
+ * confirmation screen.
+ */
+export const RE_DELIVERY_FEE = 50
 
 /** First floor, or any floor when there's a lift. */
 export const UPSTAIRS_FIRST_FLOOR = 20
@@ -33,7 +45,7 @@ export const SOFA_REMOVAL_PER_SEAT = 10
 export const SOFA_REMOVAL_MIN_SEATS = 1
 export const SOFA_REMOVAL_MAX_SEATS = 10
 /** What the seat stepper opens on: a 3-seater is the most common old sofa. */
-export const SOFA_REMOVAL_DEFAULT_SEATS = 3
+const SOFA_REMOVAL_DEFAULT_SEATS = 3
 
 export interface DeliveryOptions {
   /** 0 = ground floor. 1 = first floor, 2 = second, and so on. */
@@ -55,7 +67,7 @@ export const NO_EXTRAS: DeliveryOptions = {
 }
 
 /** Seat count held to the range the checkout and place_order both accept. */
-export function clampRemovalSeats(seats: number): number {
+function clampRemovalSeats(seats: number): number {
   if (!Number.isFinite(seats)) return SOFA_REMOVAL_DEFAULT_SEATS
   return Math.min(SOFA_REMOVAL_MAX_SEATS, Math.max(SOFA_REMOVAL_MIN_SEATS, Math.floor(seats)))
 }
@@ -66,13 +78,13 @@ export function sofaRemovalFee(seats: number): number {
 }
 
 /** Carrying charge for the chosen floor. Ground floor is free. */
-export function upstairsFee(floor: number, hasLift: boolean): number {
+function upstairsFee(floor: number, hasLift: boolean): number {
   if (!Number.isFinite(floor) || floor <= 0) return 0
   if (hasLift) return UPSTAIRS_FIRST_FLOOR
   return UPSTAIRS_FIRST_FLOOR + (Math.floor(floor) - 1) * UPSTAIRS_PER_EXTRA_FLOOR
 }
 
-export interface DeliveryBreakdownLine {
+interface DeliveryBreakdownLine {
   /** 'agreed' is the one negotiated figure on a WhatsApp order, in place of the extras. */
   key: 'upstairs' | 'assembly' | 'sofaRemoval' | 'agreed'
   label: string

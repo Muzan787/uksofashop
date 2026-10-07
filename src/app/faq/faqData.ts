@@ -5,11 +5,11 @@
 // without the client bundle pulling in the page.
 
 import { ASSEMBLY_FEE, SOFA_REMOVAL_PER_SEAT, UPSTAIRS_FIRST_FLOOR } from '@/constants/delivery'
-import { PROMISES } from '@/constants/promises'
+import { CANCELLATION, PROMISES } from '@/constants/promises'
 import { SUPPORT_EMAIL } from '@/constants/contact'
 
 export interface Faq { q: string; a: string }
-export interface FaqGroup { group: string; items: Faq[] }
+interface FaqGroup { group: string; items: Faq[] }
 
 export const faqGroups: FaqGroup[] = [
   {
@@ -71,7 +71,7 @@ export const faqGroups: FaqGroup[] = [
       },
       {
         q: 'Can I return a sofa if I change my mind?',
-        a: 'Yes. You have 14 days from delivery to cancel, as required by the Consumer Contracts Regulations, and you don’t need to give a reason. For a change-of-mind return you arrange and pay for the return carriage — worth getting a quote first, as sofas are awkward to move. If the sofa comes back damaged we’ll charge a fee accordingly and deduct it from your refund. This is separate from faulty goods, which we collect ourselves free of charge.',
+        a: `Yes. You can cancel from the moment you order until 14 days after delivery, as required by the Consumer Contracts Regulations, and you don’t need to give a reason — email, call or write to us and that’s enough. You then have another 14 days to send it back, and we refund within 14 days of it reaching us or of you showing us it’s been sent. For a change-of-mind return you arrange and pay for the return carriage — worth getting a quote first, as sofas are awkward to move. We can reduce the refund to reflect any loss in value from handling beyond what you could have done in a shop. This is separate from faulty goods, which we collect ourselves free of charge. ${CANCELLATION.test}`,
       },
     ],
   },
@@ -80,7 +80,7 @@ export const faqGroups: FaqGroup[] = [
     items: [
       {
         q: 'Can I choose my own fabric, colour or size?',
-        a: 'On our fabric sofas, yes — we make them to order in a colour, material or size of your choosing. Look for the “Made to order” block on the product page and tap “Design yours on WhatsApp”: it opens a message with that sofa’s details already filled in, and you just add what you want changed. We’ll come back to you with the price and how long it will take. Our recliner ranges aren’t made this way, so those come as listed. One thing to know before you commit: made-to-measure orders are exempt from the 14-day change-of-mind return, because they’re built specifically for you. Faulty items are still covered as normal.',
+        a: 'On our fabric sofas, yes — we make them to order in a colour, material or size of your choosing. Look for the “Made to order” block on the product page and tap “Design yours on WhatsApp”: it opens a message with that sofa’s details already filled in, and you just add what you want changed. We’ll come back to you with the price and how long it will take. Our recliner ranges aren’t made this way, so those come as listed and keep the full 14-day right to change your mind. One thing to know before you commit to a fabric sofa: choosing the cloth is part of ordering one, so it’s built to your specification and is exempt from the 14-day change-of-mind return. Faulty items are covered either way.',
       },
     ],
   },
@@ -93,7 +93,7 @@ export const faqGroups: FaqGroup[] = [
       },
       {
         q: 'What if my sofa arrives damaged?',
-        a: `Because you pay on delivery, check your sofa properly while the driver is still there and only pay once you’re happy with it. If you do find transit damage afterwards, email ${SUPPORT_EMAIL} within 24 hours with photographs. If the damage is minor and the sofa is usable, we’ll log an incident report with your photos. If it’s considerable, we’ll offer a replacement. If it can’t be repaired and is deemed faulty, we’ll collect it and issue a full refund.`,
+        a: `Because you pay on delivery, check your sofa properly while the driver is still there and only pay once you’re happy with it. If you do find transit damage afterwards, email ${SUPPORT_EMAIL} with photographs as soon as you reasonably can — the sooner we see it the quicker it’s settled, though your rights under the Consumer Rights Act run far longer than that. If the damage is minor and the sofa is usable, we’ll log an incident report with your photos. If it’s considerable, we’ll offer a replacement. If it can’t be repaired and is deemed faulty, we’ll collect it and issue a full refund.`,
       },
     ],
   },

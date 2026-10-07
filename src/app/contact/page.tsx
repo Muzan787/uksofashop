@@ -68,7 +68,11 @@ export default function ContactPage() {
                   ? <a
                       href={href}
                       onClick={href === PHONE_HREF ? onPhoneClick : undefined}
-                      style={{ fontSize: 'var(--text-caption)', fontWeight: 700, color: 'var(--color-ink-900)', textDecoration: 'none', display: 'block', marginBottom: 4 }}
+                      /* inline-flex + minHeight 44: these are the phone
+                         number and the email address on the contact page —
+                         the two things the page exists for — and they were
+                         18px-tall strips of text to hit on a phone. */
+                      style={{ fontSize: 'var(--text-caption)', fontWeight: 700, color: 'var(--color-ink-900)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', minHeight: 44, marginBottom: 4 }}
                       className="hover:text-ember-700 transition-colors"
                     >{value}</a>
                   : <div style={{ fontSize: 'var(--text-caption)', fontWeight: 700, color: 'var(--color-ink-900)', marginBottom: 4 }}>{value}</div>
@@ -91,7 +95,10 @@ export default function ContactPage() {
             </div>
             <div>
               <div style={{ fontSize: 'var(--text-body-sm)', fontWeight: 700, color: 'var(--color-calico-50)' }}>Chat on WhatsApp</div>
-              <div style={{ fontSize: 'var(--text-caption)', color: 'var(--color-ink-500)', marginTop: 2 }}>Usually replies in minutes</div>
+              {/* calico-300, not ink-500. This sits on the ink-900 panel, and
+                  ink-500 is the secondary colour for LIGHT grounds — on this
+                  one it came out at 2.41:1. */}
+              <div style={{ fontSize: 'var(--text-caption)', color: 'var(--color-calico-300)', marginTop: 2 }}>Usually replies in minutes</div>
             </div>
             <ArrowRight style={{ width: 14, height: 14, color: 'var(--color-ink-400)', marginLeft: 'auto' }} className="group-hover:text-whatsapp transition-colors" />
           </a>

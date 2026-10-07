@@ -16,11 +16,19 @@ import { isValidUkPostcode, normalisePostcode } from '@/utils/postcode'
 import type { AdminOrderDisplay, AdminOrderItemDisplay } from '@/types/adminOrders'
 import { asBuildSnapshot, describeBuild } from '@/types/build'
 import { formatPreferredDeliveryDate } from '@/utils/delivery'
+import { PROMISES } from '@/constants/promises'
 import { finishText } from '@/utils/orderFinish'
 import { itemTitle } from '@/utils/orderItemTitle'
 
-/** Every UK Mainland order, whatever it is. There is no per-order estimate. */
-const DELIVERY_WINDOW = '2-4 days'
+/**
+ * Every UK Mainland order, whatever it is. There is no per-order estimate.
+ *
+ * Taken from the shared promise rather than written out, because this block
+ * is forwarded on by hand: it used to read "2-4 days" while the rest of the
+ * site said 2–4 WORKING days, which is a shorter promise by up to two days
+ * and the only copy of it anybody actually sends to a customer.
+ */
+const DELIVERY_WINDOW = PROMISES.delivery.timingShort.replace(/^Most UK Mainland:\s*/, '')
 
 const money = (n: unknown) => `£${Number(n ?? 0).toFixed(2)}`
 

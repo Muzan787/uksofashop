@@ -3,6 +3,11 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import EditorialHero from '@/components/Editorial/EditorialHero'
 import EditorialLayout, { LastUpdated } from '@/components/Editorial/EditorialLayout'
+import { CANCELLATION } from '@/constants/promises'
+import { RE_DELIVERY_FEE } from '@/constants/delivery'
+import {
+  ADDRESS_LINE, PHONE_DISPLAY, PHONE_HREF, SUPPORT_EMAIL, traderIdentityLine,
+} from '@/constants/contact'
 
 export const metadata: Metadata = {
   title: 'Terms & Conditions',
@@ -20,10 +25,10 @@ export const metadata: Metadata = {
  * was agreed and when, that is a false statement rather than a cosmetic bug.
  * Change it when the terms change; not otherwise.
  */
-const LAST_UPDATED = '2026-08-27'
+const LAST_UPDATED = '2026-10-05'
 
 const TOC = [
-  { id: 'introduction', label: 'Introduction' },
+  { id: 'introduction', label: 'Who we are' },
   { id: 'orders', label: 'Placing an order' },
   { id: 'pricing', label: 'Pricing and payment' },
   { id: 'delivery', label: 'Delivery' },
@@ -34,6 +39,8 @@ const TOC = [
 ]
 
 export default function TermsPage() {
+  const traderIdentity = traderIdentityLine()
+
   return (
     <div className="min-h-screen bg-calico-50">
       <EditorialHero
@@ -45,24 +52,32 @@ export default function TermsPage() {
       />
 
       <EditorialLayout toc={TOC}>
-        <h2 id="introduction">1. Introduction</h2>
+        <h2 id="introduction">1. Who we are</h2>
         <p>
           These terms govern your use of uksofashop.co.uk and the purchase of goods from UK Sofa
           Shop. By placing an order you confirm that you have read, understood and agree to them.
+        </p>
+        {traderIdentity && <p>{traderIdentity}</p>}
+        <p>
+          You can reach us at <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>, on{' '}
+          <a href={PHONE_HREF}>{PHONE_DISPLAY}</a>, or by post at {ADDRESS_LINE}.
         </p>
 
         <h2 id="orders">2. Placing an order</h2>
         <p>
           When you submit an order you are making an offer to purchase. We send an acknowledgement
           email on receipt — that acknowledgement is <strong>not</strong> an acceptance. The
-          contract between us is formed when we dispatch the goods.
+          contract between us is formed when we confirm your order: for a sofa built to your own
+          fabric, size or layout that is the phone call we make before anything is made, and for
+          everything else it is when we confirm the delivery date with you.
         </p>
 
         <h2 id="pricing">3. Pricing and payment</h2>
         <p>
-          All prices include VAT at the current rate. Payment is due in full on delivery, either in
-          cash to the driver or by bank transfer completed at the door. We do not accept card
-          payments of any kind, and no payment is taken at the time of ordering.
+          The price shown is the price you pay — there is nothing added at the end. Payment is due
+          in full on delivery, either in cash to the driver or by bank transfer completed at the
+          door. We do not accept card payments of any kind, and no payment is taken at the time of
+          ordering.
         </p>
         <p>
           Optional services — upstairs delivery, assembly, removal of your old sofa — are added at
@@ -78,20 +93,29 @@ export default function TermsPage() {
         </p>
         <p>
           Once a delivery slot has been confirmed with you, a missed delivery means the journey has
-          to be made again and a £50 re-delivery charge applies. Full detail is on our{' '}
+          to be made again and a £{RE_DELIVERY_FEE} re-delivery charge applies. Full detail is on our{' '}
           <Link href="/delivery-returns">delivery and returns page</Link>.
         </p>
 
         <h2 id="cancelling">5. Returns and cancellations</h2>
         <p>
-          Under the Consumer Contracts Regulations you have 14 days from delivery to cancel your
-          order, for any reason or none. For a change-of-mind return you arrange and pay for the
-          return carriage. Faulty or damaged items are collected free of charge.
+          Under the Consumer Contracts Regulations you may cancel at any point from placing your
+          order until 14 days after it is delivered, for any reason or none. To cancel, tell us in
+          a clear statement — email <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>, call{' '}
+          <a href={PHONE_HREF}>{PHONE_DISPLAY}</a>, or write to us at {ADDRESS_LINE}. You can use
+          the <Link href="/delivery-returns#cancellation-form">cancellation form</Link> on our
+          delivery and returns page, but you do not have to.
         </p>
         <p>
-          The 14-day right does not apply to bespoke or made-to-measure items built to your own
-          specification. This is the standard exemption in the Regulations, and it does not affect
-          your rights if such an item turns out to be faulty.
+          You then have a further 14 days to send the goods back. For a change-of-mind return you
+          arrange and pay for the return carriage. We refund within 14 days of getting the sofa
+          back, or of you showing us it has been sent, whichever is sooner. Faulty or damaged items
+          are collected free of charge.
+        </p>
+        <p>{CANCELLATION.test}</p>
+        <p>
+          Where the exemption applies it affects only your right to change your mind. It does not
+          affect your rights if the item turns out to be faulty, which are the same either way.
         </p>
 
         <h2 id="guarantees">6. Guarantees</h2>

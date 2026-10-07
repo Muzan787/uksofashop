@@ -413,7 +413,13 @@ export default async function AdminOrdersPage(props: { searchParams: SearchParam
                 <StatusBadge status={order.status || 'pending_cod'} />
                 {/* Not a status of its own - see the note on orders.has_made_to_order.
                     It is a reminder that this one needs a phone call before it is
-                    built, which the status machine has no opinion about. */}
+                    built, which the status machine has no opinion about.
+
+                    It is NOT the test for whether the customer keeps the 14-day
+                    right to cancel. This flag comes from products.custom_made, so
+                    it is true for anything made after the order; the cancellation
+                    exemption needs an actual customer choice, which is a fabric or
+                    a build on the order line. See utils/cancellationRights.ts. */}
                 {order.has_made_to_order && (
                   <span className="rounded-pill border border-amber-200 bg-amber-50 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-700 sm:text-xs">
                     Call to confirm

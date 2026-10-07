@@ -9,6 +9,7 @@ import { usePhoneClick } from '@/utils/attribution/usePhoneClick';
 import WhatsAppIcon from '@/components/Product/WhatsAppIcon';
 import Timeline from '@/components/UI/Timeline';
 import { formatPreferredDeliveryDate } from '@/utils/delivery';
+import { RE_DELIVERY_FEE } from '@/constants/delivery';
 
 interface Props {
   orderId: string;
@@ -129,7 +130,7 @@ export default function SuccessStep({ orderId, postcode, amount, preferredDelive
                 <span className="block text-body-sm font-semibold text-ink-900">If you will not be in</span>
                 <span className="mt-0.5 block text-body-sm leading-relaxed text-ink-500">
                   Tell us as early as you can and we will move the day. Once a slot is agreed, a
-                  missed delivery means the whole trip has to be made again, so a £50 re-delivery
+                  missed delivery means the whole trip has to be made again, so a £{RE_DELIVERY_FEE} re-delivery
                   charge applies. <Link href="/delivery-returns" className="hover-link text-ink-900">Full delivery terms</Link>.
                 </span>
               </span>

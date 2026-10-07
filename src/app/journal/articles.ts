@@ -31,6 +31,7 @@
 // only honest if a person is behind it. Neither is worth faking for decoration.
 
 import type { TocEntry } from '@/components/Editorial/TableOfContents'
+import { FABRIC_COLOUR_COUNT } from '@/constants/swatches'
 
 export interface Article {
   slug: string
@@ -88,7 +89,7 @@ export const ARTICLES: Article[] = [
     toc: [
       { id: 'what', label: 'What it actually means' },
       { id: 'size', label: 'Changing the size' },
-      { id: 'fabric', label: 'The 70 colours' },
+      { id: 'fabric', label: `The ${FABRIC_COLOUR_COUNT} colours` },
       { id: 'samples', label: 'Order the samples' },
       { id: 'catch', label: 'The catch, plainly' },
       { id: 'faults', label: 'Faults are different' },

@@ -23,7 +23,7 @@ export const PHONE_DISPLAY = '07476 616022'
 export const PHONE_HREF = `tel:${PHONE_E164}`
 
 /** wa.me wants the international number with no "+" and no spaces. */
-export const WHATSAPP_NUMBER = '447476616022'
+const WHATSAPP_NUMBER = '447476616022'
 
 /** A wa.me link, optionally pre-filled with a message. */
 export function whatsAppHref(message?: string): string {
@@ -48,23 +48,96 @@ export const SUPPORT_EMAIL = 'enquiries@uksofashop.co.uk'
  */
 export const ORDERS_EMAIL = 'orders@uksofashop.co.uk'
 
-/**
- * The shop's original Gmail address, still read alongside the mailbox above.
- * Not published anywhere on the site; it only receives copies of mail the
- * site sends on the owner's behalf, so he sees them wherever he happens to
- * be looking.
- */
-export const OWNER_GMAIL = 'uksofashop.co.uk@gmail.com'
+// OWNER_GMAIL used to live here, and the comment beside it said "not
+// published anywhere on the site" — which stopped being true the moment it
+// was in this file. Every constant in here is imported by client components
+// (the footer, the contact page, the product page), so the whole module is
+// compiled into the JavaScript bundle: the address was sitting in three
+// public chunks in plain text, readable by anyone who opened devtools or any
+// scraper that reads .js files.
+//
+// It is only ever used to BCC the owner on mail the server sends, so it now
+// lives in src/utils/email.ts, which cannot reach the browser — it imports
+// nodemailer.
 
+/**
+ * The legal entity behind the shop.
+ *
+ * ── NOT YET CONFIRMED — FILL THIS IN ──────────────────────────────────────
+ *
+ * The Electronic Commerce Regulations 2002 (reg 6) and Schedule 2 of the
+ * Consumer Contracts Regulations 2013 both require a trader to identify
+ * itself, not just to publish an address. The address, phone number and email
+ * above are all on the site already; who you actually are is not, anywhere.
+ *
+ * Set `legalName` to the name you trade under legally:
+ *   · a limited company -> the registered name, plus `companyNumber`
+ *   · a sole trader     -> your own name; leave `companyNumber` null
+ *
+ * `vatNumber` stays null while the business is not VAT registered. The terms
+ * page used to say "all prices include VAT at the current rate", which was a
+ * claim with nothing behind it; that sentence has been removed. If you
+ * register later, put the number here and add the VAT line back.
+ *
+ * Every surface that prints these renders NOTHING while legalName is null,
+ * rather than a placeholder. That is deliberate: a half-filled identity
+ * block is worse than an absent one, and an empty one is easy to spot.
+ */
+export const TRADER: {
+  legalName: string | null
+  companyNumber: string | null
+  vatNumber: string | null
+} = {
+  legalName: null,
+  companyNumber: null,
+  vatNumber: null,
+}
+
+/**
+ * The Royal Mail address, in full.
+ *
+ * It used to read "Unit 04, Waverledge Street, Blackburn, BB6 7LS", which is
+ * three things short of the real one: the unit is 4 rather than 04, the
+ * business park was missing, and so was Great Harwood — the town the unit is
+ * actually in. BB6 is Hyndburn; Blackburn is only the post town, which is why
+ * it stays on the `locality` line.
+ *
+ * Google matches a Business Profile against the whole address, and local
+ * directories need the same string character for character, so a short
+ * version is a weaker match everywhere at once. Great Harwood is also a term
+ * worth having: far less competed than Blackburn, and where the showroom is.
+ *
+ * `locality` is deliberately unchanged — Blackburn is correct for the post
+ * town and is what all the storefront copy says. Great Harwood sits in
+ * `street`, which is where a dependent locality goes when PostalAddress has
+ * no field for one.
+ */
 export const ADDRESS = {
-  street: 'Unit 04, Waverledge Street',
+  street: 'Unit 4, Waverledge Business Park, Waverledge Street, Great Harwood',
   locality: 'Blackburn',
+  region: 'Lancashire',
   postcode: 'BB6 7LS',
   country: 'GB',
 } as const
 
 /** One line, for print templates and email footers. */
 export const ADDRESS_LINE = `${ADDRESS.street}, ${ADDRESS.locality}, ${ADDRESS.postcode}`
+
+/**
+ * The trader identity sentence, or null while TRADER is unfilled. Callers
+ * render it only when it is a string, so an unconfirmed entity shows nothing
+ * rather than a placeholder.
+ */
+export function traderIdentityLine(): string | null {
+  if (!TRADER.legalName) return null
+  const parts = [`UK Sofa Shop is a trading name of ${TRADER.legalName}`]
+  if (TRADER.companyNumber) {
+    parts.push(`registered in England and Wales, company number ${TRADER.companyNumber}`)
+  }
+  parts.push(`of ${ADDRESS_LINE}`)
+  if (TRADER.vatNumber) parts.push(`VAT registration number ${TRADER.vatNumber}`)
+  return parts.join(', ') + '.'
+}
 
 /**
  * Showroom appointment hours. One definition behind both the human-readable
@@ -77,9 +150,9 @@ export const OPENING_HOURS = [
   { days: ['Saturday'], label: 'Saturday', opens: '10:00', closes: '16:00', display: '10am – 4pm' },
 ] as const
 
-export type SocialPlatform = 'facebook' | 'instagram' | 'tiktok'
+type SocialPlatform = 'facebook' | 'instagram' | 'tiktok'
 
-export interface SocialProfile {
+interface SocialProfile {
   platform: SocialPlatform
   url: string
   /**

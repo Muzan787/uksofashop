@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { Note, PullQuote } from '@/components/Editorial/EditorialLayout'
+import { FABRIC_COLOUR_COUNT } from '@/constants/swatches'
 
 export default function SofaJargonExplained() {
   return (
@@ -155,7 +156,7 @@ export default function SofaJargonExplained() {
         </li>
       </ul>
       <p>
-        There are 70 colours across those six, all at the same price, and the{' '}
+        There are {FABRIC_COLOUR_COUNT} colours across those six, all at the same price, and the{' '}
         <Link href="/fabrics">fabric guide</Link> shows every one of them properly.
       </p>
 

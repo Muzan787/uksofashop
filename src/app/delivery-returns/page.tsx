@@ -6,9 +6,9 @@ import EditorialHero from '@/components/Editorial/EditorialHero'
 import EditorialSchema from '@/components/Editorial/EditorialSchema'
 import EditorialLayout, { Note, PullQuote } from '@/components/Editorial/EditorialLayout'
 import CoverageMap from '@/components/Editorial/CoverageMap'
-import { ASSEMBLY_FEE, SOFA_REMOVAL_PER_SEAT, UPSTAIRS_FIRST_FLOOR } from '@/constants/delivery'
-import { PROMISES } from '@/constants/promises'
-import { SUPPORT_EMAIL } from '@/constants/contact'
+import { ASSEMBLY_FEE, RE_DELIVERY_FEE, SOFA_REMOVAL_PER_SEAT, UPSTAIRS_FIRST_FLOOR } from '@/constants/delivery'
+import { CANCELLATION, PROMISES } from '@/constants/promises'
+import { ADDRESS_LINE, PHONE_DISPLAY, PHONE_HREF, SUPPORT_EMAIL } from '@/constants/contact'
 
 /**
  * Said once, used twice: as the meta description, and as the description on
@@ -30,7 +30,8 @@ const TOC = [
   { id: 'access', label: 'Access and upstairs' },
   { id: 'damaged', label: 'If it arrives damaged' },
   { id: 'returns', label: 'Changing your mind' },
-  { id: 'bespoke', label: 'Made-to-measure orders' },
+  { id: 'cancellation-form', label: 'Cancellation form' },
+  { id: 'bespoke', label: 'Built to your specification' },
 ]
 
 const CHARGES = [
@@ -57,7 +58,7 @@ const CHARGES = [
   },
   {
     label: 'Re-delivery after a missed slot',
-    price: '£50',
+    price: `£${RE_DELIVERY_FEE}`,
     note: 'Only once a slot has been confirmed with you',
   },
 ]
@@ -77,7 +78,7 @@ export default function DeliveryReturnsPage() {
         headline="Delivery & Returns"
         current="Delivery & returns"
         path="/delivery-returns"
-        updated="2026-09-07"
+        updated="2026-10-05"
         description={DESCRIPTION}
       />
       <EditorialHero
@@ -119,7 +120,9 @@ export default function DeliveryReturnsPage() {
           you place the order — not a deposit, not a card pre-authorisation, nothing.
         </p>
 
-        <div className="my-8 overflow-x-auto">
+        {/* Focusable, so the table can be scrolled sideways on a narrow
+            screen without a mouse. */}
+        <div tabIndex={0} role="region" aria-label="Delivery and service charges" className="my-8 overflow-x-auto">
           <table className="w-full min-w-[420px] border-collapse text-left">
             <caption className="sr-only">Delivery and service charges, all paid on delivery</caption>
             <thead>
@@ -181,7 +184,7 @@ export default function DeliveryReturnsPage() {
         <Note title="If you miss your delivery">
           <p>
             Once a slot has been confirmed with you, a missed delivery means the whole trip has to
-            be made again, so a £50 re-delivery charge applies. If the day stops working for you,
+            be made again, so a £{RE_DELIVERY_FEE} re-delivery charge applies. If the day stops working for you,
             tell us as early as you can and we will simply rearrange it — there is no charge for
             moving a date before it is confirmed.
           </p>
@@ -195,9 +198,11 @@ export default function DeliveryReturnsPage() {
         </p>
         <p>
           If you spot transit damage afterwards, email{' '}
-          <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a> within 24 hours with
-          photographs. Photographs are what let us settle it quickly rather than going back and
-          forth about what happened.
+          <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a> with photographs as soon as you
+          reasonably can. The sooner we see it the easier it is to settle — photographs taken on
+          the day tell us things photographs taken in a fortnight cannot. That is a request, not a
+          deadline: your rights under the Consumer Rights Act 2015 run for far longer than any
+          window we could set, and nothing here shortens them.
         </p>
         <ul>
           <li>
@@ -216,31 +221,75 @@ export default function DeliveryReturnsPage() {
 
         <h2 id="returns">Changing your mind</h2>
         <p>
-          If you simply change your mind, you have 14 days from the day your sofa is delivered to
-          cancel the order. That is your right under the Consumer Contracts Regulations, it applies
-          whatever the reason, and you do not need to explain yourself to us.
+          You can cancel at any point from placing your order until 14 days after it is delivered.
+          That is your right under the Consumer Contracts Regulations, it applies whatever the
+          reason, and you do not need to explain yourself to us.
         </p>
         <p>
-          For a change-of-mind return you arrange and pay for the return carriage. Sofas are large
-          and awkward, so it is worth getting a quote before you commit — this is the part people
-          are usually surprised by. It is also the one real difference from a faulty item, which we
+          <strong>To cancel, just tell us.</strong> Email{' '}
+          <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>, call{' '}
+          <a href={PHONE_HREF}>{PHONE_DISPLAY}</a>, or write to us at {ADDRESS_LINE}. Any clear
+          statement will do — the form below exists because the Regulations say we have to offer
+          you one, not because you have to use it.
+        </p>
+        <p>
+          Once you have cancelled you have a further 14 days to send the sofa back. For a
+          change-of-mind return you arrange and pay for the return carriage. Sofas are large and
+          awkward, so it is worth getting a quote before you commit — this is the part people are
+          usually surprised by. It is also the one real difference from a faulty item, which we
           collect ourselves, free.
         </p>
         <p>
-          Please send it back in the condition it reached you in. If the sofa comes back damaged we
-          will charge a fee accordingly and deduct it from your refund.
+          <strong>Your refund.</strong> We refund within 14 days of the sofa reaching us, or of you
+          showing us it has been sent, whichever happens first. Please send it back in the
+          condition it reached you in: we can reduce the refund to reflect any loss in value caused
+          by handling beyond what you would have been able to do in a shop, and if we do that we
+          will tell you the amount and why.
         </p>
 
-        <h2 id="bespoke">Made-to-measure orders</h2>
+        <h2 id="cancellation-form">Model cancellation form</h2>
+        <p className="fine">
+          Complete and return this form only if you wish to withdraw from the contract. You do not
+          have to use it.
+        </p>
+        <div className="my-6 rounded-md border border-calico-300 bg-calico-100 p-5 sm:p-7">
+          <p className="m-0 text-body-sm leading-relaxed text-ink-700">
+            To UK Sofa Shop, {ADDRESS_LINE} — <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>:
+          </p>
+          <p className="mt-4 text-body-sm leading-relaxed text-ink-700">
+            I/We hereby give notice that I/We cancel my/our contract of sale of the following
+            goods:
+          </p>
+          {/* Written as lines rather than a <ul>: the editorial prose styles
+              put a bullet on every list item, and a bulleted form reads as a
+              set of options rather than a set of blanks to fill in. */}
+          <div className="mt-4 space-y-3 text-body-sm leading-relaxed text-ink-500">
+            {[
+              'Ordered on / received on',
+              'Order reference',
+              'Name of consumer(s)',
+              'Address of consumer(s)',
+              'Signature of consumer(s) (only if this form is notified on paper)',
+              'Date',
+            ].map(label => (
+              <div key={label}>
+                {label}:{' '}
+                <span aria-hidden="true" className="inline-block w-full border-b border-calico-300 align-baseline" />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <h2 id="bespoke">Sofas built to your specification</h2>
+        <p>{CANCELLATION.test}</p>
         <p>
-          The 14-day right does not apply to bespoke items — anything built to your own choice of
-          fabric, colour or dimensions. That is the standard exemption in the Regulations, and the
-          reason for it is that a sofa made to your specification cannot be sold to anybody else.
-          We will always make this clear before you commit to a custom order.
+          The reason for the exemption is that a sofa made to your own choices cannot be sold to
+          anybody else. We tell you this at the checkout, on the order itself, before you commit.
         </p>
         <p className="fine">
-          Faulty made-to-measure items are covered exactly as everything else is. The exemption is
-          about changing your mind, not about our responsibility for the thing we built.
+          Faulty items built to your specification are covered exactly as everything else is. The
+          exemption is about changing your mind, not about our responsibility for the thing we
+          built.
         </p>
 
         <hr />

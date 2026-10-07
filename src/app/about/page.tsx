@@ -7,6 +7,7 @@ import EditorialHero from '@/components/Editorial/EditorialHero'
 import EditorialSchema from '@/components/Editorial/EditorialSchema'
 import EditorialLayout, { PullQuote } from '@/components/Editorial/EditorialLayout'
 import { ADDRESS } from '@/constants/contact'
+import { PROMISES } from '@/constants/promises'
 import { blurDataURL } from '@/utils/cloudinary'
 import { getWarehouseVideos } from '@/utils/videos'
 import VideoStrip from '@/components/UI/VideoStrip'
@@ -28,22 +29,19 @@ export const metadata: Metadata = {
 const WORKSHOP =
   'https://res.cloudinary.com/dmlna04yk/image/upload/v1782255171/Home-Page-Furniture-Background-Image-2_cgmd50.jpg'
 
-const PROMISES = [
-  {
-    icon: Banknote,
-    title: 'You pay when it arrives',
-    body: 'Nothing upfront, no deposit, no card details. Cash or bank transfer at your door, once you have seen it.',
-  },
-  {
-    icon: Truck,
-    title: 'Delivery is free',
-    body: 'Everywhere on UK Mainland, with no minimum order. It is not a threshold you have to reach.',
-  },
-  {
-    icon: Shield,
-    title: 'One-year guarantee',
-    body: 'On the frame and the springs — the parts you cannot inspect and have to take on trust.',
-  },
+/**
+ * The four cards under the hero.
+ *
+ * The first three are the shared promises, read from constants/promises.ts
+ * rather than restated here. They used to be a second hand-written copy —
+ * the same three claims, worded differently, in the one file most likely to
+ * be edited for tone and least likely to be checked against the rest of the
+ * site. The fourth is particular to this page and has no shared equivalent.
+ */
+const CARDS = [
+  { icon: Banknote, title: PROMISES.payment.label, body: PROMISES.payment.long },
+  { icon: Truck, title: PROMISES.delivery.label, body: PROMISES.delivery.long },
+  { icon: Shield, title: PROMISES.guarantee.label, body: PROMISES.guarantee.long },
   {
     icon: MapPin,
     title: 'A real address',
@@ -67,7 +65,7 @@ export default async function AboutPage() {
       <EditorialHero
         eyebrow="Who we are"
         title="A sofa shop in Blackburn"
-        lede="No showroom rent, no finance plans, no salesperson on commission. You pay when the sofa is in your room and not a moment before."
+        lede="No retail park rent, no finance plans, no salesperson on commission. You pay when the sofa is in your room and not a moment before."
         breadcrumb={[{ label: 'Home', href: '/' }]}
         image={WORKSHOP}
       />
@@ -120,9 +118,9 @@ export default async function AboutPage() {
 
         <h2>How we choose what to sell</h2>
         <p>
-          The range is deliberately small. We would rather stock a dozen sofas we can answer
-          questions about than three hundred we cannot — how firm the seat is, whether the arms
-          come off, what the fabric does after two years with a dog on it.
+          The range is deliberately small. We would rather carry a range we can answer questions
+          about than three hundred sofas we cannot — how firm the seat is, whether the arms come
+          off, what the fabric does after two years with a dog on it.
         </p>
         <p>
           On our fabric ranges we also build to order: your colour, your material, your dimensions.
@@ -161,7 +159,7 @@ export default async function AboutPage() {
         <h2>What we promise</h2>
 
         <div className="my-8 grid gap-3 sm:grid-cols-2">
-          {PROMISES.map(({ icon: Icon, title, body }) => (
+          {CARDS.map(({ icon: Icon, title, body }) => (
             <div key={title} className="rounded-md border border-calico-300 bg-calico-50 p-5">
               <span className="flex h-11 w-11 items-center justify-center rounded-sm bg-ember-500/12">
                 <Icon aria-hidden="true" className="h-5 w-5 text-ember-700" />
