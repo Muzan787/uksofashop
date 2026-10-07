@@ -19,13 +19,32 @@
 // failure mode this file exists to close. window.location.hostname cannot be
 // silently misconfigured the same way, and needs no build-time wiring at all.
 //
-// SERVER: VERCEL_ENV is a Vercel platform variable, present in the process
-// environment of every deployed function regardless of that toggle, and is
-// not something a developer sets by hand. Anything running outside Vercel
-// entirely - `next start` on a laptop, a CI job - has no VERCEL_ENV and is
-// therefore never production here, regardless of NODE_ENV: the forensic audit
-// that led to this file found NODE_ENV alone was never actually being checked
-// anywhere, so it is deliberately not trusted as a substitute now either.
+// SERVER: an explicit TRACKING_ENV, set by hand on the server that serves
+// live customers.
+//
+// This used to read VERCEL_ENV alone, on the reasoning that it is a platform
+// variable present in every deployed function and never set by a developer -
+// which was true while the site ran on Vercel. It moved to Hostinger on
+// 2026-09-29, where there is no platform variable at all, so that sentence
+// stopped being a guarantee and became an assumption: server-side tracking
+// now depends on somebody having hand-set a variable named after a platform
+// this site no longer uses. It IS set there today - every confirmed order
+// since the move has its purchase_event_sent_at stamped - but nothing says
+// so, and rebuilding the server without it would silently stop every Meta
+// CAPI send, every GA4 Measurement Protocol hit and every offline-conversion
+// row, with no error anywhere.
+//
+// TRACKING_ENV names the thing it actually controls. VERCEL_ENV is still
+// honoured as a fallback so that the currently-running server keeps working
+// untouched; set TRACKING_ENV=production on the host and the Vercel name can
+// be retired.
+//
+// Both are checked against the literal 'production'. Anything else - unset,
+// 'preview', 'staging', a typo - reads false, so the failure mode stays
+// closed: tracking off, and the *_event_sent_at guard columns left unclaimed
+// so a real order still reports correctly once the server is configured.
+// NODE_ENV is deliberately not trusted as a substitute: the audit that led to
+// this file found it was never actually being checked anywhere.
 
 /**
  * The only hostnames production browser tracking is allowed to run on.
@@ -50,19 +69,21 @@ export function isBrowserTrackingEnabled(): boolean {
 }
 
 /**
- * True only for code executing inside a Vercel Production deployment.
+ * True only on the server that serves live customers.
  *
  * Gates every server-side conversion send: Meta CAPI, the GA4 Measurement
  * Protocol, and the Google offline-conversion staging rows in
- * utils/orderConversions.ts. A preview deployment, a branch deployment, or a
- * local `next start` all read false here, so an order confirmed while testing
- * one of those never reaches a live ad account or the offline-conversion
- * staging table - and, because the *_event_sent_at guard columns are never
- * claimed in that case, the same order still reports correctly later if it
- * turns out to be a real production order after all.
+ * utils/orderConversions.ts. A staging host, a branch deployment, or a local
+ * `next start` all read false here, so an order confirmed while testing one
+ * of those never reaches a live ad account or the offline-conversion staging
+ * table - and, because the *_event_sent_at guard columns are never claimed
+ * in that case, the same order still reports correctly later if it turns out
+ * to be a real production order after all.
+ *
+ * See the note at the top of this file for why there are two names.
  */
 export function isServerTrackingEnabled(): boolean {
-  return process.env.VERCEL_ENV === 'production'
+  return (process.env.TRACKING_ENV ?? process.env.VERCEL_ENV) === 'production'
 }
 
 /**

@@ -42,7 +42,7 @@ first when something silently does nothing.
 | --- | --- |
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Public client key. Every storefront query goes through RLS with this. |
-| `SUPABASE_SERVICE_ROLE_KEY` | Bypasses RLS. Used **only** for newsletter double opt-in, where there is no caller identity. Never expose to the browser. |
+| `SUPABASE_SERVICE_ROLE_KEY` | Bypasses RLS entirely. Never expose to the browser. Used by about thirty server-side modules — the attribution and offer routes, the crons, the conversion reporters and the double opt-in — because the tables they write (`attribution_*`, `offer_*`, `google_*`, `whatsapp_enquiries` and the rest) have RLS on with **no policies at all**, which is deliberate: no anon or signed-in role can touch them by any route, and the server is the only way in. This line used to say "only for newsletter double opt-in", which has not been true for a long time. Anything reached by a visitor and holding this key must therefore carry its own gate — see `isProductionRequestHost`, `CRON_SECRET` and the zod schema on every such route. |
 | `NEXT_PUBLIC_SITE_URL` | Canonical origin, `https://www.uksofashop.co.uk`. Feeds canonicals, the sitemap, robots.txt and structured data. |
 
 ### Email (transactional)
@@ -63,6 +63,31 @@ is `src/utils/email.ts`.
 | `MAIL_FROM`, `MAIL_REPLY_TO` | Override the From and Reply-To addresses. Default to `orders@` and `enquiries@`. |
 | `EMAIL_USER`, `EMAIL_APP_PASSWORD` | Legacy Gmail fallback, used only while `SMTP_PASSWORD` is unset. Mail sent this way is not authenticated for the domain and lands in spam. |
 
+### Features that silently switch themselves off
+
+Audited 2026-10-06: these were all read by the code and documented nowhere.
+None of them throws when missing — the feature just stops existing, which is
+the problem. Since the move, environment variables live only in Hostinger's
+panel, so a rebuilt server with an incomplete list loses these without a
+single error in the log.
+
+| Variable | What disappears without it |
+| --- | --- |
+| `ANTHROPIC_API_KEY` | The "Ask us" assistant. The root layout checks for it on the server, so the pill simply never renders rather than opening onto an error. |
+| `NEXT_PUBLIC_HOMEDATA_API_KEY` | Address lookup at checkout. The postcode field still validates, but "Find address" throws a message asking the customer to type it by hand. |
+| `CLOUDINARY_API_KEY` + `CLOUDINARY_API_SECRET` | Review photo uploads. The server action signs the upload with these; without them it refuses and tells the customer to email the photo instead. |
+| `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` | Every image upload path, admin and customer. Build-time inlined. |
+| `NEXT_PUBLIC_CLOUDINARY_PRODUCT_UPLOAD_PRESET` | Product and category image uploads in the admin panel. Build-time inlined. |
+| `REVIEW_TOKEN_SECRET` | Signs the per-product review links in the post-delivery email, and the one-click unsubscribe on the checkout reminder. Falls back to `SUPABASE_SERVICE_ROLE_KEY`, so links keep working — but the two can then only be rotated together. |
+| `OFFER_ENTRY_SIGNING_SECRET` | The paid-offer entry tokens behind `/offer-entry/[token]`. |
+| `NEXT_PUBLIC_ADS_ORDER_PLACED_SEND_TO` | The Google Ads order-placed conversion label. Build-time inlined. Its Vercel-era name was `NEXT_PUBLIC_ADS_PURCHASE_SEND_TO`, which never matched the code and so never fired. |
+| `PHASE_D_QA_ENABLE` | Only ever `1`, and only on the CI harness. In production it must stay unset — see `src/app/api/qa/phase-d-server/route.ts`. |
+
+`LIVE_URL` and `VERCEL_GIT_COMMIT_REF` also appear in the tree but are not
+application configuration: the first is set inside
+`.github/workflows/p2a-validation.yml`, and the second is a leftover the
+2026-10-06 audit removed from `next.config.ts`.
+
 ### Trustpilot — optional
 
 The Trustpilot profile (business unit `6aad5fc120d98657b6af39aa`,
@@ -81,22 +106,40 @@ Everything below no-ops when unset, so the site runs normally without them.
 
 | Variable | What it does |
 | --- | --- |
-| `META_PIXEL_ID` | Meta Conversions API target |
+| `TRACKING_ENV` | **The master switch for every server-side send.** Set it to exactly `production` on the live server and nowhere else. Unset — or any other value — and Meta CAPI, the GA4 Measurement Protocol and the Google offline-conversion rows all stay silent, so a staging box or a local `next start` can never report a real conversion. `VERCEL_ENV` is still honoured as a fallback for the server that is running today; prefer this one. See `src/utils/trackingEnv.ts`. |
+| `META_PIXEL_ID` | Meta Conversions API target. Must equal the pixel id the browser uses, which is a constant in `src/utils/consentMode.ts` — if the two disagree, the browser and server halves of an event land in different pixels and Meta cannot deduplicate them. |
 | `META_CAPI_ACCESS_TOKEN` | Events Manager → Settings → Conversions API |
 | `META_CAPI_TEST_EVENT_CODE` | Optional. Routes events to the Test Events tab. |
-| `GA4_MEASUREMENT_ID` | GA4 Measurement Protocol |
+| `GA4_MEASUREMENT_ID` | GA4 Measurement Protocol. Same rule as the pixel id: it must match `GA_ID` in `src/utils/consentMode.ts`. |
 | `GA4_API_SECRET` | GA4 Admin → Data Streams → Measurement Protocol API secrets |
+| `NEXT_PUBLIC_GOOGLE_TRACKING_MODE` | `gtm-v1` loads the GTM container instead of gtag directly; `gtm-qa` exposes the event contract to Tag Assistant on a non-production host. Unset means the plain gtag path. |
 
 ---
 
 ## Database
 
-The schema lives in `supabase/migrations/` as SQL. **That directory is the
-source of truth, not the hosted dashboard.**
+Schema changes live in `supabase/migrations/` as SQL. Write the migration
+file first, review the SQL, then apply it — changing the schema in the
+Supabase dashboard leaves no record, and the next `db pull` produces a
+confusing diff.
 
-Working rule: write the migration file first, review the SQL, then apply it.
-Changing the schema in the Supabase dashboard leaves no record and the next
-`db pull` produces a confusing diff.
+**That directory is a change log, not a rebuildable schema. Do not assume you
+can recreate this database from it.** Audited 2026-10-06:
+
+- The base tables were never in it. `create table public.products` and its
+  siblings appear in **no** migration — they were made in the dashboard
+  before the folder existed.
+- **Eleven migrations are applied on the server with no file here**, among
+  them `rls_policies_phase1_core_access` and
+  `rls_policies_phase2_guest_order_functions` — the foundational row-level
+  security — plus `swatch_requests`, `add_variant_subgroups`,
+  `place_order_with_fabric` and `fix_modren_style_typo`. Applying this folder
+  to an empty database would produce one with no tables and most of its
+  security missing.
+- One file here, `seed_fabrics`, was never applied under that name.
+
+Closing the gap is one command, which rewrites the folder from the live
+database — do it on a clean branch and read the diff before committing:
 
 ```bash
 npx supabase db pull                                    # capture drift
@@ -151,8 +194,19 @@ never real, because the strings were duplicated across a dozen files.
 
 Hosted on **Hostinger** since 29 September 2026. Pushes to `master` deploy, but
 not instantly — allow a few minutes, and check the live page rather than
-assuming the push landed. `vercel.json` is still in the tree and is dead; it is
-kept only so the history of the move stays readable.
+assuming the push landed. `vercel.json` was deleted on 2026-10-06; it had been
+dead since the move and its three cron entries had already been reimplemented
+as a GitHub Actions workflow. Git history still has it.
+
+Verified against production on 2026-10-06, so you know what good looks like:
+
+| | |
+| --- | --- |
+| `https://uksofashop.co.uk/` | **308** to www — a real permanent redirect now. On Vercel the edge forced a 307 that `next.config.ts` could never override; there is no edge in front of the app any more, so the rule in the repo is what answers. |
+| Compression | Brotli (`content-encoding: br`), from Hostinger's CDN (`server: hcdn`). |
+| Static assets | `public, max-age=31536000, immutable`. |
+| HSTS | `max-age=63072000; includeSubDomains; preload`. |
+| `/sw.js`, `/manifest.webmanifest`, `/robots.txt`, `/sitemap.xml` | all 200, correct content types. |
 
 Three things moved with the host and are now maintained by hand:
 
@@ -161,6 +215,15 @@ Three things moved with the host and are now maintained by hand:
 | Environment variables | Hostinger's panel — that is the source of truth. The `.env*` files are gitignored and local only, so adding a variable to one does nothing in production until it is set in the panel too. |
 | Cron jobs | `.github/workflows/scheduled-jobs.yml` — review requests, recovery cleanup, weekly digest. Vercel Cron stopped existing with the move. Each is a GET guarded by `CRON_SECRET`, held both as a GitHub Actions secret and as a Hostinger variable; if the two drift the call 401s and the workflow fails loudly. |
 | Build settings | Hostinger's panel. There is no `vercel.json` equivalent under version control. |
+
+**A variable that is only set at runtime is not the same as one set at build
+time.** Every `NEXT_PUBLIC_*` value is inlined into the JavaScript when
+Hostinger compiles the app, so it has to be present for the *build*, not just
+for the running server. `next.config.ts` also turns `TRACKING_ENV` /
+`VERCEL_ENV` into `NEXT_PUBLIC_GOOGLE_TRACKING_MODE` at build time, which is
+what decides whether the site loads the GTM container or plain gtag — and it
+fails silently either way, because both code paths ship and the site keeps
+measuring through whichever one it baked in.
 
 Because a deploy is not instant and nothing announces it, the honest way to
 confirm one is to fetch something only the new build contains. Note that
