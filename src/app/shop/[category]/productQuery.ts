@@ -45,7 +45,7 @@ export function parsePrice(raw: string | string[] | undefined): number | undefin
   return Number.isFinite(n) && n >= 0 ? Math.round(n) : undefined
 }
 
-export interface ProductFilters {
+interface ProductFilters {
   categoryId: string | null
   style?: string
   material?: string
@@ -87,6 +87,30 @@ export function parsePageParam(raw: string | string[] | undefined): number {
 }
 
 /**
+ * A style facet, matched against both spellings of the key.
+ *
+ * `specifications` is free-form JSON and the key is spelled inconsistently in
+ * the catalogue - 70 active products spell it "Style" and one spells it
+ * "style". Postgres JSON key access is case-sensitive, so a filter on one
+ * spelling silently drops every product that uses the other: the lowercase
+ * spelling this used to carry matched the single "Affordable" product and
+ * returned nothing at all for High Back, Modern, Scattered Back or U shaped.
+ * CategoryFilters already reads the key case-insensitively when it builds the
+ * facet list, so the facets on offer were right all along while the filter
+ * acting on them was not.
+ *
+ * PostgREST cannot fold the case of a JSON key, so both spellings are ORed.
+ * JSON.stringify supplies the quoting: it wraps the value in double quotes and
+ * escapes any quote or backslash inside it, which is exactly what PostgREST
+ * expects and what stops a comma or a dot in a facet value being read as or()
+ * syntax.
+ */
+function styleFilter(style: string): string {
+  const v = JSON.stringify(style)
+  return `specifications->>style.ilike.${v},specifications->>Style.ilike.${v}`
+}
+
+/**
  * Applies the category and facet filters shared by both queries.
  *
  * The builder is threaded through as an opaque generic: .eq() and .filter()
@@ -94,14 +118,14 @@ export function parsePageParam(raw: string | string[] | undefined): number {
  * a loop of optional calls cannot express. Casting internally keeps the
  * call-site type intact - callers get back exactly the builder they passed in.
  */
-export function applyProductFilters<T>(
+function applyProductFilters<T>(
   query: T,
   { categoryId, style, material, color, minPrice, maxPrice }: ProductFilters,
 ): T {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- see above
   let q = query as any
   if (categoryId) q = q.eq('product_categories.category_id', categoryId)
-  if (style) q = q.filter('specifications->>style', 'ilike', style)
+  if (style) q = q.or(styleFilter(style))
   if (material) q = q.filter('product_variants.material', 'ilike', material)
   if (color) q = q.filter('product_variants.color', 'ilike', color)
   // base_price, matching the range the hero prints and the slider is bounded

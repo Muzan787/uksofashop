@@ -38,8 +38,10 @@ export default async function AdminReviewsPage() {
       )}
 
       <div className="grid grid-cols-1 gap-4">
-        {reviews?.map((review: any) => {
-          const isLive = review.is_approved === true || review.status === 'approved'
+        {reviews?.map(review => {
+          // is_approved is the table's only approval flag; there is no status
+          // column, and the `any` here was hiding a test against one.
+          const isLive = review.is_approved === true
 
           return (
             <div key={review.id} className="bg-white rounded-md p-5 sm:p-6 shadow-sm border border-stone-200 flex flex-col sm:flex-row gap-4 sm:gap-6">

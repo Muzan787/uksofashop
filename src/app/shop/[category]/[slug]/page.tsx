@@ -1,7 +1,7 @@
 // src/app/shop/[category]/[slug]/page.tsx
 import { Metadata } from 'next';
 import { notFound, permanentRedirect } from 'next/navigation';
-import { canonicalProductPath } from '@/utils/productUrl';
+import { canonicalProductPath, type CategoryRef } from '@/utils/productUrl';
 import { socialImageUrl, leadVariantImage, ogImage } from '@/utils/socialImage';
 import { productSchema, breadcrumbSchema, jsonLd } from '@/utils/schema';
 import { unstable_cache } from 'next/cache';
@@ -13,9 +13,32 @@ import { deliveryWindow } from '@/utils/delivery';
 import ProductPageClient from '../../../../components/Product/ProductPageClient';
 import { getFabricLibrary } from '@/utils/fabrics';
 import { parseDimensions } from '@/components/Product/dimensions';
-import type { ProductVideo } from '@/components/Product/types';
+import type { ProductVideo, SimilarProduct, SizeVariant, Variant, Review } from '@/components/Product/types';
+import type { Tables } from '@/types/supabase';
 
 type Params = Promise<{ slug: string; category: string }>;
+
+/**
+ * The join shapes PostgREST returns for this page's selects.
+ *
+ * A to-one relation arrives as an object and a to-many as an array, and
+ * PostgREST decides which from the foreign keys rather than from the select
+ * string - so the ones that could be either are written as both and narrowed
+ * at the point of use. These were `any` until they were written down, which
+ * meant a schema change renamed a column and nothing here failed to compile.
+ */
+type CategoryJoin = CategoryRef & { name?: string | null };
+type ProductCategoryJoin = { categories: CategoryJoin | CategoryJoin[] | null };
+type RelatedProductRow = {
+  id: string;
+  title: string;
+  slug: string;
+  base_price: number;
+  was_price: number | null;
+  is_active: boolean | null;
+  product_variants: { image_url: string | null; priority: number | null }[] | null;
+};
+type RelatedRow = { products: RelatedProductRow | RelatedProductRow[] | null };
 // NEW: Define searchParams type to read the URL
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
 
@@ -207,9 +230,9 @@ export default async function ProductPage(props: { params: Params, searchParams:
   // Otherwise /shop/anything/<slug> renders the same page and Google sees as
   // many copies as there are categories. Anything else redirects to the one
   // canonical path rather than 404ing, so old links and feed URLs still land.
-  const belongsToUrlCategory = (product.product_categories ?? []).some((pc: any) => {
-    const cats = Array.isArray(pc?.categories) ? pc.categories : pc?.categories ? [pc.categories] : [];
-    return cats.some((c: any) => c?.slug === decodeURIComponent(category));
+  const belongsToUrlCategory = ((product.product_categories ?? []) as ProductCategoryJoin[]).some(pc => {
+    const cats: CategoryJoin[] = Array.isArray(pc?.categories) ? pc.categories : pc?.categories ? [pc.categories] : [];
+    return cats.some(c => c?.slug === decodeURIComponent(category));
   });
 
   // Permanent rather than temporary: a 308 passes ranking to the canonical
@@ -257,7 +280,7 @@ export default async function ProductPage(props: { params: Params, searchParams:
 
   const initialWishlistState = Boolean(wishlistItem);
 
-  let sizeVariants: any[] = [];
+  let sizeVariants: SizeVariant[] = [];
   let subgroupTitle = 'Style';
   if (group) {
     const [{ data: groupProducts }, { data: groupInfo }] = group;
@@ -265,25 +288,27 @@ export default async function ProductPage(props: { params: Params, searchParams:
     if (groupInfo?.subgroup_title) subgroupTitle = groupInfo.subgroup_title;
 
     if (groupProducts) {
-      sizeVariants = groupProducts.filter(p => p.size_label).map(p => ({
-        id: p.id,
-        slug: p.slug,
-        size_label: p.size_label,
-        subgroup_label: p.subgroup_label
-      }));
+      sizeVariants = groupProducts
+        .filter((p): p is typeof p & { size_label: string } => Boolean(p.size_label))
+        .map(p => ({
+          id: p.id,
+          slug: p.slug,
+          size_label: p.size_label,
+          subgroup_label: p.subgroup_label
+        }));
     }
   }
 
-  let safeSimilarProducts: any[] = [];
+  let safeSimilarProducts: SimilarProduct[] = [];
   if (related) {
     const currentFirstWord = product.title.trim().split(' ')[0].toLowerCase();
 
-    const relatedProducts = related
-      .map((r: any) => r.products)
+    const relatedProducts = (related as RelatedRow[])
+      .map(r => r.products)
       .flat()
-      .filter((p: any) => p && p.id !== product.id && p.is_active !== false);
+      .filter((p): p is RelatedProductRow => Boolean(p) && p!.id !== product.id && p!.is_active !== false);
 
-    relatedProducts.sort((a: any, b: any) => {
+    relatedProducts.sort((a, b) => {
       const aFirstWord = a.title.trim().split(' ')[0].toLowerCase();
       const bFirstWord = b.title.trim().split(' ')[0].toLowerCase();
 
@@ -293,7 +318,7 @@ export default async function ProductPage(props: { params: Params, searchParams:
       return matchB - matchA;
     });
 
-    safeSimilarProducts = relatedProducts.slice(0, 4).map((p: any) => ({
+    safeSimilarProducts = relatedProducts.slice(0, 4).map(p => ({
       id: p.id,
       title: p.title,
       slug: p.slug,
@@ -320,7 +345,7 @@ export default async function ProductPage(props: { params: Params, searchParams:
     custom_made: product.custom_made ?? false,
   };
 
-  const safeVariants = (product.product_variants ?? []).map((v: any) => ({
+  const safeVariants: Variant[] = ((product.product_variants ?? []) as Tables<'product_variants'>[]).map(v => ({
     id: v.id,
     color: v.color,
     color_hex: v.color_hex,
@@ -331,9 +356,13 @@ export default async function ProductPage(props: { params: Params, searchParams:
     // order, so availability is the product-level is_active flag, not a count.
   }));
 
-  const approvedReviews = (product.reviews ?? [])
-    .filter((r: any) => r.status === 'approved' || r.is_approved === true)
-    .map((r: any) => ({
+  // `is_approved` is the only approval flag the reviews table has. This used
+  // to also test `r.status === 'approved'`, which was always false - there is
+  // no status column - and the `any` on the callback was what stopped that
+  // being a compile error.
+  const approvedReviews: Review[] = ((product.reviews ?? []) as Tables<'reviews'>[])
+    .filter(r => r.is_approved === true)
+    .map(r => ({
       id: r.id,
       customer_name: r.customer_name || '', 
       image_url: r.image_url || null,
@@ -343,7 +372,7 @@ export default async function ProductPage(props: { params: Params, searchParams:
       // Present only where the review came in against a real order - either
       // through the tokenised link in the delivery email, or matched later.
       order_id: r.order_id ?? null,
-      status: r.status ?? (r.is_approved ? 'approved' : 'pending'),                       
+      status: r.is_approved ? 'approved' : 'pending',
     }));
 
   // ── Structured data ──
@@ -397,7 +426,9 @@ export default async function ProductPage(props: { params: Params, searchParams:
     images: galleryImages,
     prices: variantPrices,
     listPrice,
-    skus: (product.product_variants ?? []).map((v: any) => v.sku).filter(Boolean),
+    skus: ((product.product_variants ?? []) as Tables<'product_variants'>[])
+      .map(v => v.sku)
+      .filter((s): s is string => Boolean(s)),
     origin: product.origin,
     customMade: product.custom_made,
     width: dims.width,
@@ -414,7 +445,9 @@ export default async function ProductPage(props: { params: Params, searchParams:
     })),
   })
 
-  const primaryCat: any = Array.isArray(product.categories) ? product.categories[0] : product.categories
+  const primaryCat: CategoryJoin | null | undefined = Array.isArray(product.categories)
+    ? (product.categories as CategoryJoin[])[0]
+    : (product.categories as CategoryJoin | null)
   const crumbCategorySlug = primaryCat?.slug ?? decodeURIComponent(category)
   // Human-readable name in the trail, not the URL slug.
   const categoryName = primaryCat?.name ?? crumbCategorySlug

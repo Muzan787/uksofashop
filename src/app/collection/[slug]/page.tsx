@@ -61,10 +61,26 @@ export async function generateMetadata(props: { params: Params }): Promise<Metad
     const description =
       main.standfirst ??
       `Browse every range and design in the ${main.name} collection at UK Sofa Shop. Free UK Mainland delivery and cash on delivery available.`
+
+    // A collection with nothing in it must not be indexable.
+    //
+    // Three exist and are empty — Sofa Beds, Dining Sets and Wardrobes, all
+    // created ahead of the stock. The sitemap already leaves them out and
+    // /collection does not link them, so nothing finds them today, but they
+    // still answer 200 and a single stray link anywhere would put an empty
+    // page into the index under a term the shop wants to rank for later.
+    // Counting is a head-only query: no rows transferred.
+    const { count } = await supabase
+      .from('products')
+      .select('id', { count: 'exact', head: true })
+      .eq('main_collection_id', main.id)
+      .eq('is_active', true)
+
     return {
       title,
       description,
       alternates: { canonical: `/collection/${slug}` },
+      ...(count ? {} : { robots: { index: false, follow: true } }),
       openGraph: { type: 'website', title, description, url: `/collection/${slug}` },
     }
   }
