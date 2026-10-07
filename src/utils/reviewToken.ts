@@ -39,7 +39,7 @@ export function createReviewToken(orderId: string, productId: string): string {
   return `${orderId}.${productId}.${sign(orderId, productId)}`
 }
 
-export interface VerifiedReviewToken {
+interface VerifiedReviewToken {
   orderId: string
   productId: string
 }

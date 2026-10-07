@@ -12,7 +12,7 @@ export async function login(formData: FormData) {
   const password = formData.get('password') as string
 
   // Authenticate with Supabase
-  const { data, error } = await supabase.auth.signInWithPassword({
+  const { error } = await supabase.auth.signInWithPassword({
     email,
     password,
   })
@@ -63,7 +63,7 @@ export async function verifySignupOtp(formData: FormData) {
   const email = formData.get('email') as string
   const otp = formData.get('otp') as string
 
-  const { data, error } = await supabase.auth.verifyOtp({
+  const { error } = await supabase.auth.verifyOtp({
     email,
     token: otp,
     type: 'signup',

@@ -34,7 +34,7 @@ const ACCESS_TOKEN = process.env.META_CAPI_ACCESS_TOKEN
 /** Optional. Echoes an event back into Events Manager's Test Events tab. */
 const TEST_EVENT_CODE = process.env.META_CAPI_TEST_EVENT_CODE
 
-export function isCapiConfigured(): boolean {
+function isCapiConfigured(): boolean {
   return Boolean(PIXEL_ID && ACCESS_TOKEN)
 }
 
@@ -46,7 +46,7 @@ function hash(value: string | null | undefined): string | undefined {
   return createHash('sha256').update(normalised).digest('hex')
 }
 
-export interface CapiUser {
+interface CapiUser {
   email?: string | null
   /** Any UK format; normalised to 447… before hashing, per Meta's spec. */
   phone?: string | null
@@ -73,7 +73,7 @@ export interface CapiUser {
   externalId?: string | null
 }
 
-export interface CapiContent {
+interface CapiContent {
   id: string
   quantity: number
   item_price: number
@@ -96,9 +96,9 @@ export interface CapiContent {
  * system_generated, business_messaging, other). Only the two this site can
  * honestly claim are listed.
  */
-export type CapiActionSource = 'website' | 'chat'
+type CapiActionSource = 'website' | 'chat'
 
-export interface CapiEvent {
+interface CapiEvent {
   eventName: 'Purchase' | 'InitiateCheckout' | 'AddToCart' | 'ViewContent' | 'OrderDelivered' | 'Contact'
   /** MUST equal the event_id the browser sent for the same action. */
   eventId: string

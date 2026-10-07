@@ -4,7 +4,7 @@ import { STAGGER_CAP, STAGGER_STEP } from '@/components/Motion';
 import SectionHeading from '@/components/UI/SectionHeading';
 import ProductCard from './ProductCard';
 
-export interface RowItem {
+interface RowItem {
   id: string;
   title: string;
   href: string;

@@ -53,7 +53,7 @@ function credentials() {
   return { cloudName, apiKey, apiSecret }
 }
 
-export interface SignedUpload {
+interface SignedUpload {
   url: string
   fields: Record<string, string>
 }
@@ -83,7 +83,7 @@ export async function signVideoUpload(kind: VideoKind): Promise<SignedUpload> {
   }
 }
 
-export interface NewVideo {
+interface NewVideo {
   kind: VideoKind
   productId: string | null
   caption: string

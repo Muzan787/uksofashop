@@ -40,7 +40,7 @@
 // page's q are untouched and attribution still works.
 
 /** A canonical uuid, as it appears in a path segment. */
-export const UUID_PATTERN =
+const UUID_PATTERN =
   '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
 
 /**
@@ -52,7 +52,7 @@ export const UUID_PATTERN =
  * `q` is deliberately absent - site search terms are wanted in GA4. So are
  * gclid and every utm_*, which is why this is a denylist.
  */
-export const SENSITIVE_PARAMS = ['token', 'ref', 'code', 'postcode', 'email']
+const SENSITIVE_PARAMS = ['token', 'ref', 'code', 'postcode', 'email']
 
 /**
  * Does this URL carry something that must not reach an analytics vendor?

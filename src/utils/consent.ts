@@ -45,7 +45,7 @@ export function getConsent(): ConsentValue | null {
  * name has to be expired against every domain variant it might have been
  * written to - otherwise the delete silently does nothing.
  */
-export function clearTrackingCookies() {
+function clearTrackingCookies() {
   if (typeof document === 'undefined') return
 
   const host = window.location.hostname
@@ -91,13 +91,6 @@ export function revokeConsent({ reload = true } = {}) {
   if (reload) window.location.reload()
 }
 
-/** Clears the stored answer so the banner asks again. */
-export function resetConsent() {
-  window.localStorage.removeItem(CONSENT_KEY)
-  recordGoogleChoice('denied', 'revoked')
-  clearTrackingCookies()
-  window.dispatchEvent(new Event(CONSENT_CHANGED_EVENT))
-}
 
 export function openCookiePreferences() {
   window.dispatchEvent(new Event(CONSENT_REOPEN_EVENT))

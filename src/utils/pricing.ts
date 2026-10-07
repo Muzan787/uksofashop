@@ -15,7 +15,7 @@
 // Google feed, or the shop is making different claims in different places.
 
 /** A price, and what it used to be. */
-export interface Sale {
+interface Sale {
   /** What it costs now, variant adjustment included. */
   price: number
   /** What it used to cost, the same adjustment applied. Null = no discount. */

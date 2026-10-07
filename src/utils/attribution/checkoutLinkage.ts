@@ -7,7 +7,7 @@
 // attribution therefore remains a manual evidence decision rather than an
 // automatic guess.
 
-export interface CheckoutWhatsAppEnquiry {
+interface CheckoutWhatsAppEnquiry {
   reference: string
   created_at: string
   visitor_id: string | null

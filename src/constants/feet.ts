@@ -19,7 +19,7 @@
 // order. When a foot carries a surcharge, it is agreed on that call and
 // recorded on the manual order, not priced by the browser.
 
-export interface FeetFinish {
+interface FeetFinish {
   /** Stable key, for the radio group. */
   key: string
   /** "Rose gold". What the customer reads and what the order records. */

@@ -12,7 +12,7 @@ import { createClient } from '@/utils/supabase/server'
 
 export const NOT_AUTHORISED = 'You are not authorised to perform this action.'
 
-export class NotAuthorisedError extends Error {
+class NotAuthorisedError extends Error {
   constructor(message = NOT_AUTHORISED) {
     super(message)
     this.name = 'NotAuthorisedError'

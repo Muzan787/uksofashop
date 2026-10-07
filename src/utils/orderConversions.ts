@@ -32,7 +32,7 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import { reportGooglePurchase } from './googleServer'
 import { GOOGLE_GTM_ENABLED } from './googleMeasurement'
 
-export type ConversionKind = 'purchase' | 'delivered'
+type ConversionKind = 'purchase' | 'delivered'
 
 /** Which column guards each event against being sent twice. */
 const SENT_COLUMN = {

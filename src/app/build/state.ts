@@ -10,7 +10,7 @@
 // their choices laid over it.
 
 import type { Fabric, FabricCollection } from '@/components/Product/types'
-import { FEET, findFeet } from '@/constants/feet'
+import { findFeet } from '@/constants/feet'
 import type { BuildBack, BuildSpec } from '@/types/build'
 import type { BuildDesign, BuildSize } from './catalogue'
 
@@ -18,7 +18,7 @@ import type { BuildDesign, BuildSize } from './catalogue'
 
 export type StepId = 'seats' | 'design' | 'fabric' | 'feet' | 'piping' | 'notes' | 'summary'
 
-export interface StepMeta {
+interface StepMeta {
   id: StepId
   /** In the rail. */
   label: string
@@ -319,5 +319,3 @@ export function toBuildSpec(draft: Draft, resolved: Resolved): BuildSpec | null 
   }
 }
 
-/** Every feet style, for the step that lists them. Re-exported so the step has one import. */
-export const FEET_STYLES = FEET

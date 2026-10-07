@@ -42,7 +42,7 @@ const schema = z.object({
     .max(MAX_SAMPLES, `${MAX_SAMPLES} samples at a time.`),
 })
 
-export interface SwatchResult {
+interface SwatchResult {
   success?: true
   error?: string
 }

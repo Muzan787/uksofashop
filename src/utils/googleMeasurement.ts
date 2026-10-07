@@ -8,11 +8,11 @@ export const GOOGLE_GTM_ENABLED = process.env.NEXT_PUBLIC_GOOGLE_TRACKING_MODE =
 export const GOOGLE_GTM_QA_ENABLED = process.env.NEXT_PUBLIC_GOOGLE_TRACKING_MODE === 'gtm-qa'
 export const GOOGLE_DATALAYER_ENABLED = GOOGLE_GTM_ENABLED || GOOGLE_GTM_QA_ENABLED
 export const GOOGLE_POLICY_VERSION = 'ukss-google-2026-09-27-v1'
-export type GoogleConsentState = 'granted' | 'denied'
-export const googleEvents = ['page_view','view_item','view_item_list','select_item','add_to_cart',
-  'remove_from_cart','view_cart','begin_checkout','checkout_progress','add_shipping_info',
-  'order_placed','whatsapp_click','phone_click'] as const
-export type GoogleEvent = typeof googleEvents[number]
+type GoogleConsentState = 'granted' | 'denied'
+export type GoogleEvent =
+  | 'page_view' | 'view_item' | 'view_item_list' | 'select_item' | 'add_to_cart'
+  | 'remove_from_cart' | 'view_cart' | 'begin_checkout' | 'checkout_progress'
+  | 'add_shipping_info' | 'order_placed' | 'whatsapp_click' | 'phone_click'
 export interface GoogleItem { item_id: string; item_name: string; price: number; quantity: number }
 export interface GoogleCommerce { currency: 'GBP'; value: number; items: GoogleItem[]; transaction_id?: string; shipping?: number }
 export interface GoogleOrderReceipt { reference: string; total: number; commerce: GoogleCommerce }
@@ -21,11 +21,16 @@ const emitted = new Set<string>()
 let navigation = { path: '', id: '' }
 
 /** Only public route identities. All queries/fragments and private path segments disappear. */
-export function googleSafeUrl(raw: string): string {
+function googleSafeUrl(raw: string): string {
   try {
     const url = new URL(raw, 'https://www.uksofashop.co.uk')
     if (!['http:','https:'].includes(url.protocol)) return ''
-    const ownQAPreview=GOOGLE_GTM_QA_ENABLED && /^uksofashop-[a-z0-9-]+-muzan787s-projects\.vercel\.app$/i.test(url.hostname)
+    // QA mode treats a non-production host as our own, so a Tag Assistant
+    // session there reports real paths rather than collapsing to the origin.
+    // This used to match a *.vercel.app preview hostname, which has not
+    // existed since the site left Vercel; GOOGLE_GTM_QA_ENABLED is the gate
+    // that matters, and it is only ever set on a staging build.
+    const ownQAPreview = GOOGLE_GTM_QA_ENABLED
     if (!ownQAPreview && !['uksofashop.co.uk','www.uksofashop.co.uk','localhost','127.0.0.1'].includes(url.hostname)) return `${url.origin}/`
     const path = url.pathname.replace(/\/[0-9a-f]{8}-[0-9a-f-]{27,}(?=\/|$)/gi,'/[id]')
       .replace(/\/(confirm-order|review|newsletter|track-order|admin|account|auth)(?:\/.*)?$/i,'/$1')
@@ -38,7 +43,7 @@ export function googleConsent() {
   try { if (getConsent() === 'granted') state = 'granted' } catch { /* fail closed */ }
   return {ad_storage:state,analytics_storage:state,ad_user_data:state,ad_personalization:state}
 }
-export function validCommerce(value: unknown): value is GoogleCommerce {
+function validCommerce(value: unknown): value is GoogleCommerce {
   if (!value || typeof value !== 'object') return false
   const c = value as GoogleCommerce
   return c.currency === 'GBP' && Number.isFinite(c.value) && c.value >= 0 &&

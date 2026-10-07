@@ -8,7 +8,7 @@
 
 import { Clock, Package, Truck, CheckCircle, XCircle, type LucideIcon } from 'lucide-react'
 
-export interface StatusConfig {
+interface StatusConfig {
   /** What a customer is told. Not the database's word. */
   label: string
   /** One line saying what that means and what happens next. */

@@ -39,7 +39,7 @@ export const COOKIE = {
 } as const
 
 /** 30 minutes, matching GA4's own default session timeout. */
-export const SESSION_MAX_AGE_S = 30 * 60
+const SESSION_MAX_AGE_S = 30 * 60
 /** ~400 days - the maximum Chrome will honour for a cookie's Max-Age at all. */
 const VISITOR_MAX_AGE_S = 400 * 24 * 60 * 60
 const TOUCH_MAX_AGE_S = VISITOR_MAX_AGE_S
@@ -106,7 +106,7 @@ export function ensureVisitorId(): string {
   return id
 }
 
-export interface SessionState {
+interface SessionState {
   sessionId: string
   arrivalId: string
   /** True when this call started a brand new session (first pageview, or timed out). */

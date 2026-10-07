@@ -44,7 +44,7 @@ function describe(item: DisplayCartItem): string {
   return specification ? `${item.title} (${specification})` : item.title
 }
 
-export interface OrderMessageContext {
+interface OrderMessageContext {
   /** The product total the customer has seen, after any online offer. */
   total: number
   /** Whether that total already has an offer taken off it. */
@@ -66,7 +66,7 @@ export interface OrderMessageContext {
  * typed into the form — a postcode, a floor, assembly — comes along rather
  * than being asked for again.
  */
-export function whatsAppOrderMessage(items: DisplayCartItem[], ctx: OrderMessageContext): string {
+function whatsAppOrderMessage(items: DisplayCartItem[], ctx: OrderMessageContext): string {
   const lines: string[] = []
 
   if (items.length === 1) {

@@ -106,6 +106,7 @@ export default function EditProductForm({ product, categories }: { product: Prod
         const data = await res.json();
         if (data.secure_url) newUrls.push(data.secure_url);
       } catch (err) {
+        console.error('Gallery image upload failed', err);
         alert("Failed to upload an image.");
       }
     }
@@ -150,7 +151,10 @@ export default function EditProductForm({ product, categories }: { product: Prod
       const res = await fetch(`https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`, { method: 'POST', body: formData });
       const data = await res.json();
       if (data.secure_url) updateVariant(index, 'image_url', data.secure_url);
-    } catch (err) { alert("Failed to upload image."); } finally { updateVariant(index, 'isUploading', false); }
+    } catch (err) {
+      console.error('Variant image upload failed', err);
+      alert("Failed to upload image.");
+    } finally { updateVariant(index, 'isUploading', false); }
   };
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -333,6 +337,7 @@ export default function EditProductForm({ product, categories }: { product: Prod
             <div className="flex flex-wrap gap-4">
               {galleryUrls.map((url, i) => (
                 <div key={i} className="relative w-24 h-24 rounded-sm border border-stone-200 overflow-hidden group shadow-sm">
+                  {/* eslint-disable-next-line @next/next/no-img-element -- Admin upload preview: behind auth, never indexed, never the LCP element. next/image would bill a transformation per thumbnail for no gain. */}
                   <img src={url} alt={`Gallery ${i}`} className="w-full h-full object-cover" />
                   <button type="button" onClick={() => removeGalleryImage(i)} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-sm opacity-0 group-hover:opacity-100 transition hover:bg-red-600">
                     <Trash2 className="w-3 h-3" />
@@ -420,6 +425,7 @@ export default function EditProductForm({ product, categories }: { product: Prod
               <div className="relative mt-2">
                 <input type="file" accept="image/*" onChange={(e) => { if (e.target.files?.[0]) handleImageUpload(index, e.target.files[0]) }} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
                 <div className={`flex items-center justify-center gap-3 p-4 rounded-sm border-2 border-dashed transition ${variant.image_url ? 'border-green-500 bg-green-50' : 'border-stone-300 bg-white hover:border-orange-500'}`}>
+                  {/* eslint-disable-next-line @next/next/no-img-element -- Admin upload preview: behind auth, never indexed, never the LCP element. next/image would bill a transformation per thumbnail for no gain. */}
                   {variant.isUploading ? <div className="flex items-center gap-2 text-stone-500 font-medium"><Loader2 className="w-5 h-5 animate-spin" /> Uploading...</div> : variant.image_url ? <><img src={variant.image_url} alt="Variant" className="w-12 h-12 object-cover rounded-sm shadow-sm" /><span className="text-green-700 font-bold text-sm">Image Uploaded (Tap to change)</span></> : <><ImagePlus className="w-6 h-6 text-stone-400" /><span className="font-bold text-stone-600 text-sm">Tap to Change Photo</span></>}
                 </div>
               </div>
@@ -429,7 +435,7 @@ export default function EditProductForm({ product, categories }: { product: Prod
       </div>
 
       <div className="pt-8">
-        <button type="submit" disabled={isPending || isUploadingGallery || variants.some((v: any) => v.isUploading)} className="w-full bg-orange-500 text-white py-4 rounded-md font-black text-lg hover:bg-orange-600 transition shadow-lg disabled:opacity-70 flex justify-center items-center gap-2 active:scale-[0.98]">
+        <button type="submit" disabled={isPending || isUploadingGallery || variants.some(v => v.isUploading)} className="w-full bg-orange-500 text-white py-4 rounded-md font-black text-lg hover:bg-orange-600 transition shadow-lg disabled:opacity-70 flex justify-center items-center gap-2 active:scale-[0.98]">
           {isPending ? <Loader2 className="w-6 h-6 animate-spin" /> : 'Save Changes'}
         </button>
       </div>

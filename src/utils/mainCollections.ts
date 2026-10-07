@@ -32,10 +32,10 @@ import { priceAnchors, summariseCollections, type CollectionSummary } from '@/ut
  */
 
 /** 'live' links through. 'coming_soon' is named, blurred and inert. */
-export type MainCollectionStatus = 'live' | 'coming_soon'
+type MainCollectionStatus = 'live' | 'coming_soon'
 
 /** The product fields a main-collection card needs, and nothing else. */
-export interface MainCollectionProduct {
+interface MainCollectionProduct {
   id: string
   /**
    * Two jobs: keeping a footstool from setting the collection's "from" price,
@@ -51,7 +51,7 @@ export interface MainCollectionProduct {
   product_variants?: { image_url?: string | null }[] | null
 }
 
-export interface MainCollectionRow {
+interface MainCollectionRow {
   id: string
   slug: string
   name: string

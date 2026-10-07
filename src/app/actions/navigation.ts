@@ -14,16 +14,16 @@ import { canonicalProductPath } from '@/utils/productUrl'
 
 // ─── Mega menu ───────────────────────────────────────────────────────────────
 
-export interface MegaCollection {
+interface MegaCollection {
   id: string
   name: string
   slug: string
 }
 
 /** categoryId -> cheapest and dearest product in it. */
-export type MegaPriceRange = Record<string, { min: number; max: number }>
+type MegaPriceRange = Record<string, { min: number; max: number }>
 
-export interface MegaMenuData {
+interface MegaMenuData {
   collections: MegaCollection[]
   prices: MegaPriceRange
 }
@@ -63,7 +63,7 @@ export async function getMegaMenuData(): Promise<MegaMenuData> {
 
 // ─── Search ──────────────────────────────────────────────────────────────────
 
-export interface SearchHit {
+interface SearchHit {
   id: string
   title: string
   slug: string

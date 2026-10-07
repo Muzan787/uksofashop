@@ -250,7 +250,7 @@ const editSchema = z.object({
   items: z.array(editLineSchema).min(1, 'An order needs at least one line.'),
 })
 
-export type EditOrderInput = z.input<typeof editSchema>
+type EditOrderInput = z.input<typeof editSchema>
 
 /**
  * Change an existing order from the admin panel - customer, address, notes,
@@ -352,7 +352,7 @@ export async function deleteOrder(orderId: string): Promise<{ success: true } | 
 }
 
 /** What the confirm button's form reports back. Null once it has worked. */
-export type ConfirmOrderState = { error: string } | null
+type ConfirmOrderState = { error: string } | null
 
 /**
  * The customer confirming their own order, from the button on

@@ -9,14 +9,14 @@
 // different prices or different images for the same collection.
 
 /** The subset of a product row this needs. Anything else is ignored. */
-export interface CollectionProduct {
+interface CollectionProduct {
   base_price: number
   is_active?: boolean | null
   gallery_images?: string[] | null
   product_variants?: { image_url?: string | null }[] | null
 }
 
-export interface CollectionGroup {
+interface CollectionGroup {
   id: string
   name: string
   slug: string

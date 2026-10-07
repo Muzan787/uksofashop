@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Check, Loader2, Mail, MessageCircle } from 'lucide-react'
 import { isValidUkMobile } from '@/utils/phone'
 
-export interface RecoveryItem {
+interface RecoveryItem {
   variant_id: string
   quantity: number
   fabric_id?: string | null

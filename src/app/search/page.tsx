@@ -23,8 +23,11 @@ export default async function SearchPage(props: { searchParams: SearchParams }) 
   const query = typeof sp.q === 'string' ? sp.q.trim() : ''
   const supabase = await createClient()
 
-  let products: any[] = []
-  if (query) {
+  // Written as a function rather than a pre-declared `let products: any[]`
+  // so the row shape is inferred from the select string instead of erased -
+  // a renamed column is now a compile error here rather than an undefined at
+  // render time.
+  async function searchProducts(q: string) {
     const { data } = await supabase
       .from('products')
       // categories!products_category_id_fkey is the designated primary
@@ -33,11 +36,13 @@ export default async function SearchPage(props: { searchParams: SearchParams }) 
       // product page's own canonical tag.
       .select('id, title, slug, base_price, was_price, average_rating, review_count, product_variants(image_url, price_adjustment), categories!products_category_id_fkey(slug), product_categories!inner(categories(slug, name))')
       .eq('is_active', true)
-      .or(`title.ilike.%${query}%,description.ilike.%${query}%`)
+      .or(`title.ilike.%${q}%,description.ilike.%${q}%`)
       .order('created_at', { ascending: false })
       .limit(24)
-    if (data) products = data
+    return data ?? []
   }
+
+  const products = query ? await searchProducts(query) : []
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--color-calico-50)' }}>

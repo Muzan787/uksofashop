@@ -8,8 +8,8 @@
 // Every product image is a Cloudinary /upload/ URL, so the correctly sized
 // card can be requested from Cloudinary rather than generated and stored.
 
-export const OG_WIDTH = 1200
-export const OG_HEIGHT = 630
+const OG_WIDTH = 1200
+const OG_HEIGHT = 630
 
 /**
  * A 1200x630 social card derived from a product photo.

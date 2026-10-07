@@ -1,5 +1,5 @@
 import { GOOGLE_POLICY_VERSION, googleConsent, GOOGLE_DATALAYER_ENABLED, GOOGLE_GTM_QA_ENABLED } from './googleMeasurement'
-export const GOOGLE_CONSENT_DETAILS = 'ukss_google_consent_v1'
+const GOOGLE_CONSENT_DETAILS = 'ukss_google_consent_v1'
 export function recordGoogleChoice(value: 'granted'|'denied', reason: 'granted'|'denied'|'revoked') {
   try { localStorage.setItem(GOOGLE_CONSENT_DETAILS,JSON.stringify({id:crypto.randomUUID(),value,reason,
     captured_at:new Date().toISOString(),policy_version:GOOGLE_POLICY_VERSION,surface:'cookie_banner'})) } catch { /* no export evidence */ }

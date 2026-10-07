@@ -22,12 +22,3 @@ export type OfferQuoteResult =
   | { success?: undefined; error: string }
   | { success: true; error?: undefined; quote: OfferQuote }
 
-/**
- * Phase B accepts the public manual code. Phase C may later supply an opaque
- * server-validated entitlement token through the same contract; merely sending
- * a token grants no discount in Phase B.
- */
-export interface OfferAuthorityInput {
-  promotionCode?: string | null
-  entitlementToken?: string | null
-}

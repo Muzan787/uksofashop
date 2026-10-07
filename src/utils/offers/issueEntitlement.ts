@@ -9,7 +9,7 @@ const issueSchema = z.object({
   expires_at: z.string(),
 })
 
-export type IssuedOfferEntitlement = z.infer<typeof issueSchema>
+type IssuedOfferEntitlement = z.infer<typeof issueSchema>
 
 export async function issueOfferEntitlement(
   visitorId: string,

@@ -46,7 +46,7 @@ export const HERO_PRODUCT_SLUG: string | null = 'verona-scattered-back-family-se
 /** A slot is either a Cloudinary URL or null. Never an empty string. */
 type ArtSlot = string | null;
 
-export interface HomeArt {
+interface HomeArt {
   heroSofa: ArtSlot;
   heroRoom: ArtSlot;
   statsTexture: ArtSlot;

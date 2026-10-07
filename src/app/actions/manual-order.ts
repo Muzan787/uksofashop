@@ -114,7 +114,7 @@ const schema = z.object({
   }).optional(),
 })
 
-export type ManualOrderInput = z.input<typeof schema>
+type ManualOrderInput = z.input<typeof schema>
 
 export type WhatsAppAttributionMatch = {
   reference: string
@@ -125,7 +125,7 @@ export type WhatsAppAttributionMatch = {
   utmContent: string | null
 }
 
-export type ManualOrderResult =
+type ManualOrderResult =
   | { success?: undefined; error: string }
   | {
       success: true

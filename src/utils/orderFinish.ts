@@ -14,7 +14,7 @@
 // tracking page and account history. The basket and checkout have their own
 // fabric_label and already put it first.
 
-export interface FinishSource {
+interface FinishSource {
   fabric_code?: string | null
   fabric_name?: string | null
   fabric_collection?: string | null
@@ -22,7 +22,7 @@ export interface FinishSource {
   color?: string | null
 }
 
-export interface Finish {
+interface Finish {
   /** "Chenille Mink" for a chosen fabric, else the variant colour, else null. */
   label: string | null
   /** The fabric code the purchase order needs, when a fabric was chosen. */

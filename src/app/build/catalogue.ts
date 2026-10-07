@@ -129,7 +129,7 @@ function backFor(subgroup: string | null): BuildBack | null {
  * "240cm x 240cm H:90cm"   ->  "240 × 240 · H 90 cm"
  * Two units separated by "|" come back on two lines.
  */
-export function tidyDimensions(raw: string | null | undefined): string | null {
+function tidyDimensions(raw: string | null | undefined): string | null {
   if (!raw) return null
   const parts = raw
     .split('|')

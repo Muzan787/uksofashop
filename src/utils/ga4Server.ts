@@ -27,14 +27,8 @@ export function isGa4ServerConfigured(): boolean {
   return Boolean(MEASUREMENT_ID && API_SECRET)
 }
 
-export interface Ga4Item {
-  item_id: string
-  item_name: string
-  price: number
-  quantity: number
-}
 
-export interface Ga4Event {
+interface Ga4Event {
   /** From the _ga cookie. Falls back to a synthetic id if unavailable. */
   clientId: string
   name: string

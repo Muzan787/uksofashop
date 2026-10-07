@@ -14,7 +14,7 @@ import WishlistGrid, { type WishlistCardItem } from '@/components/Account/Wishli
 import { useReducedMotionSafe } from '@/components/Motion/useReducedMotionSafe'
 
 
-export interface AccountOrderItem {
+interface AccountOrderItem {
   title: string
   slug: string | null
   /** "Chenille Mink (CH02)" for a made-to-order sofa, the colourway for a stocked one. */

@@ -30,7 +30,7 @@ export const CATEGORY_PRIORITY = [
 ] as const
 
 /** Last resort when a product has no categories at all. */
-export const FALLBACK_CATEGORY = 'all'
+const FALLBACK_CATEGORY = 'all'
 
 /**
  * Slugs that have been renamed, mapped old -> new. The category page reads
@@ -87,7 +87,7 @@ export function productPath(categorySlug: string | null | undefined, productSlug
 }
 
 /** The two shapes a category can arrive in from a Supabase select. */
-export interface ProductCategoryRelations {
+interface ProductCategoryRelations {
   categories?: CategoryRef | CategoryRef[] | null
   product_categories?: { categories?: CategoryRef | CategoryRef[] | null }[] | null
 }
@@ -113,7 +113,7 @@ function categoryRefs<T extends CategoryRef>(product: {
  * that both links to a product and labels it has to name the SAME category it
  * links to, or the badge and the breadcrumb the link lands on disagree.
  */
-export function canonicalCategorySlug(product: ProductCategoryRelations): string {
+function canonicalCategorySlug(product: ProductCategoryRelations): string {
   // 1. products.category_id, the designated primary category.
   const direct = Array.isArray(product.categories) ? product.categories[0] : product.categories
   if (direct?.slug) return direct.slug

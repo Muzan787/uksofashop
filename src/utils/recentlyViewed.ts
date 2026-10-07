@@ -12,7 +12,7 @@
 // state, and the hook is what lets the server render an empty trail and the
 // browser fill it in without a hydration mismatch or a cascading render.
 
-export interface RecentProduct {
+interface RecentProduct {
   id: string;
   title: string;
   href: string;

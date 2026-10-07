@@ -9,7 +9,7 @@ import { Check } from 'lucide-react';
  * the admin panel needs; "Being prepared" and "Out for delivery" are what the
  * person waiting at home needs.
  */
-export const STAGES = ['Confirmed', 'Being prepared', 'Out for delivery', 'Delivered'] as const;
+const STAGES = ['Confirmed', 'Being prepared', 'Out for delivery', 'Delivered'] as const;
 
 interface Props {
   /** Index of the stage reached. -1 shows the whole line as ahead. */

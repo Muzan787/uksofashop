@@ -21,7 +21,7 @@ import {
   type MainCollectionMember,
 } from '@/utils/mainCollections'
 
-export interface MainCollectionViewProps {
+interface MainCollectionViewProps {
   name: string
   standfirst: string | null
   members: MainCollectionMember[]

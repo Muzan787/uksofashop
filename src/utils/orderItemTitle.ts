@@ -14,7 +14,7 @@
 // from the database - track_order and order_for_confirmation already coalesce
 // the two - so nothing there has to know this field exists.
 
-export interface TitleSource {
+interface TitleSource {
   custom_title?: string | null
   product_variants?: { products?: { title?: string | null } | null } | null
 }

@@ -9,7 +9,7 @@ import { getMegaMenuData } from '@/app/actions/navigation';
 import { STAGGER_STEP, STAGGER_CAP } from '@/components/Motion/tokens';
 import { blurDataURL } from '@/utils/cloudinary'
 
-export interface MegaCategory {
+interface MegaCategory {
   id: string;
   name: string;
   slug: string;

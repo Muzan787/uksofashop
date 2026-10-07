@@ -16,8 +16,8 @@
 // to whatever zone the machine happens to be in.
 
 /** Working days added to the order date before the earliest / latest arrival. */
-export const DELIVERY_MIN_DAYS = 2
-export const DELIVERY_MAX_DAYS = 4
+const DELIVERY_MIN_DAYS = 2
+const DELIVERY_MAX_DAYS = 4
 
 const LONDON = 'Europe/London'
 
@@ -99,7 +99,7 @@ export function deliveryWindow(now: Date = new Date()): DeliveryWindow {
 /** Days from today before the first day a customer may ask for. */
 export const PREFERRED_DELIVERY_MIN_DAYS = 4
 /** How far ahead a request is accepted. A sanity ceiling, not a promise. */
-export const PREFERRED_DELIVERY_MAX_DAYS = 180
+const PREFERRED_DELIVERY_MAX_DAYS = 180
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
 

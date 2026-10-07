@@ -33,13 +33,13 @@ export function isValidUkPostcode(raw: string): boolean {
 }
 
 /** "BB6 7LS" → "BB6". */
-export function outwardCode(raw: string): string {
+function outwardCode(raw: string): string {
   return normalisePostcode(raw).split(' ')[0] ?? ''
 }
 
-export type DeliveryZone = 'MAINLAND_STANDARD' | 'CUSTOM_QUOTE'
+type DeliveryZone = 'MAINLAND_STANDARD' | 'CUSTOM_QUOTE'
 
-export type DeliveryClassification =
+type DeliveryClassification =
   | {
       kind: 'invalid'
       postcode: string
@@ -257,11 +257,6 @@ export async function resolveDeliveryPostcode(raw: string): Promise<DeliveryClas
   }
 }
 
-/** Backward-compatible convenience for presentation code. Ambiguous = not safe to promise free mainland delivery. */
-export function isMainland(raw: string, trustedAddresses: string[] = []): boolean {
-  const result = classifyDeliveryPostcode(raw, trustedAddresses)
-  return result.kind === 'classified' && result.zone === 'MAINLAND_STANDARD'
-}
 
 /**
  * Addresses at a postcode, from Homedata.

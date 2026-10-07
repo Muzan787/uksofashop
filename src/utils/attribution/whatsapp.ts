@@ -37,7 +37,7 @@ export function generateWhatsAppReference(): string {
 }
 
 /** Matches what the database's check constraint accepts. Used to validate input, not just generate it. */
-export const WHATSAPP_REFERENCE_PATTERN = /^UKSS-WA-\d{6}-[A-Z0-9]{6}$/
+const WHATSAPP_REFERENCE_PATTERN = /^UKSS-WA-\d{6}-[A-Z0-9]{6}$/
 
 /** Functional first-party cookie carrying the most recent acquisition WhatsApp reference. */
 export const WHATSAPP_REFERENCE_COOKIE = 'uksofashop_wa'
@@ -63,7 +63,7 @@ export function withReferenceLine(message: string, reference: string): string {
   return `${message}\n\nRef: ${reference}`
 }
 
-export interface WhatsAppEnquiryPayload {
+interface WhatsAppEnquiryPayload {
   reference: string
   pageUrl: string
   pageContext: string

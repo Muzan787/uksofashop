@@ -1,10 +1,10 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
 
-export const OFFER_ENTRY_VERSION = 1 as const
+const OFFER_ENTRY_VERSION = 1 as const
 
-export type TrustedOfferEntrySource = 'meta_ads' | 'meta_catalog'
+type TrustedOfferEntrySource = 'meta_ads' | 'meta_catalog'
 
-export interface OfferEntryPayload {
+interface OfferEntryPayload {
   v: typeof OFFER_ENTRY_VERSION
   source: TrustedOfferEntrySource
   destination: string
@@ -46,7 +46,7 @@ function safeDestination(raw: string): URL | null {
   }
 }
 
-export function validateOfferEntryPayload(value: unknown): OfferEntryPayload | null {
+function validateOfferEntryPayload(value: unknown): OfferEntryPayload | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null
   const candidate = value as Record<string, unknown>
   if (candidate.v !== OFFER_ENTRY_VERSION) return null

@@ -14,11 +14,11 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import { AlertCircle, Check, Eye, EyeOff, Loader2, Paperclip, Upload, X } from 'lucide-react';
 
-export type FieldType =
+type FieldType =
   | 'text' | 'email' | 'tel' | 'number' | 'password'
   | 'textarea' | 'select' | 'checkbox' | 'radio' | 'file';
 
-export interface Option {
+interface Option {
   value: string;
   label: string;
 }

@@ -15,7 +15,7 @@
 
 export type BuildBack = 'High Back' | 'Scattered Back'
 
-export interface BuildFeet {
+interface BuildFeet {
   /** The supplier's code - SF015G. What goes on the purchase order. */
   code: string
   /** Ours - "Fluted shell". */
@@ -25,7 +25,7 @@ export interface BuildFeet {
   image: string | null
 }
 
-export interface BuildPiping {
+interface BuildPiping {
   fabric_id: string
   code: string
   name: string
@@ -33,7 +33,7 @@ export interface BuildPiping {
   image: string | null
 }
 
-export interface BuildNotes {
+interface BuildNotes {
   dimensions: string | null
   design: string | null
   other: string | null
@@ -120,15 +120,3 @@ export function asBuildSnapshot(value: unknown): Partial<BuildSnapshot> | null {
   return value as Partial<BuildSnapshot>
 }
 
-/** True when the customer asked for anything beyond the frame and the fabric. */
-export function buildHasExtras(build: Partial<BuildSnapshot> | null | undefined): boolean {
-  if (!build) return false
-  return Boolean(
-    build.seats === 'Custom' ||
-    build.feet ||
-    build.piping ||
-    build.notes?.dimensions ||
-    build.notes?.design ||
-    build.notes?.other,
-  )
-}

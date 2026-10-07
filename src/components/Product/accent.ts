@@ -18,7 +18,7 @@
 
 import type { CSSProperties } from 'react'
 
-export function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
+function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
   const clean = hex.replace('#', '')
   if (clean.length !== 3 && clean.length !== 6) return null
   const full = clean.length === 3 ? clean.split('').map(c => c + c).join('') : clean
@@ -30,7 +30,7 @@ export function hexToRgb(hex: string): { r: number; g: number; b: number } | nul
   }
 }
 
-export function getLuminance(r: number, g: number, b: number): number {
+function getLuminance(r: number, g: number, b: number): number {
   const [rs, gs, bs] = [r, g, b].map(c => {
     const s = c / 255
     return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4)
@@ -42,7 +42,7 @@ export function getLuminance(r: number, g: number, b: number): number {
 const L_INK_900 = 0.0106    // #191C1B
 const L_CALICO_50 = 0.9662  // #FBFAF7
 
-export function contrastRatio(a: number, b: number): number {
+function contrastRatio(a: number, b: number): number {
   const [hi, lo] = a > b ? [a, b] : [b, a]
   return (hi + 0.05) / (lo + 0.05)
 }
@@ -78,7 +78,7 @@ const FALLBACK = {
   line: 'rgba(212,135,26,0.30)',
 }
 
-export interface AccentVars extends CSSProperties {
+interface AccentVars extends CSSProperties {
   '--pdp-accent'?: string
   '--pdp-accent-text'?: string
   '--pdp-accent-on'?: string

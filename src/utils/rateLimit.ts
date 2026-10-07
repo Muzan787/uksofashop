@@ -30,7 +30,7 @@ function sweep(now: number) {
   }
 }
 
-export interface RateLimitResult {
+interface RateLimitResult {
   ok: boolean
   /** Seconds until the window resets. Only meaningful when ok is false. */
   retryAfter: number

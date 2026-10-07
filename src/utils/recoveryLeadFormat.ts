@@ -10,7 +10,7 @@
 
 import { PHONE_DISPLAY } from '@/constants/contact'
 
-export type RecoveryBasketItem = {
+type RecoveryBasketItem = {
   product_title?: string | null
   sku?: string | null
   color?: string | null
@@ -22,7 +22,7 @@ export type RecoveryBasketItem = {
   unit_price_gbp?: number | null
 }
 
-export interface RecoveryLine {
+interface RecoveryLine {
   /** Product title, or "Sofa" when the snapshot has none. */
   title: string
   /**

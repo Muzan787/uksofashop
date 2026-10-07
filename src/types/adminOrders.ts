@@ -1,8 +1,8 @@
-export interface AdminOrderProductDisplay {
+interface AdminOrderProductDisplay {
   title: string | null
 }
 
-export interface AdminOrderVariantDisplay {
+interface AdminOrderVariantDisplay {
   color: string | null
   sku: string | null
   products: AdminOrderProductDisplay | null

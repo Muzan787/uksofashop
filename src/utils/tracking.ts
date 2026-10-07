@@ -66,7 +66,7 @@ interface AdvancedMatching {
 }
 
 /** Whatever the page has learned about who this visitor is. */
-export interface MetaIdentity {
+interface MetaIdentity {
   email?: string | null
   /** Any UK format. Normalised to 447… before it is sent. */
   phone?: string | null
@@ -346,7 +346,7 @@ function newEventId(): string {
  * page because an advertising endpoint was unhappy.
  */
 /** attribution_actions.action_type values written to the first-party ledger. */
-export type LedgerAction =
+type LedgerAction =
   | 'product_view'
   | 'add_to_cart'
   | 'checkout_start'
@@ -432,7 +432,7 @@ export function trackOperationalAction(
   window.setTimeout(() => ledger(action, actionId, context), 750)
 }
 
-export type OfferLedgerAction =
+type OfferLedgerAction =
   | 'offer_prompt_shown'
   | 'offer_prompt_dismissed'
   | 'offer_code_copied'
@@ -602,7 +602,7 @@ export function trackOrderPlaced(orderId: string, total: number, items: TrackedI
 // ─── Contact events (WhatsApp / phone) ──────────────────────────────────────
 
 /** Context describing where a Contact event happened, for reporting only. */
-export interface ContactContext {
+interface ContactContext {
   /** 'whatsapp' or 'phone' - never a monetary event, never given order revenue. */
   channel: 'whatsapp' | 'phone'
   path: string

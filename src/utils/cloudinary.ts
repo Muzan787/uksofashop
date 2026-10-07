@@ -81,7 +81,7 @@ export function trimmed(url: string): string {
 // from a phone is never what a visitor downloads.
 
 /** True for a Cloudinary video delivery URL. */
-export function isCloudinaryVideo(url: string | null | undefined): boolean {
+function isCloudinaryVideo(url: string | null | undefined): boolean {
   return Boolean(url && url.includes('/video/upload/'));
 }
 

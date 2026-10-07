@@ -10,7 +10,7 @@ import { productTransitionName } from '@/components/Motion/productTransition';
 import { blurDataURL } from '@/utils/cloudinary';
 import { percentOff } from '@/utils/pricing';
 
-export interface CardSwatch {
+interface CardSwatch {
   id: string;
   /** Human name, for the accessible label. */
   color: string | null;

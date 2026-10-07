@@ -29,7 +29,10 @@ export default function AddCategoryForm() {
       const data = await res.json()
       if (data.secure_url) setImageUrl(data.secure_url)
       else throw new Error('Upload failed')
-    } catch (err) { alert("Failed to upload image.") } finally { setIsUploading(false) }
+    } catch (err) {
+      console.error('Category image upload failed', err)
+      alert("Failed to upload image.")
+    } finally { setIsUploading(false) }
   }
 
   async function handleSubmit(formData: FormData) {
@@ -73,6 +76,7 @@ export default function AddCategoryForm() {
                 <div className="flex items-center gap-2 text-stone-500 font-medium"><Loader2 className="w-5 h-5 animate-spin" /> Uploading...</div>
               ) : imageUrl ? (
                 <>
+                  {/* eslint-disable-next-line @next/next/no-img-element -- Admin upload preview: behind auth, never indexed, never the LCP element. next/image would bill a transformation per thumbnail for no gain. */}
                   <img src={imageUrl} alt="Preview" className="w-10 h-10 object-cover rounded-sm shadow-sm" />
                   <span className="text-green-700 font-bold text-sm">Image Uploaded</span>
                 </>

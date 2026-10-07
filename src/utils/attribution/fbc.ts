@@ -6,7 +6,7 @@
 // shape. The timestamp comes from the touch itself, not from the later order
 // confirmation, so the identifier represents the ad click time.
 
-export interface FbcTouchLike {
+interface FbcTouchLike {
   fbclid?: string | null
   touchAtMs?: number | string | null
 }
