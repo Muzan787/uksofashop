@@ -1,4 +1,3 @@
-'use client';
 // src/components/Checkout/Steps.tsx
 
 import { Check } from 'lucide-react';
@@ -43,6 +42,9 @@ export default function Steps({ current }: { current: Step }) {
 
         <div
           role="progressbar"
+          // A progressbar needs a name as well as a value. Without one it
+          // announced only "Step 2 of 3", with no clue what was progressing.
+          aria-label="Checkout progress"
           aria-valuemin={1}
           aria-valuemax={STEPS.length}
           aria-valuenow={index + 1}

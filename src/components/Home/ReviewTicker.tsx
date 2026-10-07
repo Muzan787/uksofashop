@@ -201,7 +201,7 @@ export default function ReviewTicker({ reviews }: { reviews: HomeReview[] }) {
       <div className="mx-auto mt-8 max-w-shell px-4 sm:hidden sm:px-6">
         <Link
           href="/reviews"
-          className="hover-link inline-flex items-center gap-1.5 text-body-sm text-ink-500 no-underline"
+          className="hover-link inline-flex min-h-11 items-center gap-1.5 text-body-sm text-ink-500 no-underline"
         >
           All reviews
           <ArrowRight aria-hidden="true" className="h-3.5 w-3.5" />

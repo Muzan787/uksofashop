@@ -134,9 +134,19 @@ export const SplitText = forwardRef<HTMLElement, SplitTextProps>(function SplitT
     <Tag
       ref={setRefs}
       className={className}
-      aria-label={text.replace(/\n/g, ' ')}
       {...rest}
     >
+      {/*
+        The readable copy of the string.
+
+        This used to be an aria-label on the Tag itself, which ARIA forbids on
+        a <p> (and on every other element that does not support naming from
+        the author) — so on the homepage the quote had NO accessible name at
+        all: the label was ignored and every visible piece below is
+        aria-hidden. A visually hidden span works whatever Tag resolves to.
+      */}
+      <span className="sr-only">{text.replace(/\n/g, ' ')}</span>
+
       {units.map((unit, i) => {
         // Whitespace is rendered as-is; wrapping it breaks line-breaking.
         if (/^\s+$/.test(unit)) return <span key={i}>{unit}</span>

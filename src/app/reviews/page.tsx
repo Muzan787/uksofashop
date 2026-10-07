@@ -2,6 +2,7 @@
 import type { Metadata } from 'next'
 import { createClient } from '@/utils/supabase/server'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Star, BadgeCheck } from 'lucide-react'
 import ReviewFormModal from './ReviewFormModal'
 import EditorialSchema from '@/components/Editorial/EditorialSchema'
@@ -95,6 +96,11 @@ export default async function ReviewsPage() {
             {reviews.map((review) => {
               // Extract the name from wherever it might be saved, or fallback
               const displayName = review.customer_name || 'Anonymous Customer';
+              // PostgREST returns an embedded to-one relation as an object,
+              // but types it as either shape depending on the foreign keys it
+              // can see. Narrowed once here rather than cast to `any` twice
+              // at the point of use.
+              const product = Array.isArray(review.product) ? review.product[0] : review.product;
 
               return (
                 <div key={review.id} className="break-inside-avoid bg-white p-6 rounded-sm border border-calico-300 shadow-e1">
@@ -148,15 +154,22 @@ export default async function ReviewsPage() {
                   {/* Optional Image */}
                   {review.image_url && (
                     <div className="mb-4 rounded-sm overflow-hidden border border-gray-100">
-                      <img src={review.image_url} alt="Customer review" className="w-full h-auto object-cover" />
+                      <Image
+                        src={review.image_url}
+                        alt={`Sofa bought by ${displayName}`}
+                        width={600}
+                        height={600}
+                        sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                        className="w-full h-auto object-cover"
+                      />
                     </div>
                   )}
 
                   {/* Product Link Snippet */}
-                  {review.product && (
+                  {product && (
                     <div className="pt-4 mt-4 border-t border-calico-300">
-                      <Link href={`/shop/all/${(review.product as any).slug}`} className="text-caption font-semibold text-ember-700 hover:underline flex items-center gap-1">
-                        View {(review.product as any).title} →
+                      <Link href={`/shop/all/${product.slug}`} className="text-caption font-semibold text-ember-700 hover:underline flex items-center gap-1">
+                        View {product.title} →
                       </Link>
                     </div>
                   )}

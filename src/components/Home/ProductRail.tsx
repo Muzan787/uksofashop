@@ -169,6 +169,12 @@ export default function ProductRail({
               aria-selected={active === i}
               aria-label={`Go to item ${i + 1} of ${stops}`}
               onClick={() => goTo(i)}
+              // 24×44, deliberately. Widening these to 44 square overflowed
+              // the homepage horizontally on a 375px screen — a rail with
+              // nine stops needs 428px of dots and the viewport has 343.
+              // 24×44 clears WCAG 2.5.8's 24×24 minimum, and the rail's real
+              // interaction is the swipe; these are a position indicator you
+              // can also tap.
               className="grid h-11 w-6 place-items-center"
             >
               <span

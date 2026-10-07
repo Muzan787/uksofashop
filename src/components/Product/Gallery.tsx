@@ -333,7 +333,7 @@ export default function Gallery({
           <button
             type="button"
             onClick={() => setLightbox(true)}
-            className="hover-link flex min-h-9 items-center gap-2 font-data text-caption uppercase tracking-widest text-calico-300"
+            className="hover-link -ml-1 flex min-h-11 items-center gap-2 px-1 font-data text-caption uppercase tracking-widest text-calico-300"
           >
             <ZoomIn aria-hidden="true" className="h-4 w-4 text-ember-300" />
             Zoom

@@ -1542,3 +1542,28 @@ html.entrance .brand-entrance__rule {
   .fab-offset { bottom: calc(1.5rem + var(--fab-extra, 0px)); }
   .fab-offset-2 { bottom: calc(1.5rem + 3.5rem + var(--fab-extra, 0px)); }
 }
+
+/*
+ * The other half of the same problem.
+ *
+ * --fab-extra lifts the floating buttons clear of a pinned bar, but nothing
+ * gave the DOCUMENT the matching clearance, so on a phone the last ~57px of
+ * every page with a bottom bar sat underneath it: at the foot of the
+ * checkout, the total bar covered the footer's bottom row of links outright,
+ * and the WhatsApp button sat on top of another one.
+ *
+ * Applied to the footer's last row, because the footer is the last thing on
+ * every page. The 3.5rem is the WhatsApp button plus its gap - the button is
+ * only in the right-hand corner, but the footer's links run the full width
+ * underneath it.
+ *
+ * Phones and tablets only. On a wide screen the footer is far wider than the
+ * button and the overlap never reaches anything.
+ */
+.pb-bottom-bar {
+  padding-bottom: calc(env(safe-area-inset-bottom) + 16px + 3.5rem + var(--fab-extra, 0px));
+}
+
+@media (width >= 64rem) {
+  .pb-bottom-bar { padding-bottom: calc(1.5rem + var(--fab-extra, 0px)); }
+}

@@ -118,7 +118,7 @@ function TrackInterface() {
             maxLength={9}
             autoComplete="postal-code"
             spellCheck={false}
-            className="w-full border-0 bg-transparent pb-3 font-data text-lead font-bold uppercase tracking-[0.12em] text-ink-900 focus-ring-inset rounded-sm placeholder:text-ink-400"
+            className="min-h-11 w-full border-0 bg-transparent pb-3 font-data text-lead font-bold uppercase tracking-[0.12em] text-ink-900 focus-ring-inset rounded-sm placeholder:text-ink-400"
           />
           <span aria-hidden="true" className="absolute inset-x-0 bottom-0 h-px bg-calico-300" />
           <span
@@ -298,7 +298,7 @@ export default function TrackOrderPage() {
           </Link>
           <Link
             href="/shop/all"
-            className="hover-link flex items-center gap-1.5 text-caption text-calico-300 no-underline"
+            className="hover-link flex min-h-11 items-center gap-1.5 text-caption text-calico-300 no-underline"
           >
             Shop <ArrowRight aria-hidden="true" className="h-3 w-3" />
           </Link>

@@ -58,7 +58,11 @@ function Wordmark({ light, className = '' }: { light: boolean; className?: strin
           light ? 'text-calico-50' : 'text-ink-900'
         }`}
       >
-        UK Sofa<span className="text-ember-500">Shop</span>
+        {/* ember-500 is a FILL, not a text colour — 2.76:1 on the calico
+            ground, which fails AA. tokens.css says it plainly: amber text is
+            ember-700 on light and ember-300 on dark. This span was the one
+            place in the site that ignored it, on every page. */}
+        UK Sofa<span className={light ? 'text-ember-300' : 'text-ember-700'}>Shop</span>
       </span>
     </Link>
   );
@@ -300,7 +304,7 @@ export default function Header({ categories }: { categories: NavCategory[] }) {
                       aria-current={pathname === href ? 'page' : undefined}
                       className={`hover-link rounded-sm px-3 py-2 text-body-sm font-medium no-underline ${
                         pathname === href
-                          ? 'text-ember-500'
+                          ? onHero ? 'text-ember-300' : 'text-ember-700'
                           : onHero ? 'text-calico-50' : 'text-ink-700'
                       }`}
                     >

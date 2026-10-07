@@ -105,7 +105,7 @@ export default function SectionHeading({
           <Reveal delay={0.15} distance={12} amount={0.2} className="shrink-0">
             <Link
               href={href}
-              className={`hover-link inline-flex items-center gap-2 pb-1 text-body-sm no-underline ${linkTone}`}
+              className={`hover-link inline-flex min-h-11 items-center gap-2 pb-1 text-body-sm no-underline ${linkTone}`}
             >
               {linkLabel}
               <ArrowRight aria-hidden="true" className="h-4 w-4 text-ember-500" />

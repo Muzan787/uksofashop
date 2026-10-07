@@ -121,26 +121,31 @@ export default function CoverageMap() {
         </svg>
 
         <dl className="m-0 flex flex-col">
+          {/* A <div> inside a <dl> is only legal when it wraps the dt/dd pair
+              DIRECTLY. This had the pair nested one div deeper, beside the
+              swatch, which left eight dt/dd elements with no description-list
+              parent as far as a screen reader was concerned. The swatch is
+              now positioned out of the dt rather than sitting in a column of
+              its own, so the markup is a real list and the layout is
+              unchanged. */}
           {BANDS.map(band => (
             <div
               key={band.id}
-              className="flex gap-3 border-b border-calico-100 py-3 first:pt-0 last:border-b-0 last:pb-0"
+              className="border-b border-calico-100 py-3 pl-6 first:pt-0 last:border-b-0 last:pb-0"
             >
-              <span
-                aria-hidden="true"
-                className={`mt-1.5 h-3 w-3 shrink-0 rounded-sm ${band.swatch}`}
-              />
-              <div className="min-w-0">
-                <dt className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                  <span className="text-body-sm font-semibold text-ink-900">{band.label}</span>
-                  <span className="font-data text-caption font-semibold uppercase tracking-wider text-ember-700">
-                    {band.window}
-                  </span>
-                </dt>
-                <dd className="m-0 mt-1 text-caption leading-relaxed text-ink-500">
-                  {band.places}
-                </dd>
-              </div>
+              <dt className="relative flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                <span
+                  aria-hidden="true"
+                  className={`absolute -left-6 top-1 h-3 w-3 shrink-0 rounded-sm ${band.swatch}`}
+                />
+                <span className="text-body-sm font-semibold text-ink-900">{band.label}</span>
+                <span className="font-data text-caption font-semibold uppercase tracking-wider text-ember-700">
+                  {band.window}
+                </span>
+              </dt>
+              <dd className="m-0 mt-1 text-caption leading-relaxed text-ink-500">
+                {band.places}
+              </dd>
             </div>
           ))}
         </dl>

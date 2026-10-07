@@ -332,7 +332,7 @@ export default function CraftStory() {
         <div className="border-t border-calico-50/15 py-9 lg:py-12">
           <Link
             href="/about"
-            className="hover-link inline-flex items-center gap-2 text-body text-calico-50 no-underline"
+            className="hover-link inline-flex min-h-11 items-center gap-2 text-body text-calico-50 no-underline"
           >
             More about how we work
             <ArrowRight aria-hidden="true" className="h-4 w-4 text-ember-300" />

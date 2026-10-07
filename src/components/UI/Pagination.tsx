@@ -36,9 +36,13 @@ export default function Pagination({ currentPage, totalPages }: { currentPage: n
     href: string | null,
     active = false,
     disabled = false,
+    label?: string,
   ) => {
+    // 44, not 36. These were 36×36 — under the 44px target everybody's
+    // phone guidance asks for, on the one control that moves a shopper
+    // through a 72-product catalogue.
     const style: React.CSSProperties = {
-      minWidth: 36, height: 36, borderRadius: 'var(--radius-sm)',
+      minWidth: 44, height: 44, borderRadius: 'var(--radius-sm)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       fontSize: 'var(--text-caption)', fontWeight: active ? 700 : 500,
       border: `1.5px solid ${active ? ACCENT : disabled ? 'var(--color-calico-300)' : 'var(--color-calico-300)'}`,
@@ -50,18 +54,24 @@ export default function Pagination({ currentPage, totalPages }: { currentPage: n
       padding: '0 8px',
     }
     if (!href || disabled) return <div key={key} style={style}>{content}</div>
-    return <Link key={key} href={href} style={style}>{content}</Link>
+    // The prev/next arrows are an icon and nothing else, so without a label
+    // a screen reader announced them as "link" with no destination.
+    return (
+      <Link key={key} href={href} style={style} aria-label={label} aria-current={active ? 'page' : undefined}>
+        {content}
+      </Link>
+    )
   }
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 32 }}>
-      {btn('prev', <ChevronLeft style={{ width: 14, height: 14 }} />, currentPage > 1 ? url(currentPage - 1) : null, false, currentPage <= 1)}
+      {btn('prev', <ChevronLeft aria-hidden="true" style={{ width: 14, height: 14 }} />, currentPage > 1 ? url(currentPage - 1) : null, false, currentPage <= 1, `Previous page, page ${currentPage - 1}`)}
       {pages.map((p, i) =>
         p === '…'
-          ? <span key={`e${i}`} style={{ width: 24, textAlign: 'center', color: 'var(--color-ink-500)', fontSize: 'var(--text-caption)' }}>…</span>
-          : btn(`p${p}`, p, url(p as number), p === currentPage)
+          ? <span key={`e${i}`} aria-hidden="true" style={{ width: 24, textAlign: 'center', color: 'var(--color-ink-500)', fontSize: 'var(--text-caption)' }}>…</span>
+          : btn(`p${p}`, p, url(p as number), p === currentPage, false, `Page ${p}`)
       )}
-      {btn('next', <ChevronRight style={{ width: 14, height: 14 }} />, currentPage < totalPages ? url(currentPage + 1) : null, false, currentPage >= totalPages)}
+      {btn('next', <ChevronRight aria-hidden="true" style={{ width: 14, height: 14 }} />, currentPage < totalPages ? url(currentPage + 1) : null, false, currentPage >= totalPages, `Next page, page ${currentPage + 1}`)}
     </div>
   )
 }

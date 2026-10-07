@@ -1,13 +1,34 @@
 'use client'
 // src/components/UI/CookieConsent.tsx
 
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState, useSyncExternalStore } from 'react'
 import Link from 'next/link'
 import {
   getConsent, grantConsent, revokeConsent,
-  CONSENT_GRANTED_EVENT, CONSENT_REOPEN_EVENT,
+  CONSENT_CHANGED_EVENT, CONSENT_GRANTED_EVENT, CONSENT_REOPEN_EVENT,
 } from '@/utils/consent'
 import { useDialog } from './useDialog'
+
+/**
+ * The stored answer, as an external store. consent.ts already fires
+ * CONSENT_CHANGED_EVENT whenever the value moves, so it subscribes cleanly
+ * and the first client render knows the answer rather than discovering it one
+ * render later.
+ */
+function subscribeConsent(onChange: () => void) {
+  window.addEventListener(CONSENT_CHANGED_EVENT, onChange)
+  return () => window.removeEventListener(CONSENT_CHANGED_EVENT, onChange)
+}
+
+/**
+ * The server, and the hydrating client, cannot read localStorage - and
+ * "cannot tell yet" is not the same answer as "never asked". Returning null
+ * here would make the banner render during hydration for every visitor who
+ * has already answered, and then vanish: a flash of a modal on every page
+ * load. UNKNOWN keeps it closed until the real value is readable.
+ */
+const UNKNOWN = 'unknown'
+const unknownConsent = () => UNKNOWN
 
 /**
  * The cookie question, asked as a modal.
@@ -25,27 +46,48 @@ import { useDialog } from './useDialog'
  * outside is not an answer.
  */
 export default function CookieConsent() {
-  const [open, setOpen] = useState(false)
+  // The stored answer: 'granted', 'denied', null for never asked, or UNKNOWN
+  // while the value is not yet readable. Read from the store rather than
+  // assigned inside an effect, which is what made the first-time render
+  // cascade.
+  const stored = useSyncExternalStore(subscribeConsent, getConsent, unknownConsent)
+
+  const [reopened, setReopened] = useState(false)
+  const [dismissed, setDismissed] = useState(false)
   const [entered, setEntered] = useState(false)
 
-  const show = useCallback(() => {
-    setOpen(true)
-    requestAnimationFrame(() => setEntered(true))
+  // Asked only when we know nobody has answered, or when the footer link
+  // asks for it back. UNKNOWN deliberately does not open it.
+  const open = (reopened || stored === null) && !dismissed
+
+  // Already granted when the page loaded: tell TrackingScripts and
+  // AttributionBoot they may run. On arrival only - grantConsent() dispatches
+  // this itself when the answer is given here, and keying the effect to the
+  // stored value instead would fire it a second time and re-run the
+  // attribution capture behind it.
+  useEffect(() => {
+    if (getConsent() === 'granted') window.dispatchEvent(new Event(CONSENT_GRANTED_EVENT))
   }, [])
 
+  // The footer link and the /cookies page ask for it back.
   useEffect(() => {
-    const consent = getConsent()
-    if (!consent) show()
-    else if (consent === 'granted') window.dispatchEvent(new Event(CONSENT_GRANTED_EVENT))
+    const onReopen = () => { setDismissed(false); setReopened(true) }
+    window.addEventListener(CONSENT_REOPEN_EVENT, onReopen)
+    return () => window.removeEventListener(CONSENT_REOPEN_EVENT, onReopen)
+  }, [])
 
-    window.addEventListener(CONSENT_REOPEN_EVENT, show)
-    return () => window.removeEventListener(CONSENT_REOPEN_EVENT, show)
-  }, [show])
+  // The entrance transition, one frame after the dialog is in the DOM.
+  useEffect(() => {
+    if (!open) return
+    const id = requestAnimationFrame(() => setEntered(true))
+    return () => cancelAnimationFrame(id)
+  }, [open])
 
   function answer(status: 'granted' | 'denied') {
     setEntered(false)
     setTimeout(() => {
-      setOpen(false)
+      setDismissed(true)
+      setReopened(false)
       if (status === 'granted') grantConsent()
       else revokeConsent({ reload: getConsent() === 'granted' })
     }, 260)

@@ -24,13 +24,15 @@ import {
   setMetaIdentity,
   type TrackedItem,
 } from '@/utils/tracking'
-import { PROMISES } from '@/constants/promises'
+import { CANCELLATION, PROMISES } from '@/constants/promises'
+import { hasPersonalisedLine } from '@/utils/cancellationRights'
 import { buildSnapshot, describeBuild } from '@/types/build'
 import { isValidUkMobile, UK_MOBILE_ERROR } from '@/utils/phone'
 import {
   ASSEMBLY_FEE, UPSTAIRS_FIRST_FLOOR, UPSTAIRS_PER_EXTRA_FLOOR,
   SOFA_REMOVAL_PER_SEAT, SOFA_REMOVAL_MIN_SEATS, SOFA_REMOVAL_MAX_SEATS,
-  DELIVERY_AREA_NOTE, NO_EXTRAS, deliveryBreakdown, deliveryTotal, floorName, sofaRemovalFee,
+  DELIVERY_AREA_NOTE, NO_EXTRAS, RE_DELIVERY_FEE,
+  deliveryBreakdown, deliveryTotal, floorName, sofaRemovalFee,
   type DeliveryOptions,
 } from '@/constants/delivery'
 import { isValidUkPostcode, lookupAddresses, normalisePostcode } from '@/utils/postcode'
@@ -380,7 +382,12 @@ function DetailsStep({
   setDeliveryCheck: React.Dispatch<React.SetStateAction<DeliveryCheckResult | null>>
 }) {
   const { cartItems, totalAmount, clearCart } = useCart()
-  const madeToOrder = cartItems.some(i => i.fabric_id)
+  // A basket row the customer shaped: a fabric they picked, or a build they
+  // sent through /build. This decides two separate things that happen to
+  // coincide - whether we ring them before anything is made, and whether the
+  // cancellation notice applies - and the test for the second one lives in
+  // utils/cancellationRights.ts rather than here.
+  const madeToOrder = hasPersonalisedLine(cartItems)
   const extrasTotal = deliveryTotal(extras)
   const offerDiscount = offer?.valid ? offer.discountAmount : 0
   const grandTotal = Math.max(0, totalAmount - offerDiscount) + extrasTotal
@@ -418,6 +425,14 @@ function DetailsStep({
     setServerError('')
   }
 
+  // The address as it stands right now, read inside the postcode effect below
+  // without becoming one of its dependencies. Listing form.shippingAddress
+  // there would restart the debounced postcode lookup on every keystroke in
+  // the address field; the effect only needs to know whether the field is
+  // empty at the moment the lookup returns.
+  const shippingAddressRef = useRef(form.shippingAddress)
+  useEffect(() => { shippingAddressRef.current = form.shippingAddress }, [form.shippingAddress])
+
   useEffect(() => {
     const raw = form.postcode.trim()
     if (!isValidUkPostcode(raw)) {
@@ -442,7 +457,7 @@ function DetailsStep({
               const found = await lookupAddresses(result.postcode)
               if (cancelled) return
               setAddresses(found)
-              if (found.length > 0 && !form.shippingAddress.trim()) setDropdownOpen(true)
+              if (found.length > 0 && !shippingAddressRef.current.trim()) setDropdownOpen(true)
             } catch {
               if (!cancelled) setAddresses([])
             }
@@ -627,9 +642,11 @@ function DetailsStep({
       <button
         type="button"
         onClick={onBack}
-        className="mb-4 inline-flex cursor-pointer items-center gap-1 border-0 bg-transparent p-0 text-caption text-ink-500"
+        // min-h-11 and a touch of horizontal padding: this was a 17px-tall
+        // strip of text, the smallest control on the checkout.
+        className="-ml-1 mb-2 inline-flex min-h-11 cursor-pointer items-center gap-1.5 border-0 bg-transparent px-1 text-caption text-ink-500"
       >
-        <ArrowLeft aria-hidden="true" className="h-3 w-3" /> Back to Cart
+        <ArrowLeft aria-hidden="true" className="h-3.5 w-3.5" /> Back to Cart
       </button>
 
       <OrderOnWhatsApp
@@ -669,13 +686,17 @@ function DetailsStep({
         />
 
         <div>
-          <label className="mb-2 flex items-center gap-1 font-data text-eyebrow font-bold uppercase tracking-[0.15em] text-ink-500">
+          {/* htmlFor/id: the label was sitting beside the input rather than
+              attached to it, so the one field the whole delivery check hangs
+              on announced as an unlabelled text box. */}
+          <label htmlFor="postcode" className="mb-2 flex items-center gap-1 font-data text-eyebrow font-bold uppercase tracking-[0.15em] text-ink-500">
              Postcode <span className="text-ember-700">*</span>
           </label>
           <div className="flex gap-2">
             <div className="relative flex-1">
                <MapPin aria-hidden="true" className="absolute left-3 top-1/2 z-[1] h-3.5 w-3.5 -translate-y-1/2 text-ink-500" />
                <input
+                  id="postcode"
                   type="text"
                   name="postcode"
                   autoComplete="postal-code"
@@ -999,12 +1020,7 @@ function DetailsStep({
           </p>
           <p className="m-0 mt-3 flex gap-2 border-t border-indigo-300 pt-3 text-caption leading-relaxed text-ink-500">
             <AlertTriangle aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-ember-700" />
-            <span>
-              <strong className="text-ink-900">Because it&apos;s made to your specification</strong>,
-              the 14-day right to change your mind doesn&apos;t apply — that&apos;s the standard
-              exemption under the Consumer Contracts Regulations. Faulty or damaged items are
-              covered exactly as normal.
-            </span>
+            <span>{CANCELLATION.warning}</span>
           </p>
         </div>
       )}
@@ -1050,8 +1066,16 @@ function DetailsStep({
             }
           </button>
 
+          {/* Reg 40 of the Consumer Contracts Regulations wants express
+              agreement to an additional charge BEFORE the customer is bound.
+              The re-delivery fee used to appear only on the confirmation
+              screen, which is after the fact. */}
           <p className="mt-3 text-center text-caption leading-relaxed text-ink-500">
-            By placing this order you agree to pay on delivery. We&apos;ll send a confirmation email with a tracking link.
+            By placing this order you agree to pay on delivery, and to our{' '}
+            <Link href="/terms" className="hover-link text-ink-900">terms</Link>. If you are not in
+            when a slot you have agreed comes round, the trip has to be made again and a £
+            {RE_DELIVERY_FEE} re-delivery charge applies — tell us beforehand and we will simply
+            move the day, free. We&apos;ll send a confirmation email with a tracking link.
           </p>
 
           <div className="mt-4">

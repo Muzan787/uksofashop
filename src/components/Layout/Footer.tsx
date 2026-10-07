@@ -239,7 +239,10 @@ function Newsletter() {
                 value={email}
                 onChange={(e) => { setEmail(e.target.value); setStatus('idle'); }}
                 placeholder="your@email.com"
-                className="focus-ring-inset min-w-0 flex-1 appearance-none rounded-sm border-0 bg-transparent pb-2 text-body text-calico-50 placeholder:text-calico-50/30"
+                // min-h-11: the underlined field measured 35px tall, which is
+                // a small thing to hit accurately on a phone. The rule stays
+                // where it is — this only grows the box above it.
+                className="focus-ring-inset min-h-11 min-w-0 flex-1 appearance-none rounded-sm border-0 bg-transparent pb-2 text-body text-calico-50 placeholder:text-calico-50/30"
               />
               <button
                 type="submit"
@@ -428,9 +431,12 @@ export default function Footer({ categories }: { categories: NavCategory[] }) {
 
       {/* ── Base ─────────────────────────────────────────────────────────────
           Copyright, the three legal links, the social icons and back to top.
-          `pb-safe` keeps the row above a handset's home indicator; there is
-          no bottom navigation to clear any more (removed 2026-09-18). */}
-      <div className="pb-safe relative border-t border-calico-50/10">
+          `pb-bottom-bar` keeps the row above a handset's home indicator AND
+          above whatever is pinned to the bottom edge — the WhatsApp button on
+          every page, plus the checkout total bar, the sample basket or the
+          builder's summary bar where one is up. Without it the total bar sat
+          flat on top of this row of links. See the note in globals.css. */}
+      <div className="pb-bottom-bar relative border-t border-calico-50/10">
         <div className="mx-auto flex max-w-shell flex-col gap-4 px-4 py-4 sm:flex-row sm:items-center sm:px-6 lg:py-5">
           <p className="m-0 text-caption text-calico-300">
             © <span className="font-data tabular-nums">{year}</span> UK Sofa Shop. All rights reserved.

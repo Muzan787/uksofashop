@@ -92,7 +92,7 @@ export default function SwatchBrowser() {
                     type="button"
                     onClick={() => setOnly(chip.slug)}
                     aria-pressed={active}
-                    className={`hover-btn flex h-10 cursor-pointer items-center gap-2 whitespace-nowrap rounded-pill border px-4 text-body-sm font-semibold transition-colors duration-swift ease-out-expo ${
+                    className={`hover-btn flex h-11 cursor-pointer items-center gap-2 whitespace-nowrap rounded-pill border px-4 text-body-sm font-semibold transition-colors duration-swift ease-out-expo ${
                       active
                         ? 'hover-btn-dark border-ink-900 bg-ink-900 text-calico-50'
                         : 'border-calico-300 bg-calico-100 text-ink-700'
@@ -124,7 +124,7 @@ export default function SwatchBrowser() {
             onChange={e => setQuery(e.target.value)}
             placeholder="Colour or code — mink, CH14"
             aria-label="Search the fabric range by colour or code"
-            className="h-10 w-full rounded-pill border-[1.5px] border-calico-300 bg-calico-50 pl-9 pr-9 text-body-sm text-ink-900 outline-none transition-[border-color] duration-swift ease-out-expo focus:border-ember-700"
+            className="h-11 w-full rounded-pill border-[1.5px] border-calico-300 bg-calico-50 pl-9 pr-9 text-body-sm text-ink-900 outline-none transition-[border-color] duration-swift ease-out-expo focus:border-ember-700"
           />
           {query && (
             <button

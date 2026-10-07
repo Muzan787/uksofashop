@@ -261,8 +261,18 @@ export default function BuildYourOwn({ teaser, context = 'home' }: Props) {
                 motion leaves bare spans inside an <ol>. */}
             {/* One row that scrolls sideways on a phone - seven chips wrap to three
                 rows at 375px and push the button most of a screen down. */}
-            <div className="no-scrollbar -mx-4 overflow-x-auto px-4 sm:mx-0 sm:overflow-visible sm:px-0">
-              <ol className="m-0 flex w-max list-none gap-2 p-0 sm:w-auto sm:flex-wrap" aria-label="What the builder asks">
+            {/* tabIndex 0: every chip inside is a plain span, so without it
+                there was no way to scroll this sideways from the keyboard
+                and the last four steps were unreachable. */}
+            <div
+              tabIndex={0}
+              role="group"
+              aria-label="What the builder asks"
+              className="no-scrollbar -mx-4 overflow-x-auto px-4 sm:mx-0 sm:overflow-visible sm:px-0"
+            >
+              {/* The name lives on the scrollable group above, so it is not
+                  repeated here and announced twice. */}
+              <ol className="m-0 flex w-max list-none gap-2 p-0 sm:w-auto sm:flex-wrap">
               {STEPS.map((step, i) => (
                 <li key={step}>
                   <Reveal delay={staggerDelay(i, 0.05)} distance={10} amount={0.2}>
