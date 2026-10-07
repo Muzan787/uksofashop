@@ -15,8 +15,9 @@
 // because the cron has no user session and those tables have no public
 // policy. Nothing is written.
 //
-// Scheduled in vercel.json (07:00 UTC Monday = 8am BST / 7am GMT; a cron
-// on the Hobby plan may run at most once a day, and this runs once a week).
+// Scheduled by .github/workflows/scheduled-jobs.yml, Mondays 07:00 UTC
+// (8am BST / 7am GMT). The old once-a-day ceiling was a Vercel Hobby limit
+// and no longer applies.
 // Protected by CRON_SECRET like the other crons: the path is guessable and
 // nothing about it should be triggerable by a stranger, even if all it does
 // is send the owner an email.

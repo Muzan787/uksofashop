@@ -7,8 +7,10 @@
 // about the delivery, not the sofa. Three days gives the customer time to
 // actually sit on it.
 //
-// Scheduled in vercel.json. Protected by CRON_SECRET: the path is guessable
-// and this endpoint sends email, so it cannot be left open.
+// Scheduled by .github/workflows/scheduled-jobs.yml, daily at 10:00 UTC.
+// (It used to be vercel.json; Vercel Cron went with the move to Hostinger.)
+// Protected by CRON_SECRET: the path is guessable and this endpoint sends
+// email, so it cannot be left open.
 
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/utils/supabase/admin'

@@ -95,7 +95,9 @@ export async function sendLeadReminderEmail(
   }
 
   try {
-    await sendCheckoutReminder(lead.email, lead.basket)
+    // `id` is the validated uuid from the form, which is what the row was
+    // looked up by — the select does not need to return it again.
+    await sendCheckoutReminder(lead.email, lead.basket, id)
   } catch (err) {
     console.error(`lead reminder email failed: ${err instanceof Error ? err.message : String(err)}`)
     return { status: 'error', message: 'The email could not be sent. Try again in a moment.' }

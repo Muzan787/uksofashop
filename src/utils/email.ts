@@ -3,10 +3,38 @@ import type { DeliveryBreakdown } from '@/constants/delivery';
 import { whatsAppLink } from '@/utils/phone';
 import { trustpilotInviteBcc, trustpilotInviteLink } from '@/constants/trustpilot';
 import { formatPreferredDeliveryDate } from '@/utils/delivery';
-import { PHONE_DISPLAY, SUPPORT_EMAIL, ORDERS_EMAIL, OWNER_GMAIL, whatsAppHref } from '@/constants/contact';
+import { PHONE_DISPLAY, SUPPORT_EMAIL, ORDERS_EMAIL, whatsAppHref } from '@/constants/contact';
+
+/**
+ * The shop's original Gmail address, still read alongside the Hostinger
+ * mailbox. It only ever receives blind copies of mail this file sends, so
+ * the owner sees them wherever he happens to be looking.
+ *
+ * It lives HERE rather than in constants/contact.ts, which is where it used
+ * to be. Everything in that file is imported by client components, so it was
+ * being compiled into the public JavaScript bundle — an address the comment
+ * beside it described as "not published anywhere on the site" was sitting in
+ * three chunks in plain text. This module imports nodemailer and can only
+ * ever run on the server.
+ *
+ * ADMIN_EMAIL in the environment is set to the same address; that one is the
+ * configurable destination for notifications, this is the standing BCC.
+ */
+const OWNER_GMAIL = 'uksofashop.co.uk@gmail.com';
 import { gbp, recoveryBasketLines, recoveryBasketTotal, recoveryReminderEmail } from '@/utils/recoveryLeadFormat';
 import { formatSwatchForCopy, swatchCodes, type SwatchCopyLine } from '@/utils/swatchText';
 import { SAMPLE_FEE } from '@/constants/swatches';
+// Every link in every email resolves against this.
+//
+// Each template used to write `process.env.NEXT_PUBLIC_SITE_URL ||
+// 'http://localhost:3000'` for itself. Eight copies of a fallback that, if
+// the variable were ever missing in production, would have sent customers
+// order-tracking and review links pointing at their own machine — and one
+// copy (the admin review notification) had no fallback at all and would have
+// produced "undefined/admin/reviews". SITE_URL defaults to the real
+// production origin instead. See src/constants/site.ts.
+import { SITE_URL } from '@/constants/site';
+import { createRecoveryOptOutToken } from '@/utils/recoveryToken';
 
 /**
  * Escapes a value before it goes into an email's HTML.
@@ -126,14 +154,14 @@ const transporter = nodemailer.createTransport(
  * fallback it has to be the Gmail account itself: Gmail rewrites any other
  * From to the authenticated address regardless.
  */
-export const MAIL_FROM_ADDRESS =
+const MAIL_FROM_ADDRESS =
   process.env.MAIL_FROM || (usingDomainSender ? ORDERS_EMAIL : process.env.EMAIL_USER || SUPPORT_EMAIL)
 
 /** Where a customer's reply to an automated email lands. */
-export const MAIL_REPLY_TO = process.env.MAIL_REPLY_TO || SUPPORT_EMAIL
+const MAIL_REPLY_TO = process.env.MAIL_REPLY_TO || SUPPORT_EMAIL
 
 /** Where admin notifications land. */
-export const MAIL_TO_ADMIN = process.env.ADMIN_EMAIL || SUPPORT_EMAIL
+const MAIL_TO_ADMIN = process.env.ADMIN_EMAIL || SUPPORT_EMAIL
 
 /** Builds `"UK Sofa Shop" <orders@uksofashop.co.uk>`. */
 function sender(label = 'UK Sofa Shop'): string {
@@ -141,6 +169,51 @@ function sender(label = 'UK Sofa Shop'): string {
 }
 
 type Mail = Omit<nodemailer.SendMailOptions, 'from' | 'to'> & { from?: string; to: string }
+
+/**
+ * A readable text/plain version of an HTML email.
+ *
+ * Not a general-purpose HTML renderer — it only has to cope with the markup
+ * these templates produce. The important part is links: a text part that
+ * drops every href leaves the reader with "Track your order" and no way to
+ * do it, so each anchor becomes `label (url)` unless the label already is
+ * the url.
+ */
+const ENTITIES: Record<string, string> = {
+  nbsp: ' ', amp: '&', lt: '<', gt: '>', quot: '"', apos: "'",
+  pound: '£', times: '×', mdash: '—', ndash: '–', hellip: '…', bull: '•',
+  rsquo: '’', lsquo: '‘', ldquo: '“', rdquo: '”', middot: '·',
+}
+
+function decodeEntities(s: string): string {
+  return s
+    .replace(/&([a-z]+);/gi, (m, name: string) => ENTITIES[name.toLowerCase()] ?? m)
+    .replace(/&#(\d+);/g, (_m, code: string) => String.fromCodePoint(Number(code)))
+    .replace(/&#x([0-9a-f]+);/gi, (_m, code: string) => String.fromCodePoint(parseInt(code, 16)))
+}
+
+function htmlToText(html: string): string {
+  return decodeEntities(
+    html
+      .replace(/<(script|style)[\s\S]*?<\/\1>/gi, '')
+      .replace(/<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi, (_m, href: string, label: string) => {
+        const text = decodeEntities(label.replace(/<[^>]+>/g, '')).replace(/\s+/g, ' ').trim()
+        if (!text) return `\n${href}\n`
+        return text === href ? `\n${text}\n` : `\n${text} (${href})\n`
+      })
+      .replace(/<br\s*\/?>/gi, '\n')
+      // td and th as well as the block tags: the order tables put the item on
+      // one cell and its price on the next, and without a break they ran
+      // together as "Chenille Mink£1,298.00".
+      .replace(/<\/(p|div|tr|td|th|h[1-6]|li|table|section)>/gi, '\n')
+      .replace(/<li\b[^>]*>/gi, '- ')
+      .replace(/<[^>]+>/g, ''),
+  )
+    .replace(/[ \t]+/g, ' ')
+    .replace(/ *\n */g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
 
 /**
  * Every template sends through here rather than calling the transport, so the
@@ -169,6 +242,16 @@ async function deliver(mail: Mail) {
     from: sender(),
     replyTo: MAIL_REPLY_TO,
     ...mail,
+    // A plain-text alternative for every message, derived from the HTML
+    // unless the template wrote its own. Twelve of the thirteen templates
+    // were HTML-only, which costs twice: a client that shows text/plain
+    // renders an empty message, and a missing multipart alternative is one
+    // of the oldest spam heuristics there is — which matters for a shop that
+    // moved mail hosts specifically to pass SPF, DKIM and DMARC.
+    //
+    // Generated here rather than in the templates so a template added later
+    // cannot forget.
+    ...(mail.text ? {} : mail.html ? { text: htmlToText(String(mail.html)) } : {}),
     ...(bcc.length ? { bcc } : {}),
     ...(usingDomainSender
       ? { envelope: { from: SMTP_USER, to: envelopeRecipients(mail.to, mail.cc, bcc) } }
@@ -324,7 +407,7 @@ export async function sendOrderConfirmation(
   // The link no longer confirms by being opened (2026-09-25). It shows the
   // whole order and asks for a button press, so the wording here promises a
   // read rather than a done deal - see app/confirm-order/[id]/page.tsx.
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+  const siteUrl = SITE_URL;
   const confirmLink = `${siteUrl}/confirm-order/${fullOrderId}`;
   const firstName = (name || '').trim().split(/\s+/)[0] || 'there';
   const trackLink = `${siteUrl}/track-order?ref=${encodeURIComponent(shortCode)}`;
@@ -406,7 +489,7 @@ export async function sendAdminOrderNotification(
   // Since 2026-09-25 the link opens the order for checking and confirms only
   // on a button press, which is also what stops WhatsApp's own link preview
   // fetch from confirming the order before the customer reads the message.
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+  const siteUrl = SITE_URL;
   const confirmLink = `${siteUrl}/confirm-order/${fullOrderId}`;
   const waFirstName = (customerName || '').trim().split(/\s+/)[0] || 'there';
   const waUrl = whatsAppLink(
@@ -493,7 +576,7 @@ export async function sendAdminOrderConfirmedNotification(
   const adminEmail = process.env.ADMIN_EMAIL;
   if (!adminEmail) return;
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+  const siteUrl = SITE_URL;
   const firstName = (customerName || '').trim().split(/\s+/)[0] || 'there';
   // null when the number is not a UK mobile, so the button is hidden rather
   // than rendered as a dead link.
@@ -579,7 +662,7 @@ export async function sendAdminReviewNotification(
         "${esc(comment)}"
       </div>
 
-      <a href="${process.env.NEXT_PUBLIC_SITE_URL}/admin/reviews" style="background-color: #0c0c0b; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px; display: inline-block;">
+      <a href="${SITE_URL}/admin/reviews" style="background-color: #0c0c0b; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px; display: inline-block;">
         Moderate Review
       </a>
     </div>
@@ -641,7 +724,7 @@ export async function sendOrderStatusUpdate(
   status: string,
   postcode: string = ''
 ): Promise<{ trustpilotInvited: boolean }> {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+  const siteUrl = SITE_URL;
   const shortCode = orderId.substring(0, 8).toUpperCase();
 
   // Trustpilot's Automatic Feedback Service: a transactional email BCC'd to
@@ -788,7 +871,7 @@ export async function sendAdminOrderStatusNotification(
 // sent until they click the link, which is what makes the opt-in genuine.
 // ─────────────────────────────────────────────────────────────────────────────
 export async function sendNewsletterConfirmation(email: string, confirmToken: string) {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+  const siteUrl = SITE_URL;
   const confirmLink = `${siteUrl}/newsletter/confirm?token=${encodeURIComponent(confirmToken)}`;
 
   const content = `
@@ -827,9 +910,15 @@ export async function sendNewsletterConfirmation(email: string, confirmToken: st
  * Footer for any future marketing email. Every message sent to this list must
  * carry it - that is what makes "unsubscribe in one click" true, and it's a
  * legal requirement under PECR, not a courtesy.
+ *
+ * Unused today because the only newsletter mail the site sends is the double
+ * opt-in confirmation, which is transactional and needs no opt-out. Kept
+ * rather than deleted because the first campaign is exactly when it gets
+ * forgotten.
  */
-export function newsletterUnsubscribeFooter(unsubscribeToken: string) {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- see above
+function newsletterUnsubscribeFooter(unsubscribeToken: string) {
+  const siteUrl = SITE_URL;
   const link = `${siteUrl}/newsletter/unsubscribe?token=${encodeURIComponent(unsubscribeToken)}`;
   return `
     <p style="margin: 24px 0 0 0; color: #a8a29e; font-size: 11px; text-align: center; line-height: 1.6;">
@@ -1056,10 +1145,19 @@ export async function sendAdminSwatchNotification(
  * and nothing files a copy in Sent - so this is the only record of what went
  * out, and it lands in the inbox exactly as the customer saw it.
  */
-export async function sendCheckoutReminder(email: string, basket: unknown) {
+/**
+ * `leadId` is the checkout_recovery_leads row, used to build the one-click
+ * unsubscribe link. It is optional only so an older caller cannot break; a
+ * reminder sent without it carries no opt-out, which PECR reg 22(3)(c) asks
+ * for in every message, so always pass it.
+ */
+export async function sendCheckoutReminder(email: string, basket: unknown, leadId?: string) {
   const lines = recoveryBasketLines(basket)
   const total = recoveryBasketTotal(lines)
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+  const siteUrl = SITE_URL
+  const optOutUrl = leadId
+    ? `${siteUrl}/checkout/reminders/unsubscribe?token=${encodeURIComponent(createRecoveryOptOutToken(leadId))}`
+    : null
 
   const rows = lines
     .map(
@@ -1120,10 +1218,15 @@ export async function sendCheckoutReminder(email: string, basket: unknown) {
       </a>
 
       <p style="margin: 24px 0 0 0; color: #a8a29e; line-height: 1.6; font-size: 12px;">
-        You asked for this reminder on our checkout. If you'd rather not hear from us, just reply and say so.
+        You asked for this reminder on our checkout.
         Your basket is saved in the browser you used to shop, so the checkout button works best on that device.
         Or call us on ${PHONE_DISPLAY}.
       </p>
+      ${optOutUrl ? `
+      <p style="margin: 12px 0 0 0; color: #a8a29e; line-height: 1.6; font-size: 12px;">
+        <a href="${optOutUrl}" style="color: #a8a29e; text-decoration: underline;">Unsubscribe from checkout reminders</a>
+        &nbsp;&mdash;&nbsp; one click, and we delete the basket and contact details we were holding.
+      </p>` : ''}
     </div>
   `
 
