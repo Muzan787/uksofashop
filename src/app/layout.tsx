@@ -26,6 +26,10 @@ import OfferPrompt from '@/components/Offer/OfferPrompt';
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
+  // Stated rather than inherited. next/font already defaults to swap, but the
+  // other two faces below say so explicitly and a reader should not have to
+  // know the default to know what the body font does while it loads.
+  display: "swap",
 });
 
 const geistMono = Geist_Mono({
@@ -183,7 +187,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     // --font-display was declared, --font-display resolved to nothing, and
     // every heading on the site silently fell back to inherited Geist. The
     // fonts were downloading; nothing was using them.
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} ${fraunces.variable}`}>
+    //
+    // suppressHydrationWarning, on <html> only: the pre-paint script in <head>
+    // adds `.entrance` to this element before React hydrates, which is the
+    // whole point of it — the curtain has to be decided before the first
+    // paint. React then sees a class it did not render and logged a hydration
+    // mismatch on every homepage load. The class is deliberate and survives;
+    // only the warning was noise. Nothing inside <html> is affected.
+    <html lang="en" suppressHydrationWarning className={`${geistSans.variable} ${geistMono.variable} ${fraunces.variable}`}>
       <head>
         {/* Google Consent Mode v2 defaults. MUST be the first script in the
             document: a consent default that arrives after gtag.js has loaded

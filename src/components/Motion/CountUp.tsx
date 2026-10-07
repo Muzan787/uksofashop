@@ -42,7 +42,11 @@ export const CountUp = forwardRef<HTMLSpanElement, CountUpProps>(function CountU
   const reduced = useReducedMotionSafe()
   const box = useRef<HTMLSpanElement>(null)
   const inView = useInView(box, { once, amount: 0.6 })
-  const [display, setDisplay] = useState(value)
+  // The animated value, or null before the animation has produced a frame.
+  // `display` is derived rather than stored so the out-of-view and
+  // reduced-motion cases need no setState in an effect to reset it.
+  const [animated, setAnimated] = useState<number | null>(null)
+  const display = reduced || !inView ? value : animated ?? value
 
   const setRefs = useCallback(
     (node: HTMLSpanElement | null) => {
@@ -54,14 +58,11 @@ export const CountUp = forwardRef<HTMLSpanElement, CountUpProps>(function CountU
   )
 
   useEffect(() => {
-    if (reduced || !inView) {
-      setDisplay(value)
-      return
-    }
+    if (reduced || !inView) return
     const controls = animate(from, value, {
       duration,
       ease: EASE.out,
-      onUpdate: (v) => setDisplay(v),
+      onUpdate: (v) => setAnimated(v),
     })
     return () => controls.stop()
   }, [inView, value, from, duration, reduced])

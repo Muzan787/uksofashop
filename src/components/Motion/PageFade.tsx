@@ -1,47 +1,44 @@
 'use client'
 // src/components/Motion/PageFade.tsx
 
+import dynamic from 'next/dynamic'
 import { usePathname } from 'next/navigation'
-import { useEffect, useState } from 'react'
-import { motion } from 'framer-motion'
-import { DUR, EASE } from './tokens'
+import { useSyncExternalStore } from 'react'
 import { useReducedMotionSafe } from './useReducedMotionSafe'
-
 
 /**
  * The fallback for browsers without View Transitions — Firefox and older
- * Safari, today.
+ * Safari, today. Where View Transitions ARE supported it stands down
+ * entirely, so the two never run over each other.
  *
- * It fades the incoming page in and does nothing else. Deliberately not an
- * AnimatePresence exit animation: holding the outgoing tree on screen in the
- * App Router means keeping a stale server-rendered subtree alive, and the
- * failure mode when that goes wrong is a blank frame. A fade-in cannot produce
- * one — the content is in the DOM from the first paint, and only its opacity
- * is animated.
+ * WHY THE FADE IS A SEPARATE MODULE. This wraps every page from the root
+ * layout, so importing framer-motion here put the whole runtime in the
+ * first-load bundle of every route — in order to run an animation that
+ * Chrome, Edge and current Safari never execute. The capability is checked
+ * first and the fade is fetched only by the browsers that actually use it.
  *
- * It also stands down entirely where View Transitions ARE supported, so the
- * two never run over each other.
+ * The children are returned directly in the common case, so nothing waits on
+ * a chunk that is never requested.
  */
+
+/** Capability check, not a subscription: the answer never changes. */
+const neverChanges = () => () => {}
+
+const PageFadeMotion = dynamic(() => import('./PageFadeMotion'), { ssr: false })
+
 export default function PageFade({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const reduced = useReducedMotionSafe()
-  const [needsFallback, setNeedsFallback] = useState(false)
-
-  useEffect(() => {
-    setNeedsFallback(!('startViewTransition' in document))
-  }, [])
+  // Read through useSyncExternalStore so the first client render already knows
+  // the answer. As a useState + useEffect pair this re-rendered every page in
+  // the app a second time purely to record a capability that cannot change.
+  const needsFallback = useSyncExternalStore(
+    neverChanges,
+    () => !('startViewTransition' in document),
+    () => false,
+  )
 
   if (reduced || !needsFallback) return <>{children}</>
 
-  return (
-    <motion.div
-      key={pathname}
-      data-motion="page-fade"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: DUR.settle, ease: EASE.out }}
-    >
-      {children}
-    </motion.div>
-  )
+  return <PageFadeMotion pathKey={pathname ?? ''}>{children}</PageFadeMotion>
 }

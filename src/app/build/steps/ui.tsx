@@ -1,4 +1,3 @@
-'use client'
 // src/app/build/steps/ui.tsx
 //
 // The few pieces every step shares: the heading block, and the seat diagram

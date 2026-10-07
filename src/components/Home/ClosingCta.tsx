@@ -1,4 +1,3 @@
-'use client';
 // src/components/Home/ClosingCta.tsx
 
 import Image from 'next/image';

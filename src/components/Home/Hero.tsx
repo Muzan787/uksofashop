@@ -1,4 +1,3 @@
-'use client';
 // src/components/Home/Hero.tsx
 
 import Image from 'next/image';
@@ -113,14 +112,25 @@ export default function Hero({ image, productTitle, productHref, fromPrice, wasP
       data-ground="dark"
       className="grain relative isolate flex min-h-[calc(100svh-4rem)] flex-col overflow-hidden bg-ink-900 lg:min-h-[calc(100svh-2.5rem)]"
     >
-      {/* ── 1. The room ──────────────────────────────────────────────────── */}
+      {/* ── 1. The room ──────────────────────────────────────────────────────
+          This is the homepage LCP element — the largest thing above the fold —
+          and it is a backdrop at 30% opacity behind grain, an aurora wash and a
+          dark section. So it stays `priority`, because de-prioritising the LCP
+          image only makes LCP worse, but it is no longer asked for at full
+          fidelity: `sizes` caps at 1600px, since a 4K screen was pulling the
+          3840w entry for something nobody can resolve through 70% of a dark
+          overlay, and quality drops to 45 for the same reason.
+
+          The sofa cut-out further down keeps full quality. That is the thing
+          people actually look at. */}
       {room && (
         <Image
           src={darkened(room, -30, 6)}
           alt=""
           fill
           priority
-          sizes="100vw"
+          quality={45}
+          sizes="(max-width: 1600px) 100vw, 1600px"
           placeholder="blur"
           blurDataURL={blurDataURL(room)}
           className="object-cover opacity-30"

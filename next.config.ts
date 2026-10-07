@@ -9,12 +9,28 @@ const withPWA = withPWAInit({
 
 const isProduction = process.env.NODE_ENV === 'production'
 
-// Bounded Phase 2C Preview QA: never selects QA mode for production or other
-// branches. All imported Google tags still require a real production event.
-const googleTrackingPreviewQA = process.env.VERCEL_ENV === 'preview' &&
-  process.env.VERCEL_GIT_COMMIT_REF === 'codex/google-tracking-phase2b'
+// Which Google path the build bakes in: the GTM container, the Tag Assistant
+// QA container, or plain gtag.
+//
+// READ THIS BEFORE CHANGING THE BUILD ENVIRONMENT. NEXT_PUBLIC_* values are
+// inlined at BUILD time, so this is decided when Hostinger compiles the app,
+// not when it serves a request. A variable that exists only in the runtime
+// environment has no effect here at all, and the difference is silent:
+// both code paths ship either way and the site keeps measuring, just through
+// a different container than you expect.
+//
+// TRACKING_ENV is the explicit name, matching src/utils/trackingEnv.ts.
+// VERCEL_ENV stays as a fallback so the server that is running today keeps
+// building the same way it does now; see the note in that file about why the
+// Vercel name outlived Vercel.
+const trackingEnv = process.env.TRACKING_ENV ?? process.env.VERCEL_ENV
 
-const googleTrackingProduction = process.env.VERCEL_ENV === 'production'
+// Bounded preview QA. It was pinned to a Vercel preview deployment of one
+// branch, which cannot occur now there are no preview deployments — set
+// TRACKING_ENV=preview on a staging host to use it.
+const googleTrackingPreviewQA = trackingEnv === 'preview'
+
+const googleTrackingProduction = trackingEnv === 'production'
 
 const nextConfig: NextConfig = {
   reactCompiler: true,
@@ -53,22 +69,17 @@ const nextConfig: NextConfig = {
    * serves a full duplicate of the site on a second hostname, splitting
    * ranking signals between the two.
    *
-   * Vercel can also do this in Project -> Settings -> Domains by marking www
-   * as primary, which redirects at the edge before the app is invoked and is
-   * therefore cheaper. This rule is kept as a backstop so the behaviour is
-   * guaranteed by the repository rather than by dashboard state, and so it
-   * survives a move to different hosting.
+   * RESOLVED by the move to Hostinger (2026-09-29). On Vercel this rule never
+   * got the chance to run: the edge redirected the apex first and did it as a
+   * 307, which tells Google the move is provisional, so the apex stayed a
+   * ranking candidate instead of consolidating onto www. There is no edge in
+   * front of the app now, so the rule below is what answers, and it answers
+   * correctly:
    *
-   * KNOWN ISSUE, fixable only in the Vercel dashboard: the edge redirect wins,
-   * and it is currently configured as a 307 rather than a 308 -
+   *   curl -sI https://uksofashop.co.uk/  ->  308 Permanent Redirect
    *
-   *   curl -sI https://uksofashop.co.uk/  ->  307 Temporary Redirect
-   *
-   * so the `permanent: true` below never gets the chance to apply. A 307 tells
-   * Google the move is provisional, which is why it keeps the apex host as a
-   * candidate rather than consolidating every signal onto www. Set the apex
-   * domain to a Permanent redirect in Project -> Settings -> Domains; this rule
-   * then goes back to being the backstop it was written as.
+   * Verified against production 2026-10-06. Keep this rule: it is the only
+   * thing producing that redirect now, not a backstop for dashboard state.
    */
   // Removes the `X-Powered-By: Next.js` response header, which advertises the
   // framework and version to anyone scanning.
@@ -95,10 +106,8 @@ const nextConfig: NextConfig = {
    *   connect.facebook.net / facebook.com                     - Meta Pixel
    *   res.cloudinary.com                                      - product images
    *                                                             + video clips
-   *   images.pexels.com                                       - one About photo
    *   *.supabase.co                                           - database + auth
    *   fonts.googleapis.com / fonts.gstatic.com                - webfonts
-   *   vitals.vercel-insights.com                              - Vercel Analytics
    *   widget.trustpilot.com                                   - Trustpilot
    *                                                             TrustBoxes: the
    *                                                             bootstrap script
@@ -112,7 +121,7 @@ const nextConfig: NextConfig = {
       // conversion tag, which the Google tag pulls in because Ads is a
       // destination on the container. Without them the tag loads, reports
       // AW-18399071645 as a destination, and then silently cannot measure.
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.googleadservices.com https://*.g.doubleclick.net https://connect.facebook.net https://*.vercel-insights.com https://va.vercel-scripts.com https://widget.trustpilot.com",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.googleadservices.com https://*.g.doubleclick.net https://connect.facebook.net https://widget.trustpilot.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' data: https://fonts.gstatic.com",
       // pagead2.googlesyndication.com/ccm/collect is the one that was still
@@ -139,7 +148,7 @@ const nextConfig: NextConfig = {
       // a visitor on another Google domain loses remarketing audience
       // membership, which is a targeting cost and NOT a measurement one. No
       // conversion depends on this line.
-      "img-src 'self' data: blob: https://res.cloudinary.com https://images.pexels.com https://www.googletagmanager.com https://www.google-analytics.com https://www.googleadservices.com https://*.g.doubleclick.net https://pagead2.googlesyndication.com https://www.google.com https://www.google.co.uk https://www.facebook.com",
+      "img-src 'self' data: blob: https://res.cloudinary.com https://www.googletagmanager.com https://www.google-analytics.com https://www.googleadservices.com https://*.g.doubleclick.net https://pagead2.googlesyndication.com https://www.google.com https://www.google.co.uk https://www.facebook.com",
       // <video> is governed by media-src, which otherwise falls back to
       // default-src 'self' and refuses every clip. The videos are on the
       // same Cloudinary account as the photographs.
@@ -204,7 +213,7 @@ const nextConfig: NextConfig = {
       // connect.facebook.net serves the library and graph.facebook.com is the
       // Conversions API; neither of them ever receives a pixel event. Only
       // this host does.
-      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://*.analytics.google.com https://www.googletagmanager.com https://www.google.com https://www.google.co.uk https://ad.doubleclick.net https://www.googleadservices.com https://*.g.doubleclick.net https://pagead2.googlesyndication.com https://connect.facebook.net https://graph.facebook.com https://www.facebook.com https://vitals.vercel-insights.com https://api.homedata.co.uk https://api.cloudinary.com https://res.cloudinary.com https://images.pexels.com",
+      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://*.analytics.google.com https://www.googletagmanager.com https://www.google.com https://www.google.co.uk https://ad.doubleclick.net https://www.googleadservices.com https://*.g.doubleclick.net https://pagead2.googlesyndication.com https://connect.facebook.net https://graph.facebook.com https://www.facebook.com https://api.homedata.co.uk https://api.cloudinary.com https://res.cloudinary.com",
       // openstreetmap.org is the showroom locator map. An <iframe> is the
       // only way to embed a real, pannable map without shipping a mapping
       // library and a tile key - and OSM needs no key and sets no cookies,
@@ -277,8 +286,7 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       // 63 product, category and review images.
       { protocol: 'https', hostname: 'res.cloudinary.com' },
-      // One stock photo on the About page.
-      { protocol: 'https', hostname: 'images.pexels.com' },
+      // images.pexels.com was removed with the About stock photo it served.
       // ae01.alicdn.com was removed: no image anywhere referenced it.
     ],
   },

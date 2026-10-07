@@ -1,4 +1,3 @@
-'use client';
 // src/components/Category/CategoryHero.tsx
 
 import Image from 'next/image';
