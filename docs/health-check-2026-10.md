@@ -333,12 +333,7 @@ That last resolution left two live hardcodes of "2–4 working days", which is w
 | 4 | **Set `TRACKING_ENV=production`** in the Hostinger panel | Server-side conversions currently rest on a fallback named after a host you left. |
 | 5 | **Verify `TRUSTPILOT_INVITE_BCC` survived the move** | If it did not, no Trustpilot invitations are going out at all. |
 | 6 | **Supabase → enable leaked-password protection** | One dashboard toggle. |
-| 7 | **Remove the stale worktree** `.claude/worktrees/jovial-blackwell-01f9dc` | 109 MB. The fix it held is ported and verified. |
-| 8 | **Check the Google Business Profile** matches the corrected address | See §2. |
-
-```bash
-git worktree remove --force .claude/worktrees/jovial-blackwell-01f9dc
-```
+| 7 | **Check the Google Business Profile** matches the corrected address | See §2. |
 
 ### Can wait
 
