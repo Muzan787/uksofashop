@@ -1,5 +1,6 @@
 // src/app/delivery-returns/page.tsx
 import type { Metadata } from 'next'
+import { pageMetadata } from '@/utils/pageMetadata'
 import Link from 'next/link'
 import { Clock, RotateCcw, Truck, Wallet } from 'lucide-react'
 import EditorialHero from '@/components/Editorial/EditorialHero'
@@ -15,14 +16,18 @@ import { ADDRESS_LINE, PHONE_DISPLAY, PHONE_HREF, SUPPORT_EMAIL } from '@/consta
  * the page's own schema node. Two hand-written sentences describing the same
  * page is the sort of drift nobody notices and nothing benefits from.
  */
+// timingShort rather than timingLong: with the long form this ran to 236
+// characters and was truncated before the returns clause, which is the half
+// of the page people search for. The Wales and Scotland exception is on the
+// page itself, where somebody checking their own postcode will be looking.
 const DESCRIPTION =
-  `${PROMISES.delivery.short}. ${PROMISES.delivery.timingLong} Pay on delivery. What to do if your sofa arrives damaged, and your 14-day right to change your mind.`
+  `${PROMISES.delivery.short}. ${PROMISES.delivery.timingShort}. Pay on the doorstep, plus the damage procedure and your 14-day right to change your mind.`
 
-export const metadata: Metadata = {
-  title: 'Delivery & Returns',
+export const metadata: Metadata = pageMetadata({
+  title: 'Sofa Delivery & Returns',
   description: DESCRIPTION,
-  alternates: { canonical: '/delivery-returns' },
-}
+  path: '/delivery-returns',
+})
 
 const TOC = [
   { id: 'delivery', label: 'Getting it to you' },

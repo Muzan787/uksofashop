@@ -2,6 +2,7 @@
 import { Metadata } from 'next'
 import { createClient } from '@/utils/supabase/server'
 import { socialImageUrl, leadVariantImage, ogImage } from '@/utils/socialImage'
+import { pageMetadata, SITE_CARD } from '@/utils/pageMetadata'
 import { notFound } from 'next/navigation'
 import ProductCard from '@/components/Product/ProductCard'
 import CollectionHero from '@/components/Collection/CollectionHero'
@@ -57,7 +58,11 @@ export async function generateMetadata(props: { params: Params }): Promise<Metad
 
   const main = await findMainCollection(supabase, slug)
   if (main) {
-    const title = `${main.name} | Collection`
+    // Not `${main.name} | Collection`: the layout template appends the brand
+    // with its own pipe, so that rendered as "Imported Sofas | Collection |
+    // UK Sofa Shop" - three segments and two separators for two words of
+    // information.
+    const title = `${main.name} Collection`
     const description =
       main.standfirst ??
       `Browse every range and design in the ${main.name} collection at UK Sofa Shop. Free UK Mainland delivery and cash on delivery available.`
@@ -76,13 +81,15 @@ export async function generateMetadata(props: { params: Params }): Promise<Metad
       .eq('main_collection_id', main.id)
       .eq('is_active', true)
 
-    return {
+    // Through the helper. This branch previously emitted no twitter block at
+    // all, so a main collection shared on X carried the HOMEPAGE title beside
+    // the collection's own og:title, and no image on either.
+    return pageMetadata({
       title,
       description,
-      alternates: { canonical: `/collection/${slug}` },
+      path: `/collection/${slug}`,
       ...(count ? {} : { robots: { index: false, follow: true } }),
-      openGraph: { type: 'website', title, description, url: `/collection/${slug}` },
-    }
+    })
   }
 
   const { data: group } = await supabase
@@ -94,7 +101,13 @@ export async function generateMetadata(props: { params: Params }): Promise<Metad
   if (!group) return { title: 'Collection Not Found' }
 
   const title = `The ${group.name} Collection`
-  const description = `Shop the exclusive ${group.name} collection. Luxury sofas with free delivery across UK Mainland and cash on delivery available.`
+  // "exclusive" and "Luxury" said nothing and were the same two words on all
+  // twenty collection pages. What is actually true of a variant group is that
+  // its pieces are one design in matching upholstery, which is the reason
+  // somebody lands here rather than on a category listing.
+  const description =
+    `Every piece in the ${group.name} range, upholstered to match - sofas, corners and sets in one design. ` +
+    'Free UK Mainland delivery and cash on delivery.'
   const path = `/collection/${slug}`
 
   // Lead photo from the first product in the collection, so a shared link
@@ -114,15 +127,15 @@ export async function generateMetadata(props: { params: Params }): Promise<Metad
       title,
       description,
       url: path,
-      images: card
-        ? [ogImage(card, title)]
-        : undefined,
+      // Site card rather than undefined when the collection has no Cloudinary
+      // lead photo - undefined emits no og:image, it does not inherit one.
+      images: [ogImage(card ?? SITE_CARD, title)],
     },
     twitter: {
       card: 'summary_large_image',
       title,
       description,
-      images: card ? [card] : undefined,
+      images: [card ?? SITE_CARD],
     },
   }
 }

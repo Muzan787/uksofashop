@@ -1,5 +1,6 @@
 // src/app/showroom/page.tsx
 import type { Metadata } from 'next'
+import { pageMetadata } from '@/utils/pageMetadata'
 import Image from 'next/image'
 import Link from 'next/link'
 import { CalendarCheck, Mail, MapPin, MessageCircle, Palette, Phone, Ruler, Sofa } from 'lucide-react'
@@ -21,11 +22,11 @@ import { getWarehouseVideos } from '@/utils/videos'
 const DESCRIPTION =
   `See our sofas in person at our ${ADDRESS.locality} showroom, ${ADDRESS.street}, ${ADDRESS.postcode}. Visits are by appointment — call, WhatsApp or email to book a time.`
 
-export const metadata: Metadata = {
-  alternates: { canonical: '/showroom' },
+export const metadata: Metadata = pageMetadata({
   title: 'Sofa Showroom in Blackburn',
   description: DESCRIPTION,
-}
+  path: '/showroom',
+})
 
 /* The address is NOT redeclared here.
    It was — a local { line1, town, postcode } under a comment claiming it was
@@ -85,6 +86,7 @@ export default async function ShowroomPage() {
         path="/showroom"
         updated="2026-08-28"
         description={DESCRIPTION}
+        image={PHOTOGRAPH}
       />
       {/* The FurnitureStore schema for this address is emitted site-wide from
           the root layout — a second copy here would be a duplicate entity. */}

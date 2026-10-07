@@ -30,18 +30,80 @@ interface Product {
 }
 
 const BASE_URL = 'https://www.uksofashop.co.uk'
+
+/**
+ * Furniture > Sofas.
+ *
+ * UNVERIFIED IN THIS REPO: Google's taxonomy file is not reachable from the
+ * build environment, so this ID is carried forward as-is rather than changed
+ * to a guess. It is optional in the product data spec - Google classifies
+ * items itself - but an INVALID id is an item-level error, so if Merchant
+ * Centre ever reports one on google_product_category, check the current
+ * taxonomy-with-ids file and correct it here, or drop the attribute entirely.
+ */
 const GOOGLE_PRODUCT_CATEGORY = '460'
+
+/**
+ * Free delivery, declared per item.
+ *
+ * SAME KNOWN OVERSTATEMENT AS THE PRODUCT MARKUP. "GB" is the United Kingdom,
+ * and Northern Ireland, the Isle of Man, the Channel Islands, the Scottish
+ * islands, the Isle of Wight and the Isles of Scilly are all CUSTOM_QUOTE at
+ * checkout rather than free - see classifyDeliveryPostcode in
+ * src/utils/postcode.ts, which is what place_order actually enforces.
+ *
+ * g:shipping can only ADD a rate for a region; the feed specification has no
+ * way to exclude one. The exclusion therefore has to be set in Merchant
+ * Centre's own shipping settings, and cannot be fixed in this file. Until it
+ * is, a Shopping listing can promise free delivery to a Belfast postcode the
+ * checkout will then refuse.
+ */
 const SHIPPING = `
             <g:shipping>
               <g:country>GB</g:country>
               <g:price>0.00 GBP</g:price>
             </g:shipping>`
 
+/**
+ * XML-escape a bare attribute value.
+ *
+ * The URLs below are interpolated into element text rather than wrapped in
+ * CDATA, so an "&" in one - a Cloudinary URL carrying two transform params, a
+ * second query parameter on a product link - would close nothing and produce a
+ * document Merchant Centre rejects wholesale rather than per item. Nothing in
+ * the catalogue contains one today, which is exactly why it would be found the
+ * hard way.
+ */
+function xml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
+/**
+ * Identifiers, or an explicit statement that there are none.
+ *
+ * Google wants a GTIN, or an MPN together with a brand, or g:identifier_exists
+ * set to "no". The variant branch emitted g:mpn only when the SKU was present
+ * and nothing at all when it was not, so a variant saved without a SKU in the
+ * admin panel produced an item with no identifiers and no declaration either -
+ * which is a warning now and a disapproval when Google tightens. Every variant
+ * has a SKU today; this is what keeps that from being load-bearing.
+ */
+function identifierTags(sku: string | null | undefined): string {
+  const trimmed = (sku ?? '').trim()
+  return trimmed
+    ? `<g:mpn><![CDATA[${trimmed}]]></g:mpn>`
+    : '<g:identifier_exists>no</g:identifier_exists>'
+}
+
 function additionalImages(gallery: string[] | null, main: string): string {
   return (gallery ?? [])
     .filter(url => url && url !== main)
     .slice(0, 10)
-    .map(url => `<g:additional_image_link>${url}</g:additional_image_link>`)
+    .map(url => `<g:additional_image_link>${xml(url)}</g:additional_image_link>`)
     .join('')
 }
 
@@ -78,13 +140,27 @@ function priceTags(price: number, wasPrice: number | null): string {
   return `<g:price>${price.toFixed(2)} GBP</g:price>`
 }
 
+/**
+ * An item with no picture is not a feed entry, it is a disapproval.
+ *
+ * image_link is required by both Google and Meta, and the old code resolved a
+ * missing image to '' and emitted `<g:image_link></g:image_link>` anyway. That
+ * does not fail the feed: the document parses, the item is accepted, and then
+ * it is rejected downstream where nobody is looking. Returning '' here drops
+ * the item from the feed instead, which is the same outcome Merchant Centre
+ * would reach but visible in the build log. Every variant has an image today.
+ */
 function itemXml(kind: FeedKind, product: Product, variant: ProductVariant): string {
   const productPath = canonicalProductPath(product)
   const priced = sale(product.base_price, product.was_price, variant.price_adjustment)
   const finalPrice = priced.price
   const attributes = [product.size_label, variant.color, variant.material].filter(Boolean).join(' - ')
   const variantTitle = attributes ? `${product.title} - ${attributes}` : product.title
-  const imageUrl = variant.image_url || product.gallery_images?.[0] || ''
+  const imageUrl = (variant.image_url || product.gallery_images?.[0] || '').trim()
+  if (!imageUrl) {
+    console.warn(`[feed] skipped variant ${variant.id} of "${product.title}": no image`)
+    return ''
+  }
 
   return `
           <item>
@@ -92,8 +168,8 @@ function itemXml(kind: FeedKind, product: Product, variant: ProductVariant): str
             <g:item_group_id>${product.id}</g:item_group_id>
             <g:title><![CDATA[${variantTitle}]]></g:title>
             <g:description><![CDATA[${product.description || product.title}]]></g:description>
-            <g:link>${variantLink(kind, productPath, variant.id)}</g:link>
-            <g:image_link>${imageUrl}</g:image_link>
+            <g:link>${xml(variantLink(kind, productPath, variant.id))}</g:link>
+            <g:image_link>${xml(imageUrl)}</g:image_link>
             ${additionalImages(product.gallery_images, imageUrl)}
             <g:condition>new</g:condition>
             <g:availability>in_stock</g:availability>
@@ -102,7 +178,7 @@ function itemXml(kind: FeedKind, product: Product, variant: ProductVariant): str
             <g:google_product_category>${GOOGLE_PRODUCT_CATEGORY}</g:google_product_category>
             ${product.categories?.name ? `<g:product_type><![CDATA[${product.categories.name}]]></g:product_type>` : ''}
             ${SHIPPING}
-            ${variant.sku ? `<g:mpn><![CDATA[${variant.sku}]]></g:mpn>` : ''}
+            ${identifierTags(variant.sku)}
             ${variant.color ? `<g:color><![CDATA[${variant.color}]]></g:color>` : ''}
             ${variant.material ? `<g:material><![CDATA[${variant.material}]]></g:material>` : ''}
             ${product.size_label ? `<g:size><![CDATA[${product.size_label}]]></g:size>` : ''}
@@ -111,15 +187,19 @@ function itemXml(kind: FeedKind, product: Product, variant: ProductVariant): str
 
 function fallbackItemXml(product: Product): string {
   const productPath = canonicalProductPath(product)
-  const imageUrl = product.gallery_images?.[0] || ''
+  const imageUrl = (product.gallery_images?.[0] || '').trim()
+  if (!imageUrl) {
+    console.warn(`[feed] skipped product "${product.title}": no variants and no gallery image`)
+    return ''
+  }
   const priced = sale(product.base_price, product.was_price)
   return `
           <item>
             <g:id>${product.id}</g:id>
             <g:title><![CDATA[${product.title}]]></g:title>
             <g:description><![CDATA[${product.description || product.title}]]></g:description>
-            <g:link>${BASE_URL}${productPath}</g:link>
-            <g:image_link>${imageUrl}</g:image_link>
+            <g:link>${xml(`${BASE_URL}${productPath}`)}</g:link>
+            <g:image_link>${xml(imageUrl)}</g:image_link>
             ${additionalImages(product.gallery_images, imageUrl)}
             <g:condition>new</g:condition>
             <g:availability>in_stock</g:availability>

@@ -1,24 +1,37 @@
 // src/app/careers/page.tsx
 import type { Metadata } from 'next'
+import { pageMetadata } from '@/utils/pageMetadata'
 import Link from 'next/link'
 import { Briefcase } from 'lucide-react'
 import EditorialHero from '@/components/Editorial/EditorialHero'
 import EditorialLayout, { Note } from '@/components/Editorial/EditorialLayout'
+import EditorialSchema from '@/components/Editorial/EditorialSchema'
 import EmptyState from '@/components/UI/EmptyState'
 import { SUPPORT_EMAIL } from '@/constants/contact'
 
-export const metadata: Metadata = {
-  alternates: { canonical: '/careers' },
+export const metadata: Metadata = pageMetadata({
   title: 'Careers',
   description:
     'No open roles at UK Sofa Shop right now. If you upholster, drive, or know furniture, write to us anyway.',
+  path: '/careers',
   // No roles listed, so there is nothing here for a jobs crawler to index.
   robots: { index: false, follow: true },
-}
+})
 
 export default function CareersPage() {
   return (
     <div className="min-h-screen bg-calico-50">
+      {/* noindex, so this will not be read by a search crawler - but it is
+          followed, and the trail is rendered on screen either way. Correct
+          markup behind a visible breadcrumb costs nothing and stops this page
+          being the one exception. */}
+      <EditorialSchema
+        type="WebPage"
+        headline="Careers"
+        path="/careers"
+        updated="2026-08-28"
+        description="No open roles at UK Sofa Shop right now. If you upholster, drive, or know furniture, write to us anyway."
+      />
       <EditorialHero
         eyebrow="Working here"
         title="Careers"

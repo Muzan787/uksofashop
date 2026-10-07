@@ -2,7 +2,7 @@
 import type { Metadata } from 'next'
 import EditorialSchema from '@/components/Editorial/EditorialSchema'
 import { getFabricLibrary } from '@/utils/fabrics'
-import { ogImage } from '@/utils/socialImage'
+import { pageMetadata } from '@/utils/pageMetadata'
 import { getBuildCatalogue } from './catalogue'
 import BuildClient from './BuildClient'
 
@@ -39,29 +39,16 @@ import BuildClient from './BuildClient'
  */
 
 const TITLE = 'Build Your Own Sofa'
+// Was 218 characters across three sentences and lost the last one entirely.
 const DESCRIPTION =
-  'Choose the seats, the design, the fabric, the feet and the piping, and see a guide price. ' +
-  'Every sofa is made to order in the UK and we ring you to confirm every detail before it is built. ' +
-  'Nothing to pay until delivery.'
+  'Choose the seats, design, fabric, feet and piping, and see a guide price. ' +
+  'Made to order in the UK, confirmed by phone, and nothing to pay until delivery.'
 
-export const metadata: Metadata = {
-  alternates: { canonical: '/build' },
+export const metadata: Metadata = pageMetadata({
   title: TITLE,
   description: DESCRIPTION,
-  openGraph: {
-    type: 'website',
-    url: '/build',
-    title: `${TITLE} | UK Sofa Shop`,
-    description: DESCRIPTION,
-    images: [ogImage('/og-image.jpg', 'UK Sofa Shop')],
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: `${TITLE} | UK Sofa Shop`,
-    description: DESCRIPTION,
-    images: ['/og-image.jpg'],
-  },
-}
+  path: '/build',
+})
 
 export default async function BuildPage() {
   const [{ designs, sizes }, collections] = await Promise.all([

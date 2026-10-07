@@ -23,6 +23,8 @@ import ActiveFilterChips, { type Chip } from '@/components/Category/ActiveFilter
 import CategoryCopy from '@/components/Category/CategoryCopy'
 import { CATEGORY_COPY } from '@/constants/categorySeo'
 import { PROMISES } from '@/constants/promises'
+import { ogImage } from '@/utils/socialImage'
+import { SITE_CARD } from '@/utils/pageMetadata'
 
 type Params       = Promise<{ category: string }>
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>
@@ -76,9 +78,15 @@ export async function generateMetadata(
   const baseTitle = copy?.title ?? name
 
   const title = page > 1 ? `${baseTitle} - Page ${page}` : baseTitle
+  // The fallback, for a category added in the admin panel before anybody has
+  // written copy for it. It used to interpolate timingLong, which put it at
+  // ~203 characters - truncated in results, and the truncated half was the
+  // delivery promise. Every category in the catalogue has a CATEGORY_COPY
+  // entry today, so this should never be what ships; it is here so a new
+  // category is merely untuned rather than broken.
   const description =
     copy?.description ??
-    `Shop our ${name.toLowerCase()} at UK Sofa Shop. Free delivery across UK Mainland and cash on delivery. ${PROMISES.delivery.timingLong}`
+    `Shop ${name.toLowerCase()} at UK Sofa Shop. Free UK Mainland delivery and cash on delivery, ${PROMISES.delivery.timingMeta}.`
 
   return {
     title,
@@ -90,8 +98,17 @@ export async function generateMetadata(
     ...(filtered ? { robots: { index: false, follow: true } } : {}),
     // Overrides the root layout's card so a shared category link names the
     // category rather than the homepage.
-    openGraph: { type: 'website', title, description, url: path },
-    twitter: { card: 'summary_large_image', title, description },
+    // ogImage, not a bare url string. These two blocks used to omit `images`
+    // entirely, and because Next replaces the parent openGraph rather than
+    // merging into it, every category listing shared as a card with no picture.
+    openGraph: {
+      type: 'website',
+      title,
+      description,
+      url: path,
+      images: [ogImage(SITE_CARD, title)],
+    },
+    twitter: { card: 'summary_large_image', title, description, images: [SITE_CARD] },
   }
 }
 

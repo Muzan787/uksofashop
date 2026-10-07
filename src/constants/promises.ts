@@ -20,6 +20,14 @@ export const PROMISES = {
     short: 'Free UK Mainland delivery',
     long: 'Free delivery to UK Mainland addresses, brought to the ground floor or a ground-floor room of your choice.',
     timingShort: 'Most UK Mainland: 2–4 working days',
+    /**
+     * The timing clause as it reads inside a meta description, where
+     * timingLong does not fit: four category descriptions interpolated it and
+     * came out at 232-244 characters, so Google cut them off mid-clause and
+     * the delivery promise was the part that got dropped. Short enough to
+     * survive, and still the only place the figure is written.
+     */
+    timingMeta: 'most orders in 2–4 working days',
     timingException: 'Some Wales and Scotland postcodes take 5–7 working days.',
     timingLong: 'Most UK Mainland orders arrive in 2–4 working days. Some Wales and Scotland postcodes take 5–7 working days.',
   },

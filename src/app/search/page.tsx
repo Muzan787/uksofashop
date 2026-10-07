@@ -1,5 +1,6 @@
 // src/app/search/page.tsx
 import type { Metadata } from 'next'
+import { pageMetadata } from '@/utils/pageMetadata'
 import { createClient } from '@/utils/supabase/server'
 import { Search, PackageSearch } from 'lucide-react'
 import EmptyState from '@/components/UI/EmptyState'
@@ -8,12 +9,15 @@ import { canonicalProductPath } from '@/utils/productUrl'
 import { sale } from '@/utils/pricing'
 
 
-export const metadata: Metadata = {
+// noindex, so no canonical: the indexable URL for any given query is the
+// category or product page the results lead to, not a search URL.
+export const metadata: Metadata = pageMetadata({
   title: 'Search',
   description:
     'Search sofas, corner settees, recliners and fabric ranges at UK Sofa Shop.',
+  path: null,
   robots: { index: false, follow: true },
-}
+})
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>
 const ACCENT = 'var(--color-ember-500)'      // fills: buttons, rules, icons, badges

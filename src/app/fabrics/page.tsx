@@ -1,5 +1,6 @@
 // src/app/fabrics/page.tsx
 import type { Metadata } from 'next'
+import { pageMetadata } from '@/utils/pageMetadata'
 import Link from 'next/link'
 import { Package } from 'lucide-react'
 import EditorialHero from '@/components/Editorial/EditorialHero'
@@ -16,17 +17,20 @@ import { SamplesProvider, CollectionSwatches, SampleBar } from '@/components/Pro
  * the page's own schema node. Two hand-written sentences describing the same
  * page is the sort of drift nobody notices and nothing benefits from.
  */
+// Was 231 characters, so results cut it mid-sentence and the sample offer -
+// the last clause, and the only call to action in it - was never shown. The
+// offer is on the page and in /swatches' own description instead.
 const DESCRIPTION =
-  `All ${FABRIC_COLOUR_COUNT} fabrics we build made-to-order sofas in, and how to choose between them: what chenille, plush velvet, crushed velvet, naple, marble and PVC leather each do in a real room. Five samples posted for ${SAMPLE_FEE}, refunded when you order.`
+  `All ${FABRIC_COLOUR_COUNT} made-to-order sofa fabrics and how to choose: what chenille, plush velvet, crushed velvet, naple, marble and PVC leather each do in a real room.`
 
-export const metadata: Metadata = {
-  alternates: { canonical: '/fabrics' },
+export const metadata: Metadata = pageMetadata({
+  path: '/fabrics',
   // 42 characters, so the brand suffix still fits inside ~57. The old title
   // listed all six fabrics, ran to 80 with the suffix, and was cut off mid-word
   // in results - the six names are in the description and the H2s instead.
   title: `Sofa Fabric Guide: ${FABRIC_COLOUR_COUNT} Colours, ${FABRIC_COLLECTION_COUNT} Fabrics`,
   description: DESCRIPTION,
-}
+})
 
 /**
  * The fabric range, out from behind the dialog.

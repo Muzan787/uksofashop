@@ -13,6 +13,9 @@ const ACCENT_TEXT = 'var(--color-ember-700)' // letterforms on a light ground
 
 export const metadata: Metadata = {
   title: 'Confirm your subscription',
+  // Set rather than left to inherit: with no description of its own this page
+  // served the homepage's, which advertises sofas on a subscription receipt.
+  description: 'Confirm your UK Sofa Shop newsletter subscription.',
   robots: { index: false, follow: false },
 }
 

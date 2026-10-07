@@ -3,6 +3,7 @@ import { Metadata } from 'next';
 import { notFound, permanentRedirect } from 'next/navigation';
 import { canonicalProductPath, type CategoryRef } from '@/utils/productUrl';
 import { socialImageUrl, leadVariantImage, ogImage } from '@/utils/socialImage';
+import { SITE_CARD, metaDescription } from '@/utils/pageMetadata';
 import { productSchema, breadcrumbSchema, jsonLd } from '@/utils/schema';
 import { unstable_cache } from 'next/cache';
 import { createClient } from '@/utils/supabase/server';
@@ -160,16 +161,24 @@ export async function generateMetadata(props: { params: Params }): Promise<Metad
   if (!product) return { title: 'Product Not Found' };
 
   const path = canonicalProductPath(product);
-  const description =
+  // metaDescription, not the raw column. These run 311-517 characters because
+  // they are the page's body copy; untrimmed, every product snippet in search
+  // was cut off mid-sentence. The full text still renders on the page.
+  const description = metaDescription(
     product.description ||
-    `Buy the ${product.title} at UK Sofa Shop. Free UK Mainland delivery and cash on delivery available.`;
+      `Buy the ${product.title} at UK Sofa Shop. Free UK Mainland delivery and cash on delivery available.`,
+  );
 
-  // A 1200x630 card cut from the lead variant photo by Cloudinary. Falls back
-  // to the site-wide card if the image isn't a Cloudinary upload.
+  // A 1200x630 card cut from the lead variant photo by Cloudinary, falling
+  // back to the site-wide card when the photo is not a Cloudinary upload.
+  //
+  // That fallback is the fix: it used to be `undefined`, which does NOT
+  // inherit the parent's image - setting openGraph at all replaces the parent
+  // object - so any product without a Cloudinary lead photo shared as a card
+  // with no picture on it.
   const card = socialImageUrl(leadVariantImage(product.product_variants));
-  const images = card
-    ? [ogImage(card, product.title)]
-    : undefined;
+  const cardUrl = card ?? SITE_CARD;
+  const images = [ogImage(cardUrl, product.title)];
 
   return {
     title: product.title,
@@ -190,7 +199,7 @@ export async function generateMetadata(props: { params: Params }): Promise<Metad
       card: 'summary_large_image',
       title: product.title,
       description,
-      images: card ? [card] : undefined,
+      images: [cardUrl],
     },
   };
 }
@@ -431,9 +440,13 @@ export default async function ProductPage(props: { params: Params, searchParams:
       .filter((s): s is string => Boolean(s)),
     origin: product.origin,
     customMade: product.custom_made,
-    width: dims.width,
-    depth: dims.depth,
-    height: dims.height,
+    // Suppressed on a multi-piece record. A 3+2 set writes both sofas into one
+    // dimensions field, so the parsed numbers are the first piece's - true of
+    // that sofa, false as the set's own width. The diagram still draws them;
+    // Product markup does not claim them. See components/Product/dimensions.ts.
+    ...(dims.multiPiece
+      ? {}
+      : { width: dims.width, depth: dims.depth, height: dims.height }),
     materials: distinct(safeVariants.map(v => v.material)),
     colors: distinct(safeVariants.map(v => v.color)),
     // Only genuine approved reviews reach this - see the filter above.

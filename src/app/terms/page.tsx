@@ -1,20 +1,22 @@
 // src/app/terms/page.tsx
 import type { Metadata } from 'next'
+import { pageMetadata } from '@/utils/pageMetadata'
 import Link from 'next/link'
 import EditorialHero from '@/components/Editorial/EditorialHero'
 import EditorialLayout, { LastUpdated } from '@/components/Editorial/EditorialLayout'
+import EditorialSchema from '@/components/Editorial/EditorialSchema'
 import { CANCELLATION } from '@/constants/promises'
 import { RE_DELIVERY_FEE } from '@/constants/delivery'
 import {
   ADDRESS_LINE, PHONE_DISPLAY, PHONE_HREF, SUPPORT_EMAIL, traderIdentityLine,
 } from '@/constants/contact'
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: 'Terms & Conditions',
   description:
     'Our terms of sale: pricing, payment on delivery, delivery to UK Mainland, and your 14-day right to cancel.',
-  alternates: { canonical: '/terms' },
-}
+  path: '/terms',
+})
 
 /**
  * Set by hand, on purpose.
@@ -43,6 +45,19 @@ export default function TermsPage() {
 
   return (
     <div className="min-h-screen bg-calico-50">
+      {/* WebPage, not Article: a terms document is not a piece of writing with
+          an author and a publication date. The BreadcrumbList is the point -
+          EditorialHero has been drawing a trail here all along with no markup
+          behind it, which is the gap EditorialSchema exists to close and which
+          this page, /privacy, /cookies, /careers and /collection all missed. */}
+      <EditorialSchema
+        type="WebPage"
+        headline="Terms & Conditions"
+        current="Terms & conditions"
+        path="/terms"
+        updated={LAST_UPDATED}
+        description="Our terms of sale: pricing, payment on delivery, delivery to UK Mainland, and your 14-day right to cancel."
+      />
       <EditorialHero
         eyebrow="Legal"
         title="Terms & conditions"

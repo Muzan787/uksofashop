@@ -1,17 +1,19 @@
 // src/app/cookies/page.tsx
 import type { Metadata } from 'next'
+import { pageMetadata } from '@/utils/pageMetadata'
 import Link from 'next/link'
 import EditorialHero from '@/components/Editorial/EditorialHero'
 import EditorialLayout, { LastUpdated } from '@/components/Editorial/EditorialLayout'
+import EditorialSchema from '@/components/Editorial/EditorialSchema'
 import CookiePreferences from '@/components/UI/CookiePreferences'
 import { SUPPORT_EMAIL } from '@/constants/contact'
 
-export const metadata: Metadata = {
-  title: 'Cookies',
+export const metadata: Metadata = pageMetadata({
+  title: 'Cookie Policy',
   description:
     'Exactly which cookies and browser storage UK Sofa Shop uses, what each one is for, and how to change your choice at any time.',
-  alternates: { canonical: '/cookies' },
-}
+  path: '/cookies',
+})
 
 /** Set by hand. See the note in src/app/terms/page.tsx. */
 const LAST_UPDATED = '2026-10-05'
@@ -165,6 +167,14 @@ function Table({ entries, caption }: { entries: Entry[]; caption: string }) {
 export default function CookiesPage() {
   return (
     <div className="min-h-screen bg-calico-50">
+      <EditorialSchema
+        type="WebPage"
+        headline="Cookie Policy"
+        current="Cookies"
+        path="/cookies"
+        updated={LAST_UPDATED}
+        description="Exactly which cookies and browser storage UK Sofa Shop uses, what each one is for, and how to change your choice at any time."
+      />
       <EditorialHero
         eyebrow="Policies"
         title="Cookies"

@@ -1,5 +1,6 @@
 // src/app/reviews/page.tsx
 import type { Metadata } from 'next'
+import { pageMetadata } from '@/utils/pageMetadata'
 import { createClient } from '@/utils/supabase/server'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -12,11 +13,11 @@ import VideoStrip from '@/components/UI/VideoStrip'
 const DESCRIPTION =
   'Genuine reviews from UK Sofa Shop customers. Every review here comes from someone who actually bought from us.'
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: 'Customer Reviews',
   description: DESCRIPTION,
-  alternates: { canonical: '/reviews' },
-}
+  path: '/reviews',
+})
 
 export default async function ReviewsPage() {
   const supabase = await createClient()
