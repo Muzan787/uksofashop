@@ -1,0 +1,35 @@
+-- Take enforce_swatch_limit() out of the public API.
+--
+-- It is a trigger function. It reads `new.request_id`, which only exists
+-- inside a trigger, so calling it over PostgREST does nothing useful — but
+-- Supabase exposes every function in the `public` schema as an RPC endpoint,
+-- and the security advisor flags it correctly: anon and authenticated can
+-- both reach /rest/v1/rpc/enforce_swatch_limit on a SECURITY DEFINER
+-- function. A definer-rights function that was never meant to be called
+-- directly is exactly the shape of thing worth closing before somebody finds
+-- a way to make it do something.
+--
+-- Revoking EXECUTE does not affect the trigger. Triggers run the function as
+-- part of the statement that fired them and do not check the calling role's
+-- EXECUTE privilege, so swatch_request_items keeps its five-item limit.
+--
+-- The other SECURITY DEFINER functions the advisor lists are deliberate and
+-- stay as they are:
+--
+--   is_admin()                  — 22 RLS policies across 17 tables call it.
+--                                 Revoking it from `authenticated` would lock
+--                                 the admin out of his own panel. It takes no
+--                                 arguments and reports only on the caller.
+--   confirm_order,
+--   order_for_confirmation      — the order uuid IS the capability. Both are
+--                                 reached from the link in the confirmation
+--                                 email, by a customer who is not signed in.
+--   track_order                 — needs reference AND postcode together.
+--   request_swatches            — the public swatch form. Rate limited in the
+--                                 server action; nothing is posted until the
+--                                 £5 is settled on a phone call.
+--   place_manual_order,
+--   update_order_details        — both begin with
+--                                 `if not public.is_admin() then raise`.
+
+revoke execute on function public.enforce_swatch_limit() from anon, authenticated, public;

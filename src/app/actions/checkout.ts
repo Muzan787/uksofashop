@@ -24,6 +24,7 @@ import {
 } from '@/utils/attribution/whatsapp'
 import { isDeterministicCheckoutWhatsAppMatch } from '@/utils/attribution/checkoutLinkage'
 import { formatOrderForCopy } from '@/utils/orderText'
+import { externalOrigin } from '@/utils/requestOrigin'
 import { googleOrderReceipt } from '@/utils/googleServer'
 import { GOOGLE_GTM_ENABLED, type GoogleOrderReceipt } from '@/utils/googleMeasurement'
 import { createUntypedAdminClient } from '@/utils/supabase/admin'
@@ -196,7 +197,7 @@ export async function checkDeliveryPostcode(rawPostcode: string): Promise<Delive
  * token for /confirm-order/[id] and does not belong in the browser's hands, or
  * in a transaction_id sent to Google.
  */
-export type PlaceOrderResult =
+type PlaceOrderResult =
   | { success?: undefined; error: string }
   | { success: true; error?: undefined; orderId: string; total: number; googleReceipt?: GoogleOrderReceipt | null }
 
@@ -392,6 +393,11 @@ export async function placeOrder(
   // do not run otherwise.
   const hdrs = await headers()
 
+  // The protocol this request really arrived over, rebuilt from the
+  // forwarded headers rather than guessed from an env var, so the cookie
+  // flags written below match the ones the browser set.
+  const isHttps = (externalOrigin(hdrs) ?? '').startsWith('https:')
+
   // First-party visitor/session/arrival ids and last-touch click ids/UTMs -
   // all read from cookies written client-side by utils/attribution/ids.ts,
   // never trusted from the browser's form submission. Last-touch, not
@@ -453,7 +459,12 @@ export async function placeOrder(
         path: '/',
         maxAge: 0,
         sameSite: 'lax',
-        secure: process.env.VERCEL_ENV === 'production',
+        // Matched to the protocol the request actually arrived over, the way
+        // persistWhatsAppReference sets it in the browser. This read
+        // VERCEL_ENV, which has meant nothing since the site left Vercel —
+        // a deletion whose Secure flag disagrees with the original is not
+        // guaranteed to land.
+        secure: isHttps,
       })
     } catch {
       // Database state is authoritative; cookie cleanup is best-effort hygiene.

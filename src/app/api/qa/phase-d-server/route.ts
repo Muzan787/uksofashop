@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { placeOrder } from '@/app/actions/checkout'
 import { NO_EXTRAS } from '@/constants/delivery'
+import { PRODUCTION_HOSTS } from '@/utils/trackingEnv'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,15 +18,28 @@ function rpcCalls(): number {
 /**
  * QA-ONLY probe for the exact production placeOrder Server Action.
  *
- * This route exists only on the dirty Phase D QA branch and is deliberately
- * omitted from the clean release. It is additionally inert unless the local
- * direct-HTTPS harness sets PHASE_D_QA_ENABLE=1. The probe never permits a
- * successful order: the QA fetch fixture makes place_order fail with a
- * PRICE_MISMATCH after invocation, which proves that a mainland request reached
- * service-role authority without creating an order.
+ * This ships on master, because .github/workflows/phase-d-validation.yml
+ * builds the real tree and drives this route - an earlier comment here
+ * claimed the file was "omitted from the clean release", which was never
+ * true. What keeps it harmless is the gate below, not its absence.
+ *
+ * Two conditions, both required. PHASE_D_QA_ENABLE=1 is set only by the
+ * workflow and the local direct-HTTPS harness. The host check is the
+ * backstop: if that variable were ever set on the live site by accident,
+ * this would still refuse rather than drive placeOrder against a real
+ * product id. The probe never permits a successful order either way - the QA
+ * fetch fixture makes place_order fail with a PRICE_MISMATCH after
+ * invocation, which proves a mainland request reached service-role authority
+ * without creating an order.
  */
+function qaDisabled(request: Request): boolean {
+  if (process.env.PHASE_D_QA_ENABLE !== '1') return true
+  const host = new URL(request.url).hostname
+  return (PRODUCTION_HOSTS as readonly string[]).includes(host)
+}
+
 export async function POST(request: Request) {
-  if (process.env.PHASE_D_QA_ENABLE !== '1') {
+  if (qaDisabled(request)) {
     return new NextResponse(null, { status: 404 })
   }
 
