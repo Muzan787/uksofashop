@@ -284,50 +284,66 @@ read as a second, disagreeing source of truth.
 
 ---
 
-## 6. The open question: is GA4 getting your ecommerce events?
+## 6. RESOLVED: GA4 *is* receiving the events — and the page titles were wrong
 
-This is the one I could not settle, and it is the most important.
+The original version of this section said I could not tell whether GTM was
+forwarding the `ukss.*` events to GA4, because I recorded zero outgoing hits
+while instrumenting `sendBeacon`, `fetch`, XHR and image requests.
 
-**What I observed.** With an interceptor on `sendBeacon`, `fetch`, `XHR` and
-image requests — all four verified working with a control — I recorded **zero
-outgoing GA4 hits** during in-app navigation, across multiple pages, with the
-flush path forced. The GA4 config tag *did* initialise on first load
-(`G-GTBKG6RSNF` is registered in `google_tag_manager`), so the tag itself is
-installed.
+**That was a measurement artefact, not a finding.** The browser pane I tested
+in reported a zero-height viewport and could not composite the page, which is
+also why a control IntersectionObserver of my own returned no callbacks. GTM's
+GA4 tag sends from its own sandboxed realm, which my patches did not reach.
+The live GA4 property has data, so the pipe works. I should not have reported
+absence of observed hits as evidence of anything.
 
-**What that does and does not mean.** Two explanations fit, and I cannot
-distinguish them from outside:
+**What the GA4 report revealed instead** is a real bug, and a bigger one.
+"Views by Page title and screen name" showed a single row — `UK Sofa Shop`,
+65 views, 100%, 1 of 1 — for the whole property. Every page had collapsed
+into one.
 
-- **(a)** The GTM container has no tags bound to the `ukss.*` events. GA4 then
-  receives page views and nothing else — no `view_item`, no `add_to_cart`, no
-  `begin_checkout`. The site would push a perfect event layer into a container
-  that drops it.
-- **(b)** The GA4 event tags are consent-gated inside GTM, so nothing fires
-  while consent is denied. My session was unconsented.
+The cause was one line in `googleMeasurement.ts`:
 
-If (b), the setup contradicts its own stated design — the whole point of Consent
-Mode v2 here is that declining visitors still contribute modelling pings.
+```ts
+page:{ location: googleSafeUrl(...), referrer: googleSafeUrl(...), title:'UK Sofa Shop' }
+```
 
-I should flag that one of my own tests here was faulty: I tried calling
-`gtag('event', …)` to bypass GTM, but with GTM installed `gtag` is only a
-dataLayer stub, so that proved nothing. And `view_item_list` could not be tested
-at all — it needs an element 50% visible, and my browser pane reported a zero
-height viewport; a control observer of my own returned no callbacks either, so
-that event is **unproven in both directions**, not broken.
+The title was a hardcoded constant. It shipped with the Phase 2B GTM work
+(`af1612c`) and was harmless for as long as the plain gtag path was live,
+because gtag reads `document.title` by itself. The moment GTM became the path,
+the GA4 tag began taking `page_title` from this payload — and every page in
+the property started reporting as "UK Sofa Shop".
 
-**How to settle it in five minutes:**
+`page.location` was always correct, so the underlying data is intact: Pages and
+screens by **path** was right the whole time, and historic sessions are not
+lost. Only the title dimension was collapsed, and only from the date GTM went
+live (around 27 September).
 
-1. Open GTM → container `GTM-MXQ8S66N` → **Tags**. Is there a GA4 Event tag
-   triggered on `ukss.view_item`, `ukss.add_to_cart`, `ukss.begin_checkout`,
-   `ukss.order_placed`? If not, that is the answer, and building those four tags
-   is the single highest-value change available.
-2. GTM **Preview** mode on the live site, accept cookies, open a product. Watch
-   whether a GA4 tag fires on `ukss.view_item`.
-3. GA4 → **Realtime**. Open a product page with cookies accepted. If only
-   `page_view` appears, confirmed.
+Fixed: the payload now sends the real `document.title`, capped at 120
+characters, with the generic title retained on any URL carrying an order id,
+a token or a postcode.
 
-I can do this with you if you grant consent in my test browser — I did not want
-to click Accept on your banner without asking.
+**This also confirms the container is wired correctly.** A GA4 tag that reads
+`page_title` out of the `ukss` payload is a tag that has been deliberately
+mapped to it — so the forwarding that §3 depended on is real.
+
+Two of my own tests here were faulty and are recorded so nobody repeats them.
+I tried calling `gtag('event', …)` to bypass GTM, but with GTM installed
+`gtag` is only a dataLayer stub, so that proved nothing. And `view_item_list`
+could not be tested at all — it needs an element 50% visible, and the pane had
+no viewport.
+
+**Still worth confirming once, after the next deploy:**
+
+1. GA4 → **Reports** → Pages and screens → *Page title and screen name*. Real
+   titles should start appearing within minutes of the deploy. Rows before that
+   date stay as "UK Sofa Shop" — GA4 does not reprocess history.
+2. GTM → container `GTM-MXQ8S66N` → **Tags**. Confirm there is a GA4 Event tag
+   on `ukss.view_item`, `ukss.add_to_cart`, `ukss.begin_checkout` and
+   `ukss.order_placed`. Page views are proven to arrive; the ecommerce events
+   are the ones still worth checking individually.
+3. GA4 → **Realtime**, open a product page with cookies accepted, and look for
+   `view_item` beside `page_view`.
 
 ---
 
@@ -379,7 +395,7 @@ That is the sharpest drop in the funnel and the one worth investigating next —
 
 | # | Action | Why |
 |---|---|---|
-| 1 | Check the GTM container for `ukss.*` tags (§6) | Decides whether GA4 has any ecommerce data at all |
+| 1 | ~~Check the GTM container for `ukss.*` tags~~ | Resolved — see §6. Page titles fixed in code; verify in GA4 Realtime after the next deploy |
 | 2 | Confirm `TRACKING_ENV` is exactly `production` | It is set; a typo in it silently disables all four systems in §5.4 |
 | 3 | Persist Meta CAPI responses to a table | You currently cannot tell if Meta is accepting anything |
 | 4 | Compare Meta Events Manager Purchase count against 38 | One-off check while #3 is built |

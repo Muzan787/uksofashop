@@ -1,6 +1,7 @@
 // Google's public event boundary. Never pass forms, attribution IDs or bearer tokens here.
 import { getConsent } from './consent'
 import { isBrowserTrackingEnabled } from './trackingEnv'
+import { isSensitiveUrl } from './redactUrl'
 
 export const GOOGLE_GTM_ENABLED = process.env.NEXT_PUBLIC_GOOGLE_TRACKING_MODE === 'gtm-v1'
 // QA mode exists only for non-production hosts. It exposes the event contract
@@ -38,6 +39,35 @@ function googleSafeUrl(raw: string): string {
     return url.origin + path
   } catch { return '' }
 }
+/**
+ * The real page title, which is what GA4 reports under "Page title and screen
+ * name".
+ *
+ * This was the constant 'UK Sofa Shop'. It shipped with the Phase 2B GTM work
+ * and was invisible for as long as the plain gtag path was live, because gtag
+ * reads document.title by itself. The moment GTM became the path, the GA4 tag
+ * started taking page_title from this payload instead - so every page in the
+ * property collapsed into one row reading "UK Sofa Shop", and the report that
+ * shows which pages people actually visit stopped existing. page.location was
+ * always correct, so only the title dimension was affected.
+ *
+ * Sensitive URLs keep the generic title. A title is not a URL and the ones
+ * this site generates are built from static strings and product names, but
+ * the rule the rest of this module follows is that anything leaving for
+ * Google is checked rather than assumed, and a page carrying an order id or a
+ * postcode is exactly where an unchecked title would be worth having.
+ */
+function googleSafeTitle(): string {
+  const fallback = 'UK Sofa Shop'
+  try {
+    if (isSensitiveUrl(window.location.pathname + window.location.search)) return fallback
+    const title = document.title.trim()
+    // GA4 truncates page_title at 300 bytes; 120 characters is well inside
+    // that and longer than any title this site generates.
+    return title ? title.slice(0, 120) : fallback
+  } catch { return fallback }
+}
+
 export function googleConsent() {
   let state: GoogleConsentState = 'denied'
   try { if (getConsent() === 'granted') state = 'granted' } catch { /* fail closed */ }
@@ -86,7 +116,7 @@ export function emitGoogleEvent(event: GoogleEvent, commerce?: GoogleCommerce,
   layer.push({ecommerce:null,ukss:null})
   layer.push({event:`ukss.${event}`,ukss:{schema_version:1,environment:isBrowserTrackingEnabled()?'production':'preview',
     data_class:qa?'qa_test':'production_real',event_id:crypto.randomUUID(),occurred_at:new Date().toISOString(),
-    navigation_id:googleNavigationId(),page:{location:googleSafeUrl(window.location.href),referrer:googleSafeUrl(document.referrer),title:'UK Sofa Shop'},
+    navigation_id:googleNavigationId(),page:{location:googleSafeUrl(window.location.href),referrer:googleSafeUrl(document.referrer),title:googleSafeTitle()},
     consent:googleConsent(),...context,...(event==='order_placed'?{order_stage:'placed'}:{})},
     ...(commerce?{ecommerce:{currency:'GBP',value:commerce.value,items:commerce.items.map(i=>({item_id:i.item_id,item_name:i.item_name,price:i.price,quantity:i.quantity})),
       ...(commerce.transaction_id?{transaction_id:commerce.transaction_id}:{}),...(commerce.shipping!==undefined?{shipping:commerce.shipping}:{})}}:{})})
