@@ -32,7 +32,6 @@ const DATE = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', 
 export default function Reviews({ productId, reviews, isLoggedIn }: Props) {
   const count = reviews.length;
   const average = count ? reviews.reduce((s, r) => s + r.rating, 0) / count : 0;
-  const [writeFirstOpen, setWriteFirstOpen] = useState(false);
 
   // Highest rating first, so the chart reads 5 down to 1 the way people expect.
   const distribution = [5, 4, 3, 2, 1].map(stars => {
@@ -40,46 +39,20 @@ export default function Reviews({ productId, reviews, isLoggedIn }: Props) {
     return { stars, n, percent: count ? (n / count) * 100 : 0 };
   });
 
-  if (count === 0) {
-    return (
-      <section id="reviews" aria-labelledby="reviews-heading" className="reveal pt-10 lg:pt-14">
-        <SectionHeading
-          eyebrow="Customer reviews"
-          heading="What customers say."
-          emphasise="customers"
-          level="section"
-          className="mb-6 lg:mb-8"
-        />
-        <h2 id="reviews-heading" className="sr-only">Customer reviews</h2>
-
-        <div className="border-y border-calico-300 py-5 sm:flex sm:items-center sm:justify-between sm:gap-8">
-          <div className="max-w-[60ch]">
-            <p className="m-0 text-body font-semibold text-ink-900">No reviews yet.</p>
-            <p className="m-0 mt-1 text-body-sm leading-relaxed text-ink-500">
-              No customer review has been published for this sofa yet. If you have bought one,
-              you can be the first to share how it worked out.
-            </p>
-          </div>
-
-          <button
-            type="button"
-            aria-expanded={writeFirstOpen}
-            aria-controls="first-review-form"
-            onClick={() => setWriteFirstOpen(open => !open)}
-            className="hover-btn mt-4 inline-flex min-h-11 shrink-0 items-center justify-center rounded-pill border border-ink-900 px-5 py-2.5 text-body-sm font-semibold text-ink-900 sm:mt-0"
-          >
-            {writeFirstOpen ? 'Close review form' : 'Write the first review'}
-          </button>
-        </div>
-
-        {writeFirstOpen && (
-          <div id="first-review-form" className="mt-5 max-w-md">
-            <ReviewForm productId={productId} isLoggedIn={isLoggedIn} />
-          </div>
-        )}
-      </section>
-    );
-  }
+  // Nothing at all until a product has its first review.
+  //
+  // This used to render an honest empty state — "No reviews yet", with an
+  // invitation to write the first one. Well written, and still the wrong
+  // thing to put here: 71 of the 72 active products have no reviews, so on
+  // almost every product page the last word before the decision was that
+  // nobody has bought this one. An absent section says nothing; that one
+  // said something, and what it said was discouraging.
+  //
+  // No submission path is lost. The post-delivery email carries a signed
+  // per-product link to /review, which is how a real buyer gets here, and
+  // /reviews has its own form. The section reappears in full the moment a
+  // product has one approved review.
+  if (count === 0) return null;
 
   return (
     <section id="reviews" aria-labelledby="reviews-heading" className="reveal pt-10 lg:pt-14">

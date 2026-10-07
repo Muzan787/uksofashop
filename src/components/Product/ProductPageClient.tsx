@@ -29,6 +29,7 @@ import { PHONE_HREF } from '@/constants/contact';
 import { useCart } from '@/context/CartContext';
 import { trackAddToCart, trackViewContent } from '@/utils/tracking';
 import { useWhatsAppCTA } from '@/utils/attribution/useWhatsAppCTA';
+import { customEnquiryMessage, productEnquiryMessage } from '@/utils/enquiryMessage';
 import { usePhoneClick } from '@/utils/attribution/usePhoneClick';
 import type { DeliveryWindow } from '@/utils/delivery';
 import { sale } from '@/utils/pricing';
@@ -355,7 +356,7 @@ export default function ProductPageClient({
   // WhatsApp - see utils/attribution/useWhatsAppCTA.ts - so a conversation
   // that becomes a sale can be linked back to this exact product/variant.
   const agentCta = useWhatsAppCTA({
-    message: `Hi, I'm enquiring about the ${product.title}.`,
+    message: productEnquiryMessage(product.title, price),
     pageContext: 'product_agent',
     productId: product.id,
     variantId: selVariant?.id,
@@ -365,7 +366,7 @@ export default function ProductPageClient({
   // Structured so a made-to-order enquiry arrives with the answers already
   // prompted, rather than as an open-ended message.
   const customEnquiryCta = useWhatsAppCTA({
-    message: `Hi, I'd like a made-to-order ${product.title}.\n\nColour:\nFabric / material:\nSize or layout:\nAnything else:\n`,
+    message: customEnquiryMessage(product.title, price),
     pageContext: 'product_custom_enquiry',
     productId: product.id,
     variantId: selVariant?.id,
@@ -392,6 +393,9 @@ export default function ProductPageClient({
           data-product-id={product.id}
           data-variant-id={selVariant?.id ?? ''}
           data-product-name={product.title}
+          // The floating button reads the price from here, so its enquiry
+          // says the same thing as the buy box's.
+          data-product-price={String(price)}
         />
         {/* ── Breadcrumb ───────────────────────────────────────────────────
             The category link used to print the URL slug with its first letter

@@ -4,6 +4,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { useWhatsAppCTA } from '@/utils/attribution/useWhatsAppCTA';
+import { productEnquiryMessage } from '@/utils/enquiryMessage';
 import { useCompactFab } from './useCompactFab';
 
 /**
@@ -108,6 +109,8 @@ interface ProductWhatsAppContext {
   productId?: string;
   variantId?: string;
   productName: string;
+  /** Published by ProductPageClient so this enquiry quotes the same figure. */
+  price?: number;
 }
 
 export default function WhatsAppFab() {
@@ -125,7 +128,7 @@ export default function WhatsAppFab() {
     message: supportOnly
       ? 'Hi, I need some help with an existing order or account.'
       : productContext
-        ? `Hi, I'm enquiring about this product: ${productContext.productName}.`
+        ? productEnquiryMessage(productContext.productName, productContext.price)
         : 'Hi, I’d like some help with a sofa enquiry.',
     pageContext: supportOnly
       ? 'whatsapp_fab_support'
@@ -160,10 +163,12 @@ export default function WhatsAppFab() {
         return;
       }
 
+      const rawPrice = Number(marker.dataset.productPrice);
       setProductContext({
         productId: marker.dataset.productId || undefined,
         variantId: marker.dataset.variantId || undefined,
         productName,
+        price: Number.isFinite(rawPrice) && rawPrice > 0 ? rawPrice : undefined,
       });
     };
 

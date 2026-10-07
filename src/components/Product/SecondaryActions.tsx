@@ -1,7 +1,7 @@
 // src/components/Product/SecondaryActions.tsx
 
 import { AlertTriangle, ChevronDown, Ruler } from 'lucide-react';
-import { PROMISES } from '@/constants/promises';
+import { CANCELLATION, PROMISES } from '@/constants/promises';
 import type { WhatsAppCTA } from '@/utils/attribution/useWhatsAppCTA';
 import WhatsAppIcon from './WhatsAppIcon';
 
@@ -67,6 +67,14 @@ export default function SecondaryActions({ customMade, customEnquiryCta, agentCt
  * present with JavaScript disabled — and a modal is none of those. It is also
  * the same construction as the specifications accordion further down, so the
  * page has one disclosure pattern rather than two.
+ *
+ * The notice is the same sentence the checkout shows, read from
+ * constants/promises.ts rather than written out here. It is stated flatly,
+ * and that is correct for this page: you cannot add a made-to-order sofa to
+ * the basket without choosing a fabric, so every order for one is genuinely
+ * made to the customer's specification. Three surfaces used to word this
+ * independently, which is how they would have drifted apart the first time
+ * the fabric picker stopped being compulsory.
  */
 function MadeToOrder({ cta }: { cta: WhatsAppCTA }) {
   return (
@@ -107,10 +115,8 @@ function MadeToOrder({ cta }: { cta: WhatsAppCTA }) {
           <p className="m-0 mt-4 flex gap-2 rounded-sm border border-calico-300 bg-calico-50 p-3 text-caption leading-relaxed text-ink-500">
             <AlertTriangle aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-ember-700" />
             <span>
-              <strong className="text-ink-900">Before you order a made-to-measure sofa:</strong>{' '}
-              because it&apos;s built to your own specification, the 14-day right to change your mind
-              doesn&apos;t apply — that&apos;s the standard exemption under the Consumer Contracts
-              Regulations. Faulty or damaged items are still covered exactly as normal.
+              <strong className="text-ink-900">Before you order:</strong>{' '}
+              {CANCELLATION.warning}
             </span>
           </p>
 
