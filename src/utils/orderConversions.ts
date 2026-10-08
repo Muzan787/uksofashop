@@ -31,6 +31,7 @@ import { isServerTrackingEnabled } from '@/utils/trackingEnv'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { reportGooglePurchase } from './googleServer'
 import { GOOGLE_GTM_ENABLED } from './googleMeasurement'
+import { orderAdvertisingConsent } from './metaOrderConsent'
 
 type ConversionKind = 'purchase' | 'delivered'
 
@@ -77,7 +78,7 @@ export async function reportOrderConversion(
     // which collapses every field below to an error type.
     const { data: order } = await admin
       .from('orders')
-      .select('id, customer_name, customer_email, customer_phone, shipping_address, total_amount, purchase_event_id, ga_client_id, meta_fbp, meta_fbc, customer_user_agent, customer_ip, purchase_event_sent_at, delivered_event_sent_at, source, gclid, gbraid, wbraid, visitor_id, confirmed_at, delivered_at, utm_campaign')
+      .select('id, customer_name, customer_email, customer_phone, shipping_address, total_amount, purchase_event_id, ga_client_id, meta_fbp, meta_fbc, customer_user_agent, customer_ip, purchase_event_sent_at, delivered_event_sent_at, source, gclid, gbraid, wbraid, visitor_id, session_id, arrival_id, created_at, confirmed_at, delivered_at, utm_campaign')
       .eq('id', orderId)
       .single()
 
@@ -99,6 +100,68 @@ export async function reportOrderConversion(
 
     const alreadySent = (order as Record<string, unknown>)[sentColumn]
     if (alreadySent) return
+
+    const value = Number(order.total_amount)
+    const shortCode = orderId.substring(0, 8).toUpperCase()
+    const name = (order.customer_name ?? '').trim()
+
+    // Stage a row for a FUTURE, separate Google Ads offline/enhanced
+    // conversion import - see docs/TRACKING_V2_EXPORT_CONTRACT.md. Nothing
+    // here uploads to Google. Idempotent via the (order_id, conversion_stage)
+    // unique constraint: onConflict + ignoreDuplicates means a repeated
+    // confirmed->shipped->confirmed toggle never creates a second row.
+    const postcode = order.shipping_address?.split(',').pop()?.trim() ?? null
+    const conversionStage = kind === 'purchase' ? 'confirmed' : 'delivered'
+    const { data: staged, error: stagingError } = await admin
+      .from('google_offline_conversions')
+      .upsert(
+        {
+          order_id: orderId,
+          conversion_stage: conversionStage,
+          conversion_time: conversionTime,
+          value,
+          currency: 'GBP',
+          gclid: order.gclid,
+          gbraid: order.gbraid,
+          wbraid: order.wbraid,
+          customer_email: order.customer_email,
+          customer_phone: order.customer_phone,
+          customer_first_name: name.split(/\s+/)[0] || null,
+          customer_last_name: name.split(/\s+/).slice(1).join(' ') || null,
+          customer_postcode: postcode,
+        },
+        { onConflict: 'order_id,conversion_stage', ignoreDuplicates: true },
+      ).select('order_id')
+
+    const stagingAttemptAt = new Date().toISOString()
+    if (stagingError || (staged as unknown[] | null)?.length) await admin.from('conversion_events').insert({
+      order_id: orderId,
+      platform: 'google_offline_staging' as const,
+      event_name: conversionStage,
+      event_id: `${shortCode}-${conversionStage}`,
+      sent_at: stagingError ? null : stagingAttemptAt,
+      status: stagingError ? 'failed' as const : 'sent' as const,
+      error_metadata: stagingError ? { message: stagingError.message } : null,
+    })
+
+    // Google staging remains independent of the advertising consent / CAPI result.
+    const advertising = await orderAdvertisingConsent(order)
+    const eventTime = Math.floor(Date.parse(conversionTime) / 1000)
+    const now = Math.floor(Date.now() / 1000)
+    const timeValid = Number.isSafeInteger(eventTime) && eventTime > 0 && eventTime <= now && now - eventTime <= 7 * 86400
+    if (!advertising.allowed || !timeValid) {
+      // A skipped event is not a dispatch and must not claim the business flag.
+      // Preserve old rows; diagnostics apply only to this attempted invocation.
+      const eventId = kind === 'purchase' ? order.purchase_event_id : `${order.purchase_event_id}-delivered`
+      const { data: previous } = await admin.from('conversion_events').select('id')
+        .eq('order_id', orderId).eq('platform', 'meta').eq('event_id', eventId).limit(1).maybeSingle()
+      if (!previous) await admin.from('conversion_events').insert({
+        order_id: orderId, platform: 'meta', event_name: kind === 'purchase' ? 'Purchase' : 'OrderDelivered',
+        event_id: eventId, status: 'skipped', sent_at: null,
+        response_metadata: { outcome: 'skipped', reason: !advertising.allowed ? advertising.reason : 'invalid_or_aged_event_time' },
+      })
+      return
+    }
 
     // Claim it BEFORE sending. The `is null` predicate means two concurrent
     // requests cannot both win, so a double-click in the admin panel reports
@@ -125,10 +188,6 @@ export async function reportOrderConversion(
       item_price: Number(l.price_at_time_of_purchase),
     }))
 
-    // Delivery-inclusive, as the database computed it.
-    const value = Number(order.total_amount)
-    const shortCode = orderId.substring(0, 8).toUpperCase()
-    const name = (order.customer_name ?? '').trim()
 
     /**
      * An order agreed in a WhatsApp conversation, not on a page.
@@ -147,8 +206,10 @@ export async function reportOrderConversion(
      */
     const fromChat = order.source === 'whatsapp'
 
-    await Promise.all([
+    const dispatchAt = new Date().toISOString()
+    const [metaDelivery] = await Promise.all([
       sendCapiEvent({
+        eventTime,
         // Purchase is the standard event the optimiser bids against.
         // OrderDelivered is a custom event, for true-revenue reporting.
         eventName: kind === 'purchase' ? 'Purchase' : 'OrderDelivered',
@@ -216,9 +277,10 @@ export async function reportOrderConversion(
     // conversion was sent has no meaningful caller identity to check - the
     // same reasoning utils/supabase/admin.ts documents - so every caller
     // gets the same, consistent write rather than three different outcomes.
+    // Legacy 'sent' remains an attempt status for established reporting.
+    // Provider acceptance lives only in response_metadata, never source flags.
     // Best-effort and never allowed to affect anything above - both sends
-    // already happened by this point. sendCapiEvent/sendGa4Event never throw
-    // and report nothing about success beyond a console.error, so 'sent' here
+    // already happened by this point. 'sent' here
     // means "the attempt completed", not "Meta/Google accepted it" - see
     // utils/metaCapi.ts and utils/ga4Server.ts for the actual acceptance
     // logging.
@@ -228,8 +290,9 @@ export async function reportOrderConversion(
         platform: 'meta' as const,
         event_name: kind === 'purchase' ? 'Purchase' : 'OrderDelivered',
         event_id: kind === 'purchase' ? order.purchase_event_id : `${order.purchase_event_id}-delivered`,
-        sent_at: new Date().toISOString(),
-        status: 'sent' as const,
+        sent_at: metaDelivery.outcome === 'skipped' ? null : dispatchAt,
+        status: metaDelivery.outcome === 'skipped' ? 'skipped' as const : 'sent' as const,
+        response_metadata: { ...metaDelivery, dispatch_at: dispatchAt, business_event_time: conversionTime },
       },
       ...(!GOOGLE_GTM_ENABLED && kind === 'purchase' && order.ga_client_id
         ? [{
@@ -243,44 +306,7 @@ export async function reportOrderConversion(
         : []),
     ])
 
-    // Stage a row for a FUTURE, separate Google Ads offline/enhanced
-    // conversion import - see docs/TRACKING_V2_EXPORT_CONTRACT.md. Nothing
-    // here uploads to Google. Idempotent via the (order_id, conversion_stage)
-    // unique constraint: onConflict + ignoreDuplicates means a repeated
-    // confirmed->shipped->confirmed toggle never creates a second row.
-    const postcode = order.shipping_address?.split(',').pop()?.trim() ?? null
-    const conversionStage = kind === 'purchase' ? 'confirmed' : 'delivered'
-    const { error: stagingError } = await admin
-      .from('google_offline_conversions')
-      .upsert(
-        {
-          order_id: orderId,
-          conversion_stage: conversionStage,
-          conversion_time: conversionTime,
-          value,
-          currency: 'GBP',
-          gclid: order.gclid,
-          gbraid: order.gbraid,
-          wbraid: order.wbraid,
-          customer_email: order.customer_email,
-          customer_phone: order.customer_phone,
-          customer_first_name: name.split(/\s+/)[0] || null,
-          customer_last_name: name.split(/\s+/).slice(1).join(' ') || null,
-          customer_postcode: postcode,
-        },
-        { onConflict: 'order_id,conversion_stage', ignoreDuplicates: true },
-      )
 
-    const stagingAttemptAt = new Date().toISOString()
-    await admin.from('conversion_events').insert({
-      order_id: orderId,
-      platform: 'google_offline_staging' as const,
-      event_name: conversionStage,
-      event_id: `${shortCode}-${conversionStage}`,
-      sent_at: stagingError ? null : stagingAttemptAt,
-      status: stagingError ? 'failed' as const : 'sent' as const,
-      error_metadata: stagingError ? { message: stagingError.message } : null,
-    })
   } catch (err) {
     console.error(`Failed to report ${kind} conversion for order ${orderId}`, err)
   }
