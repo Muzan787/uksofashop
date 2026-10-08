@@ -1344,6 +1344,10 @@ export type Database = {
           p_whatsapp_reference?: string | null
           // Optional. See 20260920100000_manual_order_delivery_date.sql.
           p_preferred_delivery_date?: string | null
+          // Optional. See 20261008201013_place_manual_order_lead_reference.sql.
+          // A checkout-recovery lead's UKSS-LD-..., which moves that visit's
+          // click ids onto the order the way the WhatsApp one does.
+          p_lead_reference?: string | null
         }
         Returns: Json
       }

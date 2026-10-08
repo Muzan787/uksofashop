@@ -1151,7 +1151,18 @@ export async function sendAdminSwatchNotification(
  * reminder sent without it carries no opt-out, which PECR reg 22(3)(c) asks
  * for in every message, so always pass it.
  */
-export async function sendCheckoutReminder(email: string, basket: unknown, leadId?: string) {
+export async function sendCheckoutReminder(
+  email: string,
+  basket: unknown,
+  leadId?: string,
+  /**
+   * The lead's UKSS-LD-..., carried into the plain-text part so the thread
+   * this starts has the join in it. If the shopper replies here and the sale
+   * is then finished on WhatsApp, this is what links the order back to the
+   * visit - and to the ad that paid for it.
+   */
+  reference?: string | null,
+) {
   const lines = recoveryBasketLines(basket)
   const total = recoveryBasketTotal(lines)
   const siteUrl = SITE_URL
@@ -1234,8 +1245,8 @@ export async function sendCheckoutReminder(email: string, basket: unknown, leadI
     from: sender(),
     to: email,
     bcc: [SUPPORT_EMAIL, OWNER_GMAIL],
-    subject: recoveryReminderEmail(basket).subject,
-    text: recoveryReminderEmail(basket).body,
+    subject: recoveryReminderEmail(basket, reference).subject,
+    text: recoveryReminderEmail(basket, reference).body,
     html: generateEmailHTML(content),
   })
 }

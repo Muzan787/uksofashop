@@ -103,14 +103,23 @@ function customerLine(line: RecoveryLine): string {
  * read the second line. It ends on a question, because the point is a reply -
  * the price gets agreed in the conversation, not in this message.
  */
-export function recoveryReminderMessage(basket: unknown): string {
+/**
+ * @param reference The lead's UKSS-LD-..., appended on its own line the way
+ *   utils/attribution/whatsapp.ts appends a WhatsApp one. It is there so the
+ *   chat itself carries the join: when the shopper replies days later and the
+ *   order is taken by hand the reference is sitting a few messages up, and
+ *   pasting it into the order form is what moves the click ids onto the sale.
+ *   Optional, because a reminder is still worth sending without one.
+ */
+export function recoveryReminderMessage(basket: unknown, reference?: string | null): string {
   const lines = recoveryBasketLines(basket)
+  const ref = reference ? `\n\nRef: ${reference}` : ''
 
   const opening =
     "Hi, it's UK Sofa Shop. You asked us to remind you if you didn't finish your order on uksofashop.co.uk"
 
   if (lines.length === 0) {
-    return `${opening}. Would you like to go ahead, or is there anything you'd like to check first? Happy to help.`
+    return `${opening}. Would you like to go ahead, or is there anything you'd like to check first? Happy to help.${ref}`
   }
 
   return [
@@ -120,7 +129,7 @@ export function recoveryReminderMessage(basket: unknown): string {
     '',
     'Free UK Mainland ground-floor delivery · Pay on delivery.',
     '',
-    "If you'd like to go ahead, we can confirm availability and delivery, or answer anything you'd like to check first.",
+    "If you'd like to go ahead, we can confirm availability and delivery, or answer anything you'd like to check first." + ref,
   ].join('\n')
 }
 
@@ -128,14 +137,14 @@ export function recoveryReminderMessage(basket: unknown): string {
  * The same reminder for the email channel, with a subject and a way back that
  * leads to WhatsApp - which is where the sale actually happens.
  */
-export function recoveryReminderEmail(basket: unknown): { subject: string; body: string } {
+export function recoveryReminderEmail(basket: unknown, reference?: string | null): { subject: string; body: string } {
   const lines = recoveryBasketLines(basket)
   const subject =
     lines.length === 1 && lines[0].title
       ? `Still thinking about ${lines[0].title}? – UK Sofa Shop`
       : 'Your sofa choices – UK Sofa Shop'
   const body = [
-    recoveryReminderMessage(basket),
+    recoveryReminderMessage(basket, reference),
     '',
     `Just reply to this email, or WhatsApp us on ${PHONE_DISPLAY} if that's easier.`,
     '',

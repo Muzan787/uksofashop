@@ -18,6 +18,8 @@ export const revalidate = 0
 
 type RecoveryLead = {
   id: string
+  /** UKSS-LD-... Minted by a column default, so it is never absent. */
+  reference: string
   basket: unknown
   phone: string | null
   email: string | null
@@ -68,7 +70,7 @@ export default async function AdminLeadsPage(props: { searchParams: SearchParams
   const admin = createUntypedAdminClient()
   const { data, error } = await admin
     .from('checkout_recovery_leads')
-    .select('id, basket, phone, email, whatsapp_opt_in, email_opt_in, updated_at, done_at, reminder_emailed_at')
+    .select('id, reference, basket, phone, email, whatsapp_opt_in, email_opt_in, updated_at, done_at, reminder_emailed_at')
     .eq('status', view === 'done' ? 'done' : 'active')
     .eq('data_class', 'production_real')
     // QA/test recovery submissions are deliberately excluded from both views.
@@ -141,7 +143,7 @@ export default async function AdminLeadsPage(props: { searchParams: SearchParams
             // Only the channel they ticked. The other contact detail is not on
             // the row at all - the API stores each one only when it was opted in.
             const wa = lead.whatsapp_opt_in && lead.phone
-              ? whatsAppLink(lead.phone, recoveryReminderMessage(lead.basket))
+              ? whatsAppLink(lead.phone, recoveryReminderMessage(lead.basket, lead.reference))
               : null
 
             return (
@@ -156,6 +158,15 @@ export default async function AdminLeadsPage(props: { searchParams: SearchParams
                       <p className="text-xs font-bold uppercase tracking-[0.12em] text-orange-600">{ago(lead.updated_at)}</p>
                     )}
                     <p className="mt-0.5 text-sm text-zinc-500">{when(lead.updated_at)}</p>
+                    {/* The join between this lead and an order taken by hand.
+                        It goes out in the reminder, so it is already in the
+                        chat - but it is here too for the case that matters
+                        most: the shopper replies, the order is taken in
+                        /admin/orders, and this is what gets pasted into the
+                        "Lead reference" box so the sale keeps its attribution.
+                        Selectable rather than a button: a click-to-copy needs
+                        a client component, and this page is a server one. */}
+                    <p className="mt-1 select-all font-mono text-xs text-zinc-400">{lead.reference}</p>
                   </div>
                   {total !== null && (
                     <p className="text-lg font-bold text-zinc-900">{gbp(total)}</p>

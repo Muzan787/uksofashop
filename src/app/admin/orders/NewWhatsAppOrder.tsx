@@ -83,6 +83,7 @@ export default function NewWhatsAppOrder({
   const [deliveryDate, setDeliveryDate] = useState('')
   const [whatsappReference, setWhatsappReference] = useState('')
   const [matchByTime, setMatchByTime] = useState(false)
+  const [leadReference, setLeadReference] = useState('')
   const [contactDate, setContactDate] = useState('')
   const [contactHour, setContactHour] = useState('10')
   const [contactMinute, setContactMinute] = useState('00')
@@ -171,6 +172,7 @@ export default function NewWhatsAppOrder({
       preferredDeliveryDate: deliveryDate || undefined,
       items,
       whatsappReference: whatsappReference.trim() || undefined,
+      leadReference: leadReference.trim() || undefined,
       contactTime:
         !whatsappReference.trim() && matchByTime
           ? {
@@ -481,6 +483,36 @@ export default function NewWhatsAppOrder({
               </div>
             </div>
           )}
+
+          <div className="my-3 flex items-center gap-3 text-[10px] font-bold uppercase tracking-[0.2em] text-stone-400">
+            <span className="h-px flex-1 bg-stone-200" />
+            Or
+            <span className="h-px flex-1 bg-stone-200" />
+          </div>
+
+          {/* The other way a WhatsApp sale starts: they got as far as
+              checkout, asked to be reminded, and we opened the chat. There is
+              no click to match on - the enquiry came from us - so the lead
+              carries its own reference instead, printed on the card in
+              /admin/leads and sent in the reminder itself. */}
+          <label className={label} htmlFor="lead-reference">
+            Lead reference <span className="font-normal normal-case tracking-normal text-stone-400">&mdash; if they came from a checkout reminder</span>
+          </label>
+          <input
+            id="lead-reference"
+            className={`${field} uppercase`}
+            value={leadReference}
+            onChange={e => setLeadReference(e.target.value.toUpperCase())}
+            placeholder="UKSS-LD-261006-7E1E91"
+            autoComplete="off"
+          />
+          <p className="mt-2 text-xs leading-relaxed text-stone-500">
+            Copy it from the lead in <strong>Leads</strong>, or from the
+            &ldquo;Ref:&rdquo; line at the bottom of the reminder we sent them.
+            It moves that visit&rsquo;s ad click onto this order, so the sale
+            reports against the campaign that produced it. An unknown or
+            already-used reference is ignored and the order still saves.
+          </p>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-3">

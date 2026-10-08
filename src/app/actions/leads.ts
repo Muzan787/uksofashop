@@ -75,7 +75,7 @@ export async function sendLeadReminderEmail(
   const admin = createUntypedAdminClient()
   const { data, error } = await admin
     .from('checkout_recovery_leads')
-    .select('email, email_opt_in, basket, status, data_class')
+    .select('email, email_opt_in, basket, status, data_class, reference')
     .eq('id', id)
     .maybeSingle()
 
@@ -87,6 +87,7 @@ export async function sendLeadReminderEmail(
     basket: unknown
     status: string
     data_class: string
+    reference: string
   } | null
   // Converted and unsubscribed rows have had their email cleared, and a row
   // without the email tick never had it - either way there is nothing to send to.
@@ -97,7 +98,7 @@ export async function sendLeadReminderEmail(
   try {
     // `id` is the validated uuid from the form, which is what the row was
     // looked up by — the select does not need to return it again.
-    await sendCheckoutReminder(lead.email, lead.basket, id)
+    await sendCheckoutReminder(lead.email, lead.basket, id, lead.reference)
   } catch (err) {
     console.error(`lead reminder email failed: ${err instanceof Error ? err.message : String(err)}`)
     return { status: 'error', message: 'The email could not be sent. Try again in a moment.' }

@@ -42,6 +42,7 @@ import type { DeliveryBreakdown } from '@/constants/delivery'
 import { isAdmin } from '@/utils/auth'
 import { isValidUkMobile, UK_MOBILE_ERROR } from '@/utils/phone'
 import { isValidWhatsAppReference } from '@/utils/attribution/whatsapp'
+import { normaliseLeadReference } from '@/utils/attribution/lead'
 import { createAdminClient } from '@/utils/supabase/admin'
 
 const itemSchema = z.object({
@@ -100,6 +101,17 @@ const schema = z.object({
    * 20260906160000_manual_order_whatsapp_reference.sql.
    */
   whatsappReference: z.string().trim().max(32).optional(),
+  /**
+   * The other half of the same problem: a shopper who opted in to a checkout
+   * reminder and then finished the sale in the chat we sent them. Paste the
+   * UKSS-LD-… shown on the lead in /admin/leads and the database copies that
+   * visit's click ids onto the order, so the conversion reports with the ad
+   * that earned it rather than as an anonymous chat sale.
+   *
+   * Independent of whatsappReference, and both may be given - an enquiry is
+   * the more specific evidence and wins, but the lead is still closed off.
+   */
+  leadReference: z.string().trim().max(32).optional(),
   /**
    * Fallback when the customer did not paste the reference into WhatsApp.
    * This is the timestamp visible beside their first message, interpreted in
@@ -309,6 +321,9 @@ export async function createWhatsAppOrder(input: ManualOrderInput): Promise<Manu
     // it a value that could never match anything.
     p_whatsapp_reference: attribution.reference,
     p_preferred_delivery_date: v.preferredDeliveryDate ?? null,
+    // Same reasoning as the reference above: normalised, or null when it is
+    // not a lead reference at all.
+    p_lead_reference: normaliseLeadReference(v.leadReference),
   })
 
   if (error || !data) {
