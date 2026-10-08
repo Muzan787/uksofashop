@@ -25,6 +25,7 @@ export const CONSENT_REOPEN_EVENT = 'cookie_preferences_open'
 const TRACKING_COOKIE_PREFIXES = [
   '_ga',   // Google Analytics: _ga and _ga_<MEASUREMENT_ID>
   '_gid',  // Google Analytics
+  '_gcl', // Google Ads conversion-linker cookies, including _gcl_au/_aw/_gb
   '_gat',  // Google Analytics throttling
   '_fbp',  // Meta Pixel browser id
   '_fbc',  // Meta Pixel click id

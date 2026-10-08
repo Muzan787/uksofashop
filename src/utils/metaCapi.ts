@@ -102,6 +102,8 @@ interface CapiEvent {
   eventName: 'Purchase' | 'InitiateCheckout' | 'AddToCart' | 'ViewContent' | 'OrderDelivered' | 'Contact'
   /** MUST equal the event_id the browser sent for the same action. */
   eventId: string
+  /** Actual business-event Unix seconds; omitted only for immediate browser actions. */
+  eventTime?: number
   eventSourceUrl?: string
   user: CapiUser
   contents?: CapiContent[]
@@ -141,18 +143,32 @@ function userData(u: CapiUser): Record<string, unknown> {
  * Send one event. Never throws: a failure here must not affect the order that
  * triggered it, so problems are logged and swallowed.
  */
-export async function sendCapiEvent(event: CapiEvent): Promise<void> {
-  if (!isCapiConfigured()) return
+export interface CapiDeliveryResult {
+  outcome: 'accepted' | 'rejected' | 'ambiguous' | 'skipped'
+  http_status?: number
+  events_received?: number
+  error_code?: number
+  error_subcode?: number
+  reason?: 'not_configured' | 'not_production' | 'invalid_event_time' | 'transport_or_response_error'
+}
+
+export async function sendCapiEvent(event: CapiEvent): Promise<CapiDeliveryResult> {
+  if (!isCapiConfigured()) return { outcome: 'skipped', reason: 'not_configured' }
   // Production gate (utils/trackingEnv.ts): a preview deployment or local
   // build must never post a real conversion to the live Meta account, even
   // if META_CAPI_ACCESS_TOKEN happens to be present in that environment.
-  if (!isServerTrackingEnabled()) return
+  if (!isServerTrackingEnabled()) return { outcome: 'skipped', reason: 'not_production' }
+
+  const eventTime = event.eventTime ?? Math.floor(Date.now() / 1000)
+  if (!Number.isSafeInteger(eventTime) || eventTime <= 0) {
+    return { outcome: 'skipped', reason: 'invalid_event_time' }
+  }
 
   const payload = {
     data: [
       {
         event_name: event.eventName,
-        event_time: Math.floor(Date.now() / 1000),
+        event_time: eventTime,
         event_id: event.eventId,
         event_source_url: event.eventSourceUrl,
         action_source: event.actionSource ?? 'website',
@@ -181,11 +197,25 @@ export async function sendCapiEvent(event: CapiEvent): Promise<void> {
       },
     )
 
-    if (!res.ok) {
-      const body = await res.text()
-      console.error(`Meta CAPI ${event.eventName} rejected (${res.status}):`, body.slice(0, 500))
+    // Retain only numeric delivery facts. Provider bodies/messages can echo
+    // customer data or credentials and must never enter logs or the ledger.
+    let body: { events_received?: unknown; error?: { code?: unknown; error_subcode?: unknown } } | null = null
+    try { body = await res.json() } catch { /* HTTP status is still valid evidence. */ }
+    const numeric = (v: unknown): number | undefined =>
+      typeof v === 'number' && Number.isSafeInteger(v) && v >= 0 ? v : undefined
+    const received = numeric(body?.events_received)
+    const result: CapiDeliveryResult = {
+      outcome: res.ok && received === 1 && !body?.error ? 'accepted' : res.ok ? 'ambiguous' : 'rejected',
+      http_status: res.status,
+      ...(received !== undefined ? { events_received: received } : {}),
+      ...(numeric(body?.error?.code) !== undefined ? { error_code: numeric(body?.error?.code) } : {}),
+      ...(numeric(body?.error?.error_subcode) !== undefined ? { error_subcode: numeric(body?.error?.error_subcode) } : {}),
     }
-  } catch (err) {
-    console.error(`Meta CAPI ${event.eventName} failed to send`, err)
+    if (result.outcome !== 'accepted') console.error(`Meta CAPI ${event.eventName} delivery`, result)
+    return result
+  } catch {
+    // No automatic replay: an interrupted response may have been accepted.
+    console.error(`Meta CAPI ${event.eventName} transport/response ambiguous`)
+    return { outcome: 'ambiguous', reason: 'transport_or_response_error' }
   }
 }
