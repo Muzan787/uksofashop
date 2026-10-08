@@ -8,13 +8,11 @@
 -- and the click ids live in attribution_sessions - so the lead branch reads
 -- them from there.
 --
--- NOTE ON HISTORY: as first applied, the lead branch below picked its
--- attribution row with a bare `limit 1`, which was wrong -
--- attribution_sessions.session_id is not unique. That was corrected in place
--- by 20261008202143_lead_attribution_pick_richest_session.sql, and the fix is
--- folded into the body here so this file reads as the live function actually
--- is. The call it makes to lead_attribution_session resolves at execution
--- time, not at creation, so replaying these migrations in order still works.
+-- NOTE: the attribution lookup in the lead branch below takes `limit 1` with
+-- no ordering, which is WRONG - attribution_sessions.session_id is not
+-- unique. It is left here as applied, and corrected by the next-but-two
+-- migration, 20261008202143_lead_attribution_pick_richest_session.sql, so
+-- that replaying this folder in order reproduces the live function.
 --
 -- PRECEDENCE: an enquiry wins. If both references are given, the WhatsApp one
 -- is the more specific evidence - it names a click on a known page at a known
@@ -189,11 +187,23 @@ begin
     v_arrival_id := v_lead.arrival_id;
 
     -- The click ids are not on the lead. Prefer the session the lead was
-    -- captured in, then the richest row for that visitor. See
-    -- 20261008202143 for why picking an arbitrary row was wrong.
-    v_attr := public.lead_attribution_session(v_lead.session_id, v_lead.visitor_id);
+    -- captured in; fall back to that visitor's most recent session, because a
+    -- shopper who came back on a later visit before opting in still arrived
+    -- from somewhere worth crediting.
+    select * into v_attr
+    from public.attribution_sessions
+    where session_id = v_lead.session_id
+    limit 1;
 
-    if v_attr.id is not null then
+    if not found and v_lead.visitor_id is not null then
+      select * into v_attr
+      from public.attribution_sessions
+      where visitor_id = v_lead.visitor_id
+      order by created_at desc
+      limit 1;
+    end if;
+
+    if found then
       v_gclid        := v_attr.gclid;
       v_gbraid       := v_attr.gbraid;
       v_wbraid       := v_attr.wbraid;

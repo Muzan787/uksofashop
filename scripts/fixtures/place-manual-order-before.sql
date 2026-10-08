@@ -1,4 +1,14 @@
-CREATE OR REPLACE FUNCTION public.place_manual_order(p_customer_name text, p_customer_email text, p_customer_phone text, p_shipping_address text, p_special_instructions text, p_items jsonb, p_delivery_charge numeric DEFAULT 0, p_source text DEFAULT 'whatsapp'::text, p_whatsapp_reference text DEFAULT NULL::text, p_preferred_delivery_date date DEFAULT NULL::date)
+-- Captured "before" state, used by one test to reproduce the converted-
+-- reference defect that 20261008105105 fixed.
+--
+-- p_lead_reference is on the signature but UNUSED, and deliberately so. This
+-- file has to replace the live function for the duration of that test, and
+-- the live function now takes eleven arguments - a ten-argument version would
+-- be created alongside it as an overload instead of replacing it, leaving the
+-- guarded version to answer and the defect unreproduced. The body is
+-- otherwise untouched: it predates lead support and must keep behaving as it
+-- did.
+CREATE OR REPLACE FUNCTION public.place_manual_order(p_customer_name text, p_customer_email text, p_customer_phone text, p_shipping_address text, p_special_instructions text, p_items jsonb, p_delivery_charge numeric DEFAULT 0, p_source text DEFAULT 'whatsapp'::text, p_whatsapp_reference text DEFAULT NULL::text, p_preferred_delivery_date date DEFAULT NULL::date, p_lead_reference text DEFAULT NULL::text)
  RETURNS jsonb
  LANGUAGE plpgsql
  SECURITY DEFINER

@@ -30,6 +30,18 @@ const eslintConfig = defineConfig([
     "public/fallback-*.js",
     "public/swe-worker-*.js",
   ]),
+
+  // CommonJS test harnesses. scripts/*.test.cjs run under `node --test` and
+  // load modules with require() because that is what .cjs means - the rules
+  // banning it are there for application code, which is ESM. Without this the
+  // lint is permanently 16 errors red, which is how a real error gets missed.
+  {
+    files: ["scripts/**/*.cjs"],
+    rules: {
+      "@typescript-eslint/no-require-imports": "off",
+      "@next/next/no-assign-module-variable": "off",
+    },
+  },
 ]);
 
 export default eslintConfig;

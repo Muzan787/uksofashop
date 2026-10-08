@@ -44,8 +44,15 @@ $$;
 revoke execute on function public.lead_attribution_session(uuid, uuid) from anon, authenticated, public;
 
 -- Swap the two naive lookups for one call to it, by rewriting the stored
--- definition rather than restating 250 lines of unchanged function. The
--- guard matters: a silent no-match here would leave the broken version live.
+-- definition rather than restating 250 lines of unchanged function.
+--
+-- Two things this has to survive. Line endings: the migration that created
+-- the function is stored CRLF in this repository, so pg_get_functiondef
+-- hands back CRLF when it is replayed from the file and an LF-only needle
+-- finds nothing - normalise before searching. And being run twice: the
+-- already-patched form is recognised and skipped rather than treated as a
+-- failure. Anything else still raises, because a silent no-match here would
+-- leave the broken version live.
 do $patch$
 declare
   v_def text;
@@ -78,6 +85,13 @@ begin
   v_new := E'    v_attr := public.lead_attribution_session(v_lead.session_id, v_lead.visitor_id);\n'
         || E'\n'
         || E'    if v_attr.id is not null then';
+
+  v_def := replace(v_def, chr(13) || chr(10), chr(10));
+
+  if position(v_new in v_def) > 0 then
+    raise notice 'place_manual_order already picks the richest attribution row; nothing to do';
+    return;
+  end if;
 
   if position(v_old in v_def) = 0 then
     raise exception 'lead attribution block not found in place_manual_order - refusing to patch blindly';
