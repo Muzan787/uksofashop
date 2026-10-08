@@ -31,6 +31,7 @@ import { isServerTrackingEnabled } from '@/utils/trackingEnv'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { reportGooglePurchase } from './googleServer'
 import { GOOGLE_GTM_ENABLED } from './googleMeasurement'
+import { hasOrderMarketingConsent } from './metaOrderConsent'
 
 type ConversionKind = 'purchase' | 'delivered'
 
@@ -100,6 +101,11 @@ export async function reportOrderConversion(
     const alreadySent = (order as Record<string, unknown>)[sentColumn]
     if (alreadySent) return
 
+    // Fail closed BEFORE the idempotency claim. Missing, denied, withdrawn or
+    // unreadable consent must not disclose customer match data to Meta. The
+    // independent, consent-aware Google reporter above keeps its own guard.
+    if (!await hasOrderMarketingConsent(orderId)) return
+
     // Claim it BEFORE sending. The `is null` predicate means two concurrent
     // requests cannot both win, so a double-click in the admin panel reports
     // one conversion rather than two.
@@ -147,11 +153,12 @@ export async function reportOrderConversion(
      */
     const fromChat = order.source === 'whatsapp'
 
-    await Promise.all([
+    const [metaDelivery] = await Promise.all([
       sendCapiEvent({
         // Purchase is the standard event the optimiser bids against.
         // OrderDelivered is a custom event, for true-revenue reporting.
         eventName: kind === 'purchase' ? 'Purchase' : 'OrderDelivered',
+        eventTime: Math.floor(new Date(conversionTime).getTime() / 1000),
         eventId:
           kind === 'purchase'
             ? (order.purchase_event_id as string)
@@ -217,11 +224,8 @@ export async function reportOrderConversion(
     // same reasoning utils/supabase/admin.ts documents - so every caller
     // gets the same, consistent write rather than three different outcomes.
     // Best-effort and never allowed to affect anything above - both sends
-    // already happened by this point. sendCapiEvent/sendGa4Event never throw
-    // and report nothing about success beyond a console.error, so 'sent' here
-    // means "the attempt completed", not "Meta/Google accepted it" - see
-    // utils/metaCapi.ts and utils/ga4Server.ts for the actual acceptance
-    // logging.
+    // already happened by this point. Meta now records a numeric receipt;
+    // GA4's legacy path still records an attempt, not attribution evidence.
     await admin.from('conversion_events').insert([
       {
         order_id: orderId,
@@ -229,7 +233,13 @@ export async function reportOrderConversion(
         event_name: kind === 'purchase' ? 'Purchase' : 'OrderDelivered',
         event_id: kind === 'purchase' ? order.purchase_event_id : `${order.purchase_event_id}-delivered`,
         sent_at: new Date().toISOString(),
-        status: 'sent' as const,
+        // Existing status contract is retained. The receipt distinguishes
+        // provider acceptance from ambiguous/rejected/skipped dispatches.
+        status: metaDelivery.outcome === 'accepted' ? 'sent' as const
+          : metaDelivery.outcome === 'skipped' ? 'skipped' as const : 'failed' as const,
+        response_metadata: { ...metaDelivery },
+        error_metadata: metaDelivery.outcome === 'rejected' || metaDelivery.outcome === 'ambiguous'
+          ? { outcome: metaDelivery.outcome, reason: metaDelivery.reason ?? 'provider_response' } : null,
       },
       ...(!GOOGLE_GTM_ENABLED && kind === 'purchase' && order.ga_client_id
         ? [{

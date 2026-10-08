@@ -23,6 +23,7 @@ export const CONSENT_REOPEN_EVENT = 'cookie_preferences_open'
 
 /** Cookie name prefixes written by the tools we load once consent is given. */
 const TRACKING_COOKIE_PREFIXES = [
+  '_gcl',  // Google Ads conversion linker: _gcl_au, _gcl_aw and braid cookies
   '_ga',   // Google Analytics: _ga and _ga_<MEASUREMENT_ID>
   '_gid',  // Google Analytics
   '_gat',  // Google Analytics throttling
