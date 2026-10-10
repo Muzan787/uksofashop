@@ -179,7 +179,7 @@ export default function BuyBox({
   const dimensionText = readableDimensions(product.specifications);
 
   return (
-    <div className="flex flex-col gap-6">
+    <div data-journey-section="configuration" className="flex flex-col gap-6">
       {/* ── Title ────────────────────────────────────────────────────────── */}
       <div>
         <h1 className="m-0 font-display text-h1 font-semibold text-ink-900">{product.title}</h1>
@@ -202,7 +202,7 @@ export default function BuyBox({
           from above the name to under the price. Both were spending height
           ABOVE the price on a phone, where the first screen ends around 600px
           inside Facebook's browser. */}
-      <div data-pdp-price="">
+      <div data-pdp-price="" data-journey-section="price">
         <span aria-hidden="true" className="mb-4 hidden w-full md:flex">
           <span className="block h-px w-8 bg-ember-500" />
           <span className="block h-px flex-1 bg-calico-300" />
@@ -354,7 +354,7 @@ export default function BuyBox({
           data-pdp-add: while this is on screen the floating pill stands
           aside, and the first time it comes into view is recorded. */}
       <div>
-        <div data-pdp-add="">
+        <div data-pdp-add="" data-journey-section="primary">
         <AddToCart
           price={price}
           added={added}

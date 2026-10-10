@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
+import { trackJourney } from '@/utils/journey'
 
 type CheckoutStep = 'cart' | 'delivery' | 'success'
 type CheckoutField = 'name' | 'email' | 'phone' | 'postcode' | 'address' | 'special_instructions'
@@ -106,6 +107,7 @@ export default function CheckoutTelemetry() {
     let scanQueued = false
 
     const transmit = (action: TelemetryAction, metadata: Meta = {}, retry = true) => {
+      trackJourney(action, {step:metadata.step, field:metadata.field, error_code:metadata.error_code, outcome:metadata.outcome, extra:metadata.extra, enabled:metadata.enabled, surface:'checkout'})
       const actionId = newId()
       const payload = JSON.stringify({ action, actionId, metadata })
       const write = () => {

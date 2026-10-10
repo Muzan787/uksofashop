@@ -26,6 +26,7 @@
 
 import { META_PIXEL_ID, META_PIXEL_READY_EVENT } from '@/utils/consentMode'
 import { getConsent } from '@/utils/consent'
+import { mirrorJourneyAction } from '@/utils/journey'
 import { normaliseUkMobile } from '@/utils/phone'
 import { isBrowserTrackingEnabled } from '@/utils/trackingEnv'
 import { GOOGLE_DATALAYER_ENABLED, emitGoogleEvent, googleNavigationId, type GoogleCommerce, type GoogleEvent } from './googleMeasurement'
@@ -429,6 +430,7 @@ export function trackOperationalAction(
   dedupeKey?: string,
 ): void {
   if (typeof window === 'undefined') return
+  mirrorJourneyAction(action, context, dedupeKey)
 
   let actionId = newEventId()
   if (dedupeKey) {

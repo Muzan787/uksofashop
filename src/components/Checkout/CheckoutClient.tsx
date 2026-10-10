@@ -1,4 +1,5 @@
 'use client'
+import { trackJourney } from '@/utils/journey'
 
 import { useState, useCallback, useEffect, useRef } from 'react'
 import Image from 'next/image'
@@ -605,6 +606,7 @@ function DetailsStep({
     }
 
     submitInFlight.current = true
+    trackJourney('order_submit', {surface:'checkout',step:'delivery'})
     setPending(true)
     emitGoogleEvent('add_shipping_info',googleBasket(toTrackedItems(cartItems).map(i=>({item_id:i.variantId,item_name:i.title,price:i.price,quantity:i.quantity})),offerDiscount),{surface:'checkout',step:'mainland_accepted'})
 
@@ -623,20 +625,24 @@ function DetailsStep({
       const res = await placeOrder(fd, items, grandTotal, extras, appliedPromotionCode)
 
       if (res?.error) {
+        trackJourney('order_submit_failed',{surface:'checkout',outcome:'failed',error_code:'server_error'})
         setServerError(res.error)
         setPending(false)
         submitInFlight.current = false
       } else if (res?.success) {
+        trackJourney('order_saved',{surface:'checkout',outcome:'success'})
         emitGoogleOrder(res.googleReceipt)
         trackOrderPlaced(res.orderId, res.total, toTrackedItems(cartItems))
         clearCart()
         onSuccess(res.orderId, form.postcode.toUpperCase(), res.total, form.preferredDeliveryDate || null)
       } else {
+        trackJourney('order_submit_failed',{surface:'checkout',outcome:'failed',error_code:'unknown'})
         setServerError('We could not place the order right now. Please try again.')
         setPending(false)
         submitInFlight.current = false
       }
     } catch {
+      trackJourney('order_submit_failed',{surface:'checkout',outcome:'failed',error_code:'server_error'})
       setServerError('We could not place the order right now. Please try again.')
       setPending(false)
       submitInFlight.current = false

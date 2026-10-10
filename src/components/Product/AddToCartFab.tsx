@@ -58,6 +58,7 @@ export default function AddToCartFab({ price, added, onAdd, visible }: Props) {
       // inert while hidden, so a keyboard or screen reader does not land on a
       // button nobody can see.
       inert={!visible || undefined}
+      data-journey-section={visible ? 'sticky' : undefined}
       className={`fab-offset fixed left-4 z-sticky-bar transition-[bottom,opacity,transform] duration-base ease-out-expo ${
         visible ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-3 opacity-0'
       }`}

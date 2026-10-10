@@ -6,6 +6,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { Check, SlidersHorizontal } from 'lucide-react'
 import PriceRange from './PriceRange'
 import Sheet from '@/components/UI/Sheet'
+import { trackJourney } from '@/utils/journey'
 
 export interface FilterOption {
   value: string
@@ -38,6 +39,7 @@ export default function FilterSidebar({
   const [open, setOpen] = useState(false)
 
   const toggle = useCallback((key: string, val: string) => {
+    trackJourney('filter_changed',{option_code:key+'_'+val,surface:'collection',outcome:sp.get(key)===val?'closed':'selected'})
     const params = new URLSearchParams(sp.toString())
     if (params.get(key) === val) params.delete(key)
     else params.set(key, val)
@@ -47,6 +49,7 @@ export default function FilterSidebar({
   }, [sp, router, pathname])
 
   const clearAll = useCallback(() => {
+    trackJourney('filter_changed',{option_code:'clear_all',surface:'collection'})
     // Sort survives: it is how the customer wants to read the shop, not a
     // narrowing of it, and throwing it away with the filters is a surprise.
     const params = new URLSearchParams()
@@ -128,7 +131,7 @@ export default function FilterSidebar({
       {/* ── The trigger, phones only ─────────────────────────────────────── */}
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => {trackJourney('filter_changed',{option_code:'filters_open',surface:'collection',outcome:'opened'});setOpen(true)}}
         aria-expanded={open}
         aria-haspopup="dialog"
         className={`hover-btn flex h-12 w-full items-center justify-center gap-2 rounded-pill border text-body-sm font-semibold transition-colors duration-swift ease-out-expo lg:hidden ${

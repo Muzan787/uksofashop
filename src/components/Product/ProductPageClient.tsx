@@ -29,6 +29,8 @@ import { toggleWishlist } from '@/app/actions/wishlist';
 import { PHONE_HREF } from '@/constants/contact';
 import { useCart } from '@/context/CartContext';
 import { trackAddToCart, trackOperationalAction, trackViewContent } from '@/utils/tracking';
+import { trackJourney } from '@/utils/journey';
+import type { JourneySurface } from '@/utils/journeyContract';
 import { useWhatsAppCTA } from '@/utils/attribution/useWhatsAppCTA';
 import { customEnquiryMessage, photoRequestMessage, productEnquiryMessage } from '@/utils/enquiryMessage';
 import { usePhoneClick } from '@/utils/attribution/usePhoneClick';
@@ -136,6 +138,7 @@ export default function ProductPageClient({
   const selVariant = variants.find(v => (v.material || 'Standard') === selMat && v.color === selColor) ?? inMaterial[0];
 
   const handleMaterial = (mat: string) => {
+    trackJourney('material_selected',{option_code:mat.replace(/[^a-zA-Z0-9_-]/g,'_').slice(0,40)}, {productId:product.id});
     setSelMat(mat);
     const cols = variants.filter(v => (v.material || 'Standard') === mat);
     if (!cols.find(v => v.color === selColor)) setSelColor(cols[0]?.color ?? '');
@@ -268,8 +271,12 @@ export default function ProductPageClient({
   // publishes and therefore what a dynamic ad can retarget. The ref guard
   // exists because React runs effects twice under StrictMode in development.
   const lastViewed = useRef<string | null>(null);
+  const lastMeasuredPrice=useRef<number|null>(null);
   useEffect(() => {
     if (!selVariant || lastViewed.current === selVariant.id) return;
+    if(lastViewed.current) trackJourney('variant_changed',{price},{productId:product.id,variantId:selVariant.id});
+    if(lastMeasuredPrice.current!==null && lastMeasuredPrice.current!==price) trackJourney('price_changed',{price},{productId:product.id,variantId:selVariant.id});
+    lastMeasuredPrice.current=price;
     lastViewed.current = selVariant.id;
     trackViewContent({ productId: product.id, variantId: selVariant.id, title: product.title, price, quantity: 1 });
   }, [selVariant, price, product.id, product.title]);
@@ -299,6 +306,7 @@ export default function ProductPageClient({
   }, [product.id, selVariant?.id]);
 
   const onViewFabric = useCallback((viewed: Fabric) => {
+    trackJourney('fabric_viewed', { option_code: viewed.code }, { productId: product.id });
     if (fabricLooked.current) return;
     fabricLooked.current = true;
     trackOperationalAction('pdp_fabric_viewed', {
@@ -323,8 +331,8 @@ export default function ProductPageClient({
   // toast and the AddToCart event are the same whichever was pressed. Takes
   // the fabric as an argument rather than reading state because the picker
   // has just chosen it, and the state will not have caught up yet.
-  const addLine = useCallback((inFabric: Fabric | null) => {
-    if (!selVariant) return false;
+  const addLine = useCallback((inFabric: Fabric | null, surface: JourneySurface = 'primary') => {
+    if (!selVariant) { trackJourney('cart_update_failed', {surface, outcome:'missing_variant'}, {productId:product.id}); return false; }
 
     addToCart({
       variant_id: selVariant.id,
@@ -339,7 +347,7 @@ export default function ProductPageClient({
       fabric_label: inFabric ? `${inFabric.collectionName} ${inFabric.name}` : null,
       fabric_code: inFabric?.code ?? null,
       fabric_swatch: inFabric?.image ?? null,
-    });
+    }, surface);
     // Fired here rather than inside the cart reducer: the reducer runs inside a
     // setState updater, which React may invoke more than once.
     trackAddToCart({ productId: product.id, variantId: selVariant.id, title: product.title, price, quantity: 1 });
@@ -350,26 +358,29 @@ export default function ProductPageClient({
   }, [selVariant, price, product.id, product.title, images, addToCart]);
 
   // The buy box's button and the floating pill.
-  const handleAdd = useCallback(() => {
+  const handleAdd = useCallback((surface: JourneySurface = 'primary') => {
+    trackJourney('cta_click', { surface }, {productId:product.id, variantId:selVariant?.id});
     // You cannot build a sofa without knowing what to build it in. Rather than
     // refusing, this puts the choice in front of them - one tap, instead of an
     // error they then have to go and resolve for themselves.
     if (madeToOrder && !fabric) {
       openFabrics('add_to_cart');
+      trackJourney('cart_update_deferred', {surface, outcome:'requires_fabric'}, {productId:product.id});
       return;
     }
-    addLine(fabric);
-  }, [madeToOrder, fabric, addLine, openFabrics]);
+    addLine(fabric, surface);
+  }, [madeToOrder, fabric, addLine, openFabrics, product.id, selVariant?.id]);
 
   // "Build mine in this", from inside the picker: the sofa goes into the cart
   // in that fabric and the customer goes with it. Nothing is left to decide on
   // this page once the fabric is chosen, so there is no reason to close the
   // dialog and leave them looking for the next button.
   const handleBuild = useCallback((chosen: Fabric) => {
+    trackJourney('fabric_selected', {option_code:chosen.code, surface:'fabric_picker'}, {productId:product.id,variantId:selVariant?.id});
     setFabric(chosen);
     setFabricOpen(false);
-    if (addLine(chosen)) router.push('/checkout');
-  }, [addLine, router]);
+    if (addLine(chosen, 'fabric_picker')) router.push('/checkout');
+  }, [addLine, router, product.id, selVariant?.id]);
 
   // ── Wishlist ─────────────────────────────────────────────────────────────
   const [inWishlist, setInWishlist] = useState(initialWishlistState);
@@ -588,7 +599,7 @@ export default function ProductPageClient({
               // On a made-to-order frame each photograph names its own colour
               // (see `images` above), so no page-wide colour is claimed.
               selectedColor={photographsAreGallery ? '' : selColor}
-              onSelectColor={setSelColor}
+              onSelectColor={colour => {setSelColor(colour);trackJourney('colour_selected',{option_code:colour.replace(/[^a-zA-Z0-9_-]/g,'_').slice(0,40)},{productId:product.id});}}
               material={photographsAreGallery || selMat === 'Standard' ? '' : selMat}
               photoRequest={photoRequestCta}
             />
@@ -638,7 +649,7 @@ export default function ProductPageClient({
                 onOpenFabrics={madeToOrder ? () => openFabrics('fabric_card') : undefined}
                 offerTier={offerTier}
                 added={added}
-                onAdd={handleAdd}
+                onAdd={() => handleAdd('primary')}
                 inWishlist={inWishlist}
                 wishlistBusy={wishlistBusy}
                 onWishlist={handleWishlist}
@@ -705,7 +716,7 @@ export default function ProductPageClient({
           price has scrolled away (see fabVisible above). The same handler as
           the buy box's button, so a made-to-order frame with no fabric chosen
           opens the picker from here too. */}
-      <AddToCartFab price={price} added={added} onAdd={handleAdd} visible={fabVisible} />
+      <AddToCartFab price={price} added={added} onAdd={() => handleAdd('sticky')} visible={fabVisible} />
 
       {madeToOrder && fabricOpen && (
         <FabricDialog

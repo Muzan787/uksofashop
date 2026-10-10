@@ -9,6 +9,7 @@ import { productTransitionName } from '@/components/Motion/productTransition';
 import { usePointerFine } from '@/components/Motion/usePointerFine';
 import { blurDataURL, sized, videoSource } from '@/utils/cloudinary';
 import { trackOperationalAction } from '@/utils/tracking';
+import { trackJourney } from '@/utils/journey';
 import type { WhatsAppCTA } from '@/utils/attribution/useWhatsAppCTA';
 import VideoPlayer from '@/components/UI/VideoPlayer';
 import ColourSwatches from './ColourSwatches';
@@ -175,6 +176,12 @@ export default function Gallery({
   // photograph, and whether they opened one full size. Enough to tell a
   // product whose photos are doing their job from one where nobody swipes.
   const swiped = useRef(false);
+  const measuredIndex=useRef(0);
+  useEffect(()=>{
+    if(index===measuredIndex.current) return;
+    measuredIndex.current=index;
+    trackJourney('gallery_selected',{quantity:Math.min(100,index+1)},{productId});
+  },[index,productId]);
   const zoomed = useRef(false);
 
   const openLightbox = useCallback(() => {

@@ -13,6 +13,7 @@ import { useReducedMotionSafe } from '@/components/Motion/useReducedMotionSafe';
 import { blurDataURL } from '@/utils/cloudinary';
 import { MAX_SAMPLES, SAMPLE_FEE } from '@/constants/swatches';
 import type { Fabric, FabricCollection } from './types';
+import { trackJourney } from '@/utils/journey';
 
 interface Props {
   collections: FabricCollection[];
@@ -115,6 +116,7 @@ export default function FabricDialog({ collections, selectedId, productSlug, onB
 
           <Link
             href={samplesHref(zoomed)}
+            onClick={() => trackJourney('sample_click', {option_code:zoomed.code, surface:'fabric_picker'})}
             className="hover-btn flex h-12 items-center justify-center gap-2 rounded-pill border border-calico-300 bg-calico-50 px-6 text-body-sm font-semibold text-ink-900 no-underline"
           >
             <Package aria-hidden="true" className="h-4 w-4" />
@@ -184,7 +186,7 @@ export default function FabricDialog({ collections, selectedId, productSlug, onB
             label="Fabric collection"
             items={collections.map(c => ({ key: c.slug, label: c.name }))}
             selectedKey={active?.slug ?? null}
-            onSelect={setActiveSlug}
+            onSelect={slug => { setActiveSlug(slug); trackJourney('fabric_category_selected', {option_code:slug.replace(/[^a-zA-Z0-9_-]/g,'_').slice(0,40)}); }}
           />
 
           {/* The one line about what the cloth actually does. It is the same

@@ -118,6 +118,8 @@ export default function ProductCard({
       ref={article}
       className="group relative hover-card"
       data-cursor="view"
+      data-journey-product={id}
+      data-journey-surface={/similar|related/.test(listId) ? 'related' : listId.includes('recent') ? 'recent' : 'collection'}
       style={delayMs ? { animation: `fadeUp var(--dur-base) var(--ease-out-expo) ${delayMs}ms both` } : undefined}
     >
       <div

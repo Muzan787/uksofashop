@@ -1,10 +1,12 @@
 // src/context/CartContext.tsx
 'use client'
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react'
 import { CartItem } from '@/app/actions/checkout'
 import type { BuildSpec } from '@/types/build'
 import { emitGoogleEvent } from '@/utils/googleMeasurement'
+import { trackJourney } from '@/utils/journey'
+import type { JourneySurface } from '@/utils/journeyContract'
 
 export interface DisplayCartItem extends CartItem {
   /**
@@ -59,7 +61,7 @@ export function lineKey(item: Pick<DisplayCartItem, 'variant_id' | 'fabric_id' |
 
 interface CartContextType {
   cartItems: DisplayCartItem[]
-  addToCart: (item: DisplayCartItem) => void
+  addToCart: (item: DisplayCartItem, surface?: JourneySurface) => void
   /** Takes a lineKey(), not a variant id - see the note on lineKey. */
   removeFromCart: (key: string) => void
   updateQuantity: (key: string, qty: number) => void
@@ -103,6 +105,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
    */
   const [cartItems, setCartItems] = useState<DisplayCartItem[]>([])
   const [loaded, setLoaded] = useState(false)
+  const pendingTelemetry = useRef<{key:string;before:number;variant:string;quantity:number;surface:JourneySurface}[]>([])
 
   /* eslint-disable react-hooks/set-state-in-effect --
    * The rule is right in general and wrong for this case, which is the one it
@@ -139,8 +142,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
    * would double-count every add. AddToCart is fired from the click handler in
    * ProductPageClient instead, where it runs exactly once per click.
    */
-  const addToCart = (newItem: DisplayCartItem) => {
+  const addToCart = (newItem: DisplayCartItem, surface:JourneySurface='other') => {
     const key = lineKey(newItem)
+    trackJourney('cart_update_requested',{surface,quantity:newItem.quantity},{variantId:newItem.variant_id})
+    pendingTelemetry.current.push({key,before:cartItems.find(i=>lineKey(i)===key)?.quantity??0,
+      variant:newItem.variant_id,quantity:newItem.quantity,surface})
+    if(pendingTelemetry.current.length>20) pendingTelemetry.current.shift()
     setCartItems(prev => {
       const existing = prev.find(i => lineKey(i) === key)
       if (existing) {
@@ -154,8 +161,20 @@ export function CartProvider({ children }: { children: ReactNode }) {
     })
   }
 
+  useEffect(()=>{
+    if(!loaded || !pendingTelemetry.current.length) return
+    pendingTelemetry.current=pendingTelemetry.current.filter(intent=>{
+      const committed=cartItems.find(i=>lineKey(i)===intent.key)
+      if(!committed || committed.quantity<intent.before+intent.quantity) return true
+      trackJourney('cart_updated',{surface:intent.surface,quantity:intent.quantity,outcome:'success'},
+        {variantId:intent.variant})
+      return false
+    })
+  },[cartItems,loaded])
+
   const removeFromCart = (key: string) => {
     const item=cartItems.find(i=>lineKey(i)===key)
+    if(item) trackJourney('cart_removed',{quantity:item.quantity},{variantId:item.variant_id})
     if(item) emitGoogleEvent('remove_from_cart',{currency:'GBP',value:item.price*item.quantity,
       items:[{item_id:item.variant_id,item_name:item.title,price:item.price,quantity:item.quantity}]})
     setCartItems(prev => prev.filter(i => lineKey(i) !== key))
@@ -164,6 +183,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const updateQuantity = (key: string, qty: number) => {
     if (qty < 1) { removeFromCart(key); return }
     const item=cartItems.find(i=>lineKey(i)===key)
+    if(item && item.quantity!==qty) trackJourney('cart_quantity_changed',{quantity:qty},{variantId:item.variant_id})
     if(item && item.quantity!==qty) emitGoogleEvent(qty>item.quantity?'add_to_cart':'remove_from_cart',
       {currency:'GBP',value:item.price*Math.abs(qty-item.quantity),items:[{item_id:item.variant_id,item_name:item.title,price:item.price,quantity:Math.abs(qty-item.quantity)}]})
     setCartItems(prev =>

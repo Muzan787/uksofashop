@@ -85,6 +85,7 @@ export default function DeliveryEstimator() {
 
   return (
     <section
+      data-journey-section="delivery"
       aria-labelledby="estimator-heading"
       className="rounded-md border border-calico-300 bg-calico-100 p-4 sm:p-5"
     >

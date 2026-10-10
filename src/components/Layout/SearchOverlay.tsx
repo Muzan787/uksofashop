@@ -9,6 +9,8 @@ import { X, Clock, ArrowUpRight } from 'lucide-react';
 import { searchProducts } from '@/app/actions/navigation';
 import { STAGGER_STEP, STAGGER_CAP } from '@/components/Motion/tokens';
 import { blurDataURL } from '@/utils/cloudinary'
+import { trackJourney } from '@/utils/journey'
+import { searchClassification, publicJourneyPath } from '@/utils/journeyContract'
 
 interface Category { id: string; name: string; slug: string }
 
@@ -127,6 +129,7 @@ export default function SearchOverlay({ open, onClose, categories, triggerRef }:
 
   const goTo = useCallback(
     (hit: Hit) => {
+      trackJourney('search_used',{option_code:searchClassification(query),outcome:'selected',destination:publicJourneyPath(hit.href)||undefined},{productId:hit.id});
       rememberSearch(query);
       onClose();
       router.push(hit.href);
@@ -137,6 +140,7 @@ export default function SearchOverlay({ open, onClose, categories, triggerRef }:
   const submit = useCallback(() => {
     const term = query.trim();
     if (!term) return;
+    trackJourney('search_used',{option_code:searchClassification(term),outcome:'submitted',destination:'/search'});
     rememberSearch(term);
     onClose();
     router.push(`/search?q=${encodeURIComponent(term)}`);

@@ -55,7 +55,7 @@ export default function Reviews({ productId, reviews, isLoggedIn }: Props) {
   if (count === 0) return null;
 
   return (
-    <section id="reviews" aria-labelledby="reviews-heading" className="reveal pt-10 lg:pt-14">
+    <section id="reviews" data-journey-section="reviews" aria-labelledby="reviews-heading" className="reveal pt-10 lg:pt-14">
       <SectionHeading
         eyebrow="Customer reviews"
         heading="What customers say."

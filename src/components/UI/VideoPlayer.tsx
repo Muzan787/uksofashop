@@ -1,7 +1,8 @@
 'use client';
 // src/components/UI/VideoPlayer.tsx
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
+import { trackJourney } from '@/utils/journey';
 import Image from 'next/image';
 import { Play } from 'lucide-react';
 import { blurDataURL, videoPoster, videoSource } from '@/utils/cloudinary';
@@ -44,6 +45,7 @@ export default function VideoPlayer({
   src, title, width, height, aspect = 'natural', sizes = '100vw', rounded = true, className = '',
 }: Props) {
   const [playing, setPlaying] = useState(false);
+  const measured=useRef({started:false,completed:false});
   const poster = videoPoster(src);
 
   // The frame. Square where asked; otherwise the clip's own proportions,
@@ -63,6 +65,8 @@ export default function VideoPlayer({
           poster={videoPoster(src, 800)}
           controls
           autoPlay
+          onPlay={() => {if(!measured.current.started){measured.current.started=true;trackJourney('video_started')}}}
+          onEnded={() => {if(!measured.current.completed){measured.current.completed=true;trackJourney('video_completed')}}}
           playsInline
           preload="auto"
           aria-label={title}

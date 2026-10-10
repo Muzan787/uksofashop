@@ -11,6 +11,7 @@ import CookieConsent from '@/components/UI/CookieConsent';
 import AnalyticsRedaction from '@/components/UI/AnalyticsRedaction';
 import TrackingScripts from '@/components/UI/TrackingScripts';
 import AttributionBoot from '@/components/UI/AttributionBoot';
+import JourneyAnalytics from '@/components/UI/JourneyAnalytics';
 import { META_DESCRIPTION } from '@/constants/promises';
 import { localBusinessSchema, jsonLd } from '@/utils/schema';
 import { METADATA_BASE } from '@/constants/site';
@@ -259,6 +260,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <AnalyticsRedaction />
           <TrackingScripts />
           <AttributionBoot />
+          <JourneyAnalytics />
           <Suspense fallback={null}>
             <OfferBoot />
           </Suspense>

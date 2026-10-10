@@ -10,6 +10,7 @@ const navItems = [
   { href: '/admin/orders',     icon: ShoppingCart,    label: 'Orders' },
   { href: '/admin/meta',       icon: Radio,           label: 'Meta' },
   { href: '/admin/leads',      icon: UsersRound,      label: 'Leads' },
+  { href: '/admin/journeys',   icon: Radio,           label: 'Journeys' },
   { href: '/admin/inventory',  icon: Package,         label: 'Inventory' },
   { href: '/admin/categories', icon: Tags,            label: 'Categories' },
   { href: '/admin/reviews',    icon: Star,            label: 'Reviews' },

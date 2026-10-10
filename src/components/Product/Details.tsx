@@ -141,7 +141,7 @@ function Accordion({ title, defaultOpen = false, children }: {
   const buttonId = `${id}-button`;
 
   return (
-    <div className="overflow-hidden rounded-md border border-calico-300 bg-calico-50">
+    <div data-journey-section={/dimension/i.test(title) ? 'dimensions' : /deliver/i.test(title) ? 'delivery' : /faq/i.test(title) ? 'faq' : 'configuration'} className="overflow-hidden rounded-md border border-calico-300 bg-calico-50">
       <h3 className="m-0">
         <button
           type="button"

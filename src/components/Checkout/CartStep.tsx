@@ -17,6 +17,7 @@ import { useReducedMotionSafe } from '@/components/Motion/useReducedMotionSafe';
 import OfferEndsIn from '@/components/Offer/OfferEndsIn';
 import OrderOnWhatsApp from './OrderOnWhatsApp';
 import {emitGoogleEvent,googleBasket} from '@/utils/googleMeasurement';
+import { trackJourney } from '@/utils/journey';
 
 
 /** How long the row takes to collapse, and how long undo stays up. */
@@ -35,6 +36,7 @@ export default function CartStep({ onNext, discount = 0 }: {
   useEffect(()=>{
     if(googleView.current || !cartItems.length) return;
     googleView.current=true;
+    trackJourney('cart_viewed',{surface:'checkout',step:'cart',quantity:Math.min(100,cartItems.reduce((n,i)=>n+i.quantity,0))});
     emitGoogleEvent('view_cart',googleBasket(cartItems.map(i=>({item_id:i.variant_id,item_name:i.title,price:i.price,quantity:i.quantity})),discount));
   },[cartItems,totalAmount,discount]);
 
@@ -124,7 +126,7 @@ export default function CartStep({ onNext, discount = 0 }: {
 
       <button
         type="button"
-        onClick={onNext}
+        onClick={() => {trackJourney('cart_continue',{surface:'checkout',step:'delivery'});onNext()}}
         className="hover-btn btn-ember sheen shadow-ember mt-6 flex h-14 w-full items-center justify-center gap-3 rounded-pill bg-ember-500 font-data text-eyebrow font-bold uppercase tracking-[0.1em] text-ink-900 shadow-ember"
       >
         Continue to delivery

@@ -3,6 +3,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { trackJourney } from '@/utils/journey';
 
 interface Props {
   /** The cheapest and dearest product in this category, in pounds. */
@@ -62,6 +63,7 @@ export default function PriceRange({ floor, ceiling, from, to }: Props) {
   function commit(nextLo: number, nextHi: number) {
     clearTimeout(timer.current);
     timer.current = setTimeout(() => {
+      trackJourney('filter_changed',{option_code:'price_range',surface:'collection'});
       const params = new URLSearchParams(sp.toString());
 
       // A bound at the edge of the category's own range is not a filter, so it

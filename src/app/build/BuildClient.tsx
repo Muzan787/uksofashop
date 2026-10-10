@@ -11,6 +11,7 @@ import { useCart } from '@/context/CartContext'
 import { DUR, EASE } from '@/components/Motion'
 import { useReducedMotionSafe } from '@/components/Motion/useReducedMotionSafe'
 import { trackAddToCart, trackOperationalAction } from '@/utils/tracking'
+import { trackJourney } from '@/utils/journey'
 import type { FabricCollection } from '@/components/Product/types'
 import type { BuildDesign, BuildSize } from './catalogue'
 import {
@@ -120,6 +121,17 @@ export default function BuildClient({ designs, sizes, collections }: Props) {
     [draft, designs, sizes, collections],
   )
   const spec = useMemo(() => toBuildSpec(draft, resolved), [draft, resolved])
+  const lastPrice=useRef<number|null>(null)
+  useEffect(()=>{
+    if(!loaded) return
+    trackJourney('builder_step_viewed',{step:draft.step},{productId:resolved.design?.productId,variantId:resolved.design?.variantId})
+  },[loaded,draft.step,resolved.design?.productId,resolved.design?.variantId])
+  useEffect(()=>{
+    const price=resolved.design?.price
+    if(!loaded || price===undefined) return
+    if(lastPrice.current!==null && lastPrice.current!==price) trackJourney('price_changed',{price,surface:'builder'},{productId:resolved.design?.productId,variantId:resolved.design?.variantId})
+    lastPrice.current=price
+  },[loaded,resolved.design?.price,resolved.design?.productId,resolved.design?.variantId])
   const { cards, hidden } = useMemo(
     () => designCards(designs, { sizeKey: draft.sizeKey, back: draft.back, productId: draft.productId }),
     [designs, draft.sizeKey, draft.back, draft.productId],
@@ -192,6 +204,7 @@ export default function BuildClient({ designs, sizes, collections }: Props) {
 
   const next = useCallback(() => {
     if (!complete || isLast) return
+    trackJourney('builder_step_completed',{step:draft.step,outcome:'success'})
     // Leaving an optional step without answering is still a meaningful choice.
     if (draft.step === 'feet' && draft.feet === null) {
       patch({ feet: 'pictured' })
@@ -212,6 +225,7 @@ export default function BuildClient({ designs, sizes, collections }: Props) {
 
   const back = useCallback(() => {
     if (index === 0) return
+    trackJourney('builder_back',{step:STEPS[index].id})
     if (pushed.current > 0) {
       window.history.back()
       return
@@ -220,6 +234,7 @@ export default function BuildClient({ designs, sizes, collections }: Props) {
   }, [index, show])
 
   const restart = useCallback(() => {
+    trackJourney('builder_restarted')
     clearDraft()
     setDirection(-1)
     setDraft(emptyDraft())
@@ -241,11 +256,11 @@ export default function BuildClient({ designs, sizes, collections }: Props) {
     })
   }
 
-  const onBack = (pref: Draft['back']) => patch(d => {
+  const onBack = (pref: Draft['back']) => {trackJourney('builder_back_selected',{option_code:pref||'either'});patch(d => {
     const chosen = designs.find(x => x.productId === d.productId)
     const keep = !chosen || pref === 'either' || chosen.back === pref
     return { back: pref, productId: keep ? d.productId : null }
-  })
+  })}
 
   // ── Checkout ───────────────────────────────────────────────────────────
   const checkout = useCallback(() => {
@@ -265,7 +280,7 @@ export default function BuildClient({ designs, sizes, collections }: Props) {
       fabric_code: fabric.code,
       fabric_swatch: fabric.image,
       build: spec,
-    })
+    }, 'builder')
     trackAddToCart({ productId: design.productId, variantId: design.variantId, title: design.title, price: design.price, quantity: 1 })
     trackOperationalAction('builder_add_to_cart', {
       productId: design.productId,
