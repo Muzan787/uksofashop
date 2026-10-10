@@ -8,8 +8,11 @@ import { ChevronLeft, ChevronRight, Play, X, ZoomIn } from 'lucide-react';
 import { productTransitionName } from '@/components/Motion/productTransition';
 import { usePointerFine } from '@/components/Motion/usePointerFine';
 import { blurDataURL, sized, videoSource } from '@/utils/cloudinary';
+import { trackOperationalAction } from '@/utils/tracking';
+import type { WhatsAppCTA } from '@/utils/attribution/useWhatsAppCTA';
 import VideoPlayer from '@/components/UI/VideoPlayer';
 import ColourSwatches from './ColourSwatches';
+import WhatsAppIcon from './WhatsAppIcon';
 import { useDialog } from '@/components/UI/useDialog';
 import type { GalleryImage, Swatch } from './types';
 import { useReducedMotionSafe } from '@/components/Motion/useReducedMotionSafe';
@@ -24,7 +27,12 @@ interface Props {
   onSelectColor: (color: string) => void;
   /** Appears in the alt text so each photo describes what it actually shows. */
   material: string;
+  /** "Real photos or a video?" on WhatsApp, carrying this sofa and its price. */
+  photoRequest?: WhatsAppCTA;
 }
+
+/** More photographs than this and the dots become a "2 / 8" count. */
+const MAX_DOTS = 6;
 
 /**
  * Half a second, and the one duration on this page that is not a system token.
@@ -94,9 +102,25 @@ const MAGNIFY_WIDTH = 1120;
  * off the height of the first screen as a side effect — which is what made it
  * look oversized. It was not too big. It was the wrong shape, and being the
  * wrong shape made it taller than it had any reason to be.
+ *
+ * ── Except the phone carousel, which is 5:4 ──────────────────────────────────
+ *
+ * A visitor from an ad lands here on a phone, usually inside Facebook's own
+ * browser, and the price they were promised has to be on the first screen.
+ * With a square frame and the dark band that held the dots under it, the
+ * price sat at 745px - behind the floating buttons on a full-height phone and
+ * below the fold in the in-app browser. (Oct 2026: 44% of Meta visitors who
+ * landed on a product page left from it without touching anything.)
+ *
+ * 5:4 is the shape that costs the sofa nothing. A square photograph in a
+ * frame WIDER than tall is cropped top and bottom, never at the sides, and
+ * every photograph in this catalogue has wall above the sofa and floor below
+ * it. The arms - the thing the 4:5 frames used to cut off - are untouched.
+ * The full square is still one tap away in the lightbox. The desktop stage
+ * stays square: there is room for it there.
  */
 export default function Gallery({
-  productId, title, images, swatches, selectedColor, onSelectColor, material,
+  productId, title, images, swatches, selectedColor, onSelectColor, material, photoRequest,
 }: Props) {
   const fine = usePointerFine();
   const reduced = Boolean(useReducedMotionSafe());
@@ -146,11 +170,29 @@ export default function Gallery({
     if (el) el.scrollTo({ left: next * el.clientWidth, behavior: 'smooth' });
   }, [count]);
 
+  // ── Telemetry ────────────────────────────────────────────────────────────
+  // Once each per visit to the page: whether they looked past the first
+  // photograph, and whether they opened one full size. Enough to tell a
+  // product whose photos are doing their job from one where nobody swipes.
+  const swiped = useRef(false);
+  const zoomed = useRef(false);
+
+  const openLightbox = useCallback(() => {
+    setLightbox(true);
+    if (zoomed.current) return;
+    zoomed.current = true;
+    trackOperationalAction('pdp_zoom_opened', { productId, metadata: { value: String(count) } });
+  }, [productId, count]);
+
   const onTrackScroll = () => {
     const el = trackRef.current;
     if (!el || !el.clientWidth) return;
     const i = Math.round(el.scrollLeft / el.clientWidth);
     setIndex(prev => (prev === i ? prev : i));
+    if (i > 0 && !swiped.current) {
+      swiped.current = true;
+      trackOperationalAction('pdp_photo_swiped', { productId, metadata: { value: String(count) } });
+    }
   };
 
   // ── Pinch opens the lightbox ─────────────────────────────────────────────
@@ -163,11 +205,11 @@ export default function Gallery({
     const onTouch = (e: TouchEvent) => {
       if (e.touches.length < 2) return;
       e.preventDefault();
-      setLightbox(true);
+      openLightbox();
     };
     el.addEventListener('touchstart', onTouch, { passive: false });
     return () => el.removeEventListener('touchstart', onTouch);
-  }, []);
+  }, [openLightbox]);
 
   // ── The swipe hint ───────────────────────────────────────────────────────
   //
@@ -245,30 +287,19 @@ export default function Gallery({
           Full bleed: the hero grid pads by 16px and this cancels it, so the
           photograph runs edge to edge rather than sitting in a card.
 
-          The photograph sits on a lit stage rather than on the page ground —
-          the same ink gradient, drifting aurora and grain as the homepage
-          hero. The band carries no padding at the TOP, so the picture keeps
-          every pixel of its width and the dark ground appears only beneath it,
-          as a plinth holding the dots. A stage that inset the photograph would
-          have looked more like the hero and shown less of the sofa, which on a
-          product page is the wrong trade.
-
-          The glow under the bottom edge is what stops it reading as two
-          stacked rectangles: the light appears to come from behind the
-          photograph rather than the panel being a separate strip below it. */}
+          Nothing below it. This used to stand on a dark plinth that held the
+          dots and a "Zoom" label - 58px between the photograph and the name
+          and price, on the one screen where the price has to be visible. The
+          controls are on the photograph now, over a shade at its foot, and
+          the price comes up by that much. See the 5:4 note in the doc above. */}
       <div
         data-ground="dark"
         // -mx-4 AND -mx-6, because the grid around this pads 16px on a phone
         // and 24px from sm. Cancelling only the 16 left the photograph inset by
         // 8px on each side between 640 and 767px — not full bleed, and not a
         // margin either, just a sliver of page ground down both edges.
-        className="grad-ink grain relative isolate -mx-4 overflow-hidden bg-ink-900 sm:-mx-6 md:hidden"
+        className="relative isolate -mx-4 overflow-hidden bg-ink-900 sm:-mx-6 md:hidden"
       >
-        <div aria-hidden="true" className="aurora">
-          <span className="aurora__warm" />
-          <span className="aurora__deep" />
-        </div>
-
         <div
           ref={trackRef}
           onScroll={onTrackScroll}
@@ -278,7 +309,7 @@ export default function Gallery({
           {images.map((img, i) => (
             <div
               key={`${img.src}-${i}`}
-              className="relative aspect-square w-full flex-shrink-0 snap-start snap-always overflow-hidden bg-ink-900"
+              className="relative aspect-[5/4] w-full flex-shrink-0 snap-start snap-always overflow-hidden bg-ink-900"
               // See the note in the component doc: the desktop stage carries
               // the same name and exactly one of the two is ever rendered.
               style={productTransitionName(productId, i === 0)}
@@ -290,6 +321,9 @@ export default function Gallery({
                   aspect="square"
                   sizes={STAGE_SIZES}
                   rounded={false}
+                  // Filling the 5:4 slide; a definite height wins over the
+                  // player's own square ratio.
+                  className="h-full"
                 />
               ) : (
                 <Crossfade
@@ -310,41 +344,42 @@ export default function Gallery({
           ))}
         </div>
 
-        {/* The light spilling from behind the photograph's bottom edge, over
-            the plinth the dots sit on. */}
+        {/* The controls, on the photograph.
+            A shade at its foot so calico dots and the white button read over
+            a pale floor. The row itself lets taps through to the carousel;
+            only the controls take them, so a swipe that starts on the shade
+            still swipes.
+
+            Left: the photograph button. Most of this catalogue has one
+            picture, often a studio render, and "what does it really look
+            like?" is the question a careful buyer asks first. It opens
+            WhatsApp with that question already written - which is also how
+            the shops selling the same frames on Facebook work.
+
+            Right: the dots (or a count, past MAX_DOTS) and the zoom. The zoom
+            used to be a labelled button on the plinth; the pinch still works,
+            and this is how you find out it does. */}
         <span
           aria-hidden="true"
-          className="spotlight left-1/2 top-full h-16 w-[130%] -translate-x-1/2 -translate-y-1/2 opacity-70"
+          className="pointer-events-none absolute inset-x-0 bottom-0 z-raised h-20 bg-gradient-to-t from-ink-900/60 to-transparent"
         />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-raised flex items-end justify-between gap-2 px-3 pb-2">
+          {photoRequest ? (
+            <a
+              href={photoRequest.href}
+              onClick={photoRequest.onClick}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover-btn pointer-events-auto mb-0.5 inline-flex min-h-11 items-center gap-2 rounded-pill bg-calico-50/95 px-3.5 text-caption font-semibold text-ink-900 no-underline shadow-e2"
+            >
+              <WhatsAppIcon className="h-4 w-4 shrink-0 text-whatsapp-dark" />
+              <span className="whitespace-nowrap">Real photos &amp; video</span>
+            </a>
+          ) : <span />}
 
-        {/* The plinth.
-            It is always here, even for a product with one photograph and one
-            fabric — which is most of this catalogue. A band that only appeared
-            when there were dots to hold would have been invisible on the
-            majority of product pages, and the stage behind the picture would
-            have been decoration nobody ever saw.
-
-            Giving it the zoom control is what earns it the space. Opening the
-            full-size photograph on a phone was a two-finger pinch on the
-            carousel and nothing else — no button, no label, no hint. A gesture
-            with no affordance is a feature only the person who built it knows
-            about. The pinch still works; this is how you find out it does. */}
-        <div className="relative flex items-center justify-between gap-3 px-4 pb-3 pt-2.5">
-          <button
-            type="button"
-            onClick={() => setLightbox(true)}
-            className="hover-link -ml-1 flex min-h-11 items-center gap-2 px-1 font-data text-caption uppercase tracking-widest text-calico-300"
-          >
-            <ZoomIn aria-hidden="true" className="h-4 w-4 text-ember-300" />
-            Zoom
-          </button>
-
-          {/* Dots. The first is the selected variant, drawn in its own colour.
-              The rest are calico rather than ink now — they live on the dark
-              plinth, and ink on ink is not a dot, it is a hole. */}
-          {count > 1 && (
-            <div className="flex items-center gap-1">
-            {images.map((img, i) => {
+          <div className="pointer-events-auto flex items-center gap-1">
+            {/* The first dot is the selected variant, drawn in its own colour. */}
+            {count > 1 && count <= MAX_DOTS && images.map((img, i) => {
               const active = i === index;
               const isVariant = i === 0;
               return (
@@ -358,22 +393,34 @@ export default function Gallery({
                   }
                   aria-current={active ? 'true' : undefined}
                   onClick={() => goTo(i)}
-                  className="flex h-9 items-center px-1"
+                  className="flex h-11 items-center px-1"
                 >
                   <span
                     className={`block h-2 rounded-pill transition-all duration-base ease-out-expo ${
                       active ? 'w-6' : 'w-2'
                     } ${
                       isVariant
-                        ? 'bg-[var(--pdp-accent)] ring-1 ring-inset ring-calico-50/30'
-                        : active ? 'bg-calico-50' : 'bg-calico-50/35'
+                        ? 'bg-[var(--pdp-accent)] ring-1 ring-inset ring-calico-50/40'
+                        : active ? 'bg-calico-50' : 'bg-calico-50/50'
                     }`}
                   />
                 </button>
               );
             })}
-            </div>
-          )}
+            {count > MAX_DOTS && (
+              <span className="px-2 font-data text-caption tabular-nums text-calico-50" aria-live="polite">
+                {index + 1} / {count}
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={openLightbox}
+              aria-label="Open the full-size photograph"
+              className="hover-icon hover-icon-dark grid h-11 w-11 place-items-center rounded-pill text-calico-50"
+            >
+              <ZoomIn aria-hidden="true" className="h-5 w-5" />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -461,11 +508,26 @@ export default function Gallery({
             alt={stageAlt}
             magnify={fine}
             reduced={reduced}
-            onOpen={() => setLightbox(true)}
+            onOpen={openLightbox}
           />
         )}
       </div>
       </div>
+
+      {/* The desktop's copy of the photograph button. Under the stage rather
+          than on it: the stage is a zoom target from edge to edge. */}
+      {photoRequest && (
+        <a
+          href={photoRequest.href}
+          onClick={photoRequest.onClick}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hover-link mt-3 hidden min-h-11 items-center gap-2 text-body-sm font-semibold text-ink-900 no-underline md:inline-flex"
+        >
+          <WhatsAppIcon className="h-4 w-4 text-whatsapp-dark" />
+          Want real photos or a video of this sofa? Ask on WhatsApp
+        </a>
+      )}
 
       {/* ═══ Swatches ════════════════════════════════════════════════════
           Outside the stage, on the page ground. The swatch ring and the

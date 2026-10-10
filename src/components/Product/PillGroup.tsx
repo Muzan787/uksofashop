@@ -26,6 +26,8 @@ interface Props {
   items: Pill[];
   selectedKey?: string | null;
   onSelect?: (key: string) => void;
+  /** Told about every tap, link pills included. For the page's telemetry. */
+  onItemClick?: (item: Pill) => void;
   /** Appended after the pills — the dashed "Custom size" button. */
   children?: React.ReactNode;
 }
@@ -46,7 +48,7 @@ interface Props {
  * they were 8px-padded chips, which is under every touch-target guideline
  * there is.
  */
-export default function PillGroup({ layoutId, label, items, selectedKey, onSelect, children }: Props) {
+export default function PillGroup({ layoutId, label, items, selectedKey, onSelect, onItemClick, children }: Props) {
   const reduced = useReducedMotionSafe();
   const transition = { duration: reduced ? 0 : DUR.base, ease: EASE.out };
 
@@ -78,6 +80,7 @@ export default function PillGroup({ layoutId, label, items, selectedKey, onSelec
             key={item.key}
             href={item.href}
             aria-current={active ? 'page' : undefined}
+            onClick={active ? undefined : () => onItemClick?.(item)}
             className={className}
           >
             {inner}
@@ -87,7 +90,10 @@ export default function PillGroup({ layoutId, label, items, selectedKey, onSelec
             key={item.key}
             type="button"
             aria-pressed={active}
-            onClick={() => onSelect?.(item.key)}
+            onClick={() => {
+              onSelect?.(item.key);
+              if (!active) onItemClick?.(item);
+            }}
             className={className}
           >
             {inner}

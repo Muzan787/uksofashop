@@ -3,6 +3,7 @@
 import { AlertTriangle, ChevronDown, Ruler } from 'lucide-react';
 import { CANCELLATION, PROMISES } from '@/constants/promises';
 import type { WhatsAppCTA } from '@/utils/attribution/useWhatsAppCTA';
+import AskUsButton from '@/components/Chat/AskUsButton';
 import WhatsAppIcon from './WhatsAppIcon';
 
 interface Props {
@@ -13,7 +14,8 @@ interface Props {
 }
 
 /**
- * The two ways to reach a person, and the reason they live outside the buy box.
+ * The ways to reach us - two to a person, one to the assistant - and the
+ * reason they live outside the buy box.
  *
  * Structurally: the buy box is sticky on desktop, and a sticky element pins
  * inside its own grid area — so it needs an area taller than itself, and it
@@ -49,6 +51,10 @@ export default function SecondaryActions({ customMade, customEnquiryCta, agentCt
           </span>
         </span>
       </a>
+
+      {/* The assistant, which has no floating pill on product pages. Draws
+          nothing unless the site has one. */}
+      <AskUsButton />
     </div>
   );
 }

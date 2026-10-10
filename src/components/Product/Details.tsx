@@ -4,6 +4,7 @@
 import { useId, useState } from 'react';
 import { ChevronDown, RotateCcw, Ruler, ShieldCheck, Truck, Wallet } from 'lucide-react';
 import { PROMISES } from '@/constants/promises';
+import { trackOperationalAction } from '@/utils/tracking';
 import DeliveryEstimator from './DeliveryEstimator';
 import DimensionsDialog from './DimensionsDialog';
 
@@ -147,7 +148,12 @@ function Accordion({ title, defaultOpen = false, children }: {
           id={buttonId}
           aria-expanded={open}
           aria-controls={panelId}
-          onClick={() => setOpen(o => !o)}
+          onClick={() => {
+            // Which sections people open says what they are still unsure
+            // about. Recorded on opening only.
+            if (!open) trackOperationalAction('pdp_details_opened', { metadata: { value: title } });
+            setOpen(o => !o);
+          }}
           className="hover-link flex w-full items-center justify-between gap-4 px-4 py-4 text-left text-body font-semibold text-ink-900"
         >
           {title}

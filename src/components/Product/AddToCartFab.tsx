@@ -7,6 +7,12 @@ interface Props {
   price: number;
   added: boolean;
   onAdd: () => void;
+  /**
+   * Decided by ProductPageClient. On a phone the pill waits until the price
+   * has scrolled off the top, and stands aside while the buy box's own button
+   * is on screen; from md up it is always shown.
+   */
+  visible: boolean;
 }
 
 /**
@@ -16,9 +22,17 @@ interface Props {
  * title, price and an "Add" button - that slid up once the real button had
  * scrolled away, and nothing at all on desktop, where the buy box pins but is
  * taller than most viewports, so its button was often off the bottom of the
- * screen anyway. This replaces both with one pill in the bottom-left corner,
- * on every width, visible from the moment the page loads: the mirror image of
- * the WhatsApp pill on the right. Buy on one side, ask on the other.
+ * screen anyway. This replaces both with one pill in the bottom-left corner:
+ * the mirror image of the WhatsApp pill on the right. Buy on one side, ask on
+ * the other.
+ *
+ * NOT FROM THE FIRST SCREEN ON A PHONE. It was, and at 375x812 it sat exactly
+ * over the price, which drew at 745px against the pill's 748-796. A visitor
+ * from an ad that quoted a price landed on a page that hid it. It now waits
+ * until the price has been seen and scrolled past (see `visible`), which is
+ * also why the price is back on it at every width: by the time it appears,
+ * the WhatsApp pill opposite has contracted to its 48px circle and the full
+ * "ADD TO CART — £549" fits beside it on a 375px phone.
  *
  * SAME BUTTON, SMALLER. It is the buy box's button in every respect that
  * matters - the same ember pill, the same sheen, the same uppercase data face,
@@ -26,10 +40,6 @@ interface Props {
  * pill's 48px rather than the buy box's 56px, so the two corners match. And it
  * confirms the same way: the fill runs to sage and the label becomes a tick for
  * two seconds.
- *
- * The price is dropped below `sm`. Beside the WhatsApp pill on a 375px phone,
- * "ADD TO CART — £549" does not fit; "ADD TO CART" does, and the price is in
- * the buy box a thumb-flick away.
  *
  * POSITION AND STACKING are the WhatsApp button's: `.fab-offset` clears the
  * safe-area inset and any bar pinned to the bottom edge, and z-sticky-bar
@@ -42,9 +52,16 @@ interface Props {
  * The buy box's button is relative anyway; this one would have been pinned
  * to nothing.
  */
-export default function AddToCartFab({ price, added, onAdd }: Props) {
+export default function AddToCartFab({ price, added, onAdd, visible }: Props) {
   return (
-    <div className="fab-offset fixed left-4 z-sticky-bar transition-[bottom] duration-base ease-out-expo">
+    <div
+      // inert while hidden, so a keyboard or screen reader does not land on a
+      // button nobody can see.
+      inert={!visible || undefined}
+      className={`fab-offset fixed left-4 z-sticky-bar transition-[bottom,opacity,transform] duration-base ease-out-expo ${
+        visible ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-3 opacity-0'
+      }`}
+    >
       <button
         type="button"
         onClick={onAdd}
@@ -65,8 +82,7 @@ export default function AddToCartFab({ price, added, onAdd }: Props) {
           <>
             <ShoppingBag aria-hidden="true" className="h-4 w-4 shrink-0" />
             <span className="whitespace-nowrap">
-              Add to cart
-              <span className="hidden sm:inline"> — £{price.toFixed(0)}</span>
+              Add to cart — £{price.toFixed(0)}
             </span>
           </>
         )}

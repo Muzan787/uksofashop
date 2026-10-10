@@ -6,8 +6,9 @@
 // else. The page itself is six components:
 //
 //   Gallery      the photographs and the colour swatches
-//   BuyBox       title, price, delivery dates, the choices, add to cart
-//   AddToCartFab the floating add-to-cart pill, bottom left, every width
+//   BuyBox       title, price, how ordering works, the choices, add to cart
+//   AddToCartFab the floating add-to-cart pill, bottom left (on a phone, only
+//                once the price has scrolled away)
 //   Details      description, specifications, delivery, dimensions
 //   Reviews      the reviews and the form
 //   Similar      more from the same category, and Recently viewed under it
@@ -27,9 +28,9 @@ import toast from 'react-hot-toast';
 import { toggleWishlist } from '@/app/actions/wishlist';
 import { PHONE_HREF } from '@/constants/contact';
 import { useCart } from '@/context/CartContext';
-import { trackAddToCart, trackViewContent } from '@/utils/tracking';
+import { trackAddToCart, trackOperationalAction, trackViewContent } from '@/utils/tracking';
 import { useWhatsAppCTA } from '@/utils/attribution/useWhatsAppCTA';
-import { customEnquiryMessage, productEnquiryMessage } from '@/utils/enquiryMessage';
+import { customEnquiryMessage, photoRequestMessage, productEnquiryMessage } from '@/utils/enquiryMessage';
 import { usePhoneClick } from '@/utils/attribution/usePhoneClick';
 import type { DeliveryWindow } from '@/utils/delivery';
 import { sale } from '@/utils/pricing';
@@ -280,6 +281,38 @@ export default function ProductPageClient({
   const [fabric, setFabric] = useState<Fabric | null>(null);
   const [fabricOpen, setFabricOpen] = useState(false);
 
+  // The picker is compulsory on these sofas - "Add to cart" opens it - which
+  // makes it the step most likely to lose someone between interest and the
+  // cart. Opened from where, whether they looked at a fabric at all, and
+  // whether they left without choosing: that is the whole story of it.
+  const fabricLooked = useRef(false);
+  const openFabrics = useCallback((trigger: 'add_to_cart' | 'fabric_card') => {
+    fabricLooked.current = false;
+    setFabricOpen(true);
+    trackOperationalAction('pdp_fabric_picker_opened', {
+      productId: product.id,
+      variantId: selVariant?.id,
+      metadata: { step: trigger },
+    });
+  }, [product.id, selVariant?.id]);
+
+  const onViewFabric = useCallback((viewed: Fabric) => {
+    if (fabricLooked.current) return;
+    fabricLooked.current = true;
+    trackOperationalAction('pdp_fabric_viewed', {
+      productId: product.id,
+      metadata: { value: viewed.collectionName },
+    });
+  }, [product.id]);
+
+  const closeFabrics = useCallback(() => {
+    setFabricOpen(false);
+    trackOperationalAction('pdp_fabric_picker_closed', {
+      productId: product.id,
+      metadata: { step: 'without_choice', value: fabricLooked.current ? 'looked' : 'did_not_look' },
+    });
+  }, [product.id]);
+
   // ── Cart ─────────────────────────────────────────────────────────────────
   const [added, setAdded] = useState(false);
 
@@ -320,11 +353,11 @@ export default function ProductPageClient({
     // refusing, this puts the choice in front of them - one tap, instead of an
     // error they then have to go and resolve for themselves.
     if (madeToOrder && !fabric) {
-      setFabricOpen(true);
+      openFabrics('add_to_cart');
       return;
     }
     addLine(fabric);
-  }, [madeToOrder, fabric, addLine]);
+  }, [madeToOrder, fabric, addLine, openFabrics]);
 
   // "Build mine in this", from inside the picker: the sofa goes into the cart
   // in that fabric and the customer goes with it. Nothing is left to decide on
@@ -373,7 +406,92 @@ export default function ProductPageClient({
     productName: product.title,
   });
 
+  // The button on the photograph. Its own page context, so the enquiries it
+  // starts can be counted apart from the floating button's.
+  const photoRequestCta = useWhatsAppCTA({
+    message: photoRequestMessage(product.title, price),
+    pageContext: 'product_photo_request',
+    productId: product.id,
+    variantId: selVariant?.id,
+    productName: product.title,
+  });
+
   const [showCustomSize, setShowCustomSize] = useState(false);
+  const openCustomSize = useCallback(() => {
+    setShowCustomSize(true);
+    trackOperationalAction('pdp_custom_size_opened', { productId: product.id });
+  }, [product.id]);
+
+  // Which size or style they tried. A pill is a link to another product, so
+  // this is recorded against the page they are leaving.
+  const onPickOption = useCallback((kind: 'size' | 'style', label: string) => {
+    trackOperationalAction(kind === 'size' ? 'pdp_size_selected' : 'pdp_style_selected', {
+      productId: product.id,
+      metadata: { value: label.slice(0, 160) },
+    });
+  }, [product.id]);
+
+  // ── The floating add-to-cart, on a phone ─────────────────────────────────
+  //
+  // It used to be on screen from the moment the page loaded, and on a phone
+  // that put it squarely over the price: at 375x812 the price drew at 745px
+  // and the pill covered 748-796. The visitor from an ad, who was promised a
+  // price, landed on a page that hid it.
+  //
+  // So below md it waits. It appears once the price has scrolled off the top
+  // - by then the customer has seen what it costs, and the button brings the
+  // price back with it - and steps aside while the buy box's own button is on
+  // screen, so the two are never shown together. From md up the buy box pins
+  // beside the photograph, the pill cannot cover the price, and it stays on
+  // screen as it always has.
+  //
+  // The same observer records the first time the buy box's own button comes
+  // into view: how many visitors read that far down at all.
+  const [fabVisible, setFabVisible] = useState(false);
+  useEffect(() => {
+    const priceEl = document.querySelector('[data-pdp-price]');
+    const addEl = document.querySelector('[data-pdp-add]');
+    const wide = window.matchMedia('(min-width: 48rem)');
+    if (!priceEl || !addEl || typeof IntersectionObserver === 'undefined') {
+      // Nothing to watch: fall back to the pill being always there.
+      const timer = window.setTimeout(() => setFabVisible(true), 0);
+      return () => window.clearTimeout(timer);
+    }
+
+    let priceAbove = false;
+    let addInView = false;
+    let seen = false;
+    const update = () => setFabVisible(wide.matches || (priceAbove && !addInView));
+
+    const observer = new IntersectionObserver(entries => {
+      for (const entry of entries) {
+        if (entry.target === priceEl) {
+          priceAbove = !entry.isIntersecting && entry.boundingClientRect.top < 0;
+        } else {
+          addInView = entry.isIntersecting;
+          if (addInView && !seen) {
+            seen = true;
+            trackOperationalAction('pdp_add_button_seen', { productId: product.id });
+          }
+        }
+      }
+      update();
+    });
+    observer.observe(priceEl);
+    observer.observe(addEl);
+    wide.addEventListener('change', update);
+    // The first state, without waiting for the observer: its first report
+    // comes with the next rendered frame, and a tab opened in the background
+    // renders none - which left the desktop pill hidden until it was looked
+    // at. A timer runs regardless, and on a phone it settles to "hidden"
+    // until the observer says otherwise.
+    const initial = window.setTimeout(update, 0);
+    return () => {
+      window.clearTimeout(initial);
+      observer.disconnect();
+      wide.removeEventListener('change', update);
+    };
+  }, [product.id]);
 
   const crumbCategory = titleCase(categoryName || categorySlug);
 
@@ -445,7 +563,7 @@ export default function ProductPageClient({
             is the reading order the page needs; at md the same two items sit
             side by side and the gallery pins. The <h1> lives in the buy box
             and is rendered exactly once at both widths. */}
-        <div className="mx-auto grid max-w-shell grid-cols-1 items-start gap-x-10 gap-y-7 px-4 pb-10 pt-3 sm:px-6 md:grid-cols-2 md:items-stretch md:gap-y-8 md:pb-12 md:pt-4">
+        <div className="mx-auto grid max-w-shell grid-cols-1 items-start gap-x-10 gap-y-5 px-4 pb-10 pt-3 sm:px-6 md:grid-cols-2 md:items-stretch md:gap-y-8 md:pb-12 md:pt-4">
           <div className="order-1 md:col-start-1 md:row-start-1">
             <Gallery
               productId={product.id}
@@ -457,6 +575,7 @@ export default function ProductPageClient({
               selectedColor={photographsAreGallery ? '' : selColor}
               onSelectColor={setSelColor}
               material={photographsAreGallery || selMat === 'Standard' ? '' : selMat}
+              photoRequest={photoRequestCta}
             />
           </div>
 
@@ -487,7 +606,8 @@ export default function ProductPageClient({
                 currentSubgroup={currentSubgroup}
                 hrefForSubgroup={hrefForSubgroup}
                 sizes={sizes}
-                onCustomSize={() => setShowCustomSize(true)}
+                onCustomSize={openCustomSize}
+                onPickOption={onPickOption}
                 // No material pills on a made-to-order frame: the fabric
                 // picker is the material choice, and "Marble / Plush Velvet"
                 // was only which colourways had been photographed.
@@ -500,7 +620,7 @@ export default function ProductPageClient({
                 // the sofa was called and what it cost.
                 fabrics={fabrics}
                 selectedFabric={fabric}
-                onOpenFabrics={madeToOrder ? () => setFabricOpen(true) : undefined}
+                onOpenFabrics={madeToOrder ? () => openFabrics('fabric_card') : undefined}
                 offerTier={offerTier}
                 added={added}
                 onAdd={handleAdd}
@@ -566,10 +686,11 @@ export default function ProductPageClient({
         />
       </div>
 
-      {/* Bottom left, opposite the WhatsApp pill, from the moment the page
-          loads. The same handler as the buy box's button, so a made-to-order
-          frame with no fabric chosen opens the picker from here too. */}
-      <AddToCartFab price={price} added={added} onAdd={handleAdd} />
+      {/* Bottom left, opposite the WhatsApp pill - on a phone only once the
+          price has scrolled away (see fabVisible above). The same handler as
+          the buy box's button, so a made-to-order frame with no fabric chosen
+          opens the picker from here too. */}
+      <AddToCartFab price={price} added={added} onAdd={handleAdd} visible={fabVisible} />
 
       {madeToOrder && fabricOpen && (
         <FabricDialog
@@ -577,7 +698,8 @@ export default function ProductPageClient({
           selectedId={fabric?.id ?? null}
           productSlug={product.slug}
           onBuild={handleBuild}
-          onClose={() => setFabricOpen(false)}
+          onClose={closeFabrics}
+          onViewFabric={onViewFabric}
         />
       )}
 

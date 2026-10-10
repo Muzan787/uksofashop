@@ -364,6 +364,21 @@ type LedgerAction =
   | 'builder_summary_viewed'
   | 'builder_add_to_cart'
   | 'builder_whatsapp_click'
+  // What a visitor does on a product page between arriving and adding to the
+  // cart - the stretch the ledger used to be blind to. None of them carries a
+  // form value: a postcode check records the outcome, never the postcode.
+  | 'pdp_photo_swiped'
+  | 'pdp_zoom_opened'
+  | 'pdp_size_selected'
+  | 'pdp_style_selected'
+  | 'pdp_custom_size_opened'
+  | 'pdp_fabric_picker_opened'
+  | 'pdp_fabric_viewed'
+  | 'pdp_fabric_picker_closed'
+  | 'pdp_postcode_checked'
+  | 'pdp_details_opened'
+  | 'pdp_add_button_seen'
+  | 'assistant_opened'
 
 /**
  * Write an operational action independently of advertising consent.

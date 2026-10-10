@@ -4,6 +4,7 @@
 import { useState } from 'react';
 import { Check, Loader2, Truck } from 'lucide-react';
 import { PROMISES } from '@/constants/promises';
+import { trackOperationalAction } from '@/utils/tracking';
 import {
   classifyDeliveryPostcode,
   lookupAddresses,
@@ -28,18 +29,27 @@ export default function DeliveryEstimator() {
   const [pending, setPending] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
 
+  // The outcome of a check, recorded for the page's telemetry. The postcode
+  // itself never leaves this component.
+  function settle(next: Result) {
+    setResult(next);
+    trackOperationalAction('pdp_postcode_checked', {
+      metadata: { value: next.kind === 'free' ? 'free' : next.kind === 'offMainland' ? 'quote' : 'not_found' },
+    });
+  }
+
   async function check(e: React.FormEvent) {
     e.preventDefault();
     const postcode = normalisePostcode(value);
     const initial = classifyDeliveryPostcode(postcode);
 
     if (initial.kind === 'invalid') {
-      setResult({ kind: 'error', message: 'That does not look like a UK postcode. Try again?' });
+      settle({ kind: 'error', message: 'That does not look like a UK postcode. Try again?' });
       return;
     }
 
     if (initial.kind === 'classified' && initial.zone === 'CUSTOM_QUOTE') {
-      setResult({ kind: 'offMainland', postcode });
+      settle({ kind: 'offMainland', postcode });
       return;
     }
 
@@ -50,23 +60,23 @@ export default function DeliveryEstimator() {
       const addresses = await lookupAddresses(postcode);
       const resolved = classifyDeliveryPostcode(postcode, addresses);
       if (resolved.kind === 'classified' && resolved.zone === 'CUSTOM_QUOTE') {
-        setResult({ kind: 'offMainland', postcode });
+        settle({ kind: 'offMainland', postcode });
       } else {
-        setResult({ kind: 'free', postcode });
+        settle({ kind: 'free', postcode });
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : '';
       if (/not found|no addresses found/i.test(message)) {
-        setResult({ kind: 'error', message: 'We could not find that postcode. Could you check it?' });
+        settle({ kind: 'error', message: 'We could not find that postcode. Could you check it?' });
       } else if (initial.kind === 'ambiguous') {
         // Mixed mainland/island districts must fail toward a quote when the
         // trusted lookup cannot resolve them.
-        setResult({ kind: 'offMainland', postcode });
+        settle({ kind: 'offMainland', postcode });
       } else {
         // For an otherwise deterministic mainland postcode, an outage in the
         // address helper is our problem, not a reason to withdraw the existing
         // mainland delivery promise.
-        setResult({ kind: 'free', postcode });
+        settle({ kind: 'free', postcode });
       }
     } finally {
       setPending(false);

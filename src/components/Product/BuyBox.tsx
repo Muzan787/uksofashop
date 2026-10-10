@@ -7,8 +7,8 @@ import { PROMISES } from '@/constants/promises';
 import type { DeliveryWindow } from '@/utils/delivery';
 import { percentOff, pounds } from '@/utils/pricing';
 import AddToCart from './AddToCart';
-import DeliveryEstimate from './DeliveryEstimate';
 import FabricChoice from './FabricChoice';
+import HowItWorks from './HowItWorks';
 import PillGroup, { type Pill } from './PillGroup';
 import Stars from './Stars';
 import TrustBox from '@/components/UI/TrustBox';
@@ -39,6 +39,8 @@ interface Props {
 
   sizes: SizeVariant[];
   onCustomSize: () => void;
+  /** A size or style pill was tapped. For the page's telemetry. */
+  onPickOption?: (kind: 'size' | 'style', label: string) => void;
 
   materials: string[];
   selectedMaterial: string;
@@ -83,6 +85,28 @@ function configurationExplanation(sizeLabel: string | undefined, title: string):
   return `${corner[0].toLowerCase()} means ${first} ${plural(first)}, corner, ${second} ${plural(second)} — ${total} seats total.`;
 }
 
+/**
+ * A name for the size of a product that has no size_label.
+ *
+ * The size row lists the products in a variant group by their size_label, so
+ * a product without one - the Bishop U-Shape, the Sims footstool, two of the
+ * electric recliners - was missing from its own row, and the only button left
+ * was the dashed "Custom size". On the Bishop, the best basket rate in the
+ * shop, that read as "this sofa only comes made to measure". The page now
+ * names the size it is actually showing, read off the title, and draws it
+ * selected ahead of the custom option.
+ */
+function sizeFromTitle(title: string): string {
+  if (/\b3\s*\+\s*2\b/.test(title)) return '3+2 Seater';
+  if (/\bu[\s-]?shape/i.test(title)) return 'U-Shape';
+  if (/\bfootstool\b/i.test(title)) return 'Footstool';
+  if (/\barm\s?chair\b/i.test(title)) return 'Armchair';
+  if (/\bcorner\b/i.test(title)) return 'Corner';
+  const seats = title.match(/\b(\d)\s*seater\b/i);
+  if (seats) return `${seats[1]} Seater`;
+  return 'Standard size';
+}
+
 function readableDimensions(specifications: Product['specifications']): string {
   if (!specifications) return '';
 
@@ -101,20 +125,20 @@ function readableDimensions(specifications: Product['specifications']): string {
  * Everything between the photograph and the accordion.
  *
  * The order of the blocks below IS the mobile reading order, and it is
- * deliberate: title, rating, price with the cash-on-delivery mark, then the
- * delivery dates, and only then the choices. A customer buying a sofa on the
- * doorstep decides in that sequence — what is it, do people rate it, what does
- * it cost, when does it turn up.
+ * deliberate: title, rating, price with the cash-on-delivery mark, then how
+ * ordering works and when it arrives, and only then the choices. A customer
+ * buying a sofa on the doorstep decides in that sequence — what is it, do
+ * people rate it, what does it cost, what happens next, when does it turn up.
  *
  * One DOM order serves both widths, including the add-to-cart block, which
  * renders at every size. The floating pill in the bottom-left corner
- * (AddToCartFab) is the same button within reach at every scroll position,
- * not a replacement for this one.
+ * (AddToCartFab) is the same button brought back once this one is out of
+ * reach, not a replacement for it.
  */
 export default function BuyBox({
   product, price, wasPrice = null, reviewCount, averageRating, estimate, categorySlug,
   subgroups, subgroupTitle, currentSubgroup, hrefForSubgroup,
-  sizes, onCustomSize,
+  sizes, onCustomSize, onPickOption,
   materials, selectedMaterial, onSelectMaterial,
   fabrics = [], selectedFabric = null, onOpenFabrics,
   offerTier = null,
@@ -132,6 +156,15 @@ export default function BuyBox({
     label: sv.size_label,
     href: `/shop/${categorySlug}/${sv.slug}`,
   }));
+  // A product missing from its own size row is put back at the front of it,
+  // selected - see sizeFromTitle.
+  if (!sizes.some(sv => sv.slug === product.slug)) {
+    sizePills.unshift({
+      key: product.slug,
+      label: sizeFromTitle(product.title),
+      href: `/shop/${categorySlug}/${product.slug}`,
+    });
+  }
 
   // The saving, worked out from the two figures the page is already showing
   // rather than carried separately, so the badge and the strikethrough cannot
@@ -149,15 +182,6 @@ export default function BuyBox({
     <div className="flex flex-col gap-6">
       {/* ── Title ────────────────────────────────────────────────────────── */}
       <div>
-        {/* Only where the product's own origin is 'uk'. Anything else renders
-            nothing rather than making a claim we cannot evidence. */}
-        {product.origin === 'uk' && (
-          <span className="mb-3 inline-flex items-center gap-2 rounded-sm border border-[var(--pdp-accent-line)] bg-[var(--pdp-accent-tint)] px-3 py-1">
-            <span aria-hidden="true" className="h-1.5 w-1.5 rounded-pill bg-[var(--pdp-accent)]" />
-            <span className="eyebrow text-[var(--pdp-accent-text)]">Made in the UK</span>
-          </span>
-        )}
-
         <h1 className="m-0 font-display text-h1 font-semibold text-ink-900">{product.title}</h1>
 
         {reviewCount > 0 && (
@@ -170,9 +194,16 @@ export default function BuyBox({
         )}
       </div>
 
-      {/* ── Price ───────────────────────────────────────────────────────── */}
-      <div>
-        <span aria-hidden="true" className="mb-4 flex w-full">
+      {/* ── Price ───────────────────────────────────────────────────────────
+          data-pdp-price is what the floating add-to-cart watches: on a phone
+          it appears only once this block has scrolled off the top.
+
+          The rule above the price is desktop-only, and "Made in the UK" moved
+          from above the name to under the price. Both were spending height
+          ABOVE the price on a phone, where the first screen ends around 600px
+          inside Facebook's browser. */}
+      <div data-pdp-price="">
+        <span aria-hidden="true" className="mb-4 hidden w-full md:flex">
           <span className="block h-px w-8 bg-ember-500" />
           <span className="block h-px flex-1 bg-calico-300" />
         </span>
@@ -214,14 +245,23 @@ export default function BuyBox({
           </p>
         )}
 
+        {/* Only where the product's own origin is 'uk'. Anything else renders
+            nothing rather than making a claim we cannot evidence. */}
+        {product.origin === 'uk' && (
+          <span className="mt-3 inline-flex items-center gap-2 rounded-sm border border-[var(--pdp-accent-line)] bg-[var(--pdp-accent-tint)] px-3 py-1">
+            <span aria-hidden="true" className="h-1.5 w-1.5 rounded-pill bg-[var(--pdp-accent)]" />
+            <span className="eyebrow text-[var(--pdp-accent-text)]">Made in the UK</span>
+          </span>
+        )}
+
         {/* The paid-traffic offer, as a line rather than a dialog. Only a
             visitor holding an entitlement sees it, and only for a product
             with a tier - see components/Offer/OfferStrip. */}
         <OfferStrip tier={offerTier} className="mt-4" />
       </div>
 
-      {/* ── When it arrives ─────────────────────────────────────────────── */}
-      <DeliveryEstimate estimate={estimate} />
+      {/* ── What happens next, and when it arrives ──────────────────────── */}
+      <HowItWorks estimate={estimate} madeToOrder={Boolean(product.custom_made)} />
 
       {/* ── Style, where the group uses one ─────────────────────────────── */}
       {stylePills.length > 1 && (
@@ -234,6 +274,7 @@ export default function BuyBox({
             label={subgroupTitle || 'Style'}
             items={stylePills}
             selectedKey={currentSubgroup}
+            onItemClick={pill => onPickOption?.('style', pill.label)}
           />
         </div>
       )}
@@ -246,6 +287,7 @@ export default function BuyBox({
           label="Size and configuration"
           items={sizePills}
           selectedKey={product.slug}
+          onItemClick={pill => onPickOption?.('size', pill.label)}
         >
           <button
             type="button"
@@ -308,8 +350,11 @@ export default function BuyBox({
         </div>
       )}
 
-      {/* ── Add to cart ────────────────────────────────────────────────── */}
+      {/* ── Add to cart ──────────────────────────────────────────────────
+          data-pdp-add: while this is on screen the floating pill stands
+          aside, and the first time it comes into view is recorded. */}
       <div>
+        <div data-pdp-add="">
         <AddToCart
           price={price}
           added={added}
@@ -318,6 +363,7 @@ export default function BuyBox({
           wishlistBusy={wishlistBusy}
           onWishlist={onWishlist}
         />
+        </div>
 
         <ul className="m-0 mt-5 grid list-none grid-cols-3 gap-x-3 p-0">
           {[

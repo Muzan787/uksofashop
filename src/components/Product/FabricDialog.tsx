@@ -23,6 +23,8 @@ interface Props {
   /** Puts the sofa in the cart in this fabric and goes there. */
   onBuild: (fabric: Fabric) => void;
   onClose: () => void;
+  /** A tile was opened to see the weave. For the page's telemetry. */
+  onViewFabric?: (fabric: Fabric) => void;
 }
 
 /**
@@ -71,7 +73,7 @@ interface Props {
  * shortened. A 400px-per-second flight across the dialog is exactly the kind of
  * movement that setting exists to refuse.
  */
-export default function FabricDialog({ collections, selectedId, productSlug, onBuild, onClose }: Props) {
+export default function FabricDialog({ collections, selectedId, productSlug, onBuild, onClose, onViewFabric }: Props) {
   const reduced = useReducedMotionSafe();
 
   const [activeSlug, setActiveSlug] = useState(collections[0]?.slug ?? '');
@@ -204,7 +206,10 @@ export default function FabricDialog({ collections, selectedId, productSlug, onB
               <li key={fabric.id}>
                 <button
                   type="button"
-                  onClick={() => setZoomedId(fabric.id)}
+                  onClick={() => {
+                    setZoomedId(fabric.id);
+                    onViewFabric?.(fabric);
+                  }}
                   aria-label={`${fabric.collectionName} ${fabric.name}, ${fabric.code}`}
                   className="group w-full cursor-pointer border-0 bg-transparent p-0 text-left"
                 >

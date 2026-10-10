@@ -19,9 +19,9 @@
 // whether delivery is free, how long it takes, and whether it is mainland at
 // all.
 //
-// Three surfaces send these and they are written here together so they
+// Four surfaces send these and they are written here together so they
 // cannot drift apart: the buy box's "talk to an agent", the made-to-order
-// panel, and the floating button.
+// panel, the floating button, and the "real photos" button on the gallery.
 
 /** Money as a customer writes it: £649, not £649.00. */
 function gbp(amount: number): string {
@@ -41,6 +41,19 @@ const POSTCODE_PROMPT = 'My postcode is:'
 export function productEnquiryMessage(title: string, price?: number | null): string {
   const named = price ? `the ${title} (${gbp(price)})` : `the ${title}`
   return `Hi, I'm interested in ${named}.\n\n${POSTCODE_PROMPT}`
+}
+
+/**
+ * "Can I see the real thing?", from the button on the product photograph.
+ *
+ * Most of the catalogue has one picture, often a studio render, and the
+ * question a cautious buyer asks before anything else is what it really looks
+ * like. Asking it here starts the same conversation as any other enquiry -
+ * the sofa, the price, the postcode - with the photos as the opening reply.
+ */
+export function photoRequestMessage(title: string, price?: number | null): string {
+  const named = price ? `the ${title} (${gbp(price)})` : `the ${title}`
+  return `Hi, could you send me some real photos or a short video of ${named}?\n\n${POSTCODE_PROMPT}`
 }
 
 /**

@@ -9,7 +9,10 @@
 // `--fab-extra` clearance, so the two move together when a bottom bar is up.
 // Like that one it shows its word only while the page is at the top and
 // contracts to a circle once scrolled (useCompactFab) - a size smaller than
-// WhatsApp, because WhatsApp is the one that reaches a person.
+// WhatsApp, because WhatsApp is the one that reaches a person. On product
+// pages there is no pill at all: the panel opens from a row in the page
+// (AskUsButton), so WhatsApp is the only floating button a shopper sees on
+// arrival.
 //
 // WHAT IT IS FOR. Visitors ask the same handful of things before they will
 // message - does it fit, do you deliver here, how do I pay, can I have it in
@@ -28,13 +31,16 @@
 // except to /api/chat when the visitor presses send.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { MessageCircleQuestionMark, RotateCcw, SendHorizontal, X } from 'lucide-react';
 import { useWhatsAppCTA } from '@/utils/attribution/useWhatsAppCTA';
 import { useCompactFab } from '@/components/Layout/useCompactFab';
 import { PHONE_DISPLAY } from '@/constants/contact';
+import { trackOperationalAction } from '@/utils/tracking';
 import { useBodyLock } from '@/components/UI/useBodyLock';
 import WhatsAppIcon from '@/components/Product/WhatsAppIcon';
 import AssistantText from './AssistantText';
+import { ASSISTANT_OPEN_EVENT, isProductPage, markAssistantReady } from './assistantEvents';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -105,9 +111,37 @@ export default function ChatWidget() {
   const loaded = useRef(false);
   const compact = useCompactFab();
 
+  // No floating pill on a product page. There it is a row beside the
+  // WhatsApp agent link (AskUsButton), opened through ASSISTANT_OPEN_EVENT,
+  // so the foot of a phone screen carries one floating button, not three.
+  const pathname = usePathname();
+  const pillHidden = isProductPage(pathname);
+
   const launcher = useRef<HTMLButtonElement>(null);
   const textarea = useRef<HTMLTextAreaElement>(null);
   const list = useRef<HTMLDivElement>(null);
+  // Whatever opened the panel gets focus back when it closes. The pill on
+  // most pages; the row on a product page, where the pill is not drawn.
+  const opener = useRef<HTMLElement | null>(null);
+
+  const openPanel = useCallback((from: 'launcher' | 'product') => {
+    opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setOpen(true);
+    trackOperationalAction('assistant_opened', { metadata: { step: from } });
+  }, []);
+
+  useEffect(() => {
+    markAssistantReady(true);
+    const onOpen = (e: Event) => {
+      const from = (e as CustomEvent<{ from?: string }>).detail?.from === 'product' ? 'product' : 'launcher';
+      openPanel(from);
+    };
+    window.addEventListener(ASSISTANT_OPEN_EVENT, onOpen);
+    return () => {
+      window.removeEventListener(ASSISTANT_OPEN_EVENT, onOpen);
+      markAssistantReady(false);
+    };
+  }, [openPanel]);
 
   // Restore after mount, never during render: the server has no storage, and
   // a stored conversation rendered on the client's first pass would not match
@@ -151,7 +185,8 @@ export default function ChatWidget() {
 
   const close = useCallback(() => {
     setOpen(false);
-    launcher.current?.focus();
+    const back = opener.current?.isConnected ? opener.current : launcher.current;
+    back?.focus();
   }, []);
 
   const lastQuestion = [...messages].reverse().find(m => m.role === 'user')?.content.trim();
@@ -243,10 +278,11 @@ export default function ChatWidget() {
           contracts the same way: 12px + 20px icon + 12px is a circle once the
           page is scrolled. The left-hand corner is the product page's
           "Add to cart" pill - see components/Layout/WhatsAppFab.tsx. */}
+      {!pillHidden && (
       <button
         ref={launcher}
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => openPanel('launcher')}
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-controls="site-assistant"
@@ -271,6 +307,7 @@ export default function ChatWidget() {
           </span>
         </span>
       </button>
+      )}
 
       {open && (
         <div
