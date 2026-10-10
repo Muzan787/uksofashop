@@ -9,6 +9,7 @@
 // not necessarily today's. Fine for a reminder; not an authority for anything.
 
 import { PHONE_DISPLAY } from '@/constants/contact'
+import { offerHoldReminderLine, type OfferHold } from '@/utils/offers/deadline'
 
 type RecoveryBasketItem = {
   product_title?: string | null
@@ -111,15 +112,21 @@ function customerLine(line: RecoveryLine): string {
  *   pasting it into the order form is what moves the click ids onto the sale.
  *   Optional, because a reminder is still worth sending without one.
  */
-export function recoveryReminderMessage(basket: unknown, reference?: string | null): string {
+/**
+ * @param hold The shopper's ad-offer window, if one is still open on this
+ *   basket (utils/offers/leadHold). Adds one line - "Your £30 online offer is
+ *   held for you until Sun 12 Oct, 2:05pm." - and nothing once it has ended.
+ */
+export function recoveryReminderMessage(basket: unknown, reference?: string | null, hold?: OfferHold | null): string {
   const lines = recoveryBasketLines(basket)
   const ref = reference ? `\n\nRef: ${reference}` : ''
+  const offer = offerHoldReminderLine(hold)
 
   const opening =
     "Hi, it's UK Sofa Shop. You asked us to remind you if you didn't finish your order on uksofashop.co.uk"
 
   if (lines.length === 0) {
-    return `${opening}. Would you like to go ahead, or is there anything you'd like to check first? Happy to help.${ref}`
+    return `${opening}.${offer ? ` ${offer}` : ''} Would you like to go ahead, or is there anything you'd like to check first? Happy to help.${ref}`
   }
 
   return [
@@ -128,6 +135,7 @@ export function recoveryReminderMessage(basket: unknown, reference?: string | nu
     ...lines.map((l) => `• ${customerLine(l)}`),
     '',
     'Free UK Mainland ground-floor delivery · Pay on delivery.',
+    ...(offer ? ['', offer] : []),
     '',
     "If you'd like to go ahead, we can confirm availability and delivery, or answer anything you'd like to check first." + ref,
   ].join('\n')
@@ -137,14 +145,18 @@ export function recoveryReminderMessage(basket: unknown, reference?: string | nu
  * The same reminder for the email channel, with a subject and a way back that
  * leads to WhatsApp - which is where the sale actually happens.
  */
-export function recoveryReminderEmail(basket: unknown, reference?: string | null): { subject: string; body: string } {
+export function recoveryReminderEmail(
+  basket: unknown,
+  reference?: string | null,
+  hold?: OfferHold | null,
+): { subject: string; body: string } {
   const lines = recoveryBasketLines(basket)
   const subject =
     lines.length === 1 && lines[0].title
       ? `Still thinking about ${lines[0].title}? – UK Sofa Shop`
       : 'Your sofa choices – UK Sofa Shop'
   const body = [
-    recoveryReminderMessage(basket, reference),
+    recoveryReminderMessage(basket, reference, hold),
     '',
     `Just reply to this email, or WhatsApp us on ${PHONE_DISPLAY} if that's easier.`,
     '',

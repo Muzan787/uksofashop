@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowLeft, ArrowRight, Minus, Plus, ShoppingBag, Trash2, Truck } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Minus, Plus, ShoppingBag, Trash2, Truck } from 'lucide-react';
 import EmptyState from '@/components/UI/EmptyState';
 import toast from 'react-hot-toast';
 import { PROMISES } from '@/constants/promises';
@@ -14,6 +14,7 @@ import { useCart, lineKey, type DisplayCartItem } from '@/context/CartContext';
 import { blurDataURL } from '@/utils/cloudinary';
 import { describeBuild } from '@/types/build';
 import { useReducedMotionSafe } from '@/components/Motion/useReducedMotionSafe';
+import OfferEndsIn from '@/components/Offer/OfferEndsIn';
 import OrderOnWhatsApp from './OrderOnWhatsApp';
 import {emitGoogleEvent,googleBasket} from '@/utils/googleMeasurement';
 
@@ -108,6 +109,18 @@ export default function CartStep({ onNext, discount = 0 }: {
           </li>
         ))}
       </ul>
+
+      {/* The ad offer and the time it has left, where the shopper decides
+          whether to carry on. Only when a discount is actually applied. */}
+      {discount > 0 && (
+        <p className="m-0 mt-4 flex items-center justify-between gap-3 rounded-sm border border-sage-300 bg-sage-50 px-3.5 py-2.5 text-body-sm text-sage-800">
+          <span className="font-semibold">
+            £{discount.toFixed(0)} ad offer applied
+            <OfferEndsIn className="font-normal" />
+          </span>
+          <Check aria-hidden="true" className="h-4 w-4 shrink-0" />
+        </p>
+      )}
 
       <button
         type="button"

@@ -50,6 +50,8 @@ import type { Fabric, FabricCollection, GalleryImage, Product, ProductVideo, Rev
 import VideoStrip from '@/components/UI/VideoStrip';
 import { videoPoster } from '@/utils/cloudinary';
 import type { OfferTier } from '@/types/offers';
+import { useOffer } from '@/components/Offer/OfferProvider';
+import { OFFER_TIER_AMOUNTS } from '@/utils/offers/constants';
 
 interface Props {
   product: Product;
@@ -388,8 +390,18 @@ export default function ProductPageClient({
   // Each mints its own UKSS-WA-... reference before the visitor leaves for
   // WhatsApp - see utils/attribution/useWhatsAppCTA.ts - so a conversation
   // that becomes a sale can be linked back to this exact product/variant.
+  //
+  // While a paid visitor's window is open and this sofa qualifies, each one
+  // also carries the offer and its deadline, so the chat says what the
+  // customer was promised and until when.
+  const offerWindow = useOffer();
+  const offerAmount = offerTier ? OFFER_TIER_AMOUNTS[offerTier] : 0;
+  const offerHold = offerWindow.active && offerWindow.expiresAt && offerAmount > 0
+    ? { amount: offerAmount, expiresAt: offerWindow.expiresAt }
+    : null;
+
   const agentCta = useWhatsAppCTA({
-    message: productEnquiryMessage(product.title, price),
+    message: productEnquiryMessage(product.title, price, offerHold),
     pageContext: 'product_agent',
     productId: product.id,
     variantId: selVariant?.id,
@@ -399,7 +411,7 @@ export default function ProductPageClient({
   // Structured so a made-to-order enquiry arrives with the answers already
   // prompted, rather than as an open-ended message.
   const customEnquiryCta = useWhatsAppCTA({
-    message: customEnquiryMessage(product.title, price),
+    message: customEnquiryMessage(product.title, price, offerHold),
     pageContext: 'product_custom_enquiry',
     productId: product.id,
     variantId: selVariant?.id,
@@ -409,7 +421,7 @@ export default function ProductPageClient({
   // The button on the photograph. Its own page context, so the enquiries it
   // starts can be counted apart from the floating button's.
   const photoRequestCta = useWhatsAppCTA({
-    message: photoRequestMessage(product.title, price),
+    message: photoRequestMessage(product.title, price, offerHold),
     pageContext: 'product_photo_request',
     productId: product.id,
     variantId: selVariant?.id,
@@ -514,6 +526,9 @@ export default function ProductPageClient({
           // The floating button reads the price from here, so its enquiry
           // says the same thing as the buy box's.
           data-product-price={String(price)}
+          // And the offer this sofa carries, so its enquiry can quote the
+          // same figure and deadline. 0 when the sofa has none.
+          data-offer-amount={String(offerAmount)}
         />
         {/* ── Breadcrumb ───────────────────────────────────────────────────
             The category link used to print the URL slug with its first letter

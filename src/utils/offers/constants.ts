@@ -1,5 +1,15 @@
 export const OFFER_ENTITLEMENT_COOKIE = 'uksofashop_offer'
-export const OFFER_ENTITLEMENT_MAX_AGE_S = 7 * 24 * 60 * 60
+/**
+ * How long a paid visitor's offer runs, from their first qualifying click.
+ * Fixed: a later click does not extend it, and once it ends it does not come
+ * back. The database sets it (issue_paid_offer_entitlement); this is the same
+ * figure for copy that needs to say it.
+ */
+export const OFFER_WINDOW_HOURS = 48
+/**
+ * The visitor's own code. It works only while their window is open - the
+ * database refuses it otherwise - so it is never "passed on".
+ */
 export const OFFER_PUBLIC_CODE = 'SOFAEXTRA'
 
 export type PaidOfferSource = 'google_ads' | 'meta_ads' | 'meta_catalog'

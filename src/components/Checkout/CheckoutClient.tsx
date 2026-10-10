@@ -50,6 +50,8 @@ import DeliveryDateField from './DeliveryDateField'
 import CheckoutRecoveryOptIn from './CheckoutRecoveryOptIn'
 import TrustBox from '@/components/UI/TrustBox'
 import { useOffer } from '@/components/Offer/OfferProvider'
+import OfferEndsIn from '@/components/Offer/OfferEndsIn'
+import { formatOfferDeadline } from '@/utils/offers/deadline'
 import { emitGoogleOrder, emitGoogleEvent, googleBasket, GOOGLE_GTM_ENABLED, GOOGLE_GTM_QA_ENABLED } from '@/utils/googleMeasurement'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -307,6 +309,7 @@ function OrderSummary({
               {offer.offerSource === 'paid_entitlement'
                 ? 'Online offer'
                 : `Offer${offer.normalizedCode ? ` · ${offer.normalizedCode}` : ''}`}
+              {discount > 0 && <OfferEndsIn />}
             </span>
             <span className="font-data tnum shrink-0 font-bold text-sage-300">
               {discount > 0 ? `−£${discount.toFixed(2)}` : '£0.00'}
@@ -391,6 +394,9 @@ function DetailsStep({
   const extrasTotal = deliveryTotal(extras)
   const offerDiscount = offer?.valid ? offer.discountAmount : 0
   const grandTotal = Math.max(0, totalAmount - offerDiscount) + extrasTotal
+  // The paid visitor's window, for the deadline the delivery-quote message
+  // carries into WhatsApp.
+  const offerWindow = useOffer()
 
   const [errors, setErrors] = useState<FieldError>({})
   // Whether "Choose a day" is open. Kept apart from the date itself so a
@@ -544,7 +550,9 @@ function DetailsStep({
   }).join('\n')
   const quoteOfferContext = offer?.valid
     ? offerDiscount > 0
-      ? `£${offerDiscount.toFixed(0)} product/order offer currently applied`
+      ? `£${offerDiscount.toFixed(0)} product/order offer currently applied${
+          offerWindow.active && offerWindow.expiresAt ? `, valid until ${formatOfferDeadline(offerWindow.expiresAt)}` : ''
+        }`
       : 'Offer checked; no product discount applies to this basket'
     : 'No online product offer currently applied'
   const quoteExtras = deliveryBreakdown(extras).lines
@@ -825,6 +833,9 @@ function DetailsStep({
             <p className="m-0 text-body-sm font-bold text-sage-800">Online offer applied</p>
             <p className="m-0 mt-1 text-caption leading-relaxed text-sage-700">
               £{offerDiscount.toFixed(2)} has already been taken off this basket.
+              {/* The deadline is real: once it passes, the discount is not
+                  given at checkout and the order totals without it. */}
+              <OfferEndsIn prefix="Offer " className="mt-0.5 block font-semibold" />
             </p>
           </div>
           <Check aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 text-sage-700" />
@@ -1149,7 +1160,7 @@ export default function CheckoutClient() {
     }
 
     if (!res.quote.codeValid) {
-      setOfferError('Offer code not recognised.')
+      setOfferError(res.quote.message || 'Offer code not recognised.')
       if (res.quote.valid && res.quote.offerSource === 'paid_entitlement') {
         setOfferQuote(res.quote)
         setQuotedBasketKey(snapshotKey)

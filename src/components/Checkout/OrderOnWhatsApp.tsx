@@ -25,6 +25,8 @@ import { deliveryBreakdown, NO_EXTRAS, type DeliveryOptions } from '@/constants/
 import { describeBuild } from '@/types/build'
 import { isValidUkPostcode, normalisePostcode } from '@/utils/postcode'
 import { formatPreferredDeliveryDate, isValidPreferredDeliveryDate } from '@/utils/delivery'
+import { formatOfferDeadline } from '@/utils/offers/deadline'
+import { useOffer } from '@/components/Offer/OfferProvider'
 
 /** Whole pounds read as whole pounds; anything else gets its pence. */
 function pounds(amount: number): string {
@@ -49,6 +51,12 @@ interface OrderMessageContext {
   total: number
   /** Whether that total already has an offer taken off it. */
   discounted?: boolean
+  /**
+   * When that offer ends, if it is a paid visitor's window. Written into the
+   * message so the chat carries the real deadline - the one to honour, and no
+   * later. Filled from OfferProvider by the component, not by callers.
+   */
+  offerEndsAt?: string | null
   /** Whatever is in the postcode field, if the customer got that far. */
   postcode?: string
   /** Delivery extras ticked on the form, if any. */
@@ -82,9 +90,10 @@ function whatsAppOrderMessage(items: DisplayCartItem[], ctx: OrderMessageContext
   }
 
   lines.push('')
+  const until = ctx.discounted && ctx.offerEndsAt ? formatOfferDeadline(ctx.offerEndsAt) : ''
   lines.push(
     `Website ${items.length === 1 && items[0].quantity === 1 ? 'price' : 'total'}: ${pounds(ctx.total)}${
-      ctx.discounted ? ' (online offer applied)' : ''
+      ctx.discounted ? ` (online offer applied${until ? `, valid until ${until}` : ''})` : ''
     }`,
   )
 
@@ -122,9 +131,10 @@ export default function OrderOnWhatsApp({
   // A single-line basket is a product enquiry with extra steps, and the
   // enquiry row should say which product. A mixed basket has no one answer.
   const only = items.length === 1 ? items[0] : null
+  const { active: offerActive, expiresAt } = useOffer()
 
   const cta = useWhatsAppCTA({
-    message: whatsAppOrderMessage(items, ctx),
+    message: whatsAppOrderMessage(items, { ...ctx, offerEndsAt: offerActive ? expiresAt : null }),
     pageContext,
     variantId: only?.variant_id,
     productName: only?.title,

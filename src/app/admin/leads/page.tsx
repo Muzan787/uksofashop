@@ -11,6 +11,8 @@ import {
   recoveryReminderMessage,
 } from '@/utils/recoveryLeadFormat'
 import { formatUkMobile, whatsAppLink } from '@/utils/phone'
+import { offerHoldsForLeads } from '@/utils/offers/leadHold'
+import { formatOfferDeadline } from '@/utils/offers/deadline'
 
 export const metadata: Metadata = { title: 'Leads' }
 export const dynamic = 'force-dynamic'
@@ -21,6 +23,8 @@ type RecoveryLead = {
   /** UKSS-LD-... Minted by a column default, so it is never absent. */
   reference: string
   basket: unknown
+  /** The shopper's visitor id - how their ad-offer window is found. */
+  visitor_id: string | null
   phone: string | null
   email: string | null
   whatsapp_opt_in: boolean
@@ -70,7 +74,7 @@ export default async function AdminLeadsPage(props: { searchParams: SearchParams
   const admin = createUntypedAdminClient()
   const { data, error } = await admin
     .from('checkout_recovery_leads')
-    .select('id, reference, basket, phone, email, whatsapp_opt_in, email_opt_in, updated_at, done_at, reminder_emailed_at')
+    .select('id, reference, basket, visitor_id, phone, email, whatsapp_opt_in, email_opt_in, updated_at, done_at, reminder_emailed_at')
     .eq('status', view === 'done' ? 'done' : 'active')
     .eq('data_class', 'production_real')
     // QA/test recovery submissions are deliberately excluded from both views.
@@ -87,6 +91,11 @@ export default async function AdminLeadsPage(props: { searchParams: SearchParams
   }
 
   const leads = (data ?? []) as RecoveryLead[]
+  // Each shopper's ad-offer window, if they had one: the reminder quotes it
+  // while it is open, and the card says when it ends - or that it has - so a
+  // reply in the chat is answered with the right price. Two queries for the
+  // whole page.
+  const holds = await offerHoldsForLeads(admin, leads)
 
   return (
     <div className="mx-auto max-w-5xl space-y-6 animate-in fade-in duration-500">
@@ -142,8 +151,9 @@ export default async function AdminLeadsPage(props: { searchParams: SearchParams
 
             // Only the channel they ticked. The other contact detail is not on
             // the row at all - the API stores each one only when it was opted in.
+            const hold = holds.get(lead.id)
             const wa = lead.whatsapp_opt_in && lead.phone
-              ? whatsAppLink(lead.phone, recoveryReminderMessage(lead.basket, lead.reference))
+              ? whatsAppLink(lead.phone, recoveryReminderMessage(lead.basket, lead.reference, hold && !hold.ended ? hold : null))
               : null
 
             return (
@@ -198,6 +208,19 @@ export default async function AdminLeadsPage(props: { searchParams: SearchParams
                       </li>
                     ))}
                   </ul>
+                )}
+
+                {/* The ad offer, stated for the shop: open until when, or over.
+                    This is the deadline to honour in the chat, and no later -
+                    the countdown the shopper saw is only true if it is. */}
+                {hold && (
+                  <p className={`mt-3 rounded-sm px-3 py-2 text-xs font-semibold ${
+                    hold.ended ? 'bg-zinc-100 text-zinc-500' : 'bg-orange-50 text-orange-700'
+                  }`}>
+                    {hold.ended
+                      ? `Ad offer (£${Math.round(hold.amount)}) ended ${formatOfferDeadline(hold.expiresAt)} - full price now`
+                      : `Ad offer: £${Math.round(hold.amount)} off until ${formatOfferDeadline(hold.expiresAt)}`}
+                  </p>
                 )}
 
                 {/* The reminder, one tap away, on whichever channel they chose: WhatsApp

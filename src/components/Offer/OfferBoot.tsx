@@ -70,7 +70,8 @@ export default function OfferBoot() {
         return
       }
 
-      // Seven days is comfortably below the browser timer ceiling. Re-check
+      // A window (48 hours, or what is left of an old seven-day one) is far
+      // below the browser timer ceiling. Re-check
       // server authority just after expiry instead of leaving a stale reminder
       // alive until the next navigation.
       expiryTimer.current = setTimeout(() => {

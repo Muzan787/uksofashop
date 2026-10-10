@@ -4,11 +4,8 @@ import { cookies, headers } from 'next/headers'
 import { rateLimit, callerKey } from '@/utils/rateLimit'
 import { externalOrigin } from '@/utils/requestOrigin'
 import { classifyPaidLanding } from '@/utils/offers/paidTraffic'
-import { issueOfferEntitlement } from '@/utils/offers/issueEntitlement'
-import {
-  OFFER_ENTITLEMENT_COOKIE,
-  OFFER_ENTITLEMENT_MAX_AGE_S,
-} from '@/utils/offers/constants'
+import { issueOfferEntitlement, secondsLeft } from '@/utils/offers/issueEntitlement'
+import { OFFER_ENTITLEMENT_COOKIE } from '@/utils/offers/constants'
 import { INACTIVE_OFFER_ENTITLEMENT, type PublicOfferEntitlement } from '@/types/offerEntitlement'
 
 export const dynamic = 'force-dynamic'
@@ -93,6 +90,22 @@ export async function POST(request: Request) {
     return json(INACTIVE_OFFER_ENTITLEMENT, 503)
   }
 
+  // A visitor whose 48 hours have already run out gets their old row back,
+  // not a new window - so a fresh ad click can find an ended offer. Say so,
+  // and leave no cookie behind: the countdown must never restart.
+  const remaining = secondsLeft(issued)
+  if (remaining <= 0) {
+    const ended = json(INACTIVE_OFFER_ENTITLEMENT)
+    ended.cookies.set(OFFER_ENTITLEMENT_COOKIE, '', {
+      httpOnly: true,
+      secure: origin.startsWith('https:'),
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 0,
+    })
+    return ended
+  }
+
   const response = json({
     active: true,
     source: paidSource,
@@ -109,7 +122,9 @@ export async function POST(request: Request) {
     secure: origin.startsWith('https:'),
     sameSite: 'lax',
     path: '/',
-    maxAge: OFFER_ENTITLEMENT_MAX_AGE_S,
+    // Exactly as long as the window, so the browser drops the cookie when
+    // the offer ends.
+    maxAge: remaining,
   })
 
   return response

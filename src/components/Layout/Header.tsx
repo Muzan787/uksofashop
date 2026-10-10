@@ -11,6 +11,7 @@ import MegaMenu from './MegaMenu';
 import MobileMenu from './MobileMenu';
 import SearchOverlay from './SearchOverlay';
 import { useOffer } from '@/components/Offer/OfferProvider';
+import OfferAnnouncement from '@/components/Offer/OfferAnnouncement';
 
 /** One message. This bar used to cycle four of them every four seconds. */
 const ANNOUNCEMENT = ANNOUNCEMENTS[0];
@@ -74,9 +75,11 @@ export default function Header({ categories }: { categories: NavCategory[] }) {
   const { active: offerActive } = useOffer();
   // One line at 375px. The longer version ("Your online offer is active ·
   // SOFAEXTRA · FREE UK Mainland Delivery") wrapped to three on a phone and
-  // took 72px off the top of every ad landing page.
+  // took 72px off the top of every ad landing page. While a paid visitor's
+  // window is open it is the countdown - its own component, so the tick
+  // re-renders a line of text rather than this whole header.
   const announcement = offerActive
-    ? 'Offer active · code SOFAEXTRA'
+    ? <OfferAnnouncement />
     : ANNOUNCEMENT;
 
   const [scrolled, setScrolled] = useState(false);

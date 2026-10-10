@@ -5,7 +5,7 @@ import { z } from 'zod'
 import { createAdminClient } from '@/utils/supabase/admin'
 import type { CartItem } from '@/app/actions/checkout'
 import type { OfferQuote, OfferQuoteResult, OfferTier, OfferSource } from '@/types/offers'
-import { OFFER_ENTITLEMENT_COOKIE } from '@/utils/offers/constants'
+import { OFFER_ENTITLEMENT_COOKIE, OFFER_PUBLIC_CODE, OFFER_WINDOW_HOURS } from '@/utils/offers/constants'
 
 const itemsSchema = z.array(z.object({
   variant_id: z.string().uuid(),
@@ -27,8 +27,8 @@ function asSource(value: unknown): OfferSource | null {
 
 /**
  * Ask the database for the current authoritative basket offer. The caller may
- * supply a shareable customer-facing code, but never a paid entitlement token,
- * tier or amount. The opaque Phase C bearer is read only from the HttpOnly
+ * supply the customer-facing code - valid only inside the visitor's own
+ * 48-hour window - but never a paid entitlement token, tier or amount. The opaque Phase C bearer is read only from the HttpOnly
  * first-party cookie on this server action and is revalidated by PostgreSQL.
  */
 export async function quoteOffer(
@@ -77,7 +77,12 @@ export async function quoteOffer(
 
   let message = ''
   if (promotionCode?.trim() && !codeValid) {
-    message = 'Offer code not recognised.'
+    // The code is real but belongs to a window: it works only while a paid
+    // visitor's 48 hours are open. Say that, rather than "not recognised",
+    // to someone who saw it on the site and is entitled to know why.
+    message = promotionCode.trim().toUpperCase() === OFFER_PUBLIC_CODE
+      ? `${OFFER_PUBLIC_CODE} works for ${OFFER_WINDOW_HOURS} hours after a visit from one of our ads, in the browser that visit was on. It has ended, or isn't active here.`
+      : 'Offer code not recognised.'
   } else if (!valid) {
     message = ''
   } else if (discountAmount > 0) {

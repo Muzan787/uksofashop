@@ -12,14 +12,16 @@
 // the discount still comes off at checkout whether or not this is ever seen.
 
 import { useEffect, useState } from 'react'
-import { Check, Copy, Truck, Wallet } from 'lucide-react'
+import { Check, Clock, Copy, Truck, Wallet } from 'lucide-react'
 import Modal from '@/components/UI/Modal'
 import { OFFER_OPEN_EVENT, OFFER_PUBLIC_CODE } from '@/utils/offers/constants'
 import { trackOfferAction } from '@/utils/tracking'
 import { useOffer } from './OfferProvider'
+import { useOfferCountdown } from './useOfferCountdown'
 
 function OfferContent({ amount, onCopied }: { amount: number | null; onCopied: () => void }) {
   const [copied, setCopied] = useState(false)
+  const { clock, deadline } = useOfferCountdown()
 
   const copy = async () => {
     try {
@@ -42,6 +44,24 @@ function OfferContent({ amount, onCopied }: { amount: number | null; onCopied: (
       <h3 className="m-0 mt-2 font-display text-h3 font-semibold leading-tight text-ink-900">
         {amount ? `£${amount} off this sofa` : 'Extra savings on selected sofas'}
       </h3>
+
+      {/* The window, said twice: a clock for at-a-glance, and the deadline
+          as a time, which is what someone plans around. */}
+      {deadline && (
+        <div className="mt-3 flex items-center gap-2.5 rounded-sm border border-ember-500/30 bg-ember-500/[0.06] px-3.5 py-2.5">
+          <Clock aria-hidden="true" className="h-4 w-4 shrink-0 text-ember-700" />
+          <p className="m-0 text-body-sm text-ink-700">
+            Held for you until <strong className="text-ink-900">{deadline}</strong>
+            {clock && (
+              <>
+                {' '}·{' '}
+                <span aria-hidden="true" className="font-data font-bold tabular-nums text-ember-700">{clock}</span>
+                <span aria-hidden="true"> left</span>
+              </>
+            )}
+          </p>
+        </div>
+      )}
 
       <div className="mt-4 flex flex-col gap-2 rounded-md border border-calico-300 bg-calico-100/60 p-3.5">
         <div className="flex items-center gap-2 text-body-sm font-semibold text-ink-900">
@@ -68,8 +88,13 @@ function OfferContent({ amount, onCopied }: { amount: number | null; onCopied: (
         </button>
       </div>
 
+      {/* It used to say the code was "here in case you want to pass it on".
+          It cannot be passed on any more: it works only inside this
+          visitor's own window, and saying otherwise would be a promise the
+          checkout then breaks. */}
       <p className="m-0 mt-3 text-caption leading-relaxed text-ink-500">
-        It comes off automatically at checkout - nothing to type. The code is here in case you want to pass it on.
+        It comes off automatically at checkout - nothing to type. The offer is yours alone: it works in
+        this browser until the time above, and it isn&apos;t extended or given again once it ends.
       </p>
     </div>
   )

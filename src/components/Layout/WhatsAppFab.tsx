@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { useWhatsAppCTA } from '@/utils/attribution/useWhatsAppCTA';
 import { productEnquiryMessage } from '@/utils/enquiryMessage';
+import { useOffer } from '@/components/Offer/OfferProvider';
 import { useCompactFab } from './useCompactFab';
 
 /**
@@ -111,6 +112,8 @@ interface ProductWhatsAppContext {
   productName: string;
   /** Published by ProductPageClient so this enquiry quotes the same figure. */
   price?: number;
+  /** The ad offer this sofa carries, in pounds; 0 when it has none. */
+  offerAmount?: number;
 }
 
 export default function WhatsAppFab() {
@@ -124,11 +127,18 @@ export default function WhatsAppFab() {
   const [productContext, setProductContext] = useState<ProductWhatsAppContext | null>(null);
   const supportOnly = routeIsSupport || checkoutHasOrder;
 
+  // A paid visitor's open window, quoted in a product enquiry the same way
+  // the buy box's agent link quotes it - figure and deadline.
+  const offerWindow = useOffer();
+  const offerHold = offerWindow.active && offerWindow.expiresAt && (productContext?.offerAmount ?? 0) > 0
+    ? { amount: productContext?.offerAmount ?? 0, expiresAt: offerWindow.expiresAt }
+    : null;
+
   const cta = useWhatsAppCTA({
     message: supportOnly
       ? 'Hi, I need some help with an existing order or account.'
       : productContext
-        ? productEnquiryMessage(productContext.productName, productContext.price)
+        ? productEnquiryMessage(productContext.productName, productContext.price, offerHold)
         : 'Hi, I’d like some help with a sofa enquiry.',
     pageContext: supportOnly
       ? 'whatsapp_fab_support'
@@ -164,11 +174,13 @@ export default function WhatsAppFab() {
       }
 
       const rawPrice = Number(marker.dataset.productPrice);
+      const rawOffer = Number(marker.dataset.offerAmount);
       setProductContext({
         productId: marker.dataset.productId || undefined,
         variantId: marker.dataset.variantId || undefined,
         productName,
         price: Number.isFinite(rawPrice) && rawPrice > 0 ? rawPrice : undefined,
+        offerAmount: Number.isFinite(rawOffer) && rawOffer > 0 ? rawOffer : 0,
       });
     };
 

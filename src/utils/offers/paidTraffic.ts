@@ -2,7 +2,15 @@ import type { PaidOfferSource } from './constants'
 
 const GOOGLE_SOURCE = 'google'
 const GOOGLE_MEDIUM = 'cpc'
-const META_SOURCES = new Set(['facebook', 'instagram', 'meta'])
+/**
+ * Meta's own words for itself, as well as ours. Ads tagged with Meta's
+ * dynamic {{site_source_name}} parameter arrive as fb, ig, msg (Messenger)
+ * or an (Audience Network) - the October 2026 campaigns do exactly that - and
+ * none of them was in this list, so 122 visitors from the Verona Family Set
+ * ad in its first four days got no offer at all, while the September
+ * campaign's hand-written "meta" got it every time.
+ */
+const META_SOURCES = new Set(['facebook', 'instagram', 'meta', 'fb', 'ig', 'msg', 'an'])
 const META_MEDIUM = 'paid_social'
 
 function clean(value: string | null): string {

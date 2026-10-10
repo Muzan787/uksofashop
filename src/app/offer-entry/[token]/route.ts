@@ -4,12 +4,9 @@ import { cookies, headers } from 'next/headers'
 import { z } from 'zod'
 import { callerKey, rateLimit } from '@/utils/rateLimit'
 import { COOKIE } from '@/utils/attribution/ids'
-import { issueOfferEntitlement } from '@/utils/offers/issueEntitlement'
+import { issueOfferEntitlement, secondsLeft } from '@/utils/offers/issueEntitlement'
 import { verifyOfferEntry } from '@/utils/offers/entryToken'
-import {
-  OFFER_ENTITLEMENT_COOKIE,
-  OFFER_ENTITLEMENT_MAX_AGE_S,
-} from '@/utils/offers/constants'
+import { OFFER_ENTITLEMENT_COOKIE } from '@/utils/offers/constants'
 import { isProductionRequestHost } from '@/utils/trackingEnv'
 import { externalOrigin } from '@/utils/requestOrigin'
 
@@ -86,12 +83,16 @@ export async function GET(
     path: '/',
     maxAge: VISITOR_MAX_AGE_S,
   })
-  response.cookies.set(OFFER_ENTITLEMENT_COOKIE, issued.token, {
+  // The visitor still lands on the sofa they tapped. Whether the offer comes
+  // with them depends on their window: an ended one is not reissued, so the
+  // cookie is cleared rather than set, and the countdown cannot restart.
+  const remaining = secondsLeft(issued)
+  response.cookies.set(OFFER_ENTITLEMENT_COOKIE, remaining > 0 ? issued.token : '', {
     httpOnly: true,
     secure: true,
     sameSite: 'lax',
     path: '/',
-    maxAge: OFFER_ENTITLEMENT_MAX_AGE_S,
+    maxAge: remaining,
   })
   return response
 }

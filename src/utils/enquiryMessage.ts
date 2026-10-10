@@ -23,6 +23,8 @@
 // cannot drift apart: the buy box's "talk to an agent", the made-to-order
 // panel, the floating button, and the "real photos" button on the gallery.
 
+import { offerHoldLine, type OfferHold } from '@/utils/offers/deadline'
+
 /** Money as a customer writes it: £649, not £649.00. */
 function gbp(amount: number): string {
   return `£${Math.round(amount).toLocaleString('en-GB')}`
@@ -36,11 +38,21 @@ function gbp(amount: number): string {
 const POSTCODE_PROMPT = 'My postcode is:'
 
 /**
+ * The ad offer's line, when the visitor has an open window and this sofa
+ * qualifies - placed just above the postcode so the blank stays last. In the
+ * chat it is the deadline the shop honours: no later. See offers/deadline.
+ */
+function withHold(hold: OfferHold | null | undefined): string {
+  const line = offerHoldLine(hold)
+  return line ? `${line}\n\n` : ''
+}
+
+/**
  * A general enquiry about one sofa, from the buy box or the floating button.
  */
-export function productEnquiryMessage(title: string, price?: number | null): string {
+export function productEnquiryMessage(title: string, price?: number | null, hold?: OfferHold | null): string {
   const named = price ? `the ${title} (${gbp(price)})` : `the ${title}`
-  return `Hi, I'm interested in ${named}.\n\n${POSTCODE_PROMPT}`
+  return `Hi, I'm interested in ${named}.\n\n${withHold(hold)}${POSTCODE_PROMPT}`
 }
 
 /**
@@ -51,9 +63,9 @@ export function productEnquiryMessage(title: string, price?: number | null): str
  * like. Asking it here starts the same conversation as any other enquiry -
  * the sofa, the price, the postcode - with the photos as the opening reply.
  */
-export function photoRequestMessage(title: string, price?: number | null): string {
+export function photoRequestMessage(title: string, price?: number | null, hold?: OfferHold | null): string {
   const named = price ? `the ${title} (${gbp(price)})` : `the ${title}`
-  return `Hi, could you send me some real photos or a short video of ${named}?\n\n${POSTCODE_PROMPT}`
+  return `Hi, could you send me some real photos or a short video of ${named}?\n\n${withHold(hold)}${POSTCODE_PROMPT}`
 }
 
 /**
@@ -61,7 +73,7 @@ export function photoRequestMessage(title: string, price?: number | null): strin
  * price is the starting figure before any change the customer asks for, so
  * it is labelled as such rather than stated flatly.
  */
-export function customEnquiryMessage(title: string, price?: number | null): string {
+export function customEnquiryMessage(title: string, price?: number | null, hold?: OfferHold | null): string {
   const from = price ? ` (from ${gbp(price)})` : ''
   return (
     `Hi, I'd like a made-to-order ${title}${from}.\n\n` +
@@ -69,6 +81,7 @@ export function customEnquiryMessage(title: string, price?: number | null): stri
     'Fabric / material:\n' +
     'Size or layout:\n' +
     'Anything else:\n\n' +
+    withHold(hold) +
     POSTCODE_PROMPT
   )
 }

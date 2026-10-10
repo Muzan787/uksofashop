@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { requireAdmin } from '@/utils/auth'
 import { createUntypedAdminClient } from '@/utils/supabase/admin'
 import { sendCheckoutReminder } from '@/utils/email'
+import { offerHoldsForLeads } from '@/utils/offers/leadHold'
 
 /**
  * Tick a checkout-recovery lead off, or put it back.
@@ -75,7 +76,7 @@ export async function sendLeadReminderEmail(
   const admin = createUntypedAdminClient()
   const { data, error } = await admin
     .from('checkout_recovery_leads')
-    .select('email, email_opt_in, basket, status, data_class, reference')
+    .select('email, email_opt_in, basket, status, data_class, reference, visitor_id')
     .eq('id', id)
     .maybeSingle()
 
@@ -88,6 +89,7 @@ export async function sendLeadReminderEmail(
     status: string
     data_class: string
     reference: string
+    visitor_id: string | null
   } | null
   // Converted and unsubscribed rows have had their email cleared, and a row
   // without the email tick never had it - either way there is nothing to send to.
@@ -95,10 +97,15 @@ export async function sendLeadReminderEmail(
     return { status: 'error', message: 'This lead did not ask for an email reminder.' }
   }
 
+  // Their ad offer, if its 48 hours are still running - a true reason to come
+  // back. Looked up at the moment of sending, so a reminder sent after the
+  // window has closed says nothing about an offer.
+  const hold = (await offerHoldsForLeads(admin, [{ id, visitor_id: lead.visitor_id, basket: lead.basket }])).get(id)
+
   try {
     // `id` is the validated uuid from the form, which is what the row was
     // looked up by — the select does not need to return it again.
-    await sendCheckoutReminder(lead.email, lead.basket, id, lead.reference)
+    await sendCheckoutReminder(lead.email, lead.basket, id, lead.reference, hold && !hold.ended ? hold : null)
   } catch (err) {
     console.error(`lead reminder email failed: ${err instanceof Error ? err.message : String(err)}`)
     return { status: 'error', message: 'The email could not be sent. Try again in a moment.' }

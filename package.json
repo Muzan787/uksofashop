@@ -10,7 +10,7 @@
     "social": "node --env-file-if-exists=.env --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/social/render.ts",
     "social:lut": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/social/ember-lut.ts",
     "social:outro": "node --env-file-if-exists=.env --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/social/render-outro.ts",
-    "test:tracking": "node --test scripts/tracking-audit-regression.test.cjs scripts/tracking-integration.test.cjs"
+    "test:tracking": "node --test scripts/tracking-audit-regression.test.cjs scripts/tracking-integration.test.cjs scripts/offer-window.test.cjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.125.0",

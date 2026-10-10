@@ -22,6 +22,7 @@ import { PHONE_DISPLAY, SUPPORT_EMAIL, ORDERS_EMAIL, whatsAppHref } from '@/cons
  */
 const OWNER_GMAIL = 'uksofashop.co.uk@gmail.com';
 import { gbp, recoveryBasketLines, recoveryBasketTotal, recoveryReminderEmail } from '@/utils/recoveryLeadFormat';
+import { offerHoldReminderLine, type OfferHold } from '@/utils/offers/deadline';
 import { formatSwatchForCopy, swatchCodes, type SwatchCopyLine } from '@/utils/swatchText';
 import { SAMPLE_FEE } from '@/constants/swatches';
 // Every link in every email resolves against this.
@@ -1162,9 +1163,16 @@ export async function sendCheckoutReminder(
    * visit - and to the ad that paid for it.
    */
   reference?: string | null,
+  /**
+   * The shopper's ad-offer window, if still open on this basket. Drawn as one
+   * line with its deadline; absent once it has ended - a reminder never
+   * mentions an offer it cannot give. See utils/offers/leadHold.
+   */
+  hold?: OfferHold | null,
 ) {
   const lines = recoveryBasketLines(basket)
   const total = recoveryBasketTotal(lines)
+  const offerLine = offerHoldReminderLine(hold)
   const siteUrl = SITE_URL
   const optOutUrl = leadId
     ? `${siteUrl}/checkout/reminders/unsubscribe?token=${encodeURIComponent(createRecoveryOptOutToken(leadId))}`
@@ -1217,6 +1225,11 @@ export async function sendCheckoutReminder(
         <strong style="color:#1c1917;">Pay on delivery</strong>
       </div>
 
+      ${offerLine ? `
+      <div style="margin: 0 0 20px 0; padding: 12px 14px; border-radius: 8px; background: #fff7ea; border: 1px solid #e9b96a; color: #1c1917; font-size: 14px; line-height: 1.5; font-weight: 600;">
+        ${esc(offerLine)}
+      </div>` : ''}
+
       <p style="margin: 20px 0 24px 0; color: #57534e; line-height: 1.6;">
         If you&apos;d like to go ahead, we can confirm availability and delivery, or answer anything you&apos;d like to check first.
       </p>
@@ -1245,8 +1258,8 @@ export async function sendCheckoutReminder(
     from: sender(),
     to: email,
     bcc: [SUPPORT_EMAIL, OWNER_GMAIL],
-    subject: recoveryReminderEmail(basket, reference).subject,
-    text: recoveryReminderEmail(basket, reference).body,
+    subject: recoveryReminderEmail(basket, reference, hold).subject,
+    text: recoveryReminderEmail(basket, reference, hold).body,
     html: generateEmailHTML(content),
   })
 }
