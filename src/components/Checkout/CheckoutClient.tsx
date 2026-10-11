@@ -395,7 +395,7 @@ function DetailsStep({
   const extrasTotal = deliveryTotal(extras)
   const offerDiscount = offer?.valid ? offer.discountAmount : 0
   const grandTotal = Math.max(0, totalAmount - offerDiscount) + extrasTotal
-  // The paid visitor's window, for the deadline the delivery-quote message
+  // The visitor's offer window, for the deadline the delivery-quote message
   // carries into WhatsApp.
   const offerWindow = useOffer()
 

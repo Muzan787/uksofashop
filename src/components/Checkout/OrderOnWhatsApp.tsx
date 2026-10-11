@@ -52,7 +52,7 @@ interface OrderMessageContext {
   /** Whether that total already has an offer taken off it. */
   discounted?: boolean
   /**
-   * When that offer ends, if it is a paid visitor's window. Written into the
+   * When that offer ends, if the visitor has an open window. Written into the
    * message so the chat carries the real deadline - the one to honour, and no
    * later. Filled from OfferProvider by the component, not by callers.
    */

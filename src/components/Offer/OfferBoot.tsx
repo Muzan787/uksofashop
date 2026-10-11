@@ -7,6 +7,9 @@ import { classifyPaidLanding } from '@/utils/offers/paidTraffic'
 import { INACTIVE_OFFER_ENTITLEMENT, type PublicOfferEntitlement } from '@/types/offerEntitlement'
 import { useOffer } from './OfferProvider'
 
+/** Pages for people who have already ordered. No new offer window opens here. */
+const AFTER_SALE_PATHS = ['/confirm-order', '/track-order', '/account', '/review']
+
 function isPublicState(value: unknown): value is PublicOfferEntitlement {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false
   const v = value as Record<string, unknown>
@@ -93,21 +96,35 @@ export default function OfferBoot() {
       return isPublicState(value) ? value : INACTIVE_OFFER_ENTITLEMENT
     }
 
+    const qualify = () => fetch('/api/offer/qualify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      cache: 'no-store',
+      body: JSON.stringify({ landingPath }),
+    })
+
+    // Every visitor gets the 48-hour offer since 2026-10-12, so the first
+    // page of a visit asks for a window rather than only reading one. The
+    // server returns the visitor's existing window untouched if they have
+    // one (an ended one stays ended), or opens a new one. A paid landing
+    // later in the visit asks again, which credits the window to the ad
+    // without moving its deadline.
+    //
+    // Not on the after-sale pages: a customer opening their order
+    // confirmation, tracking or account should not be shown a countdown to a
+    // discount on something they have already bought. They only read status.
+    const afterSale = AFTER_SALE_PATHS.some(p => pathname === p || pathname.startsWith(`${p}/`))
+
     if (paidSource && lastQualifiedLanding.current !== landingPath) {
       lastQualifiedLanding.current = landingPath
       initialStatusDone.current = true
-      void fetch('/api/offer/qualify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        cache: 'no-store',
-        body: JSON.stringify({ landingPath }),
-      })
+      void qualify()
         .then(readResponse)
         .then(installState)
         .catch(() => installState(INACTIVE_OFFER_ENTITLEMENT))
     } else if (!initialStatusDone.current) {
       initialStatusDone.current = true
-      void fetch('/api/offer/status', { cache: 'no-store' })
+      void (afterSale ? fetch('/api/offer/status', { cache: 'no-store' }) : qualify())
         .then(readResponse)
         .then(installState)
         .catch(() => installState(INACTIVE_OFFER_ENTITLEMENT))

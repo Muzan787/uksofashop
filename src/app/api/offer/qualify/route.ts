@@ -5,7 +5,7 @@ import { rateLimit, callerKey } from '@/utils/rateLimit'
 import { externalOrigin } from '@/utils/requestOrigin'
 import { classifyPaidLanding } from '@/utils/offers/paidTraffic'
 import { issueOfferEntitlement, secondsLeft } from '@/utils/offers/issueEntitlement'
-import { OFFER_ENTITLEMENT_COOKIE } from '@/utils/offers/constants'
+import { OFFER_ENTITLEMENT_COOKIE, type OfferSource } from '@/utils/offers/constants'
 import { INACTIVE_OFFER_ENTITLEMENT, type PublicOfferEntitlement } from '@/types/offerEntitlement'
 
 export const dynamic = 'force-dynamic'
@@ -14,6 +14,8 @@ const bodySchema = z.object({
   landingPath: z.string().min(1).max(2048),
 })
 const uuidSchema = z.string().uuid()
+/** Crawlers and link previewers - no offer window for them. */
+const BOT_UA = /bot|crawl|spider|slurp|preview|facebookexternalhit|headless|lighthouse|pagespeed/i
 
 function json(state: PublicOfferEntitlement, status = 200) {
   const response = NextResponse.json(state, { status })
@@ -70,8 +72,17 @@ export async function POST(request: Request) {
   // Query-string encoding can be normalised differently by URLSearchParams
   // (for example %20 versus +). Classify the browser's actual Referer query
   // rather than trusting the JSON copy supplied by React.
+  //
+  // Since 2026-10-12 every visitor gets the 48-hour offer, so a landing with
+  // no paid evidence is a 'site_visit' rather than a refusal. The paid
+  // classification still matters: it decides which source the window is
+  // credited to, and a paid source outranks a site visit in the database.
   const paidSource = classifyPaidLanding(`${referer.pathname}${referer.search}`)
-  if (!paidSource) return json(INACTIVE_OFFER_ENTITLEMENT, 400)
+  const source: OfferSource = paidSource ?? 'site_visit'
+
+  // Crawlers that run JavaScript (Googlebot renders pages) would otherwise
+  // open a window each, filling the table with offers nobody can use.
+  if (BOT_UA.test(hdrs.get('user-agent') ?? '')) return json(INACTIVE_OFFER_ENTITLEMENT)
 
   const jar = await cookies()
   const visitor = uuidSchema.safeParse(jar.get('uksofashop_vid')?.value)
@@ -82,7 +93,7 @@ export async function POST(request: Request) {
   try {
     issued = await issueOfferEntitlement(
       visitor.data,
-      paidSource,
+      source,
       arrival.success ? arrival.data : null,
     )
   } catch (error) {
@@ -108,7 +119,9 @@ export async function POST(request: Request) {
 
   const response = json({
     active: true,
-    source: paidSource,
+    // What the window is credited to now - which may be a paid source from
+    // an earlier visit, not this landing's.
+    source: issued.source,
     startedAt: issued.started_at,
     expiresAt: issued.expires_at,
     offerAvailable: true,

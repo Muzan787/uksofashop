@@ -1,6 +1,7 @@
 export const OFFER_ENTITLEMENT_COOKIE = 'uksofashop_offer'
 /**
- * How long a paid visitor's offer runs, from their first qualifying click.
+ * How long a visitor's offer runs, from their first visit (every visitor
+ * since 2026-10-12; only ad visitors before that).
  * Fixed: a later click does not extend it, and once it ends it does not come
  * back. The database sets it (issue_paid_offer_entitlement); this is the same
  * figure for copy that needs to say it.
@@ -13,6 +14,12 @@ export const OFFER_WINDOW_HOURS = 48
 export const OFFER_PUBLIC_CODE = 'SOFAEXTRA'
 
 export type PaidOfferSource = 'google_ads' | 'meta_ads' | 'meta_catalog'
+/**
+ * Where a visitor's offer window came from. Every visitor has had one since
+ * 2026-10-12: 'site_visit' is anyone not from an ad. A paid source outranks
+ * it if the same visitor later arrives from an ad, without moving the deadline.
+ */
+export type OfferSource = PaidOfferSource | 'site_visit'
 
 /**
  * What each tier is worth, in pounds, FOR DISPLAY ONLY.

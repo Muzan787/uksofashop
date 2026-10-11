@@ -1,9 +1,9 @@
-import type { PaidOfferSource } from '@/utils/offers/constants'
+import type { OfferSource } from '@/utils/offers/constants'
 
 /** Safe storefront state. The opaque bearer token never crosses this boundary. */
 export interface PublicOfferEntitlement {
   active: boolean
-  source: PaidOfferSource | null
+  source: OfferSource | null
   startedAt: string | null
   expiresAt: string | null
   offerAvailable: boolean

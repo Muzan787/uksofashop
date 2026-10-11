@@ -3,7 +3,8 @@
 //
 // The offer, as one line under the price - with the time it has left.
 //
-// A visitor from a Meta or Google ad holds an entitlement (OfferProvider)
+// Every visitor holds an entitlement (OfferProvider) - since 2026-10-12, not
+// only those from a Meta or Google ad -
 // that takes a fixed amount off the sofa at checkout. This used to be
 // announced by a sheet that opened on arrival, over the product, before the
 // visitor had seen what they came for; two in three closed it unread. Now

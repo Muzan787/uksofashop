@@ -81,7 +81,7 @@ export async function quoteOffer(
     // visitor's 48 hours are open. Say that, rather than "not recognised",
     // to someone who saw it on the site and is entitled to know why.
     message = promotionCode.trim().toUpperCase() === OFFER_PUBLIC_CODE
-      ? `${OFFER_PUBLIC_CODE} works for ${OFFER_WINDOW_HOURS} hours after a visit from one of our ads, in the browser that visit was on. It has ended, or isn't active here.`
+      ? `${OFFER_PUBLIC_CODE} works for ${OFFER_WINDOW_HOURS} hours from your first visit, in the browser you visited on. It has ended, or isn't active here.`
       : 'Offer code not recognised.'
   } else if (!valid) {
     message = ''

@@ -1,5 +1,6 @@
-// The paid offer's 48-hour window: fixed from the first click, never slid,
-// never reissued once ended, and SOFAEXTRA valid only inside it. Replays the
+// The offer's 48-hour window - every visitor's since 2026-10-12: fixed from
+// the first visit, never slid, never reissued once ended, and SOFAEXTRA valid
+// only inside it. Replays the
 // migration into PGlite over the minimum tables it touches.
 const { test, before } = require('node:test')
 const assert = require('node:assert')
@@ -22,6 +23,7 @@ before(async () => {
     insert into offer_product_tiers values ('aaaaaaaa-0000-4000-8000-000000000001', 'ROMA');
   `)
   await db.exec(fs.readFileSync(path.join(__dirname, '../supabase/migrations/20261010190333_offer_fixed_48_hour_window.sql'), 'utf8'))
+  await db.exec(fs.readFileSync(path.join(__dirname, '../supabase/migrations/20261011212054_offer_for_every_visitor.sql'), 'utf8'))
 })
 const issue = async (v = V, s = 'meta_ads') => (await db.query(`select issue_paid_offer_entitlement($1,$2,null) r`, [v, s])).rows[0].r
 const items = JSON.stringify([{ variant_id: 'bbbbbbbb-0000-4000-8000-000000000001', quantity: 1 }])
@@ -69,4 +71,20 @@ test('an old seven-day row keeps its expiry and is not slid', async () => {
   const before = (await db.query(`select expires_at from offer_entitlements where visitor_id=$1`, [v3])).rows[0].expires_at
   const b = await issue(v3)
   assert.equal(Date.parse(b.expires_at), new Date(before).getTime())
+})
+
+test('every visitor gets a window; a later ad click is credited but the deadline stays', async () => {
+  const v4 = '44444444-4444-4444-8444-444444444444'
+  const a = await issue(v4, 'site_visit')
+  assert.equal(a.source, 'site_visit')
+  assert.equal((Date.parse(a.expires_at) - Date.parse(a.started_at)) / 36e5, 48)
+  const b = await issue(v4, 'meta_ads')
+  assert.equal(b.source, 'meta_ads')
+  assert.equal(b.token, a.token)
+  assert.equal(b.expires_at, a.expires_at)
+  const c = await issue(v4, 'site_visit')
+  assert.equal(c.source, 'meta_ads')
+})
+test('an unknown source is refused', async () => {
+  await assert.rejects(() => issue('55555555-5555-4555-8555-555555555555', 'organic'))
 })

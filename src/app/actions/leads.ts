@@ -97,7 +97,7 @@ export async function sendLeadReminderEmail(
     return { status: 'error', message: 'This lead did not ask for an email reminder.' }
   }
 
-  // Their ad offer, if its 48 hours are still running - a true reason to come
+  // Their online offer, if its 48 hours are still running - a true reason to come
   // back. Looked up at the moment of sending, so a reminder sent after the
   // window has closed says nothing about an offer.
   const hold = (await offerHoldsForLeads(admin, [{ id, visitor_id: lead.visitor_id, basket: lead.basket }])).get(id)

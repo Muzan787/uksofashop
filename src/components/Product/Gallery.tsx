@@ -28,12 +28,13 @@ interface Props {
   onSelectColor: (color: string) => void;
   /** Appears in the alt text so each photo describes what it actually shows. */
   material: string;
-  /** "Real photos or a video?" on WhatsApp, carrying this sofa and its price. */
+  /** "More pictures & videos" on WhatsApp, carrying this sofa and its price. */
   photoRequest?: WhatsAppCTA;
 }
 
-/** More photographs than this and the dots become a "2 / 8" count. */
-const MAX_DOTS = 6;
+/** More photographs than this and the dots become a "2 / 6" count - six
+ *  dots would reach the "More pictures & videos" button on a 375px phone. */
+const MAX_DOTS = 5;
 
 /**
  * Half a second, and the one duration on this page that is not a system token.
@@ -357,11 +358,11 @@ export default function Gallery({
             only the controls take them, so a swipe that starts on the shade
             still swipes.
 
-            Left: the photograph button. Most of this catalogue has one
-            picture, often a studio render, and "what does it really look
-            like?" is the question a careful buyer asks first. It opens
-            WhatsApp with that question already written - which is also how
-            the shops selling the same frames on Facebook work.
+            Left: "More pictures & videos" (Muaz's wording). Most of this
+            catalogue has one picture, often a studio render, and seeing more
+            of it is what a careful buyer asks for first. It opens WhatsApp
+            with the request already written - which is also how the shops
+            selling the same frames on Facebook work.
 
             Right: the dots (or a count, past MAX_DOTS) and the zoom. The zoom
             used to be a labelled button on the plinth; the pinch still works,
@@ -380,7 +381,7 @@ export default function Gallery({
               className="hover-btn pointer-events-auto mb-0.5 inline-flex min-h-11 items-center gap-2 rounded-pill bg-calico-50/95 px-3.5 text-caption font-semibold text-ink-900 no-underline shadow-e2"
             >
               <WhatsAppIcon className="h-4 w-4 shrink-0 text-whatsapp-dark" />
-              <span className="whitespace-nowrap">Real photos &amp; video</span>
+              <span className="whitespace-nowrap">More pictures &amp; videos</span>
             </a>
           ) : <span />}
 
@@ -532,7 +533,7 @@ export default function Gallery({
           className="hover-link mt-3 hidden min-h-11 items-center gap-2 text-body-sm font-semibold text-ink-900 no-underline md:inline-flex"
         >
           <WhatsAppIcon className="h-4 w-4 text-whatsapp-dark" />
-          Want real photos or a video of this sofa? Ask on WhatsApp
+          Want more pictures or videos of this sofa? Ask on WhatsApp
         </a>
       )}
 

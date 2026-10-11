@@ -21,7 +21,7 @@
 //
 // Four surfaces send these and they are written here together so they
 // cannot drift apart: the buy box's "talk to an agent", the made-to-order
-// panel, the floating button, and the "real photos" button on the gallery.
+// panel, the floating button, and "More pictures & videos" on the gallery.
 
 import { offerHoldLine, type OfferHold } from '@/utils/offers/deadline'
 
@@ -38,7 +38,7 @@ function gbp(amount: number): string {
 const POSTCODE_PROMPT = 'My postcode is:'
 
 /**
- * The ad offer's line, when the visitor has an open window and this sofa
+ * The online offer's line, when the visitor has an open window and this sofa
  * qualifies - placed just above the postcode so the blank stays last. In the
  * chat it is the deadline the shop honours: no later. See offers/deadline.
  */
@@ -56,7 +56,8 @@ export function productEnquiryMessage(title: string, price?: number | null, hold
 }
 
 /**
- * "Can I see the real thing?", from the button on the product photograph.
+ * "Can I see more of it?", from the "More pictures & videos" button on the
+ * product photograph.
  *
  * Most of the catalogue has one picture, often a studio render, and the
  * question a cautious buyer asks before anything else is what it really looks
@@ -65,7 +66,7 @@ export function productEnquiryMessage(title: string, price?: number | null, hold
  */
 export function photoRequestMessage(title: string, price?: number | null, hold?: OfferHold | null): string {
   const named = price ? `the ${title} (${gbp(price)})` : `the ${title}`
-  return `Hi, could you send me some real photos or a short video of ${named}?\n\n${withHold(hold)}${POSTCODE_PROMPT}`
+  return `Hi, could you send me more pictures or videos of ${named}?\n\n${withHold(hold)}${POSTCODE_PROMPT}`
 }
 
 /**

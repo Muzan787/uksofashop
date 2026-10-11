@@ -62,7 +62,7 @@ export async function GET() {
 
   return json({
     active: true,
-    source: data.source === 'google_ads' || data.source === 'meta_ads' || data.source === 'meta_catalog'
+    source: data.source === 'google_ads' || data.source === 'meta_ads' || data.source === 'meta_catalog' || data.source === 'site_visit'
       ? data.source
       : null,
     startedAt: data.started_at,

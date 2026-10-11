@@ -53,14 +53,14 @@ export interface OfferHold {
 /**
  * The line a WhatsApp enquiry or a reminder carries while the window is open:
  *
- *   My ad offer: £30 off with SOFAEXTRA, valid until Sun 12 Oct, 2:05pm
+ *   My online offer: £30 off with SOFAEXTRA, valid until Sun 12 Oct, 2:05pm
  *
  * In the chat it tells the shop the customer's real deadline - which is the
  * deadline to honour, no later.
  */
 export function offerHoldLine(hold: OfferHold | null | undefined, now = Date.now()): string | null {
   if (!isOpen(hold, now)) return null
-  return `My ad offer: £${Math.round(hold.amount)} off with ${OFFER_PUBLIC_CODE}, valid until ${formatOfferDeadline(hold.expiresAt)}`
+  return `My online offer: £${Math.round(hold.amount)} off with ${OFFER_PUBLIC_CODE}, valid until ${formatOfferDeadline(hold.expiresAt)}`
 }
 
 /**

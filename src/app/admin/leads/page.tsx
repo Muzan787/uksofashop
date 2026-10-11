@@ -210,7 +210,7 @@ export default async function AdminLeadsPage(props: { searchParams: SearchParams
                   </ul>
                 )}
 
-                {/* The ad offer, stated for the shop: open until when, or over.
+                {/* The online offer, stated for the shop: open until when, or over.
                     This is the deadline to honour in the chat, and no later -
                     the countdown the shopper saw is only true if it is. */}
                 {hold && (
@@ -218,8 +218,8 @@ export default async function AdminLeadsPage(props: { searchParams: SearchParams
                     hold.ended ? 'bg-zinc-100 text-zinc-500' : 'bg-orange-50 text-orange-700'
                   }`}>
                     {hold.ended
-                      ? `Ad offer (£${Math.round(hold.amount)}) ended ${formatOfferDeadline(hold.expiresAt)} - full price now`
-                      : `Ad offer: £${Math.round(hold.amount)} off until ${formatOfferDeadline(hold.expiresAt)}`}
+                      ? `Online offer (£${Math.round(hold.amount)}) ended ${formatOfferDeadline(hold.expiresAt)} - full price now`
+                      : `Online offer: £${Math.round(hold.amount)} off until ${formatOfferDeadline(hold.expiresAt)}`}
                   </p>
                 )}
 

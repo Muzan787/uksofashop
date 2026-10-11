@@ -112,7 +112,7 @@ interface ProductWhatsAppContext {
   productName: string;
   /** Published by ProductPageClient so this enquiry quotes the same figure. */
   price?: number;
-  /** The ad offer this sofa carries, in pounds; 0 when it has none. */
+  /** The online offer this sofa carries, in pounds; 0 when it has none. */
   offerAmount?: number;
 }
 
@@ -127,7 +127,7 @@ export default function WhatsAppFab() {
   const [productContext, setProductContext] = useState<ProductWhatsAppContext | null>(null);
   const supportOnly = routeIsSupport || checkoutHasOrder;
 
-  // A paid visitor's open window, quoted in a product enquiry the same way
+  // The visitor's open offer window, quoted in a product enquiry the same way
   // the buy box's agent link quotes it - figure and deadline.
   const offerWindow = useOffer();
   const offerHold = offerWindow.active && offerWindow.expiresAt && (productContext?.offerAmount ?? 0) > 0

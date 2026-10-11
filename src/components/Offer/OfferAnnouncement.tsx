@@ -1,7 +1,7 @@
 'use client'
 // src/components/Offer/OfferAnnouncement.tsx
 //
-// The announcement bar's line while a paid visitor's offer is open:
+// The announcement bar's line while the visitor's offer is open:
 // "Your offer ends in 47:12:05". Its own component so the second-by-second
 // tick re-renders these few words, not the whole header.
 //

@@ -402,7 +402,7 @@ export default function ProductPageClient({
   // WhatsApp - see utils/attribution/useWhatsAppCTA.ts - so a conversation
   // that becomes a sale can be linked back to this exact product/variant.
   //
-  // While a paid visitor's window is open and this sofa qualifies, each one
+  // While the visitor's offer window is open and this sofa qualifies, each one
   // also carries the offer and its deadline, so the chat says what the
   // customer was promised and until when.
   const offerWindow = useOffer();

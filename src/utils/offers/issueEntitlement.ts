@@ -1,10 +1,10 @@
 import { z } from 'zod'
 import { createAdminClient } from '@/utils/supabase/admin'
-import type { PaidOfferSource } from './constants'
+import type { OfferSource } from './constants'
 
 const issueSchema = z.object({
   token: z.string().uuid(),
-  source: z.enum(['google_ads', 'meta_ads', 'meta_catalog']),
+  source: z.enum(['google_ads', 'meta_ads', 'meta_catalog', 'site_visit']),
   started_at: z.string(),
   expires_at: z.string(),
   // Present from the 48-hour migration on. A missing value reads as "not
@@ -16,7 +16,7 @@ type IssuedOfferEntitlement = z.infer<typeof issueSchema>
 
 export async function issueOfferEntitlement(
   visitorId: string,
-  source: PaidOfferSource,
+  source: OfferSource,
   arrivalId: string | null,
 ): Promise<IssuedOfferEntitlement> {
   const admin = createAdminClient()
