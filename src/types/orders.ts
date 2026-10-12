@@ -34,6 +34,10 @@ export interface TrackedOrder {
   fee_assembly?: number
   wants_sofa_removal?: boolean
   fee_sofa_removal?: number
+  /** Distance delivery charge (Devon, Cornwall, far north of Scotland). 0 when free. */
+  fee_distance?: number
+  /** The band that charge belongs to, e.g. "Cornwall". */
+  delivery_region?: string | null
   sofa_removal_seats?: number | null
   /** YYYY-MM-DD the customer asked for at checkout, or null for as soon as possible. */
   preferred_delivery_date?: string | null
@@ -90,5 +94,7 @@ export interface ConfirmationOrder {
   wants_sofa_removal: boolean
   sofa_removal_seats: number | null
   fee_sofa_removal: number
+  fee_distance: number
+  delivery_region: string | null
   order_items: ConfirmationOrderItem[]
 }

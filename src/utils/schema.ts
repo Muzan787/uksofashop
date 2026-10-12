@@ -133,7 +133,7 @@ export function webSiteSchema() {
 // ─── Product ─────────────────────────────────────────────────────────────────
 
 /**
- * Free to UK Mainland, ground floor, 2-4 working days. The paid extras
+ * Free to most of UK Mainland, ground floor, 2-4 working days. The paid extras
  * (upstairs, assembly, old sofa removal) are deliberately not modelled here:
  * they're optional services chosen at checkout, not a shipping rate, and
  * putting them in shippingRate would misstate the delivery price.
@@ -146,7 +146,9 @@ function shippingDetails() {
     // the United Kingdom, which includes Northern Ireland - and NI, the Isle
     // of Man, the Channel Islands, the Scottish islands, the Isle of Wight and
     // the Isles of Scilly are all CUSTOM_QUOTE rather than free, per
-    // classifyDeliveryPostcode in src/utils/postcode.ts.
+    // classifyDeliveryPostcode in src/utils/postcode.ts. And since 2026-10-12
+    // Devon, Cornwall and the north of Scotland pay £40-£100 by postcode
+    // district (delivery_distance_fees) - the same overstatement, wider.
     //
     // schema.org can express the exclusion (a second OfferShippingDetails with
     // doesNotShip and a DefinedRegion of postalCodePrefix values), but whether
@@ -504,7 +506,7 @@ export function localBusinessSchema() {
     image: `${SITE_URL}/og-image.jpg`,
     parentOrganization: { '@id': `${SITE_URL}/#organization` },
     description:
-      'Furniture retailer in Blackburn selling sofas and recliners with free UK Mainland delivery and cash on delivery. Showroom visits by appointment.',
+      'Furniture retailer in Blackburn selling sofas and recliners with free delivery to most of the UK and cash on delivery. Showroom visits by appointment.',
     telephone: PHONE_E164,
     email: SUPPORT_EMAIL,
     priceRange: '££-£££',

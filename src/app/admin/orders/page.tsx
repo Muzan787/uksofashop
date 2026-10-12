@@ -474,6 +474,12 @@ export default async function AdminOrdersPage(props: { searchParams: SearchParam
                 <div className="flex items-start gap-3 pt-3 border-t border-stone-200">
                   <Truck className="w-4 h-4 text-stone-400 mt-0.5 shrink-0" />
                   <div className="text-sm space-y-1">
+                    {Number(order.fee_distance ?? 0) > 0 && (
+                      <p className="text-stone-700">
+                        <span className="font-semibold">Delivery{order.delivery_region ? ` to ${order.delivery_region}` : ''}</span>
+                        <span className="text-stone-500"> — £{Number(order.fee_distance).toFixed(2)} (distance from Blackburn)</span>
+                      </p>
+                    )}
                     {Number(order.fee_upstairs ?? 0) > 0 && (
                       <p className="text-stone-700">
                         <span className="font-semibold">Upstairs delivery</span>

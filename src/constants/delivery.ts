@@ -85,8 +85,13 @@ function upstairsFee(floor: number, hasLift: boolean): number {
 }
 
 interface DeliveryBreakdownLine {
-  /** 'agreed' is the one negotiated figure on a WhatsApp order, in place of the extras. */
-  key: 'upstairs' | 'assembly' | 'sofaRemoval' | 'agreed'
+  /**
+   * 'agreed' is the one negotiated figure on a WhatsApp order, in place of the
+   * extras. 'distance' is the delivery charge for Devon, Cornwall and the far
+   * north of Scotland (delivery_distance_fees), added once place_order has
+   * settled it.
+   */
+  key: 'upstairs' | 'assembly' | 'sofaRemoval' | 'agreed' | 'distance'
   label: string
   detail?: string
   amount: number
@@ -149,4 +154,4 @@ export function floorName(floor: number): string {
  * delivery charge before taking the order.
  */
 export const DELIVERY_AREA_NOTE =
-  'FREE delivery applies to UK Mainland. Northern Ireland, the Isle of Man, Channel Islands, Scottish islands, Isle of Wight, Isles of Scilly and other non-mainland destinations need a custom delivery quote first.'
+  'FREE delivery applies to most of UK Mainland (Devon, Cornwall and the north of Scotland pay £40 to £100). Northern Ireland, the Isle of Man, Channel Islands, Scottish islands, Isle of Wight, Isles of Scilly and other non-mainland destinations need a custom delivery quote first.'

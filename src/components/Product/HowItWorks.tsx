@@ -57,7 +57,7 @@ export default function HowItWorks({ estimate, madeToOrder }: {
             : 'A WhatsApp message to confirm your order, and a call to agree your delivery day.'}
         </Step>
 
-        <Step n={3} Icon={Truck} title="Delivered free — pay when it arrives">
+        <Step n={3} Icon={Truck} title="Free delivery to most of the UK — pay when it arrives">
           {isRoma ? (
             <span className="block text-ink-900">{ROMA_DELIVERY_NOTICE}</span>
           ) : (
@@ -72,6 +72,11 @@ export default function HowItWorks({ estimate, madeToOrder }: {
           {!isRoma && (
             <span className="mt-1 block text-caption">{PROMISES.delivery.timingException}</span>
           )}
+          {/* The exception to "free", said where the promise is made. The
+              exact figure for a postcode is in the check further down. */}
+          <span className="mt-1 block text-caption">
+            Devon, Cornwall and the north of Scotland pay £40–£100 - check your postcode below.
+          </span>
         </Step>
       </ol>
     </section>

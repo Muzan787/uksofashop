@@ -300,9 +300,9 @@ export default function EditOrderForm({
             value={delivery}
             onChange={e => setDelivery(e.target.value)}
           />
-          {(Number(order.fee_upstairs ?? 0) + Number(order.fee_assembly ?? 0) + Number(order.fee_sofa_removal ?? 0)) > 0 && (
+          {(Number(order.fee_upstairs ?? 0) + Number(order.fee_assembly ?? 0) + Number(order.fee_sofa_removal ?? 0) + Number(order.fee_distance ?? 0)) > 0 && (
             <p className="m-0 mt-1 text-[11px] leading-snug text-stone-500">
-              Currently itemised (upstairs, assembly, removal). Changing the figure replaces that with one agreed charge.
+              Currently itemised (distance, upstairs, assembly, removal). Changing the figure replaces that with one agreed charge.
             </p>
           )}
         </div>

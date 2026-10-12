@@ -71,7 +71,7 @@ export default function CoverageMap() {
           Where we deliver
         </h2>
         <p className="m-0 mt-1 text-body-sm leading-relaxed text-ink-500">
-          Free to every UK Mainland address, with no minimum order. How long it takes depends on
+          Free to most of the UK, with no minimum order; Devon, Cornwall and the north of Scotland pay £40 to £100. How long it takes depends on
           how far the van has to go.
         </p>
       </div>

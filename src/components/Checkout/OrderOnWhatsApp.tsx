@@ -63,6 +63,14 @@ interface OrderMessageContext {
   extras?: DeliveryOptions
   /** The day they asked for on the form, YYYY-MM-DD, if they chose one. */
   preferredDeliveryDate?: string
+  /**
+   * The distance delivery charge for the checked postcode, in pounds - 0 is
+   * free. Undefined until a postcode has been checked, and then nothing is
+   * said about delivery cost at all.
+   */
+  deliveryFee?: number
+  /** The band the charge belongs to ("Cornwall"), when there is one. */
+  deliveryRegion?: string | null
 }
 
 /**
@@ -99,6 +107,14 @@ function whatsAppOrderMessage(items: DisplayCartItem[], ctx: OrderMessageContext
 
   if (ctx.postcode && isValidUkPostcode(ctx.postcode)) {
     lines.push(`Postcode: ${normalisePostcode(ctx.postcode)}`)
+  }
+
+  // What the website quoted for delivery to that postcode, so the chat starts
+  // from the same figure.
+  if (typeof ctx.deliveryFee === 'number') {
+    lines.push(ctx.deliveryFee > 0
+      ? `Delivery: ${pounds(ctx.deliveryFee)}${ctx.deliveryRegion ? ` (${ctx.deliveryRegion})` : ''}`
+      : 'Delivery: free')
   }
 
   const extras = deliveryBreakdown(ctx.extras ?? NO_EXTRAS).lines

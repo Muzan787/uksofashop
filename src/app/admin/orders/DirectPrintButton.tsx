@@ -322,8 +322,8 @@ export default function DirectPrintButton({ order }: { order: AdminOrderDisplay 
                   <span style="font-weight: 600; color: #166534;">−£${Number(activeOrder.discount_amount).toFixed(2)}</span>
                 </div>` : ''}
                 <div class="summary-row">
-                  <span>Delivery (UK Mainland, ground floor)</span>
-                  <span style="font-weight: 600; color: #1c1917;">FREE</span>
+                  <span>Delivery (ground floor)${Number(activeOrder.fee_distance ?? 0) > 0 && activeOrder.delivery_region ? ` · ${activeOrder.delivery_region}` : ''}</span>
+                  <span style="font-weight: 600; color: #1c1917;">${Number(activeOrder.fee_distance ?? 0) > 0 ? `£${Number(activeOrder.fee_distance).toFixed(2)}` : 'FREE'}</span>
                 </div>
                 ${Number(activeOrder.fee_upstairs ?? 0) > 0 ? `
                 <div class="summary-row">

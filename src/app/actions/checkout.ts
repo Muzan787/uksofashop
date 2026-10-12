@@ -9,6 +9,7 @@ import {
 } from '@/constants/delivery'
 import { isValidUkMobile, UK_MOBILE_ERROR } from '@/utils/phone'
 import { resolveDeliveryPostcode } from '@/utils/postcode'
+import { distanceFeeFor } from '@/utils/deliveryFee'
 import {
   earliestPreferredDeliveryDate, formatPreferredDeliveryDate, isValidPreferredDeliveryDate,
 } from '@/utils/delivery'
@@ -126,6 +127,7 @@ async function orderCopyText(orderId: string): Promise<string | null> {
         id, created_at, customer_name, customer_email, customer_phone,
         shipping_address, items_subtotal, total_amount, discount_amount,
         promotion_code, fee_upstairs, fee_assembly, fee_sofa_removal,
+        fee_distance, delivery_region,
         sofa_removal_seats, preferred_delivery_date, special_instructions,
         order_items (
           id, variant_id, fabric_id, quantity, price_at_time_of_purchase,
@@ -151,14 +153,24 @@ interface PlacedOrder {
   discount_tier: string | null
   promotion_code: string | null
   offer_source: string | null
+  /** The distance delivery charge place_order added; 0 when free. */
+  fee_distance?: number | null
+  delivery_region?: string | null
   delivery_total: number
   total_amount: number
 }
 
 export type DeliveryCheckResult =
   | { status: 'invalid'; postcode: string; message: string }
-  | { status: 'mainland'; postcode: string }
+  /**
+   * fee: the distance delivery charge in pounds, 0 for free (within 250
+   * miles of Blackburn). region names the band when there is one. Read from
+   * the same table place_order totals with - see utils/deliveryFee.
+   */
+  | { status: 'mainland'; postcode: string; fee: number; region: string | null }
   | { status: 'custom_quote'; postcode: string }
+  /** The postcode was fine but the delivery charge could not be read. */
+  | { status: 'unavailable'; postcode: string; message: string }
 
 /**
  * Client-facing delivery decision. This is presentation only: placeOrder runs
@@ -178,9 +190,20 @@ export async function checkDeliveryPostcode(rawPostcode: string): Promise<Delive
     // fallback conservative in case a future classifier adds another mixed area.
     return { status: 'custom_quote', postcode: result.postcode }
   }
-  return result.zone === 'MAINLAND_STANDARD'
-    ? { status: 'mainland', postcode: result.postcode }
-    : { status: 'custom_quote', postcode: result.postcode }
+  if (result.zone !== 'MAINLAND_STANDARD') {
+    return { status: 'custom_quote', postcode: result.postcode }
+  }
+  try {
+    const { fee, region } = await distanceFeeFor(result.postcode)
+    return { status: 'mainland', postcode: result.postcode, fee, region }
+  } catch (err) {
+    console.error('Delivery fee lookup failed:', err)
+    return {
+      status: 'unavailable',
+      postcode: result.postcode,
+      message: 'We could not check delivery for that postcode just now. Please try again in a moment.',
+    }
+  }
 }
 
 /**
@@ -344,6 +367,17 @@ export async function placeOrder(
   const order = data as unknown as PlacedOrder
   const shortCode = order.id.substring(0, 8).toUpperCase()
   const breakdown = deliveryBreakdown(opts)
+  // The distance charge, as the database settled it, leads the delivery lines
+  // in the emails - so "Delivery to Cornwall £80" sits where "FREE" would.
+  const distanceFee = Number(order.fee_distance ?? 0)
+  if (distanceFee > 0) {
+    breakdown.lines.unshift({
+      key: 'distance',
+      label: `Delivery to ${order.delivery_region ?? 'your area'}`,
+      amount: distanceFee,
+    })
+    breakdown.total += distanceFee
+  }
 
   // Sent after the response goes back to the customer. The order is already
   // committed at this point, so a slow or unreachable mail server delays a

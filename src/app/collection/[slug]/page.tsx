@@ -65,7 +65,7 @@ export async function generateMetadata(props: { params: Params }): Promise<Metad
     const title = `${main.name} Collection`
     const description =
       main.standfirst ??
-      `Browse every range and design in the ${main.name} collection at UK Sofa Shop. Free UK Mainland delivery and cash on delivery available.`
+      `Browse every range and design in the ${main.name} collection at UK Sofa Shop. Free delivery to most of the UK and cash on delivery available.`
 
     // A collection with nothing in it must not be indexable.
     //
@@ -107,7 +107,7 @@ export async function generateMetadata(props: { params: Params }): Promise<Metad
   // somebody lands here rather than on a category listing.
   const description =
     `Every piece in the ${group.name} range, upholstered to match - sofas, corners and sets in one design. ` +
-    'Free UK Mainland delivery and cash on delivery.'
+    'Free delivery to most of the UK and cash on delivery.'
   const path = `/collection/${slug}`
 
   // Lead photo from the first product in the collection, so a shared link

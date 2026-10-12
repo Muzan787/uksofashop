@@ -373,6 +373,8 @@ export type Database = {
           offer_source: string | null
           fee_assembly: number
           fee_sofa_removal: number
+          fee_distance: number
+          delivery_region: string | null
           fee_upstairs: number
           id: string
           items_subtotal: number
@@ -434,6 +436,8 @@ export type Database = {
           offer_source?: string | null
           fee_assembly?: number
           fee_sofa_removal?: number
+          fee_distance?: number
+          delivery_region?: string | null
           fee_upstairs?: number
           id?: string
           items_subtotal?: number
@@ -493,6 +497,8 @@ export type Database = {
           offer_source?: string | null
           fee_assembly?: number
           fee_sofa_removal?: number
+          fee_distance?: number
+          delivery_region?: string | null
           fee_upstairs?: number
           id?: string
           items_subtotal?: number

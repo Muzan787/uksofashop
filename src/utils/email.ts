@@ -88,14 +88,15 @@ const totalsTable = (
     : '';
 
   // A WhatsApp order carries one agreed delivery figure rather than the
-  // website's free-plus-extras; printing "FREE" above it would contradict it.
-  const agreed = (breakdown?.lines ?? []).some(l => l.key === 'agreed');
+  // website's free-plus-extras, and a far-away website order carries its
+  // distance charge; printing "FREE" above either would contradict it.
+  const agreed = (breakdown?.lines ?? []).some(l => l.key === 'agreed' || l.key === 'distance');
 
   return `
     <table role="presentation" style="width: 100%; border-collapse: collapse; margin: 0;">
       ${row('Your order', `£${itemsSubtotal.toFixed(2)}`)}
       ${offer}
-      ${agreed ? '' : row('Delivery (UK Mainland, ground floor)', 'FREE')}
+      ${agreed ? '' : row('Delivery (ground floor)', 'FREE')}
       ${extras}
       <tr>
         <td style="padding: 12px 0 0 0; border-top: 1px solid #e7e5e4; color: #1c1917; font-size: 14px; font-weight: bold;">Total due on delivery</td>
@@ -1220,7 +1221,7 @@ export async function sendCheckoutReminder(
       </table>` : ''}
 
       <div style="margin: 20px 0; padding: 12px 14px; border-radius: 8px; background: #fef9f0; border: 1px solid #f5dfbd; color: #57534e; font-size: 13px; line-height: 1.5;">
-        <strong style="color:#1c1917;">Free UK Mainland ground-floor delivery</strong>
+        <strong style="color:#1c1917;">Free delivery to most of the UK</strong>
         <span style="color:#d6b47b;"> &nbsp;·&nbsp; </span>
         <strong style="color:#1c1917;">Pay on delivery</strong>
       </div>

@@ -19,7 +19,7 @@ import VideoStrip from '@/components/UI/VideoStrip'
  * page is the sort of drift nobody notices and nothing benefits from.
  */
 const DESCRIPTION =
-  'A Blackburn furniture shop selling sofas with free UK Mainland delivery and cash on delivery. Who we are and how we work.'
+  'A Blackburn furniture shop selling sofas with free delivery to most of the UK and cash on delivery. Who we are and how we work.'
 
 export const metadata: Metadata = pageMetadata({
   title: 'About Us',

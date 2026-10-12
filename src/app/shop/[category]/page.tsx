@@ -86,7 +86,7 @@ export async function generateMetadata(
   // category is merely untuned rather than broken.
   const description =
     copy?.description ??
-    `Shop ${name.toLowerCase()} at UK Sofa Shop. Free UK Mainland delivery and cash on delivery, ${PROMISES.delivery.timingMeta}.`
+    `Shop ${name.toLowerCase()} at UK Sofa Shop. Free delivery to most of the UK and cash on delivery, ${PROMISES.delivery.timingMeta}.`
 
   return {
     title,

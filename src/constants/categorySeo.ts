@@ -69,78 +69,78 @@ export const CATEGORY_COPY: Record<string, CategoryCopy> = {
   'corner-sofa': {
     title: 'Corner Sofas & Corner Settees',
     description:
-      'Corner sofas and corner settees for family rooms, with fabric shapes made in your own size and colour. Free UK Mainland delivery and cash on delivery.',
+      'Corner sofas and corner settees for family rooms, with fabric shapes made in your own size and colour. Free delivery to most of the UK and cash on delivery.',
     heading: 'Choosing a corner sofa',
     body: [
       'A corner sofa earns its place by seating more people in the same floor area than two separate sofas would, and by giving a room a defined edge instead of a gap behind the furniture. It is the shape most people end up with in a rectangular living room, and the shape most likely to be measured wrong.',
       'The measurement that matters is not the room. It is the doorway, the hallway and the turn at the bottom of the stairs, because a corner unit arrives in pieces but each piece is still the length of one arm. Our [size guide](/size-guide) has a calculator that takes your doorway width and tells you what goes through it, and it is worth two minutes before you order rather than after.',
       `Fabric corner sofas here are made to order, so the size can follow your room rather than the other way round, and the colour is yours to pick from the [${FABRIC_COLOUR_COUNT}-fabric library](/fabrics) - chenille, plush velvet, crushed velvet, naple, marble and PVC leather. Leather corners are stocked in set sizes and go out sooner.`,
-      `Every corner sofa is delivered free to a UK Mainland address, brought to the ground floor or a ground-floor room of your choice, and paid for in cash or by bank transfer on the doorstep. ${DELIVERY_TIMING} Nothing upfront. It carries a 1-year guarantee on the frame and springs.`,
+      `Every corner sofa is delivered free to most of the UK, brought to the ground floor or a ground-floor room of your choice, and paid for in cash or by bank transfer on the doorstep. ${DELIVERY_TIMING} Nothing upfront. It carries a 1-year guarantee on the frame and springs.`,
     ],
   },
 
   'fabric-sofa': {
     title: 'Fabric Sofas Made to Your Own Size',
     description:
-      `Fabric sofas made to order in your choice of ${FABRIC_COLOUR_COUNT} colours across chenille, velvet and more. Free UK Mainland delivery, ${DELIVERY_TIMING_META}.`,
+      `Fabric sofas made to order in your choice of ${FABRIC_COLOUR_COUNT} colours across chenille, velvet and more. Free delivery to most of the UK, ${DELIVERY_TIMING_META}.`,
     heading: 'About our fabric sofas',
     body: [
       'Our fabric sofas are made to order rather than pulled off a shelf, which means three things are yours to decide: the size, the shape and the cloth. If your alcove is 214cm and every sofa you have found is 220cm, that is a solvable problem here.',
       `There are ${FABRIC_COLOUR_COUNT} colours across ${FABRIC_COLLECTION_COUNT} fabrics, and they behave differently rather than just looking different. Chenille is the hard-wearing everyday choice with a soft, slightly nubby surface. Plush velvet has a deep even pile and reads as the expensive one. Crushed velvet catches the light and hides very little. Naple and marble carry their pattern in the weave itself. PVC leather wipes clean in seconds, which matters with small children. The [fabric library](/fabrics) explains each one properly and shows all ${FABRIC_COLOUR_COUNT} colours side by side.`,
       'Picking the cloth is part of ordering one of these, so the sofa is built to your specification and falls under the standard exemption from the 14-day right to change your mind - we cannot resell a sofa cut to your alcove in a colour you chose. The stocked ranges, sold in set sizes and finishes, carry the full 14 days. Faults are a separate matter entirely, and covered by the 1-year frame guarantee. The [delivery and returns page](/delivery-returns) sets out exactly where that line sits.',
-      `Delivery is free to UK Mainland and you pay cash or by bank transfer when it arrives. ${DELIVERY_TIMING} Fabric needs a little care to stay looking new; the [care guide](/care-guide) covers the first thirty seconds of a spill, which is the part that decides the outcome.`,
+      `Delivery is free to most of the UK and you pay cash or by bank transfer when it arrives. ${DELIVERY_TIMING} Fabric needs a little care to stay looking new; the [care guide](/care-guide) covers the first thirty seconds of a spill, which is the part that decides the outcome.`,
     ],
   },
 
   'leather-sofa': {
     title: 'Leather Sofas & Leather Sofa Sets',
     description:
-      'Leather sofas and 3+2 leather sofa sets that wipe clean in seconds. Free UK Mainland delivery, and you pay when it arrives on the doorstep.',
+      'Leather sofas and 3+2 leather sofa sets that wipe clean in seconds. Free delivery to most of the UK, and you pay when it arrives on the doorstep.',
     heading: 'Leather, and who it suits',
     body: [
       'Leather is the practical choice, which is not how it is usually sold. A spilled drink on leather is a cloth and ten seconds; on an untreated woven fabric it can be permanent. If you have young children, a dog, or a habit of eating on the sofa, this is the category to start in.',
       'Worth being precise about what "leather" means here, because the trade often is not. The Roma is real leather blended with fabric panels: a hide, so it takes marks where you sit and gets darker and softer there, and it wants conditioning every six to twelve months. The Nova, Orlando and Oxford ranges are tech leather - a coated synthetic that is breathable, scratch-resistant and wipes clean, holds its colour indefinitely, and should never be conditioned. Neither is better than the other; they suit different houses, which [fabric or leather](/journal/fabric-or-leather) works through properly.',
       'What leather asks in return is that you keep it away from five things that will ruin it - direct radiator heat, sunlight, baby wipes, household cleaning spray, and anything containing alcohol. The [care guide](/care-guide) names them and says what to use instead.',
-      `Most of the leather here is stocked in set sizes, and comes with the full 14-day right to change your mind; the faux-leather Oakland is made to order, and the product page says so. Delivery is free across UK Mainland, cash or bank transfer on the doorstep. ${DELIVERY_TIMING} A 1-year guarantee covers the frame and springs. Check the doorway first with the [size guide](/size-guide): a leather three-seater does not give under pressure the way a fabric one does.`,
+      `Most of the leather here is stocked in set sizes, and comes with the full 14-day right to change your mind; the faux-leather Oakland is made to order, and the product page says so. Delivery is free to most of the UK, cash or bank transfer on the doorstep. ${DELIVERY_TIMING} A 1-year guarantee covers the frame and springs. Check the doorway first with the [size guide](/size-guide): a leather three-seater does not give under pressure the way a fabric one does.`,
     ],
   },
 
   recliner: {
     title: 'Recliner Sofas & Reclining Sofa Sets',
     description:
-      'Recliner sofas, reclining armchairs and 3+2 recliner sets, manual and electric. Free UK Mainland delivery, and you pay cash when it arrives.',
+      'Recliner sofas, reclining armchairs and 3+2 recliner sets, manual and electric. Free delivery to most of the UK, and you pay cash when it arrives.',
     heading: 'Before you buy a recliner',
     body: [
       'The thing nobody mentions about recliners is the clearance behind them. A reclining back needs room to travel, and a recliner pushed flat against a wall is a recliner that does not recline. Leave a hand-width behind it at minimum, more on the deeper frames, and measure that gap before you commit to where it is going.',
       'Manual recliners work on a lever or a push through the back and need nothing but a floor. Electric recliners move at the touch of a button, hold any position on the way, and need a socket within reach - so they suit anyone who finds the manual push hard work, which is often the exact reason a recliner is being bought in the first place. Those are gathered separately under [electric recliners](/shop/electric-sofa).',
       'Recliners come as single armchairs and as [3+2 sets](/shop/3-2-seater) where the reclining seats are the two outer positions. In a set that is worth checking against your room, because the two ends are the seats that need the clearance and they are the ones nearest the walls.',
-      `Free delivery to UK Mainland, brought to a ground-floor room of your choice, paid in cash or by bank transfer on arrival. ${DELIVERY_TIMING} A 1-year guarantee covers the frame and springs. Upstairs delivery, assembly and taking your old sofa away are available as paid extras chosen at checkout - see [delivery and returns](/delivery-returns).`,
+      `Free delivery to most of the UK, brought to a ground-floor room of your choice, paid in cash or by bank transfer on arrival. ${DELIVERY_TIMING} A 1-year guarantee covers the frame and springs. Upstairs delivery, assembly and taking your old sofa away are available as paid extras chosen at checkout - see [delivery and returns](/delivery-returns).`,
     ],
   },
 
   'electric-sofa': {
     title: 'Electric Recliner Sofas',
     description:
-      'Electric recliner sofas and power reclining sofa sets, reclining at the touch of a button. Free UK Mainland delivery and cash on delivery.',
+      'Electric recliner sofas and power reclining sofa sets, reclining at the touch of a button. Free delivery to most of the UK and cash on delivery.',
     heading: 'How electric recliners differ',
     body: [
       'An electric recliner uses a motor rather than your own weight, so it goes back at the touch of a button and stops wherever you let go. That matters more than it sounds. A manual recliner needs a firm push through the back of the seat, and for anyone with a bad shoulder, a bad back, reduced grip, or simply less strength than they used to have, that push is the reason a manual one ends up never being used.',
       'The practical requirements are a socket within reach of where the sofa is going, and clearance behind the seat for the back to travel into. Both are easier to sort out before delivery day than after.',
       'The trade-off against a [manual recliner](/shop/recliner) is that there is a motor, a transformer and a handset, which is more to go wrong than a lever - and the price sits higher for the same size of sofa. In exchange you get positions a manual mechanism cannot hold, and a seat anyone in the house can operate.',
-      `Delivered free to UK Mainland and paid for in cash or by bank transfer when it arrives. ${DELIVERY_TIMING} The 1-year guarantee covers structural faults in the frame and springs. Measure the doorway first with the [size guide](/size-guide): powered frames carry their mechanism inside the seat and do not pack down as small as you might expect.`,
+      `Delivered free to most of the UK and paid for in cash or by bank transfer when it arrives. ${DELIVERY_TIMING} The 1-year guarantee covers structural faults in the frame and springs. Measure the doorway first with the [size guide](/size-guide): powered frames carry their mechanism inside the seat and do not pack down as small as you might expect.`,
     ],
   },
 
   '3-2-seater': {
     title: '3+2 Seater Sofa Sets',
     description:
-      'A three seater and a two seater together - the usual answer for a family living room. Free UK Mainland delivery and cash on delivery.',
+      'A three seater and a two seater together - the usual answer for a family living room. Free delivery to most of the UK and cash on delivery.',
     heading: 'Why a 3+2 rather than a corner',
     body: [
       'A 3+2 set is a three-seater and a two-seater bought together and upholstered to match. It seats five, and it is the arrangement most UK living rooms end up with, for a reason worth spelling out: two separate sofas can face each other, sit at right angles, or move to opposite walls, and they can be rearranged again next year. A [corner sofa](/shop/corner-sofa) commits you to one layout on the day it arrives.',
       'Two pieces are also easier to get into the house than one long L-shape, which is the single most common cause of a delivery that goes wrong. If your hallway has a tight turn or a narrow front door, a 3+2 is the safer shape - though it is still worth running both pieces through the calculator on the [size guide](/size-guide).',
       'What you give up is floor efficiency. Two arms sit in the middle of the room where a corner unit would have a continuous seat, so a 3+2 seats slightly fewer people in the same square metres and leaves less usable lounging length.',
-      `Fabric sets are made to order in your own size and any of the ${FABRIC_COLOUR_COUNT} colours in the [fabric library](/fabrics); leather sets are stocked in set sizes. Either way delivery is free to UK Mainland, both pieces are brought to a ground-floor room of your choice, and you pay cash or by bank transfer on the doorstep. ${DELIVERY_TIMING} A 1-year guarantee covers frame and springs on both pieces.`,
+      `Fabric sets are made to order in your own size and any of the ${FABRIC_COLOUR_COUNT} colours in the [fabric library](/fabrics); leather sets are stocked in set sizes. Either way delivery is free to most of the UK, both pieces are brought to a ground-floor room of your choice, and you pay cash or by bank transfer on the doorstep. ${DELIVERY_TIMING} A 1-year guarantee covers frame and springs on both pieces.`,
     ],
   },
 
@@ -155,26 +155,26 @@ export const CATEGORY_COPY: Record<string, CategoryCopy> = {
   'u-shaped-sofa': {
     title: 'U-Shaped Sofas & U-Shape Corner Sofas',
     description:
-      'U-shaped sofas that seat a whole family, made to order in your own size and any of 70 colours. Free UK Mainland delivery and cash on delivery.',
+      'U-shaped sofas that seat a whole family, made to order in your own size and any of 70 colours. Free delivery to most of the UK and cash on delivery.',
     heading: 'Choosing a U-shaped sofa',
     body: [
       'A U-shape is a long back with a return at each end, so it seats more people than a corner sofa of the same back length and it faces inward rather than along a wall. That second part is the reason to buy one: a U-shape makes the seating the room instead of lining the edge of it, which works in an open-plan space where there is no wall to push furniture against.',
       'It is also the shape that needs the most measuring, because it is three runs rather than two - the back and both returns - and the returns are what decide whether a doorway or a coffee table still works once it is in. Tape the whole footprint out on the floor before you order, and put the longest single piece through the calculator on the [size guide](/size-guide); a U-shape arrives in sections, but no section gets shorter than the back.',
       'Two versions, and the difference matters more than it looks. An armed U-shape has a full arm at each end, which gives you something to lean against and closes the shape off. An armless one leaves both returns open, so each end works as a chaise you can stretch out along and the whole thing reads lower and longer. Neither is better; they suit different rooms, and the product photographs show which is which.',
-      `Fabric U-shapes are made to order, so the size follows your room rather than the other way round, and the colour comes from the [70-fabric library](/fabrics) - chenille, plush velvet, crushed velvet, naple, marble and PVC leather. Delivery is free to any UK Mainland address, brought to the ground floor or a ground-floor room of your choice, and paid in cash or by bank transfer on the doorstep. ${DELIVERY_TIMING} A 1-year guarantee covers the frame and springs.`,
+      `Fabric U-shapes are made to order, so the size follows your room rather than the other way round, and the colour comes from the [70-fabric library](/fabrics) - chenille, plush velvet, crushed velvet, naple, marble and PVC leather. Delivery is free to most of the UK, brought to the ground floor or a ground-floor room of your choice, and paid in cash or by bank transfer on the doorstep. ${DELIVERY_TIMING} A 1-year guarantee covers the frame and springs.`,
     ],
   },
 
   all: {
     title: 'All Sofas',
     description:
-      'Every sofa we sell: corner sofas, fabric sofas, leather sofas, recliners and 3+2 sets. Free UK Mainland delivery, and you pay when it arrives at your door.',
+      'Every sofa we sell: corner sofas, fabric sofas, leather sofas, recliners and 3+2 sets. Free delivery to most of the UK, and you pay when it arrives at your door.',
     heading: 'Everything in one place',
     body: [
       'This is the whole catalogue, filterable by style, fabric, colour and price. If you already know the shape you want, the faster route is [corner sofas](/shop/corner-sofa), [3+2 sets](/shop/3-2-seater), [recliners](/shop/recliner), [electric recliners](/shop/electric-sofa), [fabric sofas](/shop/fabric-sofa) or [leather sofas](/shop/leather-sofa).',
       `Two decisions do most of the work. The first is fabric or leather: fabric is warmer to sit on, comes in ${FABRIC_COLOUR_COUNT} colours and can be made to your own size, while leather wipes clean in seconds and copes better with children and pets. The [fabric library](/fabrics) covers the first properly.`,
       'The second is whether it fits, and it is the one people skip. Almost every delivery that goes wrong goes wrong at the front door rather than in the room, and almost all of those were preventable with a tape measure. The [size guide](/size-guide) has a calculator for exactly this.',
-      `However you get there: free delivery to any UK Mainland address, brought to the ground floor or a ground-floor room of your choice, and paid for in cash or by bank transfer when it arrives rather than upfront. ${DELIVERY_TIMING} A 1-year guarantee covers the frame and springs. You can also see everything in person at the Blackburn [showroom](/showroom), by appointment.`,
+      `However you get there: free delivery to most of the UK, brought to the ground floor or a ground-floor room of your choice, and paid for in cash or by bank transfer when it arrives rather than upfront. ${DELIVERY_TIMING} A 1-year guarantee covers the frame and springs. You can also see everything in person at the Blackburn [showroom](/showroom), by appointment.`,
     ],
   },
 }

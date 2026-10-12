@@ -161,7 +161,7 @@ export default function CheckoutTelemetry() {
       const body = document.body.textContent ?? ''
       if (postcodeAttempt > postcodeResultAttempt) {
         let outcome: Meta['outcome'] | null = null
-        if (/FREE UK Mainland delivery to/i.test(body)) outcome = 'mainland_success'
+        if (/FREE delivery to|added to your total/i.test(body)) outcome = 'mainland_success'
         else if (/custom delivery quote|confirm delivery first/i.test(body)) outcome = 'custom_quote'
         else if (document.querySelector('[name="postcode"][aria-invalid="true"]')) outcome = 'invalid'
         if (outcome) {

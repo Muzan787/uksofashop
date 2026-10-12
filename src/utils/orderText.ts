@@ -89,6 +89,7 @@ export function formatOrderForCopy(order: AdminOrderDisplay): string {
     : 'Date unavailable'
 
   const extras = [
+    Number(order.fee_distance ?? 0) > 0 && `Delivery${order.delivery_region ? ` (${order.delivery_region})` : ''}: ${money(order.fee_distance)}`,
     Number(order.fee_upstairs ?? 0) > 0 && `Upstairs: ${money(order.fee_upstairs)}`,
     Number(order.fee_assembly ?? 0) > 0 && `Assembly: ${money(order.fee_assembly)}`,
     Number(order.fee_sofa_removal ?? 0) > 0 && `Removal${order.sofa_removal_seats ? ` (${order.sofa_removal_seats} seats)` : ''}: ${money(order.fee_sofa_removal)}`,

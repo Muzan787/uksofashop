@@ -361,6 +361,12 @@ function OrderCard({ order }: { order: AccountOrder }) {
                     <dd className="m-0 font-data tabular-nums text-sage-700">−£{order.discountAmount.toFixed(2)}</dd>
                   </div>
                 )}
+                {Math.max(0, (order.deliveryTotal ?? 0) - (order.feeUpstairs + order.feeAssembly + order.feeSofaRemoval)) > 0 && (
+                  <Line
+                    label="Delivery"
+                    value={Math.max(0, (order.deliveryTotal ?? 0) - (order.feeUpstairs + order.feeAssembly + order.feeSofaRemoval))}
+                  />
+                )}
                 {order.feeUpstairs > 0 && <Line label="Upstairs delivery" value={order.feeUpstairs} />}
                 {order.feeAssembly > 0 && <Line label="Assembly" value={order.feeAssembly} />}
                 {order.feeSofaRemoval > 0 && (

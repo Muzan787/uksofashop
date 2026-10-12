@@ -41,10 +41,26 @@ const TOC = [
 
 const CHARGES = [
   {
-    label: 'Delivery to UK Mainland, ground floor',
+    label: 'Delivery to most of the UK, ground floor',
     price: 'Free',
     note: 'No minimum order value',
     free: true,
+  },
+  // By distance from Blackburn - the figures in delivery_distance_fees.
+  {
+    label: 'Delivery to Devon or the Aberdeen area',
+    price: '£40',
+    note: 'Added at checkout from your postcode',
+  },
+  {
+    label: 'Delivery to Cornwall or the Scottish Highlands',
+    price: '£80',
+    note: 'Includes Inverness, Moray and North East Scotland beyond 250 miles',
+  },
+  {
+    label: 'Delivery to the far north of Scotland',
+    price: '£100',
+    note: 'Caithness and Sutherland, including Thurso and Wick',
   },
   {
     label: 'Upstairs delivery',
@@ -69,7 +85,7 @@ const CHARGES = [
 ]
 
 const FACTS = [
-  { icon: Truck, label: 'Free UK Mainland delivery' },
+  { icon: Truck, label: 'Free delivery to most of the UK' },
   { icon: Clock, label: PROMISES.delivery.timingShort },
   { icon: Wallet, label: 'Pay on delivery' },
   { icon: RotateCcw, label: '14 days to change your mind' },
@@ -106,10 +122,13 @@ export default function DeliveryReturnsPage() {
       <EditorialLayout toc={TOC}>
         <h2 id="delivery">Getting it to you</h2>
         <p>
-          Delivery is free to every UK Mainland address, with no minimum order value. Our drivers
-          bring your sofa to the ground floor, or to a ground-floor room of your choice. Most UK
-          Mainland orders arrive in two to four working days. Some Wales and Scotland postcodes
-          take five to seven working days.
+          Delivery is free to most of the UK, with no minimum order value. Our drivers bring your
+          sofa to the ground floor, or to a ground-floor room of your choice. The far ends of the
+          mainland pay by distance from our Blackburn showroom: £40 to Devon and the Aberdeen area,
+          £80 to Cornwall and the Scottish Highlands, and £100 to the far north of Scotland. The
+          exact figure for your postcode is shown on every product page and at checkout, before you
+          order. Most UK Mainland orders arrive in two to four working days. Some Wales and Scotland
+          postcodes take five to seven working days.
         </p>
         <p>
           Northern Ireland, the Isle of Man and the Scottish Islands sit outside that service. They

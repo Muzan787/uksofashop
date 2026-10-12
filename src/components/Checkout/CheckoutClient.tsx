@@ -25,7 +25,7 @@ import {
   setMetaIdentity,
   type TrackedItem,
 } from '@/utils/tracking'
-import { CANCELLATION, PROMISES } from '@/constants/promises'
+import { CANCELLATION, DELIVERY_CHARGE_NOTE, PROMISES } from '@/constants/promises'
 import { hasPersonalisedLine } from '@/utils/cancellationRights'
 import { buildSnapshot, describeBuild } from '@/types/build'
 import { isValidUkMobile, UK_MOBILE_ERROR } from '@/utils/phone'
@@ -215,16 +215,20 @@ function OrderSummary({
   extras = NO_EXTRAS,
   offer = null,
   deliveryStatus = null,
+  distance = null,
 }: {
   compact?: boolean
   extras?: DeliveryOptions
   offer?: OfferQuote | null
   deliveryStatus?: DeliveryCheckResult['status'] | null
+  /** The distance charge for the postcode checked, once there is one. */
+  distance?: { fee: number; region: string | null } | null
 }) {
   const { cartItems, totalAmount } = useCart()
   const { lines: extraLines, total: delivery } = deliveryBreakdown(extras)
   const discount = offer?.valid ? offer.discountAmount : 0
-  const grandTotal = Math.max(0, totalAmount - discount) + delivery
+  const distanceFee = distance?.fee ?? 0
+  const grandTotal = Math.max(0, totalAmount - discount) + delivery + distanceFee
   const quoteRequired = deliveryStatus === 'custom_quote'
 
   return (
@@ -317,12 +321,28 @@ function OrderSummary({
             </span>
           </div>
         )}
+        {/* Free to most of the UK; Devon, Cornwall and the far north of
+            Scotland pay by distance (utils/deliveryFee). Until a postcode is
+            checked the row says so, so the charge is never a surprise. */}
         <div className="flex justify-between gap-3 text-caption text-calico-300">
-          <span>{quoteRequired ? 'Delivery · Custom quote' : 'Delivery · UK Mainland'}</span>
-          <span className={`shrink-0 font-bold ${quoteRequired ? 'text-ember-300' : 'text-sage-300'}`}>
-            {quoteRequired ? 'TO CONFIRM' : 'FREE'}
+          <span className="min-w-0">
+            {quoteRequired
+              ? 'Delivery · Custom quote'
+              : distanceFee > 0
+                ? `Delivery · ${distance?.region ?? 'your area'}`
+                : distance
+                  ? 'Delivery'
+                  : 'Delivery · most of the UK'}
+          </span>
+          <span className={`font-data tnum shrink-0 font-bold ${quoteRequired ? 'text-ember-300' : distanceFee > 0 ? 'text-calico-50' : 'text-sage-300'}`}>
+            {quoteRequired ? 'TO CONFIRM' : distanceFee > 0 ? `£${distanceFee.toFixed(2)}` : 'FREE'}
           </span>
         </div>
+        {!quoteRequired && !distance && (
+          <p className="m-0 text-caption leading-relaxed text-calico-300/80">
+            {DELIVERY_CHARGE_NOTE}
+          </p>
+        )}
 
         {extraLines.map(line => (
           <div key={line.key} className="flex justify-between gap-3 text-caption text-calico-300">
@@ -349,7 +369,7 @@ function OrderSummary({
         <div className="mt-4 flex flex-col gap-2 border-t border-calico-50/[0.06] pt-4">
           {([
             [ShieldCheck, PROMISES.guarantee.short],
-            [Truck, quoteRequired ? 'Non-mainland delivery is confirmed by quote first' : PROMISES.delivery.long],
+            [Truck, quoteRequired ? 'Non-mainland delivery is confirmed by quote first' : PROMISES.delivery.short],
           ] as const).map(([Icon, text]) => (
             <div key={text} className="flex items-center gap-2">
               <Icon aria-hidden="true" className="h-3 w-3 shrink-0 text-ember-300" />
@@ -394,7 +414,8 @@ function DetailsStep({
   const madeToOrder = hasPersonalisedLine(cartItems)
   const extrasTotal = deliveryTotal(extras)
   const offerDiscount = offer?.valid ? offer.discountAmount : 0
-  const grandTotal = Math.max(0, totalAmount - offerDiscount) + extrasTotal
+  const distanceFee = deliveryCheck?.status === 'mainland' ? deliveryCheck.fee : 0
+  const grandTotal = Math.max(0, totalAmount - offerDiscount) + extrasTotal + distanceFee
   // The visitor's offer window, for the deadline the delivery-quote message
   // carries into WhatsApp.
   const offerWindow = useOffer()
@@ -602,8 +623,13 @@ function DetailsStep({
       if (currentDecision?.status === 'invalid') {
         setErrors(e => ({ ...e, postcode: currentDecision?.message || 'Please enter a valid UK postcode' }))
       }
+      if (currentDecision?.status === 'unavailable') setServerError(currentDecision.message)
       return
     }
+    // The total as the database will compute it - with the distance charge
+    // for the postcode just confirmed, which may not be the one the screen
+    // last rendered.
+    const expectedTotal = Math.max(0, totalAmount - offerDiscount) + extrasTotal + currentDecision.fee
 
     submitInFlight.current = true
     trackJourney('order_submit', {surface:'checkout',step:'delivery'})
@@ -622,7 +648,7 @@ function DetailsStep({
 
     const items = toOrderItems(cartItems)
     try {
-      const res = await placeOrder(fd, items, grandTotal, extras, appliedPromotionCode)
+      const res = await placeOrder(fd, items, expectedTotal, extras, appliedPromotionCode)
 
       if (res?.error) {
         trackJourney('order_submit_failed',{surface:'checkout',outcome:'failed',error_code:'server_error'})
@@ -672,6 +698,8 @@ function DetailsStep({
         postcode={form.postcode}
         extras={extras}
         preferredDeliveryDate={form.preferredDeliveryDate || undefined}
+        deliveryFee={deliveryCheck?.status === 'mainland' ? deliveryCheck.fee : undefined}
+        deliveryRegion={deliveryCheck?.status === 'mainland' ? deliveryCheck.region : undefined}
         pageContext="checkout_details_whatsapp_order"
       />
 
@@ -679,7 +707,7 @@ function DetailsStep({
         Delivery Information
       </div>
       <p className="mb-4 text-caption text-ink-500">
-        Delivered free to UK Mainland, ground floor. We&apos;ll call before arrival.
+        Free delivery to most of the UK, to the ground floor. We&apos;ll call before arrival.
       </p>
 
       {serverError && (
@@ -730,7 +758,7 @@ function DetailsStep({
             </button>
           </div>
           <p className="m-0 mt-1.5 text-[11px] leading-relaxed text-ink-500">
-            Enter your postcode and we&apos;ll check free mainland delivery and look for your address automatically. You can always type the full address below.
+            Enter your postcode and we&apos;ll check delivery to your area and look for your address automatically. You can always type the full address below.
           </p>
           {errors.postcode && <p className="mt-1 text-caption text-rust-700">{errors.postcode}</p>}
           {checkingDelivery && !errors.postcode && (
@@ -745,9 +773,14 @@ function DetailsStep({
             >
               <p className="m-0 flex items-center gap-2 overflow-hidden rounded-sm border border-sage-300 bg-sage-50 px-3 py-2 text-body-sm font-semibold text-sage-700">
                 <Check aria-hidden="true" className="h-4 w-4 shrink-0" />
-                FREE UK Mainland delivery to {confirmed}
+                {deliveryCheck.fee > 0
+                  ? <>Delivery to {confirmed} ({deliveryCheck.region}): £{deliveryCheck.fee.toFixed(0)}, added to your total</>
+                  : <>FREE delivery to {confirmed}</>}
               </p>
             </div>
+          )}
+          {deliveryCheck?.status === 'unavailable' && !checkingDelivery && (
+            <p className="m-0 mt-2 text-caption text-rust-700" aria-live="polite">{deliveryCheck.message}</p>
           )}
           {customQuote && !checkingDelivery && (
             <div className="mt-2 rounded-sm border border-calico-300 bg-calico-100 px-3 py-3" aria-live="polite">
@@ -866,7 +899,7 @@ function DetailsStep({
           <span className="flex items-center justify-between gap-3">
             <span>
               <span className="block text-body-sm font-bold text-ink-900">Need assembly, upstairs delivery or old-sofa removal?</span>
-              <span className="mt-1 block text-caption leading-relaxed text-ink-500">Free UK Mainland ground-floor delivery is already included.</span>
+              <span className="mt-1 block text-caption leading-relaxed text-ink-500">Ground-floor delivery is already included - free to most of the UK.</span>
             </span>
             <span className="shrink-0 font-data text-caption font-semibold uppercase tracking-wider text-ink-500">Optional</span>
           </span>
@@ -1315,7 +1348,7 @@ export default function CheckoutClient() {
           {step !== 'success' && cartItems.length > 0 && (
             <div className="hidden lg:block">
               <div className="sticky top-20">
-                <OrderSummary extras={extras} offer={effectiveOffer} deliveryStatus={deliveryCheck?.status} />
+                <OrderSummary extras={extras} offer={effectiveOffer} deliveryStatus={deliveryCheck?.status} distance={deliveryCheck?.status === 'mainland' ? deliveryCheck : null} />
               </div>
             </div>
           )}
@@ -1323,11 +1356,11 @@ export default function CheckoutClient() {
 
         {step !== 'success' && cartItems.length > 0 && (
           <MobileTotalBar
-            total={Math.max(0, totalAmount - effectiveDiscount) + deliveryTotal(extras)}
+            total={Math.max(0, totalAmount - effectiveDiscount) + deliveryTotal(extras) + (deliveryCheck?.status === 'mainland' ? deliveryCheck.fee : 0)}
             itemCount={cartItems.reduce((n, i) => n + i.quantity, 0)}
             quoteRequired={quoteRequired}
           >
-            <OrderSummary extras={extras} offer={effectiveOffer} deliveryStatus={deliveryCheck?.status} />
+            <OrderSummary extras={extras} offer={effectiveOffer} deliveryStatus={deliveryCheck?.status} distance={deliveryCheck?.status === 'mainland' ? deliveryCheck : null} />
           </MobileTotalBar>
         )}
       </div>

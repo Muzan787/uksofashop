@@ -13,7 +13,7 @@ import { staggerDelay } from '@/components/Motion/tokens';
 export const metadata: Metadata = pageMetadata({
   title: 'Collections',
   description:
-    'Imported recliners, made-to-order sofas, and what is coming next. Browse every part of the UK Sofa Shop range, with free UK Mainland delivery.',
+    'Imported recliners, made-to-order sofas, and what is coming next. Browse every part of the UK Sofa Shop range, with free delivery to most of the UK.',
   path: '/collection',
 });
 
@@ -69,7 +69,7 @@ export default async function CollectionsIndexPage() {
         current="Collections"
         path="/collection"
         updated="2026-09-18"
-        description="Imported recliners, made-to-order sofas, and what is coming next. Browse every part of the UK Sofa Shop range, with free UK Mainland delivery."
+        description="Imported recliners, made-to-order sofas, and what is coming next. Browse every part of the UK Sofa Shop range, with free delivery to most of the UK."
         crumbs={[
           { name: 'Home', path: '/' },
           { name: 'Shop', path: '/shop/all' },

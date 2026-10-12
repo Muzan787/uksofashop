@@ -66,7 +66,7 @@ function OfferContent({ amount, onCopied }: { amount: number | null; onCopied: (
       <div className="mt-4 flex flex-col gap-2 rounded-md border border-calico-300 bg-calico-100/60 p-3.5">
         <div className="flex items-center gap-2 text-body-sm font-semibold text-ink-900">
           <Truck aria-hidden="true" className="h-4 w-4 shrink-0 text-ember-700" />
-          FREE UK Mainland Delivery
+          FREE Delivery to Most of the UK
         </div>
         <div className="flex items-center gap-2 text-body-sm font-semibold text-ink-900">
           <Wallet aria-hidden="true" className="h-4 w-4 shrink-0 text-ember-700" />

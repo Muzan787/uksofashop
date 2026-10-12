@@ -101,8 +101,11 @@ export default function TermsPage() {
 
         <h2 id="delivery">4. Delivery</h2>
         <p>
-          Delivery is free to UK Mainland addresses with no minimum order value, to the ground
-          floor or a ground-floor room of your choice. Delivery dates are estimates. Delays
+          Delivery is free to most UK Mainland addresses with no minimum order value, to the ground
+          floor or a ground-floor room of your choice. Addresses far from our Blackburn showroom pay
+          a delivery charge by postcode district: £40 for Devon and the Aberdeen area, £80 for
+          Cornwall and the Scottish Highlands, and £100 for the far north of Scotland. Any charge is
+          shown before you order and is paid on delivery with the sofa. Delivery dates are estimates. Delays
           occasionally occur for reasons outside our control, and we will tell you about any
           significant one as soon as we know.
         </p>

@@ -20,7 +20,7 @@ export default function CashOnDeliveryExplained() {
         but our time.
       </p>
       <p>
-        Delivery to a UK Mainland address is free with no minimum order, and the sofa is brought to
+        Delivery to most of the UK is free with no minimum order, and the sofa is brought to
         the ground floor, or to a ground-floor room of your choice — not left on the drive.
       </p>
       <p>
@@ -71,7 +71,7 @@ export default function CashOnDeliveryExplained() {
 
       <h2 id="extras">The optional extras, and what they cost</h2>
       <p>
-        Standard delivery covers a UK Mainland ground floor and costs nothing. Anything beyond that
+        Standard delivery covers a ground floor and is free to most of the UK. Anything beyond that
         is chosen at checkout and added to what you pay on the day, so there are no surprises at
         the door:
       </p>

@@ -166,7 +166,7 @@ export async function generateMetadata(props: { params: Params }): Promise<Metad
   // was cut off mid-sentence. The full text still renders on the page.
   const description = metaDescription(
     product.description ||
-      `Buy the ${product.title} at UK Sofa Shop. Free UK Mainland delivery and cash on delivery available.`,
+      `Buy the ${product.title} at UK Sofa Shop. Free delivery to most of the UK and cash on delivery available.`,
   );
 
   // A 1200x630 card cut from the lead variant photo by Cloudinary, falling

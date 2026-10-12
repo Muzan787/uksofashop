@@ -297,7 +297,7 @@ export default async function ShowroomPage() {
                 Cannot get to Blackburn?
               </h2>
               <p className="m-0 mx-auto mt-3 max-w-[46ch] text-body-sm leading-relaxed text-calico-300">
-                The full range is online with free delivery across UK Mainland, and you pay only
+                The full range is online with free delivery to most of the UK, and you pay only
                 when your sofa is in the room.
               </p>
               <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">

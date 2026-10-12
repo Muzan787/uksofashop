@@ -21,7 +21,7 @@ export const faqGroups: FaqGroup[] = [
       },
       {
         q: 'Where do you deliver?',
-        a: 'We deliver across UK Mainland, and it’s free — there’s no minimum order value. Our drivers bring your sofa to the ground floor, or to a ground-floor room of your choice.',
+        a: 'We deliver across UK Mainland, and to most of it delivery is free — there’s no minimum order value. Devon and the Aberdeen area are £40, Cornwall and the Scottish Highlands £80, and the far north of Scotland £100; enter your postcode on any product page to see yours. Our drivers bring your sofa to the ground floor, or to a ground-floor room of your choice.',
       },
       {
         q: 'Do you deliver to Northern Ireland or the Scottish Islands?',

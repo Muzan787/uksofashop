@@ -5,24 +5,26 @@ import { useState } from 'react';
 import { Check, Loader2, Truck } from 'lucide-react';
 import { PROMISES } from '@/constants/promises';
 import { trackOperationalAction } from '@/utils/tracking';
-import {
-  classifyDeliveryPostcode,
-  lookupAddresses,
-  normalisePostcode,
-} from '@/utils/postcode';
+import { checkDeliveryPostcode } from '@/app/actions/checkout';
+import { classifyDeliveryPostcode, normalisePostcode } from '@/utils/postcode';
 
 type Result =
   | { kind: 'free'; postcode: string }
+  | { kind: 'charge'; postcode: string; fee: number; region: string | null }
   | { kind: 'offMainland'; postcode: string }
   | { kind: 'error'; message: string };
 
 /**
  * "When will it get here, and does it cost anything?"
  *
- * Phase D uses the same canonical delivery classification as checkout. Most
- * postcodes are deterministic from the postcode itself; the genuinely mixed
- * IV40 and PA34 districts are resolved from trusted postcode-lookup address
- * evidence rather than a crude district-wide block.
+ * Asks the checkout's own server action, so the answer here - free, a
+ * distance charge (£40-£100 for Devon, Cornwall and the far north of
+ * Scotland), or a custom quote - is the same one the checkout gives and the
+ * same figure place_order charges. The mixed IV40 and PA34 districts are
+ * resolved there from trusted postcode-lookup evidence, as before.
+ *
+ * A postcode that is plainly not one, or plainly an island, is answered here
+ * without a round trip.
  */
 export default function DeliveryEstimator() {
   const [value, setValue] = useState('');
@@ -34,7 +36,12 @@ export default function DeliveryEstimator() {
   function settle(next: Result) {
     setResult(next);
     trackOperationalAction('pdp_postcode_checked', {
-      metadata: { value: next.kind === 'free' ? 'free' : next.kind === 'offMainland' ? 'quote' : 'not_found' },
+      metadata: {
+        value: next.kind === 'free' ? 'free'
+          : next.kind === 'charge' ? `charge_${next.fee}`
+          : next.kind === 'offMainland' ? 'quote'
+          : 'not_found',
+      },
     });
   }
 
@@ -57,27 +64,18 @@ export default function DeliveryEstimator() {
     setResult(null);
 
     try {
-      const addresses = await lookupAddresses(postcode);
-      const resolved = classifyDeliveryPostcode(postcode, addresses);
-      if (resolved.kind === 'classified' && resolved.zone === 'CUSTOM_QUOTE') {
-        settle({ kind: 'offMainland', postcode });
+      const answer = await checkDeliveryPostcode(postcode);
+      if (answer.status === 'mainland') {
+        settle(answer.fee > 0
+          ? { kind: 'charge', postcode: answer.postcode, fee: answer.fee, region: answer.region }
+          : { kind: 'free', postcode: answer.postcode });
+      } else if (answer.status === 'custom_quote') {
+        settle({ kind: 'offMainland', postcode: answer.postcode });
       } else {
-        settle({ kind: 'free', postcode });
+        settle({ kind: 'error', message: answer.message });
       }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : '';
-      if (/not found|no addresses found/i.test(message)) {
-        settle({ kind: 'error', message: 'We could not find that postcode. Could you check it?' });
-      } else if (initial.kind === 'ambiguous') {
-        // Mixed mainland/island districts must fail toward a quote when the
-        // trusted lookup cannot resolve them.
-        settle({ kind: 'offMainland', postcode });
-      } else {
-        // For an otherwise deterministic mainland postcode, an outage in the
-        // address helper is our problem, not a reason to withdraw the existing
-        // mainland delivery promise.
-        settle({ kind: 'free', postcode });
-      }
+    } catch {
+      settle({ kind: 'error', message: 'We could not check that postcode just now. Please try again.' });
     } finally {
       setPending(false);
     }
@@ -125,13 +123,32 @@ export default function DeliveryEstimator() {
           <div className="mt-4 rounded-sm border border-sage-300 bg-sage-50 p-4">
             <p className="m-0 flex items-center gap-2 text-body-sm font-semibold text-sage-700">
               <Check aria-hidden="true" className="h-4 w-4 shrink-0" />
-              Free UK Mainland delivery to {result.postcode}
+              Free delivery to {result.postcode}
             </p>
             <p className="m-0 mt-2 text-body font-semibold text-ink-900">
               {PROMISES.delivery.timingLong}
             </p>
             <p className="m-0 mt-2 text-caption leading-relaxed text-ink-500">
-              {PROMISES.delivery.sub}. {PROMISES.payment.long}
+              Ground floor, or a ground-floor room of your choice. {PROMISES.payment.long}
+            </p>
+          </div>
+        )}
+
+        {result?.kind === 'charge' && (
+          <div className="mt-4 rounded-sm border border-calico-300 bg-calico-50 p-4">
+            <p className="m-0 flex items-start gap-2 text-body-sm font-semibold text-ink-900">
+              <Truck aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-ember-700" />
+              <span>
+                Delivery to {result.postcode}{result.region ? ` (${result.region})` : ''}:{' '}
+                <span className="font-data tabular-nums">£{result.fee.toFixed(0)}</span>
+              </span>
+            </p>
+            <p className="m-0 mt-2 text-body font-semibold text-ink-900">
+              {PROMISES.delivery.timingLong}
+            </p>
+            <p className="m-0 mt-2 text-caption leading-relaxed text-ink-500">
+              Delivery is free to most of the UK; the far ends of the mainland pay by distance from our
+              Blackburn showroom. It is added to your total at checkout and paid on delivery with the sofa.
             </p>
           </div>
         )}

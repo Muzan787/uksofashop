@@ -246,6 +246,15 @@ function Result({ order }: { order: TrackedOrder }) {
                   <span className="font-data tabular-nums text-sage-300">−£{discountAmount.toFixed(2)}</span>
                 </div>
               )}
+              {/* The distance charge (Devon, Cornwall, far north of Scotland)
+                  or a WhatsApp order's agreed figure: whatever the itemised
+                  extras do not cover, as the confirmation page shows it. */}
+              {Math.max(0, deliveryTotal - (Number(order.fee_upstairs ?? 0) + Number(order.fee_assembly ?? 0) + Number(order.fee_sofa_removal ?? 0))) > 0 && (
+                <Line
+                  label="Delivery"
+                  value={Math.max(0, deliveryTotal - (Number(order.fee_upstairs ?? 0) + Number(order.fee_assembly ?? 0) + Number(order.fee_sofa_removal ?? 0)))}
+                />
+              )}
               {Number(order.fee_upstairs ?? 0) > 0 && (
                 <Line
                   label={`Upstairs delivery${order.delivery_has_lift ? ' (lift)' : order.delivery_floor ? ` (${order.delivery_floor} up)` : ''}`}

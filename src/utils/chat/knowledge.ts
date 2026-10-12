@@ -30,7 +30,7 @@ import {
   UPSTAIRS_FIRST_FLOOR,
   UPSTAIRS_PER_EXTRA_FLOOR,
 } from '@/constants/delivery'
-import { PROMISES } from '@/constants/promises'
+import { DELIVERY_CHARGE_NOTE, PROMISES } from '@/constants/promises'
 import {
   ADDRESS_LINE,
   OPENING_HOURS,
@@ -308,6 +308,7 @@ function renderPrompt(catalogue: string | null, fabrics: string | null): string 
 # Promises
 
 - Delivery: ${PROMISES.delivery.long} ${PROMISES.delivery.timingLong} No minimum order.
+- Delivery charges by distance from Blackburn, by postcode district: ${DELIVERY_CHARGE_NOTE} Everywhere else on UK Mainland is free. If asked about a specific place, say which band it is likely in and that the postcode check on any product page, or checkout, gives the exact figure.
 - Delivery area: ${DELIVERY_AREA_NOTE} The team still delivers to those places - it is quoted individually on WhatsApp before the order is placed.
 - Payment: ${PROMISES.payment.long} Cash or bank transfer at the door. No deposit, no card payments, no finance.
 - Optional extras, chosen at checkout and paid on delivery: upstairs delivery from £${UPSTAIRS_FIRST_FLOOR} (first floor, or any floor with a lift) plus £${UPSTAIRS_PER_EXTRA_FLOOR} per extra floor without a lift; assembly in the room £${ASSEMBLY_FEE}; old sofa removal £${SOFA_REMOVAL_PER_SEAT} per seat (count every seat we collect, so a 3-seater is £${SOFA_REMOVAL_PER_SEAT * 3}), confirmed before delivery for unusually large items. Extras cannot be added on the day.

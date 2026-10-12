@@ -50,7 +50,11 @@ const GOOGLE_PRODUCT_CATEGORY = '460'
  * and Northern Ireland, the Isle of Man, the Channel Islands, the Scottish
  * islands, the Isle of Wight and the Isles of Scilly are all CUSTOM_QUOTE at
  * checkout rather than free - see classifyDeliveryPostcode in
- * src/utils/postcode.ts, which is what place_order actually enforces.
+ * src/utils/postcode.ts, which is what place_order actually enforces. Since
+ * 2026-10-12 Devon and the Aberdeen area also pay £40, Cornwall and the
+ * Scottish Highlands £80, and the far north of Scotland £100, by postcode
+ * district (delivery_distance_fees) - those rates need adding to Merchant
+ * Centre's shipping settings as postcode groups as well.
  *
  * g:shipping can only ADD a rate for a region; the feed specification has no
  * way to exclude one. The exclusion therefore has to be set in Merchant

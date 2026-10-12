@@ -14,11 +14,16 @@
 // framework-agnostic and can also be used in metadata and email.
 
 export const PROMISES = {
+  // Free to most of the UK since 2026-10-12, not to every mainland address:
+  // Devon, Cornwall and the north of Scotland pay by distance from
+  // Blackburn (DELIVERY_CHARGE_NOTE, utils/deliveryFee). Muaz wanted the free
+  // delivery promise kept everywhere, and it is - worded "most of the UK" so
+  // it stays true for the customers who now pay.
   delivery: {
     label: 'Free Delivery',
-    sub: 'UK Mainland, ground floor',
-    short: 'Free UK Mainland delivery',
-    long: 'Free delivery to UK Mainland addresses, brought to the ground floor or a ground-floor room of your choice.',
+    sub: 'Most of the UK, ground floor',
+    short: 'Free delivery to most of the UK',
+    long: 'Free delivery to most of the UK, brought to the ground floor or a ground-floor room of your choice.',
     timingShort: 'Most UK Mainland: 2–4 working days',
     /**
      * The timing clause as it reads inside a meta description, where
@@ -63,9 +68,18 @@ export const PROMISES = {
   },
 } as const
 
+/**
+ * Where delivery is not free, in one sentence. Shown wherever "free delivery
+ * to most of the UK" is said with room for the detail - before a postcode is
+ * known - so the charge is never a surprise at the end of checkout. The
+ * figures are delivery_distance_fees'; keep the two in step.
+ */
+export const DELIVERY_CHARGE_NOTE =
+  'Devon and the Aberdeen area £40; Cornwall and the Scottish Highlands £80; the far north of Scotland £100 - shown when you enter your postcode.'
+
 /** Rotating strip at the very top of the site. */
 export const ANNOUNCEMENTS = [
-  'Free Delivery to UK Mainland',
+  'Free Delivery to Most of the UK',
   'Fabric Sofas Made to Your Own Size and Colour',
   'Pay Cash or by Bank Transfer on Delivery',
   'Most UK Mainland Orders: 2-4 Working Days',
@@ -110,4 +124,4 @@ export const CANCELLATION = {
 
 /** Shared meta description, used by the root layout and the manifest. */
 export const META_DESCRIPTION =
-  'Luxury sofas with free delivery across UK Mainland and cash on delivery available. 1-year frame guarantee. Shop corner sofas, fabric sofas, recliners and more.'
+  'Luxury sofas with free delivery to most of the UK and cash on delivery available. 1-year frame guarantee. Shop corner sofas, fabric sofas, recliners and more.'

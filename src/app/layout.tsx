@@ -136,7 +136,7 @@ export const metadata: Metadata = {
     siteName: 'UK Sofa Shop',
     url: '/',
     title: "UK Sofa Shop | Sofas with Cash on Delivery",
-    description: "Sofas delivered free across UK Mainland, and you pay only when they arrive.",
+    description: "Sofas delivered free to most of the UK, and you pay only when they arrive.",
     // Dimensions and type declared so a scraper can size the card before it
     // has fetched the file - that is what gets a large preview in WhatsApp
     // rather than a thumbnail, or nothing at all.
@@ -145,7 +145,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'UK Sofa Shop | Sofas with Cash on Delivery',
-    description: 'Sofas delivered free across UK Mainland, and you pay only when they arrive.',
+    description: 'Sofas delivered free to most of the UK, and you pay only when they arrive.',
     images: ['/og-image.jpg'],
   },
   appleWebApp: {

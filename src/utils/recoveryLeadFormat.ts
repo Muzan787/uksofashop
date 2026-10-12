@@ -134,7 +134,7 @@ export function recoveryReminderMessage(basket: unknown, reference?: string | nu
     '',
     ...lines.map((l) => `• ${customerLine(l)}`),
     '',
-    'Free UK Mainland ground-floor delivery · Pay on delivery.',
+    'Free delivery to most of the UK · Pay on delivery.',
     ...(offer ? ['', offer] : []),
     '',
     "If you'd like to go ahead, we can confirm availability and delivery, or answer anything you'd like to check first." + ref,
