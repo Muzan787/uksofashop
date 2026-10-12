@@ -75,7 +75,7 @@ async function orderDb() {
     insert into products values ('aaaaaaaa-0000-4000-8000-000000000001', 649, true, false);
     insert into product_variants values ('${VARIANT}', 'aaaaaaaa-0000-4000-8000-000000000001', 0);`)
   for (const m of ['20261010190333_offer_fixed_48_hour_window.sql', '20261011212054_offer_for_every_visitor.sql',
-                   '20261012122909_delivery_distance_fees.sql', '20261012122910_place_order_distance_fee.sql']) {
+                   '20261012122909_delivery_distance_fees.sql', '20261012125526_place_order_distance_fee.sql']) {
     await pg.exec(fs.readFileSync(path.join(__dirname, '../supabase/migrations/' + m), 'utf8'))
   }
   return pg
