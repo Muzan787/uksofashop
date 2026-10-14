@@ -291,7 +291,9 @@ test('every admin time reads in UK and Pakistan time', () => {
 
 test('no admin page formats a time by itself', () => {
   const files = [...walk('src/app/admin'), ...walk('src/components/Admin')]
-    .filter(f => !f.endsWith('DirectPrintButton.tsx')) // the printed invoice is the customer's document
+    // The printed invoice and the driver's delivery note are paper for the
+    // customer's door: one UK date, no clock.
+    .filter(f => !f.endsWith('DirectPrintButton.tsx') && !f.endsWith('DeliveryNote.tsx'))
   const offenders = files.filter(f => /toLocale(?:Date|Time)?String\([^)]*(?:hour|timeZone)|new Intl\.DateTimeFormat/.test(read(f)))
   assert.deepEqual(offenders, [])
 })

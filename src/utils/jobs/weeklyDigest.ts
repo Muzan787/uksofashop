@@ -10,6 +10,11 @@
 // most. Each figure carries the previous week beside it, so a change made
 // on a Tuesday can be read on the Monday after without anyone asking.
 //
+// And (admin upgrade Q5) the orders confirmed that week and their value, by
+// where they came from - Meta split by campaign and ad, Google, WhatsApp,
+// phone, direct - real orders only, leaving out any since cancelled. The
+// rules are in utils/digestSources.ts.
+//
 // Read straight from the first-party ledger (attribution_sessions,
 // attribution_actions, orders, whatsapp_enquiries) with the service role,
 // because the job has no user session and those tables have no public
@@ -24,6 +29,7 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import { sendWeeklyDigest, type DigestWeek } from '@/utils/email'
 import type { JobOutcome } from '@/utils/jobRuns'
 import type { Json } from '@/types/supabase'
+import { summariseConfirmed } from '@/utils/digestSources'
 
 const DAY_MS = 24 * 60 * 60 * 1000
 
@@ -70,7 +76,7 @@ async function readWeek(db: Db, from: Date, to: Date): Promise<DigestWeek> {
   const f = from.toISOString()
   const t = to.toISOString()
 
-  const [rows, productViews, addToCart, checkoutStarted, callTaps, orders, enquiries] = await Promise.all([
+  const [rows, productViews, addToCart, checkoutStarted, callTaps, orders, enquiries, confirmed] = await Promise.all([
     allSessions(db, f, t),
     countActions(db, f, t, 'product_view'),
     countActions(db, f, t, 'add_to_cart'),
@@ -87,7 +93,16 @@ async function readWeek(db: Db, from: Date, to: Date): Promise<DigestWeek> {
       .select('id', { count: 'exact', head: true })
       .gte('created_at', f)
       .lt('created_at', t),
+    // Confirmed that week, whenever placed. A week holds tens, not thousands.
+    db
+      .from('orders')
+      .select('total_amount, source, channel, manual_acquisition_source, utm_source, utm_campaign, utm_content, fbclid, meta_fbc, gclid, gbraid, wbraid')
+      .eq('is_test', false)
+      .neq('status', 'cancelled')
+      .gte('confirmed_at', f)
+      .lt('confirmed_at', t),
   ])
+  if (confirmed.error) throw confirmed.error
   const landedFromMeta = rows.filter(r => /[?&]fbclid=/i.test(r.landing_page ?? ''))
   const landedFromGoogle = rows.filter(r => /[?&](gclid|gbraid|wbraid)=/i.test(r.landing_page ?? ''))
   // The touch cookies are only written once the cookie question is answered
@@ -125,6 +140,7 @@ async function readWeek(db: Db, from: Date, to: Date): Promise<DigestWeek> {
     whatsappTaps: enquiries.count ?? 0,
     callTaps,
     topLandingPages,
+    confirmed: summariseConfirmed(confirmed.data ?? []),
   }
 }
 

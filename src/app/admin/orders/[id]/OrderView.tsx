@@ -88,7 +88,7 @@ function banner(sp: Record<string, string | undefined>, order: { customer_name: 
     case 'review': return { tone: 'ok', text: 'Review email sent.' }
   }
   const errors: Record<string, string> = {
-    'cancel-reason': "Give a reason to cancel - it goes in the customer's email.",
+    'cancel-reason': "Give a reason to cancel. It is kept on the order and goes in its WhatsApp message.",
     bad_status_change: "That status change isn't allowed. A cancelled order can only be reopened as Confirmed, and a confirmed order can't go back to waiting.",
     reason_required: 'Reopening a cancelled order needs a reason.',
     stage_time_locked: "A stage time can't be changed once it has been recorded.",
@@ -377,6 +377,13 @@ export default function OrderView({ order, events, sends, reviewLinks, pickers, 
         <div className="flex flex-wrap gap-2">
           <CopyOrderButton order={order} />
           <DirectPrintButton order={order} />
+          {/* H1: the driver's note, beside the invoice, which is unchanged. */}
+          <Link
+            href={`/admin/orders/${order.id}/delivery-note`}
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-sm bg-stone-100 px-4 py-2.5 text-sm font-bold text-stone-700 transition hover:bg-stone-200"
+          >
+            <Truck className="h-4 w-4" aria-hidden="true" /> Delivery note
+          </Link>
           {status !== 'cancelled' && <EditOrderForm order={order} variants={pickers.variants} fabrics={pickers.fabrics} />}
         </div>
       </section>
@@ -598,7 +605,7 @@ export default function OrderView({ order, events, sends, reviewLinks, pickers, 
                 {corrections.map(s => <option key={s} value={s}>{ADMIN_STATUS_LABEL[s]}</option>)}
               </select>
               <label htmlFor="correct-reason" className="block text-xs font-bold uppercase tracking-wider text-stone-500">
-                Reason {status === 'cancelled' ? '(needed to reopen)' : '(needed to cancel - it goes in the customer’s email)'}
+                Reason {status === 'cancelled' ? '(needed to reopen)' : '(needed to cancel; kept on the order and used in its WhatsApp message)'}
               </label>
               <input id="correct-reason" name="reason" maxLength={500} className={field} placeholder={status === 'cancelled' ? 'Why it is being reopened' : 'Why it is being cancelled'} />
               <ConfirmSubmit className={darkButton} question="Change this order's status?">Change status</ConfirmSubmit>

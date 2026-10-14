@@ -38,6 +38,7 @@ import { SAMPLE_FEE } from '@/constants/swatches';
 import { SITE_URL } from '@/constants/site';
 import { createRecoveryOptOutToken } from '@/utils/recoveryToken';
 import { createAdminClient } from '@/utils/supabase/admin';
+import type { ConfirmedSummary } from '@/utils/digestSources';
 
 /**
  * Escapes a value before it goes into an email's HTML.
@@ -1362,6 +1363,8 @@ export interface DigestWeek {
   whatsappTaps: number
   callTaps: number
   topLandingPages: { path: string; count: number }[]
+  /** Orders confirmed that week, by where they came from (admin upgrade Q5). */
+  confirmed: ConfirmedSummary
 }
 
 export async function sendWeeklyDigest(
@@ -1410,6 +1413,26 @@ export async function sendWeeklyDigest(
         </tr>`).join('')
     : '<tr><td style="padding: 5px 0; color: #a8a29e; font-size: 13px;">No Meta landings recorded.</td></tr>'
 
+  // Confirmed orders by where they came from: every source either week had,
+  // then Meta's campaigns and ads, most orders last week first.
+  const both = (a: { orders: number; value: number } | undefined) => a ? `${n(a.orders)} · ${money(a.value)}` : '0'
+  const sourceRows = week.confirmed.bySource
+    .map(s => ({ now: s, prev: before.confirmed.bySource.find(b => b.key === s.key) }))
+    .filter(({ now, prev }) => now.orders > 0 || (prev?.orders ?? 0) > 0)
+    .map(({ now, prev }) => row(esc(now.label), both(now), both(prev), delta(now.orders, prev?.orders ?? 0)))
+    .join('')
+  const adKey = (a: { campaign: string; ad: string }) => `${a.campaign}\u0000${a.ad}`
+  const adRows = [
+    ...week.confirmed.metaAds,
+    ...before.confirmed.metaAds.filter(b => !week.confirmed.metaAds.some(a => adKey(a) === adKey(b))).map(b => ({ ...b, orders: 0, value: 0 })),
+  ]
+    .slice(0, 10)
+    .map(a => {
+      const prev = before.confirmed.metaAds.find(b => adKey(b) === adKey(a))
+      return row(`<span style="color:#78716c;">↳</span> ${esc(a.campaign)} <span style="color:#a8a29e;">·</span> ${esc(a.ad)}`, both(a.orders ? a : undefined), both(prev), delta(a.orders, prev?.orders ?? 0))
+    })
+    .join('')
+
   const content = `
     <div style="text-align: left;">
       <div style="display: inline-block; background-color: #fef9f0; color: #d4871a; padding: 6px 14px; border-radius: 6px; font-weight: bold; font-size: 11px; margin-bottom: 20px; letter-spacing: 0.1em; text-transform: uppercase;">
@@ -1425,6 +1448,14 @@ export async function sendWeeklyDigest(
           <td style="padding: 4px 8px; color: #a8a29e; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; text-align: right;">Before</td>
           <td style="padding: 4px 0 4px 8px; color: #a8a29e; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; text-align: right;">Change</td>
         </tr>
+
+        ${section('Confirmed orders')}
+        ${row('Confirmed', n(week.confirmed.orders), n(before.confirmed.orders), delta(week.confirmed.orders, before.confirmed.orders), 'real orders, not since cancelled')}
+        ${row('Their value', money(week.confirmed.value), money(before.confirmed.value), delta(Math.round(week.confirmed.value), Math.round(before.confirmed.value)))}
+
+        ${section('Where confirmed orders came from')}
+        ${sourceRows || row('<span style="color:#a8a29e;">No confirmed orders either week.</span>', '', '', '')}
+        ${adRows ? `${section('Meta, by campaign and ad')}${adRows}` : ''}
 
         ${section('Traffic')}
         ${row('Sessions', n(week.sessions), n(before.sessions), delta(week.sessions, before.sessions))}

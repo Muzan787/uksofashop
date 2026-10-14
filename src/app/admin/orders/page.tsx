@@ -27,7 +27,7 @@ const OPEN = new Set(['pending_cod', 'confirmed', 'processing', 'shipped'])
 /** The newest matches a search shows; more than this and the search is too broad. */
 const SEARCH_LIMIT = 200
 
-type SearchParams = Promise<{ status?: string; page?: string; q?: string; ref?: string; deleted?: string; error?: string }>
+type SearchParams = Promise<{ status?: string; page?: string; q?: string; ref?: string; new?: string; deleted?: string; error?: string }>
 
 export default async function AdminOrdersPage(props: { searchParams: SearchParams }) {
   const supabase = await createClient()
@@ -113,6 +113,7 @@ export default async function AdminOrdersPage(props: { searchParams: SearchParam
       counts={counts}
       tiles={tiles}
       pickers={pickers}
+      openForm={sp.new === '1'}
       reference={(sp.ref ?? '').replace(/[^A-Za-z0-9-]/g, '').slice(0, 40)}
       deleted={(sp.deleted ?? '').replace(/[^A-Za-z0-9]/g, '').slice(0, 8).toUpperCase()}
       error={Boolean(sp.error)}

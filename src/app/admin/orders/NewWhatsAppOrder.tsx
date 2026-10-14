@@ -58,14 +58,17 @@ export default function NewWhatsAppOrder({
   variants,
   fabrics,
   initialReference = '',
+  initialOpen = false,
 }: {
   variants: PickerVariant[]
   fabrics: PickerFabric[]
   /** A WhatsApp enquiry's reference (?ref= on the orders page): opens the form with it filled in. */
   initialReference?: string
+  /** Opened from Home's "Take a WhatsApp or phone order" (?new=1). */
+  initialOpen?: boolean
 }) {
   const router = useRouter()
-  const [open, setOpen] = useState(Boolean(initialReference))
+  const [open, setOpen] = useState(initialOpen || Boolean(initialReference))
   const [channel, setChannel] = useState<'whatsapp' | 'phone'>('whatsapp')
   const [isTest, setIsTest] = useState(false)
   const [pending, setPending] = useState(false)

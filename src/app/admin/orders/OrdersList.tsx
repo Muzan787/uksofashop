@@ -58,13 +58,15 @@ export interface OrdersListProps {
   pickers: { variants: PickerVariant[]; fabrics: PickerFabric[] }
   /** A WhatsApp reference to open the new-order form with (?ref=). */
   reference: string
+  /** Open the new-order form straight away (?new=1, from Home). */
+  openForm: boolean
   /** The code of an order just deleted, for the banner. */
   deleted: string
   error: boolean
 }
 
 export default function OrdersList({
-  orders, total, overall, status, q, searchTooBroad, page, lastPage, counts, tiles, pickers, reference, deleted, error,
+  orders, total, overall, status, q, searchTooBroad, page, lastPage, counts, tiles, pickers, reference, openForm, deleted, error,
 }: OrdersListProps) {
   const href = (s: string, p = 1) => {
     const params = new URLSearchParams()
@@ -95,7 +97,7 @@ export default function OrdersList({
         </div>
       )}
 
-      <NewWhatsAppOrder variants={pickers.variants} fabrics={pickers.fabrics} initialReference={reference} />
+      <NewWhatsAppOrder variants={pickers.variants} fabrics={pickers.fabrics} initialReference={reference} initialOpen={openForm} />
 
       {/* D2: at-a-glance workload. Operational counts, not ad reporting; test orders are left out. */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
