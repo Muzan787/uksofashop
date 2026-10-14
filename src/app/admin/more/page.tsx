@@ -6,7 +6,7 @@ import type { Metadata } from 'next'
 // On a desktop the sidebar already lists everything, but the page works there
 // too.
 import Link from 'next/link'
-import { ChevronRight, Clapperboard, LogOut, Palette, Radio, Route, Star, Tags, type LucideIcon } from 'lucide-react'
+import { Activity, ChevronRight, Clapperboard, LogOut, Palette, Radio, Route, Star, Tags, type LucideIcon } from 'lucide-react'
 import { createClient } from '@/utils/supabase/server'
 import { logout } from '@/app/actions/auth'
 import { ADMIN_SECTIONS, MORE_SECTION_KEYS, type AdminSectionKey } from '@/utils/adminNav'
@@ -22,6 +22,7 @@ const ICONS: Partial<Record<AdminSectionKey, LucideIcon>> = {
   swatches: Palette,
   videos: Clapperboard,
   categories: Tags,
+  status: Activity,
 }
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
@@ -72,6 +73,7 @@ export default async function AdminMorePage() {
       : { text: 'Nothing to post', waiting: false },
     videos: { text: `${plural(videos.count ?? 0, 'video', 'videos')} on the site`, waiting: false },
     categories: { text: plural(categories.count ?? 0, 'category', 'categories'), waiting: false },
+    status: { text: 'Is everything working?', waiting: false },
   }
 
   const sections = MORE_SECTION_KEYS

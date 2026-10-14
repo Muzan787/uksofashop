@@ -23,6 +23,7 @@
 // is send the owner an email.
 
 import { NextResponse } from 'next/server'
+import { withJobRun } from '@/utils/jobRuns'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { sendWeeklyDigest, type DigestWeek } from '@/utils/email'
 
@@ -135,7 +136,10 @@ async function readWeek(db: Db, from: Date, to: Date): Promise<DigestWeek> {
   }
 }
 
-export async function GET(request: Request) {
+// Each authorised run is recorded in job_runs for the Status page.
+export const GET = (request: Request) => withJobRun('weekly-digest', request, run)
+
+async function run(request: Request) {
   const secret = process.env.CRON_SECRET
   if (!secret) {
     console.error('CRON_SECRET is not set - weekly digest refused to run')

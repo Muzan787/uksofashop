@@ -418,11 +418,35 @@ wins.
 15. **Ad links page:** build it.
 16. **Product types:** no change; build on the current tables.
 
-**Only Muaz can do:**
-- set `TRACKING_ENV=production` on Hostinger;
-- turn on Supabase leaked-password protection;
-- after Phase 1, switch the Cloudinary product upload preset to Signed;
-- after Phase 4, set up UptimeRobot (steps provided then).
+### Muaz's end list
+
+Muaz does every one of these in one go after the last phase (15 Oct 2026).
+Each phase adds what it creates here, instead of asking him mid-phase. When
+he asks, give them as numbered steps with exact clicks.
+
+1. Hostinger → environment variables: add `TRACKING_ENV=production`.
+   Then `VERCEL_ENV` can go. (From the health check, Oct 2026.)
+2. Supabase → Authentication → Passwords: turn on leaked-password
+   protection.
+3. Cloudinary → Settings → Upload → Upload presets → `products`: set
+   Signing mode to Signed. (Phase 1 already signs every upload, so this
+   is safe at any time.)
+4. Decide whether to stop Google/Meta tracking scripts loading on admin
+   pages. The recommendation is yes, together with "exclude this device"
+   in Phase 11. (Phase 2.)
+5. UptimeRobot: add the monitor for `/api/health` (Phase 4 writes the
+   steps).
+6. Google Ads offline conversions. Confirmed WhatsApp sales reach Google
+   Ads through a Google Sheet, but copying them into the Sheet has only
+   ever run once, by hand, on 2 Oct, and 19 sales are waiting (Status
+   shows this red). Decide: copy them by hand again, or let a later phase
+   automate it. Automating needs a Google service account that can edit
+   the Sheet. (Phase 3.)
+7. OrderFlow (optional; it's the OrderFlow app, not this shop). Its
+   `ingest-order` function sometimes fails on a cold start with "JWT
+   issued at future", which is a clock-timing hiccup. The same order is
+   accepted on the next 15-minute re-send, so nothing is lost; fixing it
+   in OrderFlow would stop the amber notes on Status. (Phase 3.)
 
 ---
 

@@ -13,6 +13,7 @@
 // email, so it cannot be left open.
 
 import { NextResponse } from 'next/server'
+import { withJobRun } from '@/utils/jobRuns'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { sendReviewRequest } from '@/utils/email'
 import { createReviewToken } from '@/utils/reviewToken'
@@ -30,7 +31,10 @@ function unauthorised() {
   return NextResponse.json({ error: 'Not authorised' }, { status: 401 })
 }
 
-export async function GET(request: Request) {
+// Each authorised run is recorded in job_runs for the Status page.
+export const GET = (request: Request) => withJobRun('review-requests', request, run)
+
+async function run(request: Request) {
   const secret = process.env.CRON_SECRET
   if (!secret) {
     console.error('CRON_SECRET is not set - review request cron refused to run')

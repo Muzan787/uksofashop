@@ -8,7 +8,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, ShoppingCart, Package, Tags, LogOut, Star, Palette, UsersRound,
-  Clapperboard, Radio, Route, Ellipsis, type LucideIcon,
+  Clapperboard, Radio, Route, Ellipsis, Activity, type LucideIcon,
 } from 'lucide-react'
 import { logout } from '@/app/actions/auth'
 import {
@@ -27,6 +27,7 @@ const SECTION_ICONS: Record<AdminSectionKey, LucideIcon> = {
   reviews: Star,
   swatches: Palette,
   videos: Clapperboard,
+  status: Activity,
 }
 
 const TAB_ICONS: Record<PhoneTabKey, LucideIcon> = {

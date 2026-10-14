@@ -11,7 +11,7 @@
     "social:lut": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/social/ember-lut.ts",
     "social:outro": "node --env-file-if-exists=.env --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/social/render-outro.ts",
     "test:tracking": "node --test scripts/tracking-audit-regression.test.cjs scripts/tracking-integration.test.cjs scripts/offer-window.test.cjs scripts/delivery-fee.test.cjs",
-    "test:admin": "node --test scripts/admin-access.test.cjs"
+    "test:admin": "node --test scripts/admin-access.test.cjs scripts/health-checks.test.cjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.125.0",

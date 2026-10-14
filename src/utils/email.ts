@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer';
 import type { DeliveryBreakdown } from '@/constants/delivery';
+import type { Json } from '@/types/supabase';
 import { whatsAppLink } from '@/utils/phone';
 import { trustpilotInviteBcc, trustpilotInviteLink } from '@/constants/trustpilot';
 import { formatPreferredDeliveryDate } from '@/utils/delivery';
@@ -36,6 +37,7 @@ import { SAMPLE_FEE } from '@/constants/swatches';
 // production origin instead. See src/constants/site.ts.
 import { SITE_URL } from '@/constants/site';
 import { createRecoveryOptOutToken } from '@/utils/recoveryToken';
+import { createAdminClient } from '@/utils/supabase/admin';
 
 /**
  * Escapes a value before it goes into an email's HTML.
@@ -238,7 +240,66 @@ function htmlToText(html: string): string {
  *   sent, which is exactly the silent failure a Bcc to Trustpilot's
  *   invitation service would produce.
  */
-async function deliver(mail: Mail) {
+async function deliver(mail: Mail, log: EmailLogInfo) {
+  try {
+    const info = await send(mail)
+    await logEmail(log, mail, 'sent', { messageId: info?.messageId })
+    return info
+  } catch (err) {
+    await logEmail(log, mail, 'failed', { error: err })
+    throw err
+  }
+}
+
+/** What the email log records about a send, beyond the message itself. */
+interface EmailLogInfo {
+  /** What this email is, e.g. 'order-confirmation', 'order-status-delivered'. */
+  kind: string
+  /** The order's full id, when the sender has it. */
+  orderId?: string | null
+  /** The 8-character code, when that is all the sender has. */
+  orderRef?: string | null
+  /** Small facts worth keeping, e.g. { trustpilot: true }. */
+  meta?: Record<string, unknown>
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/**
+ * One row in email_log for every send, failure or skip (admin upgrade Q1).
+ *
+ * Written with the service role after the send has been decided, and never
+ * allowed to throw: a slow or broken log costs a row, not an email. The
+ * Status page reads these rows to say whether email is working.
+ */
+async function logEmail(
+  log: EmailLogInfo,
+  mail: { to?: Mail['to']; subject?: Mail['subject'] } | null,
+  status: 'sent' | 'failed' | 'skipped',
+  extra: { messageId?: string; error?: unknown } = {},
+): Promise<void> {
+  try {
+    const orderId = log.orderId && UUID.test(log.orderId) ? log.orderId : null
+    const { error } = await createAdminClient().from('email_log').insert({
+      kind: log.kind,
+      order_id: orderId,
+      order_ref: log.orderRef ?? (orderId ? orderId.slice(0, 8).toUpperCase() : null),
+      recipient: mail?.to ? String(mail.to).slice(0, 320) : null,
+      subject: mail?.subject ? String(mail.subject).slice(0, 300) : null,
+      status,
+      provider_message_id: extra.messageId ?? null,
+      error: extra.error === undefined ? null
+        : (extra.error instanceof Error ? extra.error.message : String(extra.error)).slice(0, 1000),
+      meta: (log.meta ?? {}) as Json,
+    })
+    if (error) console.error('[email] could not write the email log:', error.message)
+  } catch (err) {
+    console.error('[email] could not write the email log:', err instanceof Error ? err.message : err)
+  }
+}
+
+/** Every template sends through deliver(); this is the transport part of it. */
+async function send(mail: Mail) {
   const bcc = withOwnerCopy(mail.to, mail.cc, mail.bcc)
   const message: nodemailer.SendMailOptions = {
     from: sender(),
@@ -452,7 +513,7 @@ export async function sendOrderConfirmation(
     to: email,
     subject: `Please confirm your order (#${shortCode})`,
     html: generateEmailHTML(content),
-  });
+  }, { kind: 'order-confirmation', orderId: fullOrderId });
 }
 
 // 4. Admin: New Order Notification (With WhatsApp Integration)
@@ -478,7 +539,10 @@ export async function sendAdminOrderNotification(
   copyText: string | null = null,
 ) {
   const adminEmail = process.env.ADMIN_EMAIL;
-  if (!adminEmail) return;
+  if (!adminEmail) {
+    await logEmail({ kind: 'admin-new-order', orderId: fullOrderId }, null, 'skipped', { error: 'ADMIN_EMAIL is not set' });
+    return;
+  }
 
   // null when the number is not a UK mobile, so the button is hidden rather
   // than rendered as a dead link.
@@ -547,7 +611,7 @@ Once it is confirmed we will ring you to arrange delivery.`,
     to: adminEmail,
     subject: `Action Required: New Order Received (#${shortCode})`,
     html: generateEmailHTML(content),
-  });
+  }, { kind: 'admin-new-order', orderId: fullOrderId });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -576,7 +640,10 @@ export async function sendAdminOrderConfirmedNotification(
   preferredDeliveryDate: string | null = null,
 ) {
   const adminEmail = process.env.ADMIN_EMAIL;
-  if (!adminEmail) return;
+  if (!adminEmail) {
+    await logEmail({ kind: 'admin-order-confirmed', orderRef: shortCode }, null, 'skipped', { error: 'ADMIN_EMAIL is not set' });
+    return;
+  }
 
   const siteUrl = SITE_URL;
   const firstName = (customerName || '').trim().split(/\s+/)[0] || 'there';
@@ -631,7 +698,7 @@ export async function sendAdminOrderConfirmedNotification(
     to: adminEmail,
     subject: `Confirmed: ${customerName} confirmed order #${shortCode} — ring to arrange delivery`,
     html: generateEmailHTML(content),
-  });
+  }, { kind: 'admin-order-confirmed', orderRef: shortCode });
 }
 
 // 5. Admin: Review Moderation Notification
@@ -642,7 +709,10 @@ export async function sendAdminReviewNotification(
   imageUrl: string | null
 ) {
   const adminEmail = process.env.ADMIN_EMAIL;
-  if (!adminEmail) return;
+  if (!adminEmail) {
+    await logEmail({ kind: 'admin-new-review' }, null, 'skipped', { error: 'ADMIN_EMAIL is not set' });
+    return;
+  }
 
   const content = `
     <div style="text-align: left;">
@@ -675,7 +745,7 @@ export async function sendAdminReviewNotification(
     to: adminEmail,
     subject: `New Review Requires Approval (${rating} Stars)`,
     html: generateEmailHTML(content),
-  });
+  }, { kind: 'admin-new-review' });
 }
 
 // 6. Admin: Contact Form Notification
@@ -708,7 +778,7 @@ export async function sendContactNotification(
     replyTo: email,
     subject: `Support Request: ${esc(name)}${orderNumber ? ` (#${esc(orderNumber)})` : ''}`,
     html: generateEmailHTML(content),
-  });
+  }, { kind: 'contact-form' });
 }
 
 // Add to the bottom of src/utils/email.ts
@@ -788,7 +858,7 @@ export async function sendOrderStatusUpdate(
     ...(inviteBcc ? { bcc: inviteBcc } : {}),
     subject: `Update: ${esc(currentConfig.title)} (#${shortCode})`,
     html: generateEmailHTML(content),
-  });
+  }, { kind: `order-status-${status}`, orderId, meta: inviteBcc ? { trustpilot: true } : {} });
 
   return { trustpilotInvited: Boolean(inviteBcc) };
 }
@@ -801,7 +871,10 @@ export async function sendAdminOrderStatusNotification(
   status: string
 ) {
   const adminEmail = process.env.ADMIN_EMAIL;
-  if (!adminEmail) return;
+  if (!adminEmail) {
+    await logEmail({ kind: `admin-order-status-${status}`, orderRef: shortCode }, null, 'skipped', { error: 'ADMIN_EMAIL is not set' });
+    return;
+  }
 
 
   // Generate a dynamic WhatsApp message based on the status
@@ -864,7 +937,7 @@ export async function sendAdminOrderStatusNotification(
     to: adminEmail,
     subject: `Notify Customer: Order ${title} (#${shortCode})`,
     html: generateEmailHTML(content),
-  });
+  }, { kind: `admin-order-status-${status}`, orderRef: shortCode });
 }
 // ─────────────────────────────────────────────────────────────────────────────
 // 9. Newsletter: double opt-in confirmation
@@ -905,7 +978,7 @@ export async function sendNewsletterConfirmation(email: string, confirmToken: st
     to: email,
     subject: 'Please confirm your subscription',
     html: generateEmailHTML(content),
-  });
+  }, { kind: 'newsletter-confirm' });
 }
 
 /**
@@ -1004,7 +1077,7 @@ export async function sendReviewRequest(
     to: email,
     subject: `How is your new sofa, ${firstName}?`,
     html: generateEmailHTML(content),
-  })
+  }, { kind: 'review-request', orderRef: shortCode })
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1067,7 +1140,7 @@ export async function sendSwatchConfirmation(
     to: email,
     subject: 'Your fabric samples',
     html: generateEmailHTML(content),
-  })
+  }, { kind: 'swatch-confirmation' })
 }
 
 export async function sendAdminSwatchNotification(
@@ -1126,7 +1199,7 @@ export async function sendAdminSwatchNotification(
     replyTo: email,
     subject: `Swatches: ${esc(swatchCodes(items))} to ${esc(postcode)}`,
     html: generateEmailHTML(content),
-  })
+  }, { kind: 'admin-swatch-request' })
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1262,7 +1335,7 @@ export async function sendCheckoutReminder(
     subject: recoveryReminderEmail(basket, reference, hold).subject,
     text: recoveryReminderEmail(basket, reference, hold).body,
     html: generateEmailHTML(content),
-  })
+  }, { kind: 'checkout-reminder', meta: leadId ? { lead: leadId } : {} })
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1390,5 +1463,5 @@ export async function sendWeeklyDigest(
     bcc: [OWNER_GMAIL],
     subject: `Weekly digest: ${title} - ${week.websiteOrders + week.whatsappOrders} orders, ${week.metaLandings} Meta landings`,
     html: generateEmailHTML(content),
-  })
+  }, { kind: 'weekly-digest' })
 }

@@ -41,6 +41,99 @@ export type Database = {
         }
         Relationships: []
       }
+      email_log: {
+        Row: {
+          created_at: string
+          error: string | null
+          id: number
+          kind: string
+          meta: Json
+          order_id: string | null
+          order_ref: string | null
+          provider_message_id: string | null
+          recipient: string | null
+          status: string
+          subject: string | null
+        }
+        Insert: {
+          created_at?: string
+          error?: string | null
+          id?: never
+          kind: string
+          meta?: Json
+          order_id?: string | null
+          order_ref?: string | null
+          provider_message_id?: string | null
+          recipient?: string | null
+          status: string
+          subject?: string | null
+        }
+        Update: {
+          created_at?: string
+          error?: string | null
+          id?: never
+          kind?: string
+          meta?: Json
+          order_id?: string | null
+          order_ref?: string | null
+          provider_message_id?: string | null
+          recipient?: string | null
+          status?: string
+          subject?: string | null
+        }
+        Relationships: []
+      }
+      job_runs: {
+        Row: {
+          detail: Json | null
+          finished_at: string | null
+          id: number
+          job: string
+          started_at: string
+          status: string
+        }
+        Insert: {
+          detail?: Json | null
+          finished_at?: string | null
+          id?: never
+          job: string
+          started_at?: string
+          status?: string
+        }
+        Update: {
+          detail?: Json | null
+          finished_at?: string | null
+          id?: never
+          job?: string
+          started_at?: string
+          status?: string
+        }
+        Relationships: []
+      }
+      feed_fetches: {
+        Row: {
+          feed: string
+          fetched_at: string
+          fetcher: string
+          id: number
+          item_count: number | null
+        }
+        Insert: {
+          feed: string
+          fetched_at?: string
+          fetcher: string
+          id?: never
+          item_count?: number | null
+        }
+        Update: {
+          feed?: string
+          fetched_at?: string
+          fetcher?: string
+          id?: never
+          item_count?: number | null
+        }
+        Relationships: []
+      }
       checkout_recovery_leads: {
         Row: {
           arrival_id: string
@@ -1385,6 +1478,7 @@ export type Database = {
       }
       is_admin: { Args: never; Returns: boolean }
       claim_admin: { Args: never; Returns: boolean }
+      admin_status_snapshot: { Args: never; Returns: Json }
       /** Reads an order for /confirm-order/[id]. Confirms nothing. */
       order_for_confirmation: {
         Args: { p_order_id: string }

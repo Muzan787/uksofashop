@@ -263,6 +263,7 @@ test('the phone bar has five tabs and More stays lit on its sections', () => {
     '/admin/swatches': 'more',
     '/admin/videos': 'more',
     '/admin/categories': 'more',
+    '/admin/status': 'more',
   }
   for (const [pathname, tab] of Object.entries(cases)) assert.equal(nav.activePhoneTab(pathname), tab, pathname)
   // Every section is reachable on a phone: a tab of its own, or behind More.
@@ -305,5 +306,26 @@ test('the admin names every status in its own words', () => {
   assert.equal(adminStatusLabel('something_new'), 'something new')
   for (const f of [...walk('src/app/admin'), ...walk('src/components/Admin')]) {
     assert.doesNotMatch(read(f), /status[^\n]*\.replace\('_', ' '\)/, `${f} prints a raw status`)
+  }
+})
+
+// ── 5. Email log and job runs (Phase 3) ───────────────────────────────────
+
+test('every email the site sends is labelled for the email log', () => {
+  const src = read('src/utils/email.ts')
+  const sends = src.match(/^ {2}await deliver\(\{$/gm) ?? []
+  const labelled = src.match(/^ {2}\}, \{ kind: /gm) ?? []
+  assert.ok(sends.length >= 13, `found ${sends.length} sends`)
+  assert.equal(labelled.length, sends.length, 'a deliver() call has no kind')
+  // The transport is reached only through deliver(), which logs.
+  assert.equal((src.match(/transporter\.sendMail\(/g) ?? []).length, 2, 'only send() calls the transport')
+  assert.match(src, /async function deliver\(mail: Mail, log: EmailLogInfo\)/)
+})
+
+test('every scheduled job records its runs', () => {
+  for (const job of ['review-requests', 'recovery-cleanup', 'weekly-digest']) {
+    const src = read(`src/app/api/cron/${job}/route.ts`)
+    assert.ok(src.includes(`export const GET = (request: Request) => withJobRun('${job}', request, run)`), job)
+    assert.doesNotMatch(src, /export async function GET/, `${job} has a second, unrecorded GET`)
   }
 })

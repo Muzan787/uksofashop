@@ -3,6 +3,8 @@ import type { Metadata } from 'next'
 import { createClient } from '@/utils/supabase/server'
 import { ShoppingBag, PackagePlus, ArrowRight, MessageCircle } from 'lucide-react'
 import Link from 'next/link'
+import HealthCard from '@/components/Admin/HealthCard'
+import { loadHealthReport } from '@/utils/health/loadHealth'
 
 
 export const metadata: Metadata = { title: 'Overview' }
@@ -53,6 +55,9 @@ export default async function AdminDashboardPage() {
     .eq('status', 'active')
   const leadsWaiting = leadCount ?? 0
 
+  // The same report the Status page shows; the card lists only what isn't green.
+  const health = await loadHealthReport(supabase)
+
   return (
     <div className="space-y-6 lg:space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
       
@@ -90,6 +95,8 @@ export default async function AdminDashboardPage() {
           <p className="text-2xl lg:text-3xl font-bold text-zinc-900">{productCount || 0}</p>
         </div>
       </div>
+
+      <HealthCard report={health} />
 
       {/* Quick Actions - Ergonomic touch targets for mobile */}
       <div>

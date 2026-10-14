@@ -11,7 +11,7 @@
 
 export type AdminSectionKey =
   | 'home' | 'orders' | 'meta' | 'leads' | 'journeys'
-  | 'inventory' | 'categories' | 'reviews' | 'swatches' | 'videos'
+  | 'inventory' | 'categories' | 'reviews' | 'swatches' | 'videos' | 'status'
 
 export interface AdminSection {
   key: AdminSectionKey
@@ -31,6 +31,7 @@ export const ADMIN_SECTIONS: AdminSection[] = [
   { key: 'reviews',    href: '/admin/reviews',    label: 'Reviews' },
   { key: 'swatches',   href: '/admin/swatches',   label: 'Swatches' },
   { key: 'videos',     href: '/admin/videos',     label: 'Videos' },
+  { key: 'status',     href: '/admin/status',     label: 'Status' },
 ]
 
 export type PhoneTabKey = 'home' | 'orders' | 'leads' | 'catalogue' | 'more'
@@ -57,7 +58,7 @@ export const MORE_HREF = '/admin/more'
 
 /** The sections reached through More on a phone, in the More page's order. */
 export const MORE_SECTION_KEYS: AdminSectionKey[] = [
-  'meta', 'journeys', 'reviews', 'swatches', 'videos', 'categories',
+  'meta', 'journeys', 'reviews', 'swatches', 'videos', 'categories', 'status',
 ]
 
 /** True when `pathname` is `href` or somewhere beneath it. Home matches only itself. */

@@ -5,12 +5,16 @@
 // the checkout converts or the shopper opts out.
 
 import { NextResponse } from 'next/server'
+import { withJobRun } from '@/utils/jobRuns'
 import { createUntypedAdminClient } from '@/utils/supabase/admin'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
 
-export async function GET(request: Request) {
+// Each authorised run is recorded in job_runs for the Status page.
+export const GET = (request: Request) => withJobRun('recovery-cleanup', request, run)
+
+async function run(request: Request) {
   const secret = process.env.CRON_SECRET
   if (!secret || request.headers.get('authorization') !== `Bearer ${secret}`) {
     return NextResponse.json({ error: 'Not authorised' }, { status: 401 })
