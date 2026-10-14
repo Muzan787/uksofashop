@@ -8,6 +8,7 @@ import { Database } from '@/types/supabase'
 import { createClient } from '@/utils/supabase/client'
 import PriceFields from './PriceFields'
 import MainCollectionField from './MainCollectionField'
+import { uploadAdminImage } from '@/utils/adminImageUpload'
 
 type Category = Pick<Database['public']['Tables']['categories']['Row'], 'id' | 'name'>
 
@@ -109,16 +110,11 @@ export default function AddProductForm({ categories }: { categories: Category[] 
     const newUrls: string[] = [];
 
     for (const file of files) {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('upload_preset', process.env.NEXT_PUBLIC_CLOUDINARY_PRODUCT_UPLOAD_PRESET!);
       try {
-        const res = await fetch(`https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`, { method: 'POST', body: formData });
-        const data = await res.json();
-        if (data.secure_url) newUrls.push(data.secure_url);
+        newUrls.push(await uploadAdminImage(file));
       } catch (err) {
         console.error('Gallery image upload failed', err);
-        alert("Failed to upload an image.");
+        alert(`Failed to upload an image. ${err instanceof Error ? err.message : ''}`.trim());
       }
     }
     setGalleryUrls(prev => [...prev, ...newUrls]);
@@ -143,16 +139,11 @@ export default function AddProductForm({ categories }: { categories: Category[] 
   const handleImageUpload = async (index: number, file: File) => {
     if (!file) return;
     updateVariant(index, 'isUploading', true);
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('upload_preset', process.env.NEXT_PUBLIC_CLOUDINARY_PRODUCT_UPLOAD_PRESET!);
     try {
-      const res = await fetch(`https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`, { method: 'POST', body: formData });
-      const data = await res.json();
-      if (data.secure_url) updateVariant(index, 'image_url', data.secure_url);
+      updateVariant(index, 'image_url', await uploadAdminImage(file));
     } catch (err) {
       console.error('Variant image upload failed', err);
-      alert("Failed to upload image.");
+      alert(`Failed to upload image. ${err instanceof Error ? err.message : ''}`.trim());
     } finally { updateVariant(index, 'isUploading', false); }
   };
 

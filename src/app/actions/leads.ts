@@ -3,7 +3,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { requireAdmin } from '@/utils/auth'
-import { createUntypedAdminClient } from '@/utils/supabase/admin'
+import { createClient } from '@/utils/supabase/server'
 import { sendCheckoutReminder } from '@/utils/email'
 import { offerHoldsForLeads } from '@/utils/offers/leadHold'
 
@@ -26,13 +26,14 @@ export async function setLeadDone(formData: FormData) {
     throw new Error('Missing or invalid lead id')
   }
 
-  // The table is service-role only; the session client has no policy on it.
-  // requireAdmin() above is the authorisation - this client is just the pen.
-  const admin = createUntypedAdminClient()
+  // The admin's own session. RLS admits admins to read the leads and to
+  // change status, done_at and reminder_emailed_at - nothing else - so the
+  // database checks this write as well as requireAdmin() above.
+  const supabase = await createClient()
 
   // updated_at is left alone on purpose: it records the shopper's last action,
   // which is what "2 hours ago" on the card means. done_at records ours.
-  const { error } = await admin
+  const { error } = await supabase
     .from('checkout_recovery_leads')
     .update(
       done
@@ -73,8 +74,8 @@ export async function sendLeadReminderEmail(
     return { status: 'error', message: 'Missing or invalid lead id' }
   }
 
-  const admin = createUntypedAdminClient()
-  const { data, error } = await admin
+  const supabase = await createClient()
+  const { data, error } = await supabase
     .from('checkout_recovery_leads')
     .select('email, email_opt_in, basket, status, data_class, reference, visitor_id')
     .eq('id', id)
@@ -100,7 +101,7 @@ export async function sendLeadReminderEmail(
   // Their online offer, if its 48 hours are still running - a true reason to come
   // back. Looked up at the moment of sending, so a reminder sent after the
   // window has closed says nothing about an offer.
-  const hold = (await offerHoldsForLeads(admin, [{ id, visitor_id: lead.visitor_id, basket: lead.basket }])).get(id)
+  const hold = (await offerHoldsForLeads(supabase, [{ id, visitor_id: lead.visitor_id, basket: lead.basket }])).get(id)
 
   try {
     // `id` is the validated uuid from the form, which is what the row was
@@ -111,7 +112,7 @@ export async function sendLeadReminderEmail(
     return { status: 'error', message: 'The email could not be sent. Try again in a moment.' }
   }
 
-  const { error: stampError } = await admin
+  const { error: stampError } = await supabase
     .from('checkout_recovery_leads')
     .update({ reminder_emailed_at: new Date().toISOString() })
     .eq('id', id)

@@ -15,6 +15,11 @@ export default function LoginPage() {
   async function handleLogin(fd: FormData) {
     setPending(true)
     setError('')
+    // Where they were going before being asked to sign in (the admin proxy
+    // sets it). Read here rather than with useSearchParams so the page stays
+    // static; the action decides whether it is safe to follow.
+    const next = new URLSearchParams(window.location.search).get('next')
+    if (next) fd.set('next', next)
     const res = await login(fd)
     // On success `login` redirects, so reaching here at all means it failed.
     if (res?.error) { setError(res.error); setPending(false) }

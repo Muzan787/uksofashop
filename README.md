@@ -77,7 +77,7 @@ single error in the log.
 | `NEXT_PUBLIC_HOMEDATA_API_KEY` | Address lookup at checkout. The postcode field still validates, but "Find address" throws a message asking the customer to type it by hand. |
 | `CLOUDINARY_API_KEY` + `CLOUDINARY_API_SECRET` | Review photo uploads. The server action signs the upload with these; without them it refuses and tells the customer to email the photo instead. |
 | `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` | Every image upload path, admin and customer. Build-time inlined. |
-| `NEXT_PUBLIC_CLOUDINARY_PRODUCT_UPLOAD_PRESET` | Product and category image uploads in the admin panel. Build-time inlined. |
+| `NEXT_PUBLIC_CLOUDINARY_PRODUCT_UPLOAD_PRESET` | Upload preset for product and category photos in the admin panel. The upload is signed on the server with `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET` (see `src/app/actions/image-upload.ts`), so the preset itself can be set to Signed in Cloudinary. |
 | `REVIEW_TOKEN_SECRET` | Signs the per-product review links in the post-delivery email, and the one-click unsubscribe on the checkout reminder. Falls back to `SUPABASE_SERVICE_ROLE_KEY`, so links keep working — but the two can then only be rotated together. |
 | `OFFER_ENTRY_SIGNING_SECRET` | The paid-offer entry tokens behind `/offer-entry/[token]`. |
 | `NEXT_PUBLIC_ADS_ORDER_PLACED_SEND_TO` | The Google Ads order-placed conversion label. Build-time inlined. Its Vercel-era name was `NEXT_PUBLIC_ADS_PURCHASE_SEND_TO`, which never matched the code and so never fired. |

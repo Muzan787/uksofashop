@@ -1,7 +1,6 @@
 import type { Metadata } from 'next'
 // src/app/admin/page.tsx
 import { createClient } from '@/utils/supabase/server'
-import { createUntypedAdminClient } from '@/utils/supabase/admin'
 import { ShoppingBag, PackagePlus, ArrowRight, MessageCircle } from 'lucide-react'
 import Link from 'next/link'
 
@@ -45,10 +44,10 @@ export default async function AdminDashboardPage() {
     .select('*', { count: 'exact', head: true })
     .eq('is_active', true)
 
-  // Shoppers who asked for a reminder and have not converted or expired. The
-  // table is service-role only (see /admin/leads), so this one count uses the
-  // admin client rather than the session client the rest of the page does.
-  const { count: leadCount } = await createUntypedAdminClient()
+  // Shoppers who asked for a reminder and have not converted or expired.
+  // Read under the admin's own session, like the rest of the page: the leads
+  // table admits admins through RLS.
+  const { count: leadCount } = await supabase
     .from('checkout_recovery_leads')
     .select('id', { count: 'exact', head: true })
     .eq('status', 'active')

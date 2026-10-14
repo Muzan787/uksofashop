@@ -13,7 +13,8 @@
 // never more than the basket itself. Display only - the checkout prices the
 // order, and a WhatsApp sale is priced in the chat.
 
-import type { createUntypedAdminClient } from '@/utils/supabase/admin'
+import type { SupabaseClient } from '@supabase/supabase-js'
+import type { Database } from '@/types/supabase'
 import { OFFER_TIER_AMOUNTS } from './constants'
 import type { OfferHold } from './deadline'
 
@@ -52,7 +53,8 @@ function basketItems(basket: unknown): { productId: string; total: number }[] {
  * goes, just without an offer line, which is the safe way to be wrong.
  */
 export async function offerHoldsForLeads(
-  admin: ReturnType<typeof createUntypedAdminClient>,
+  // The admin's session client: RLS lets admins read both tables.
+  db: SupabaseClient<Database>,
   leads: LeadForHold[],
 ): Promise<Map<string, LeadHold>> {
   const holds = new Map<string, LeadHold>()
@@ -62,9 +64,9 @@ export async function offerHoldsForLeads(
   const productIds = [...new Set(leads.flatMap(l => basketItems(l.basket).map(i => i.productId)))]
 
   const [entitlements, tiers] = await Promise.all([
-    admin.from('offer_entitlements').select('visitor_id, expires_at, revoked_at').in('visitor_id', visitorIds),
+    db.from('offer_entitlements').select('visitor_id, expires_at, revoked_at').in('visitor_id', visitorIds),
     productIds.length
-      ? admin.from('offer_product_tiers').select('product_id, tier').in('product_id', productIds)
+      ? db.from('offer_product_tiers').select('product_id, tier').in('product_id', productIds)
       : Promise.resolve({ data: [], error: null }),
   ])
   if (entitlements.error || tiers.error) {

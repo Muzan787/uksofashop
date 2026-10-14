@@ -16,16 +16,97 @@ export type Database = {
     Tables: {
       admins: {
         Row: {
+          claimed_at: string | null
           created_at: string | null
-          id: string
+          email: string
+          id: string | null
+          is_active: boolean
+          name: string | null
         }
         Insert: {
+          claimed_at?: string | null
           created_at?: string | null
-          id: string
+          email: string
+          id?: string | null
+          is_active?: boolean
+          name?: string | null
         }
         Update: {
+          claimed_at?: string | null
           created_at?: string | null
+          email?: string
+          id?: string | null
+          is_active?: boolean
+          name?: string | null
+        }
+        Relationships: []
+      }
+      checkout_recovery_leads: {
+        Row: {
+          arrival_id: string
+          basket: Json
+          consent_at: string
+          consent_copy_version: string
+          converted_order_id: string | null
+          created_at: string
+          data_class: string
+          done_at: string | null
+          email: string | null
+          email_opt_in: boolean
+          expires_at: string
+          id: string
+          phone: string | null
+          reference: string
+          reminder_emailed_at: string | null
+          session_id: string
+          status: string
+          updated_at: string
+          visitor_id: string
+          whatsapp_opt_in: boolean
+        }
+        Insert: {
+          arrival_id: string
+          basket?: Json
+          consent_at?: string
+          consent_copy_version?: string
+          converted_order_id?: string | null
+          created_at?: string
+          data_class?: string
+          done_at?: string | null
+          email?: string | null
+          email_opt_in?: boolean
+          expires_at?: string
           id?: string
+          phone?: string | null
+          reference?: string
+          reminder_emailed_at?: string | null
+          session_id: string
+          status?: string
+          updated_at?: string
+          visitor_id: string
+          whatsapp_opt_in?: boolean
+        }
+        Update: {
+          arrival_id?: string
+          basket?: Json
+          consent_at?: string
+          consent_copy_version?: string
+          converted_order_id?: string | null
+          created_at?: string
+          data_class?: string
+          done_at?: string | null
+          email?: string | null
+          email_opt_in?: boolean
+          expires_at?: string
+          id?: string
+          phone?: string | null
+          reference?: string
+          reminder_emailed_at?: string | null
+          session_id?: string
+          status?: string
+          updated_at?: string
+          visitor_id?: string
+          whatsapp_opt_in?: boolean
         }
         Relationships: []
       }
@@ -1303,6 +1384,7 @@ export type Database = {
         }[]
       }
       is_admin: { Args: never; Returns: boolean }
+      claim_admin: { Args: never; Returns: boolean }
       /** Reads an order for /confirm-order/[id]. Confirms nothing. */
       order_for_confirmation: {
         Args: { p_order_id: string }

@@ -1,6 +1,8 @@
 // src/app/admin/layout.tsx
 import type { Metadata } from 'next'
+import { notFound } from 'next/navigation'
 import AdminSidebarClient from '@/components/Admin/AdminSidebarClient'
+import { isAdmin } from '@/utils/auth'
 
 // Applies to every page under /admin. robots.txt already disallows the path,
 // but that only asks crawlers not to fetch it - noindex is what keeps it out
@@ -17,7 +19,12 @@ export const metadata: Metadata = {
   manifest: '/admin/manifest.webmanifest',
 }
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+  // The second of four checks (proxy, this layout, each server action, the
+  // database). proxy.ts already turns non-admins away; this one means a gap
+  // in the proxy's matcher can never render the panel on its own.
+  if (!(await isAdmin())) notFound()
+
   return (
     <div className="min-h-screen bg-zinc-50">
       <AdminSidebarClient />

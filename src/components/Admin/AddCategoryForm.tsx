@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { addCategory } from '@/app/actions/categories'
 import { Loader2, ImagePlus } from 'lucide-react'
+import { uploadAdminImage } from '@/utils/adminImageUpload'
 
 export default function AddCategoryForm() {
   const router = useRouter()
@@ -18,20 +19,11 @@ export default function AddCategoryForm() {
     if (!file) return
     
     setIsUploading(true)
-    const formData = new FormData()
-    formData.append('file', file)
-    formData.append('upload_preset', process.env.NEXT_PUBLIC_CLOUDINARY_PRODUCT_UPLOAD_PRESET!)
-
     try {
-      const res = await fetch(`https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`, {
-        method: 'POST', body: formData,
-      })
-      const data = await res.json()
-      if (data.secure_url) setImageUrl(data.secure_url)
-      else throw new Error('Upload failed')
+      setImageUrl(await uploadAdminImage(file))
     } catch (err) {
       console.error('Category image upload failed', err)
-      alert("Failed to upload image.")
+      alert(`Failed to upload image. ${err instanceof Error ? err.message : ''}`.trim())
     } finally { setIsUploading(false) }
   }
 

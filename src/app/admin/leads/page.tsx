@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Check, Inbox, RotateCcw } from 'lucide-react'
-import { createUntypedAdminClient } from '@/utils/supabase/admin'
+import { createClient } from '@/utils/supabase/server'
 import { setLeadDone } from '@/app/actions/leads'
 import EmailLeadButton from './EmailLeadButton'
 import {
@@ -68,11 +68,11 @@ export default async function AdminLeadsPage(props: { searchParams: SearchParams
   const sp = await props.searchParams
   const view = sp.view === 'done' ? 'done' : 'waiting'
 
-  // /admin is already protected by proxy.ts. The recovery table itself is
-  // service-role only, so this server component uses the admin client and does
-  // not expose any database credential to the browser.
-  const admin = createUntypedAdminClient()
-  const { data, error } = await admin
+  // The signed-in admin's own session. The leads table admits admins through
+  // RLS (is_admin()), so the database checks every row as well as the proxy
+  // and the layout - the service-role key that used to read this is gone.
+  const supabase = await createClient()
+  const { data, error } = await supabase
     .from('checkout_recovery_leads')
     .select('id, reference, basket, visitor_id, phone, email, whatsapp_opt_in, email_opt_in, updated_at, done_at, reminder_emailed_at')
     .eq('status', view === 'done' ? 'done' : 'active')
@@ -95,7 +95,7 @@ export default async function AdminLeadsPage(props: { searchParams: SearchParams
   // while it is open, and the card says when it ends - or that it has - so a
   // reply in the chat is answered with the right price. Two queries for the
   // whole page.
-  const holds = await offerHoldsForLeads(admin, leads)
+  const holds = await offerHoldsForLeads(supabase, leads)
 
   return (
     <div className="mx-auto max-w-5xl space-y-6 animate-in fade-in duration-500">

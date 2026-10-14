@@ -26,15 +26,29 @@ export async function proxy(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
 
   if (request.nextUrl.pathname.startsWith('/admin')) {
-    if (!user) return NextResponse.redirect(new URL('/login', request.url))
+    // Signed out: to the sign-in page, which brings them back here after.
+    // The sign-in action only honours `next` when it is a path on this site.
+    if (!user) {
+      const login = new URL('/login', request.url)
+      login.searchParams.set('next', `${request.nextUrl.pathname}${request.nextUrl.search}`)
+      return NextResponse.redirect(login)
+    }
 
-    const { data: adminRecord } = await supabase
-      .from('admins')
-      .select('id')
-      .eq('id', user.id)
-      .single()
+    // The same definition of "admin" the RLS policies, the admin layout and
+    // every admin action use: a linked, active row on the allowlist. This
+    // used to read public.admins itself, which stopped being the whole rule
+    // once rows could be switched off.
+    const { data: admin } = await supabase.rpc('is_admin')
 
-    if (!adminRecord) return NextResponse.redirect(new URL('/', request.url))
+    // Signed in but not an admin - a customer account. They get the shop's
+    // ordinary "page not found", so the panel's existence is not confirmed to
+    // anyone who isn't on the list. A rewrite to a path no route matches
+    // renders app/not-found.tsx with a 404, at the URL they asked for.
+    if (admin !== true) {
+      const hidden = NextResponse.rewrite(new URL('/__not-found', request.url))
+      supabaseResponse.cookies.getAll().forEach(cookie => hidden.cookies.set(cookie))
+      return hidden
+    }
   }
 
   return supabaseResponse

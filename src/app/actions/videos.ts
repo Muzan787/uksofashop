@@ -1,10 +1,10 @@
 // src/app/actions/videos.ts
 'use server'
 
-import { createHash } from 'crypto'
 import { revalidatePath, revalidateTag } from 'next/cache'
 import { createClient } from '@/utils/supabase/server'
 import { requireAdmin } from '@/utils/auth'
+import { cloudinaryCredentials, cloudinarySignature } from '@/utils/cloudinarySignature'
 import { VIDEO_TRANSFORM } from '@/utils/cloudinary'
 import { VIDEO_KINDS, type VideoKind } from '@/constants/videos'
 
@@ -31,26 +31,12 @@ function revalidateStorefront() {
   revalidatePath('/shop/[category]/[slug]', 'page')
 }
 
-/**
- * Cloudinary's signature: parameters sorted by key, joined as k=v with &, the
- * API secret appended, SHA-1 of the whole string.
- */
-function sign(params: Record<string, string>, secret: string): string {
-  const toSign = Object.keys(params)
-    .sort()
-    .map(k => `${k}=${params[k]}`)
-    .join('&')
-  return createHash('sha1').update(toSign + secret).digest('hex')
-}
-
 function credentials() {
-  const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
-  const apiKey = process.env.CLOUDINARY_API_KEY
-  const apiSecret = process.env.CLOUDINARY_API_SECRET
-  if (!cloudName || !apiKey || !apiSecret) {
+  const found = cloudinaryCredentials()
+  if (!found) {
     throw new Error('Video upload is not configured: CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET are missing.')
   }
-  return { cloudName, apiKey, apiSecret }
+  return found
 }
 
 interface SignedUpload {
@@ -79,7 +65,7 @@ export async function signVideoUpload(kind: VideoKind): Promise<SignedUpload> {
 
   return {
     url: `https://api.cloudinary.com/v1_1/${cloudName}/video/upload`,
-    fields: { ...params, api_key: apiKey, signature: sign(params, apiSecret) },
+    fields: { ...params, api_key: apiKey, signature: cloudinarySignature(params, apiSecret) },
   }
 }
 
@@ -193,7 +179,7 @@ export async function deleteVideo(formData: FormData) {
     const body = new FormData()
     for (const [k, v] of Object.entries(params)) body.append(k, v)
     body.append('api_key', apiKey)
-    body.append('signature', sign(params, apiSecret))
+    body.append('signature', cloudinarySignature(params, apiSecret))
 
     try {
       const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/video/destroy`, {
