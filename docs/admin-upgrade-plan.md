@@ -434,8 +434,23 @@ he asks, give them as numbered steps with exact clicks.
 4. Decide whether to stop Google/Meta tracking scripts loading on admin
    pages. The recommendation is yes, together with "exclude this device"
    in Phase 11. (Phase 2.)
-5. UptimeRobot: add the monitor for `/api/health` (Phase 4 writes the
-   steps).
+5. UptimeRobot: watch the shop and get an email when it's down or a Status
+   check is red. (Phase 4.)
+   1. Go to uptimerobot.com and sign up for a free account with the email
+      you want alerts at.
+   2. Click **+ New monitor**.
+   3. Monitor type: **HTTP(s)**.
+   4. Friendly name: `UK Sofa Shop`.
+   5. URL: `https://www.uksofashop.co.uk/api/health`
+   6. Monitoring interval: **5 minutes** (the free plan's shortest).
+   7. Alert contacts: tick your email.
+   8. Click **Create monitor**.
+
+   It reports "Up" when the page answers 200 and "Down" when it answers
+   503 or doesn't answer at all. 503 means a Status check is red, or the
+   hourly check has stopped. The page only says how many problems there
+   are; open Admin → Status to see which. Expect "Down" straight away
+   while the Google Ads sync (item 6) is red.
 6. Google Ads offline conversions. Confirmed WhatsApp sales reach Google
    Ads through a Google Sheet, but copying them into the Sheet has only
    ever run once, by hand, on 2 Oct, and 19 sales are waiting (Status

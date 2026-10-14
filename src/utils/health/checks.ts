@@ -243,6 +243,10 @@ function jobsCheck({ env, snapshot, now }: HealthInput): HealthCheck {
     if (run.status === 'running' && startedHours !== null && startedHours > 0.5) {
       states.push('red')
       details.push(`${label}: started ${ago(run.started_at, now)} and never reported back`)
+    } else if (run.status === 'running') {
+      // In progress right now - including the hourly check looking at itself.
+      states.push('ok')
+      details.push(`${label}: running now`)
     } else if (run.status === 'failed') {
       states.push('red')
       details.push(`${label}: failed ${ago(run.finished_at ?? run.started_at, now)}`)

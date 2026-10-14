@@ -227,3 +227,12 @@ test('a database job starter shows only when it is paused or failing', () => {
   const failing = broken(i => { i.snapshot.cron.push({ name: 'job-review-requests', active: true, last_status: 'failed', last_start: hoursAgo(1), last_message: 'boom' }) })
   assert.equal(stateOf(failing, 'jobs'), 'red')
 })
+
+test('a job that is running right now is not a problem, even on its first run', () => {
+  const report = broken(i => {
+    i.snapshot.jobs = i.snapshot.jobs.filter(j => j.job !== 'health-check')
+    i.snapshot.jobs.push({ job: 'health-check', started_at: hoursAgo(0.01), finished_at: null, status: 'running', last_ok_at: null })
+  })
+  assert.equal(stateOf(report, 'jobs'), 'ok')
+  assert.ok(report.checks.find(c => c.key === 'jobs').details.includes('Hourly health check: running now'))
+})
