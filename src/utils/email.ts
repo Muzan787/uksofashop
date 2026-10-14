@@ -1465,3 +1465,64 @@ export async function sendWeeklyDigest(
     html: generateEmailHTML(content),
   }, { kind: 'weekly-digest' })
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Health alert (admin upgrade Q3)
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface HealthAlertCheck {
+  key: string
+  title: string
+  summary: string
+  details: string[]
+}
+
+/**
+ * The hourly health check's email to the shop: what has just broken, what is
+ * still broken a day on, and what is working again. Sent only when one of the
+ * three has something in it (utils/health/alerts.ts decides).
+ */
+export async function sendHealthAlert(alert: {
+  broke: HealthAlertCheck[]
+  still: HealthAlertCheck[]
+  fixed: HealthAlertCheck[]
+  headline: string
+}) {
+  const statusLink = `${SITE_URL}/admin/status`
+  const names = (checks: HealthAlertCheck[]) => checks.map(c => c.title).join(', ')
+  const subject = alert.broke.length
+    ? `Needs attention: ${names(alert.broke)}`
+    : alert.still.length
+      ? `Still not working: ${names(alert.still)}`
+      : `Back to normal: ${names(alert.fixed)}`
+
+  const section = (heading: string, colour: string, checks: HealthAlertCheck[], withDetails: boolean) =>
+    checks.length === 0
+      ? ''
+      : `
+      <h3 style="margin: 24px 0 8px 0; font-size: 15px; color: ${colour};">${esc(heading)}</h3>
+      ${checks.map(c => `
+        <div style="margin: 0 0 12px 0; padding: 12px 14px; border: 1px solid #e7e5e4; border-left: 4px solid ${colour}; border-radius: 6px;">
+          <p style="margin: 0; font-weight: bold; color: #1c1917;">${esc(c.title)}</p>
+          <p style="margin: 4px 0 0 0; color: #44403c; font-size: 14px;">${esc(c.summary)}</p>
+          ${withDetails && c.details.length ? `<p style="margin: 6px 0 0 0; color: #78716c; font-size: 12px;">${c.details.slice(0, 4).map(d => esc(d)).join('<br>')}</p>` : ''}
+        </div>`).join('')}`
+
+  const content = `
+    <div style="text-align: left;">
+      <h2 style="margin: 0 0 8px 0; font-size: 22px; color: #1c1917;">${esc(alert.headline)}</h2>
+      <p style="margin: 0; color: #57534e; font-size: 14px;">From the hourly check of the shop. The full picture is on the Status page.</p>
+      ${section('Needs attention', '#b91c1c', alert.broke, true)}
+      ${section('Still not working, a day on', '#b45309', alert.still, true)}
+      ${section('Working again', '#15803d', alert.fixed, false)}
+      <a href="${statusLink}" style="background-color: #1c1917; color: #ffffff; padding: 12px 22px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px; display: inline-block; margin-top: 16px;">Open Status</a>
+    </div>
+  `
+
+  await deliver({
+    from: sender('UK Sofa Shop status'),
+    to: MAIL_TO_ADMIN,
+    subject,
+    html: generateEmailHTML(content),
+  }, { kind: 'health-alert' })
+}

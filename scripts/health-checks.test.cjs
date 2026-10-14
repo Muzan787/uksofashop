@@ -54,6 +54,7 @@ function healthy() {
         { job: 'review-requests', started_at: hoursAgo(3), finished_at: hoursAgo(3), status: 'ok', last_ok_at: hoursAgo(3) },
         { job: 'recovery-cleanup', started_at: hoursAgo(4), finished_at: hoursAgo(4), status: 'ok', last_ok_at: hoursAgo(4) },
         { job: 'weekly-digest', started_at: hoursAgo(50), finished_at: hoursAgo(50), status: 'ok', last_ok_at: hoursAgo(50) },
+        { job: 'health-check', started_at: hoursAgo(0.5), finished_at: hoursAgo(0.5), status: 'ok', last_ok_at: hoursAgo(0.5) },
       ],
       cron: [
         { name: 'orderflow-resend-recent', active: true, last_status: 'succeeded', last_start: hoursAgo(0.1) },
@@ -174,4 +175,55 @@ test('ago reads naturally', () => {
   assert.equal(ago(hoursAgo(30), NOW), '30 hours ago')
   assert.equal(ago(hoursAgo(24 * 11), NOW), '11 days ago')
   assert.equal(ago(null, NOW), 'never')
+})
+
+// ── The hourly alert email (Q3) ────────────────────────────────────────────
+
+const { planHealthAlerts, hasAlerts } = load('src/utils/health/alerts.ts')
+
+test('a check that breaks emails once, again a day later, and once when fixed', () => {
+  const at = h => new Date(NOW.getTime() + h * 3600_000)
+  const red = () => broken(i => { i.snapshot.email.failed_24h = 3 })
+  const fine = () => buildHealthReport(healthy())
+  let memory = []
+  const run = (report, hour) => {
+    const plan = planHealthAlerts(report, memory, at(hour))
+    memory = plain(plan.next)
+    return { broke: plan.broke.map(c => c.key), still: plan.still.map(c => c.key), fixed: plan.fixed.map(c => c.key), emails: hasAlerts(plan) }
+  }
+
+  // First run on a healthy shop: nothing to say.
+  assert.deepEqual(plain(run(fine(), 0)), { broke: [], still: [], fixed: [], emails: false })
+  // Email breaks: one alert.
+  assert.deepEqual(plain(run(red(), 1)), { broke: ['email'], still: [], fixed: [], emails: true })
+  // Still broken an hour later, and twenty hours later: quiet.
+  assert.equal(run(red(), 2).emails, false)
+  assert.equal(run(red(), 21).emails, false)
+  // A day after the first alert: one reminder.
+  assert.deepEqual(plain(run(red(), 25)), { broke: [], still: ['email'], fixed: [], emails: true })
+  assert.equal(run(red(), 26).emails, false)
+  // Fixed: one "back to normal".
+  assert.deepEqual(plain(run(fine(), 27)), { broke: [], still: [], fixed: ['email'], emails: true })
+  // And then quiet again.
+  assert.equal(run(fine(), 28).emails, false)
+})
+
+test('amber never sends an alert', () => {
+  const report = broken(i => { i.env.addressLookup = false; i.snapshot.feeds = [] })
+  const plan = planHealthAlerts(report, [], NOW)
+  assert.equal(hasAlerts(plan), false)
+})
+
+test('the first run after deploy alerts about what is already red', () => {
+  const report = broken(i => { Object.assign(i.snapshot.google_offline, { pending: 19, oldest_pending_at: hoursAgo(24 * 11) }) })
+  const plan = planHealthAlerts(report, [], NOW)
+  assert.deepEqual(plain(plan.broke.map(c => c.key)), ['google-ads'])
+})
+
+test('a database job starter shows only when it is paused or failing', () => {
+  const quiet = buildHealthReport(healthy())
+  const withStarter = broken(i => { i.snapshot.cron.push({ name: 'job-review-requests', active: true, last_status: 'succeeded', last_start: hoursAgo(1) }) })
+  assert.equal(withStarter.checks.find(c => c.key === 'jobs').details.length, quiet.checks.find(c => c.key === 'jobs').details.length)
+  const failing = broken(i => { i.snapshot.cron.push({ name: 'job-review-requests', active: true, last_status: 'failed', last_start: hoursAgo(1), last_message: 'boom' }) })
+  assert.equal(stateOf(failing, 'jobs'), 'red')
 })

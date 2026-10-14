@@ -85,28 +85,64 @@ export type Database = {
       }
       job_runs: {
         Row: {
+          claimed_at: string | null
           detail: Json | null
           finished_at: string | null
           id: number
           job: string
           started_at: string
           status: string
+          ticket_expires_at: string | null
+          ticket_hash: string | null
+          trigger: string
         }
         Insert: {
+          claimed_at?: string | null
           detail?: Json | null
           finished_at?: string | null
           id?: never
           job: string
           started_at?: string
           status?: string
+          ticket_expires_at?: string | null
+          ticket_hash?: string | null
+          trigger?: string
         }
         Update: {
+          claimed_at?: string | null
           detail?: Json | null
           finished_at?: string | null
           id?: never
           job?: string
           started_at?: string
           status?: string
+          ticket_expires_at?: string | null
+          ticket_hash?: string | null
+          trigger?: string
+        }
+        Relationships: []
+      }
+      health_alerts: {
+        Row: {
+          check_key: string
+          last_alert_at: string | null
+          red_since: string | null
+          state: string
+          updated_at: string
+        }
+        Insert: {
+          check_key: string
+          last_alert_at?: string | null
+          red_since?: string | null
+          state: string
+          updated_at?: string
+        }
+        Update: {
+          check_key?: string
+          last_alert_at?: string | null
+          red_since?: string | null
+          state?: string
+          updated_at?: string
         }
         Relationships: []
       }

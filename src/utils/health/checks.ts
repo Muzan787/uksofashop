@@ -89,6 +89,7 @@ export const SCHEDULED_JOBS: { job: string; label: string; everyHours: number }[
   { job: 'review-requests', label: 'Review requests', everyHours: 24 },
   { job: 'recovery-cleanup', label: 'Basket reminder clean-up', everyHours: 24 },
   { job: 'weekly-digest', label: 'Monday summary email', everyHours: 24 * 7 },
+  { job: 'health-check', label: 'Hourly health check', everyHours: 1 },
 ]
 
 const HOUR = 60 * 60 * 1000
@@ -256,6 +257,10 @@ function jobsCheck({ env, snapshot, now }: HealthInput): HealthCheck {
 
   for (const c of snapshot?.cron ?? []) {
     const name = c.name
+    // job-* entries only start a run; how the run went is in the lines above.
+    // They show here only when the starter itself is paused or failing.
+    const starter = name.startsWith('job-')
+    if (starter && c.active !== false && c.last_status !== 'failed') continue
     if (c.active === false) {
       states.push('amber')
       details.push(`${name} (database): paused`)

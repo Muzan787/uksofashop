@@ -1,19 +1,39 @@
 // src/utils/jobRuns.ts
 //
 // Records each run of a scheduled job in job_runs, so the Status page can say
-// when it last ran and what it reported (admin upgrade Phase 3) - before this,
-// a job that stopped or failed told nobody.
+// when it last ran and what it reported - before this, a job that stopped or
+// failed told nobody.
 //
-// Wraps a cron route's handler without changing it: only a request carrying
-// the right CRON_SECRET is recorded (a stranger hitting the URL is refused by
-// the route as before and leaves no row), the run's JSON reply becomes the
-// row's detail, and a status of 400 or more marks it failed. Recording never
-// changes what the job does or returns, and a failure to record is logged and
-// ignored.
+// Two ways a job starts:
+//
+//   * The database (pg_cron), admin upgrade Phase 4. It writes the run with a
+//     one-time ticket - only the ticket's SHA-256 is stored - and posts the
+//     ticket to /api/jobs/[job]. claimJobTicket() accepts it once, for that
+//     job, within 15 minutes; the job runs; finishJobRun() reports back. No
+//     shared secret exists anywhere: the ticket is the only credential and it
+//     is worthless once claimed. A run that never reports back is marked
+//     failed after 30 minutes by the database.
+//
+//   * By hand or by GitHub, through the old /api/cron/* routes with
+//     CRON_SECRET. withJobRun() records those runs without changing what the
+//     route does or returns.
+//
+// Recording never changes what a job does, and a failure to record is logged
+// and ignored.
 
 import 'server-only'
+import { createHash } from 'crypto'
 import { createAdminClient } from '@/utils/supabase/admin'
 import type { Json } from '@/types/supabase'
+
+export type JobStatus = 'ok' | 'failed' | 'skipped'
+
+/** What a job's work returns: its verdict, and the reply its route sends. */
+export interface JobOutcome {
+  status: JobStatus
+  httpStatus: number
+  body: { [key: string]: Json | undefined }
+}
 
 type Handler = (request: Request) => Promise<Response>
 
@@ -24,7 +44,11 @@ function authorised(request: Request): boolean {
 
 async function start(job: string): Promise<number | null> {
   try {
-    const { data, error } = await createAdminClient().from('job_runs').insert({ job }).select('id').single()
+    const { data, error } = await createAdminClient()
+      .from('job_runs')
+      .insert({ job, trigger: 'cron_secret' })
+      .select('id')
+      .single()
     if (error) throw new Error(error.message)
     return data.id
   } catch (err) {
@@ -33,13 +57,15 @@ async function start(job: string): Promise<number | null> {
   }
 }
 
-async function finish(job: string, id: number | null, status: 'ok' | 'failed' | 'skipped', detail: Json): Promise<void> {
+/** Marks a run finished. Only a run still marked running is changed. */
+export async function finishJobRun(job: string, id: number | null, status: JobStatus, detail: Json): Promise<void> {
   if (id === null) return
   try {
     const { error } = await createAdminClient()
       .from('job_runs')
       .update({ status, detail, finished_at: new Date().toISOString() })
       .eq('id', id)
+      .eq('status', 'running')
     if (error) throw new Error(error.message)
   } catch (err) {
     console.error(`[jobs] could not record the end of ${job}:`, err instanceof Error ? err.message : err)
@@ -55,7 +81,7 @@ export async function withJobRun(job: string, request: Request, handler: Handler
   try {
     response = await handler(request)
   } catch (err) {
-    await finish(job, id, 'failed', { error: err instanceof Error ? err.message : String(err) })
+    await finishJobRun(job, id, 'failed', { error: err instanceof Error ? err.message : String(err) })
     throw err
   }
 
@@ -66,6 +92,34 @@ export async function withJobRun(job: string, request: Request, handler: Handler
     // Not JSON; the status code is all there is to record.
   }
   const skipped = typeof detail === 'object' && detail !== null && !Array.isArray(detail) && detail.skipped === true
-  await finish(job, id, !response.ok ? 'failed' : skipped ? 'skipped' : 'ok', detail)
+  await finishJobRun(job, id, !response.ok ? 'failed' : skipped ? 'skipped' : 'ok', detail)
   return response
+}
+
+export function ticketHash(ticket: string): string {
+  return createHash('sha256').update(ticket, 'utf8').digest('hex')
+}
+
+/**
+ * Accepts a database-issued ticket for `job`: once, unexpired, unclaimed.
+ * Returns the run's id, or null for anything else. One UPDATE does the
+ * check and the claim together, so two callers with the same ticket cannot
+ * both get it.
+ */
+export async function claimJobTicket(job: string, ticket: string): Promise<number | null> {
+  if (!/^[0-9a-f]{64}$/.test(ticket)) return null
+  const { data, error } = await createAdminClient()
+    .from('job_runs')
+    .update({ claimed_at: new Date().toISOString() })
+    .eq('job', job)
+    .eq('ticket_hash', ticketHash(ticket))
+    .eq('status', 'running')
+    .is('claimed_at', null)
+    .gt('ticket_expires_at', new Date().toISOString())
+    .select('id')
+  if (error) {
+    console.error(`[jobs] ticket check for ${job} failed:`, error.message)
+    return null
+  }
+  return data?.[0]?.id ?? null
 }

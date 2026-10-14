@@ -329,3 +329,31 @@ test('every scheduled job records its runs', () => {
     assert.doesNotMatch(src, /export async function GET/, `${job} has a second, unrecorded GET`)
   }
 })
+
+// ── 6. Jobs from the database, and the uptime address (Phase 4) ───────────
+
+test('the jobs address runs nothing without a claimed ticket', () => {
+  const src = read('src/app/api/jobs/[job]/route.ts')
+  assert.ok(src.indexOf('claimJobTicket(') > 0 && src.indexOf('claimJobTicket(') < src.indexOf('after('), 'ticket is claimed before the job is queued')
+  assert.match(src, /if \(id === null\) return NextResponse\.json\(\{ error: 'Not authorised' \}, \{ status: 401 \}\)/)
+  assert.doesNotMatch(src, /CRON_SECRET/, 'no shared secret on the database path')
+  const jobs = read('src/utils/jobRuns.ts')
+  assert.match(jobs, /\.is\('claimed_at', null\)/, 'a ticket works once')
+  assert.match(jobs, /\.gt\('ticket_expires_at'/, 'a ticket expires')
+  assert.match(jobs, /\.eq\('job', job\)/, 'a ticket works only for its own job')
+})
+
+test('the old cron routes and the database run the same job code', () => {
+  assert.match(read('src/app/api/cron/review-requests/route.ts'), /runReviewRequests\(\)/)
+  assert.match(read('src/app/api/cron/weekly-digest/route.ts'), /runWeeklyDigest\(\)/)
+  const jobs = read('src/app/api/jobs/[job]/route.ts')
+  for (const fn of ['runReviewRequests', 'runWeeklyDigest', 'runHealthCheck']) assert.ok(jobs.includes(fn), fn)
+})
+
+test('/api/health tells only how many problems, never which', () => {
+  const src = read('src/app/api/health/route.ts')
+  assert.match(src, /\{ ok: problems === 0, problems \}/)
+  assert.doesNotMatch(src, /red_checks|\.summary\b|report\.checks/, 'no check names or sentences in the reply')
+  assert.match(src, /rateLimit\(/)
+  assert.match(src, /'Cache-Control': 'no-store'/)
+})
