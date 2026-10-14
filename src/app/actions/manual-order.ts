@@ -30,7 +30,7 @@ import { createUntypedAdminClient } from '@/utils/supabase/admin'
 // there is an email to send it to), and the shop gets the new-order email
 // with the WhatsApp button that carries the same link - so the customer's
 // yes is on record in the chat either way. Every later status change then
-// emails through updateOrderStatus like any other order.
+// emails through the order page (runStatusChange) like any other order.
 
 import { z } from 'zod'
 import { after } from 'next/server'
@@ -117,6 +117,14 @@ const schema = z.object({
    * This is the timestamp visible beside their first message, interpreted in
    * the timezone the admin says that WhatsApp screen was showing.
    */
+  /**
+   * How it came in (admin upgrade G1). Shown in the admin only: the order is
+   * saved with source 'whatsapp' either way, exactly as before, so nothing
+   * Meta, Google or OrderFlow receives changes.
+   */
+  channel: z.enum(['whatsapp', 'phone']).default('whatsapp'),
+  /** A test order: kept out of reports, Needs attention and ad sends. */
+  isTest: z.boolean().default(false),
   contactTime: z.object({
     date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Choose the contact date.'),
     hour: z.number().int().min(1).max(12),
@@ -143,6 +151,7 @@ type ManualOrderResult =
       success: true
       error?: undefined
       orderId: string
+      fullOrderId: string
       total: number
       attributionMatch: WhatsAppAttributionMatch | null
       contactTimeSearched: boolean
@@ -351,6 +360,16 @@ export async function createWhatsAppOrder(input: ManualOrderInput): Promise<Manu
 
   const order = data as unknown as { id: string; total_amount: number; items_subtotal: number; delivery_total: number }
   const shortCode = order.id.substring(0, 8).toUpperCase()
+
+  // How it came in, and whether it is a test. Separate calls, after the order
+  // exists, so place_manual_order keeps its signature. A failure here leaves a
+  // perfectly good order that the order page can correct.
+  const { error: channelError } = await supabase.rpc('set_order_channel', { p_order_id: order.id, p_channel: v.channel })
+  if (channelError) console.error('set_order_channel failed:', channelError.message)
+  if (v.isTest) {
+    const { error: testError } = await supabase.rpc('set_order_test_flag', { p_order_id: order.id, p_is_test: true, p_reason: 'Taken as a test from the order form' })
+    if (testError) console.error('set_order_test_flag failed:', testError.message)
+  }
   if (GOOGLE_GTM_ENABLED && attribution.reference) {
     try { await createUntypedAdminClient().rpc('google_phase2b_attach_whatsapp',{p_order_id:order.id}) }
     catch { /* Google evidence cannot interrupt the committed manual order. */ }
@@ -402,6 +421,8 @@ export async function createWhatsAppOrder(input: ManualOrderInput): Promise<Manu
     success: true,
     // The short reference, as the rest of the site uses it.
     orderId: shortCode,
+    // The full id, so the form can open the new order's page.
+    fullOrderId: order.id,
     total: Number(order.total_amount),
     attributionMatch: attribution.match,
     contactTimeSearched: attribution.searchedTime,

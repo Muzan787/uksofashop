@@ -657,6 +657,7 @@ export type Database = {
           is_test: boolean
           test_reason: string | null
           confirmed_by: string | null
+          channel: string | null
           manual_acquisition_source: string | null
           manual_acquisition_note: string | null
           manual_acquisition_at: string | null
@@ -723,6 +724,7 @@ export type Database = {
           is_test?: boolean
           test_reason?: string | null
           confirmed_by?: string | null
+          channel?: string | null
           manual_acquisition_source?: string | null
           manual_acquisition_note?: string | null
           manual_acquisition_at?: string | null
@@ -787,6 +789,7 @@ export type Database = {
           is_test?: boolean
           test_reason?: string | null
           confirmed_by?: string | null
+          channel?: string | null
           manual_acquisition_source?: string | null
           manual_acquisition_note?: string | null
           manual_acquisition_at?: string | null
@@ -1562,6 +1565,10 @@ export type Database = {
       add_order_note: { Args: { p_order_id: string; p_note: string }; Returns: number }
       set_order_source: { Args: { p_order_id: string; p_source: string | null; p_note?: string | null }; Returns: undefined }
       delete_order: { Args: { p_order_id: string }; Returns: boolean }
+      set_order_channel: { Args: { p_order_id: string; p_channel: string | null }; Returns: undefined }
+      search_orders: { Args: { p_query: string }; Returns: string[] }
+      order_orderflow_sends: { Args: { p_order_id: string }; Returns: Json }
+      send_order_to_orderflow: { Args: { p_order_id: string }; Returns: boolean }
       /** Reads an order for /confirm-order/[id]. Confirms nothing. */
       order_for_confirmation: {
         Args: { p_order_id: string }

@@ -9,6 +9,7 @@ import { reportOrderConversion } from '@/utils/orderConversions'
 import { reportGooglePurchase } from '@/utils/googleServer'
 import { sendOrderStatusUpdate, sendAdminOrderStatusNotification, sendAdminOrderConfirmedNotification } from '@/utils/email'
 import { requireAdmin } from '@/utils/auth'
+import { sendReviewEmailNow } from '@/utils/jobs/reviewRequests'
 import { z } from 'zod'
 import { isValidUkMobile, UK_MOBILE_ERROR } from '@/utils/phone'
 import type { ConfirmationOrder, TrackedOrder } from '@/types/orders'
@@ -37,44 +38,45 @@ function statusChangeError(message: string): string {
   return 'Failed to update order status.'
 }
 
-export async function updateOrderStatus(formData: FormData) {
-  // Throws rather than returning an error: the admin orders page discards this
-  // action's return value, so an { error } object would be swallowed silently.
-  await requireAdmin()
+interface StatusChange {
+  changed: boolean
+  confirmed_now: boolean
+  customer_name: string
+  customer_email: string | null
+  customer_phone: string | null
+  shipping_address: string | null
+}
 
+/**
+ * Changes an order's status and sends the emails that go with it, for the
+ * order page's status forms (changeOrderStatusFromPage below).
+ *
+ * The database is the one place a status changes (admin upgrade F4): it
+ * checks the move is allowed, stamps each stage's time the first time it is
+ * reached and never again, records who confirmed it, and writes the order's
+ * history. The reason is kept as the cancellation reason when cancelling,
+ * and is required to reopen a cancelled order.
+ */
+async function runStatusChange(
+  orderId: string,
+  newStatus: string,
+  reason: string | null,
+): Promise<{ error: string; code: string } | { change: StatusChange }> {
   const supabase = await createClient()
-
-  const orderId = formData.get('orderId') as string
-  const newStatus = formData.get('status') as string
-
-  if (!orderId || !newStatus) {
-    return { error: 'Missing order ID or status' }
-  }
-
-  // The database is the one place a status changes (admin upgrade F4): it
-  // checks the move is allowed, stamps each stage's time the first time it is
-  // reached and never again, records who confirmed it, and writes the order's
-  // history. The reason is kept as the cancellation reason when cancelling,
-  // and is required to reopen a cancelled order.
-  const reason = formData.get('cancellationReason')
   const { data, error } = await supabase.rpc('change_order_status', {
     p_order_id: orderId,
     p_status: newStatus,
-    p_reason: typeof reason === 'string' && reason.trim() ? reason.trim() : null,
+    p_reason: reason,
   })
 
   if (error || !data) {
     console.error('change_order_status failed:', error?.message)
-    return { error: statusChangeError(error?.message ?? '') }
+    const message = error?.message ?? ''
+    const code = ['NOT_AUTHORISED', 'BAD_STATUS_CHANGE', 'REASON_REQUIRED', 'STAGE_TIME_LOCKED', 'NOT_FOUND'].find(c => message.includes(c)) ?? 'FAILED'
+    return { error: statusChangeError(message), code }
   }
 
-  const change = data as unknown as {
-    confirmed_now: boolean
-    customer_name: string
-    customer_email: string | null
-    customer_phone: string | null
-    shipping_address: string | null
-  }
+  const change = data as unknown as StatusChange
 
   if (change.confirmed_now) after(() => reportGooglePurchase(orderId))
 
@@ -139,8 +141,10 @@ export async function updateOrderStatus(formData: FormData) {
   // "Send Purchase" / "Send Delivered" action after the relevant status exists.
 
   revalidatePath('/admin/orders')
+  revalidatePath(`/admin/orders/${orderId}`)
   revalidatePath('/admin/meta')
-  return { success: true }
+  revalidatePath('/admin')
+  return { change }
 }
 
 /**
@@ -460,4 +464,121 @@ export async function trackOrder(reference: string, postcode: string) {
   }
 
   return { success: true, order: data as unknown as TrackedOrder }
+}
+
+// ─── The order page (admin upgrade Phase 6) ──────────────────────────────────
+//
+// Plain form actions: each works without JavaScript and comes back to the
+// order page with a banner (?done=… or ?error=…) the page turns into a
+// sentence. Each checks admin rights itself, and the database checks again.
+
+const uuid = z.string().uuid()
+
+function orderPage(orderId: string, params: Record<string, string>): string {
+  const query = new URLSearchParams(params).toString()
+  return `/admin/orders/${orderId}${query ? `?${query}` : ''}`
+}
+
+const statusForm = z.object({
+  orderId: uuid,
+  status: z.enum(['pending_cod', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled']),
+  reason: z.string().trim().max(500).optional(),
+})
+
+/** The next-step button and the corrections fold. */
+export async function changeOrderStatusFromPage(formData: FormData) {
+  await requireAdmin()
+  const parsed = statusForm.safeParse({
+    orderId: formData.get('orderId'),
+    status: formData.get('status'),
+    reason: formData.get('reason') ?? undefined,
+  })
+  if (!parsed.success) redirect('/admin/orders?error=bad-request')
+  const { orderId, status, reason } = parsed.data
+
+  // A cancellation goes to the customer with its reason, so it needs one.
+  if (status === 'cancelled' && !reason) redirect(orderPage(orderId, { error: 'cancel-reason' }))
+
+  const result = await runStatusChange(orderId, status, reason || null)
+  if ('error' in result) redirect(orderPage(orderId, { error: result.code.toLowerCase() }))
+
+  redirect(orderPage(orderId, {
+    done: result.change.changed ? 'status' : 'unchanged',
+    status,
+    emailed: result.change.customer_email ? '1' : '0',
+  }))
+}
+
+export async function addOrderNoteFromPage(formData: FormData) {
+  await requireAdmin()
+  const parsed = z.object({ orderId: uuid, note: z.string().trim().min(1).max(2000) })
+    .safeParse({ orderId: formData.get('orderId'), note: formData.get('note') })
+  const orderId = String(formData.get('orderId') ?? '')
+  if (!parsed.success) redirect(orderPage(orderId, { error: 'note' }))
+
+  const supabase = await createClient()
+  const { error } = await supabase.rpc('add_order_note', { p_order_id: parsed.data.orderId, p_note: parsed.data.note })
+  if (error) redirect(orderPage(orderId, { error: 'failed' }))
+  revalidatePath(`/admin/orders/${orderId}`)
+  redirect(orderPage(orderId, { done: 'note' }))
+}
+
+export async function setOrderTestFlagFromPage(formData: FormData) {
+  await requireAdmin()
+  const parsed = z.object({ orderId: uuid, isTest: z.enum(['true', 'false']), reason: z.string().trim().max(200).optional() })
+    .safeParse({ orderId: formData.get('orderId'), isTest: formData.get('isTest'), reason: formData.get('reason') ?? undefined })
+  if (!parsed.success) redirect('/admin/orders?error=bad-request')
+  const { orderId, isTest, reason } = parsed.data
+
+  const supabase = await createClient()
+  const { error } = await supabase.rpc('set_order_test_flag', { p_order_id: orderId, p_is_test: isTest === 'true', p_reason: reason || null })
+  if (error) redirect(orderPage(orderId, { error: 'failed' }))
+  revalidatePath('/admin/orders')
+  revalidatePath(`/admin/orders/${orderId}`)
+  revalidatePath('/admin')
+  redirect(orderPage(orderId, { done: isTest === 'true' ? 'test-on' : 'test-off' }))
+}
+
+export async function setOrderSourceFromPage(formData: FormData) {
+  await requireAdmin()
+  const parsed = z.object({
+    orderId: uuid,
+    source: z.enum(['', 'meta', 'google', 'direct', 'referral', 'other']),
+    note: z.string().trim().max(300).optional(),
+  }).safeParse({ orderId: formData.get('orderId'), source: formData.get('source') ?? '', note: formData.get('note') ?? undefined })
+  if (!parsed.success) redirect('/admin/orders?error=bad-request')
+  const { orderId, source, note } = parsed.data
+
+  const supabase = await createClient()
+  const { error } = await supabase.rpc('set_order_source', { p_order_id: orderId, p_source: source || null, p_note: note || null })
+  if (error) redirect(orderPage(orderId, { error: 'failed' }))
+  revalidatePath(`/admin/orders/${orderId}`)
+  revalidatePath('/admin/meta')
+  redirect(orderPage(orderId, { done: 'source' }))
+}
+
+/** "Send to OrderFlow now" - the same send as every other, labelled by hand. */
+export async function sendToOrderFlowFromPage(formData: FormData) {
+  await requireAdmin()
+  const parsed = uuid.safeParse(formData.get('orderId'))
+  if (!parsed.success) redirect('/admin/orders?error=bad-request')
+  const orderId = parsed.data
+
+  const supabase = await createClient()
+  const { error } = await supabase.rpc('send_order_to_orderflow', { p_order_id: orderId })
+  if (error) redirect(orderPage(orderId, { error: error.message.includes('ORDERFLOW_OFF') ? 'orderflow-off' : 'failed' }))
+  revalidatePath(`/admin/orders/${orderId}`)
+  redirect(orderPage(orderId, { done: 'orderflow' }))
+}
+
+/** "Send the review email now" (E8). The page asks first when one has gone. */
+export async function sendReviewEmailFromPage(formData: FormData) {
+  await requireAdmin()
+  const parsed = uuid.safeParse(formData.get('orderId'))
+  if (!parsed.success) redirect('/admin/orders?error=bad-request')
+  const orderId = parsed.data
+
+  const result = await sendReviewEmailNow(orderId)
+  revalidatePath(`/admin/orders/${orderId}`)
+  redirect(orderPage(orderId, result === 'sent' ? { done: 'review' } : { error: `review-${result}` }))
 }

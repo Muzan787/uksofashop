@@ -372,7 +372,7 @@ export default async function MetaAdminPage(props: { searchParams: SearchParams 
                 </div>
 
                 <Link
-                  href={`/admin/orders?status=all#${order.id}`}
+                  href={`/admin/orders/${order.id}`}
                   className="shrink-0 text-xs font-bold text-orange-600 hover:text-orange-700"
                 >
                   Open in Orders →

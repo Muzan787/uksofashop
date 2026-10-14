@@ -11,10 +11,21 @@
 // reason instead, so the record of what happened stays.
 
 import { useEffect, useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { Trash2 } from 'lucide-react'
 import { deleteOrder } from '@/app/actions/orders'
 
-export default function DeleteOrderButton({ orderId, reference }: { orderId: string; reference: string }) {
+export default function DeleteOrderButton({
+  orderId,
+  reference,
+  redirectTo,
+}: {
+  orderId: string
+  reference: string
+  /** Where to go once it is gone - the order page sends you back to the list. */
+  redirectTo?: string
+}) {
+  const router = useRouter()
   const [armed, setArmed] = useState(false)
   const [error, setError] = useState('')
   const [pending, startTransition] = useTransition()
@@ -34,7 +45,9 @@ export default function DeleteOrderButton({ orderId, reference }: { orderId: str
       if ('error' in res) {
         setError(res.error)
         setArmed(false)
+        return
       }
+      if (redirectTo) router.replace(redirectTo)
       // On success the list re-renders without this card; nothing to reset.
     })
   }

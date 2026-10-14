@@ -14,6 +14,11 @@
 //   * deleting an order clears every linked row, in one go;
 //   * orderflow.order_payload() returns exactly what it did before.
 //
+// And, from 20261014230352_order_page.sql (Phase 6), the orders list's search
+// - a phone typed without spaces still finds "07700 900123" - and the
+// WhatsApp-or-phone channel; plus the order page's WhatsApp messages and the
+// search box's own cleaning (src/utils/orderWhatsApp.ts, orderSearch.ts).
+//
 // Each test runs inside BEGIN ... ROLLBACK, so they don't see each other.
 const { test, before } = require('node:test')
 const assert = require('node:assert/strict')
@@ -92,7 +97,7 @@ before(async () => {
     create table public.orders (
       id uuid primary key default gen_random_uuid(),
       status text not null default 'pending_cod',
-      customer_name text, customer_email text, customer_phone text, shipping_address text,
+      source text, customer_name text, customer_email text, customer_phone text, shipping_address text,
       special_instructions text, preferred_delivery_date date,
       items_subtotal numeric, delivery_total numeric, total_amount numeric,
       created_at timestamptz not null default now(),
@@ -117,8 +122,8 @@ before(async () => {
     -- A sample order with lines, and the test order decision 6 names.
     insert into public.products (id, title) values ('aaaaaaaa-0000-4000-8000-000000000001', 'Hannah Electric 3+2 Seater');
     insert into public.product_variants (id, product_id, sku, material) values ('bbbbbbbb-0000-4000-8000-000000000001', 'aaaaaaaa-0000-4000-8000-000000000001', 'HAN-32-GRY', 'Plush velvet');
-    insert into public.orders (id, status, customer_name, shipping_address, total_amount, confirmed_at, preferred_delivery_date)
-      values ('cccccccc-0000-4000-8000-000000000001', 'confirmed', 'Sample', '1 High St, Blackburn, BB1 1AA', 1299.5, now(), '2026-10-20');
+    insert into public.orders (id, status, source, customer_name, shipping_address, total_amount, confirmed_at, preferred_delivery_date)
+      values ('cccccccc-0000-4000-8000-000000000001', 'confirmed', 'whatsapp', 'Sample', '1 High St, Blackburn, BB1 1AA', 1299.5, now(), '2026-10-20');
     insert into public.order_items (order_id, variant_id, quantity, price_at_time_of_purchase, fabric_name)
       values ('cccccccc-0000-4000-8000-000000000001', 'bbbbbbbb-0000-4000-8000-000000000001', 1, 1299.5, 'Chenille Mink');
     insert into public.orders (id, status, customer_name, total_amount, utm_campaign, cancelled_at)
@@ -126,6 +131,7 @@ before(async () => {
   `)
   payloadBefore = (await db.query(`select orderflow.order_payload('cccccccc-0000-4000-8000-000000000001') p`)).rows[0].p
   await db.exec(read('supabase/migrations/20261014215150_order_rules.sql'))
+  await db.exec(read('supabase/migrations/20261014230352_order_page.sql'))
 })
 
 /** Runs `fn` in a transaction that is always rolled back. */
@@ -309,4 +315,91 @@ test('OrderFlow receives exactly what it did before', async () => {
   assert.deepEqual(after, payloadBefore)
   assert.deepEqual(Object.keys(after).sort(), ['delivery_date', 'external_id', 'items', 'placed_at', 'postcode', 'status', 'total'])
   assert.equal(after.postcode, 'BB1 1AA')
+})
+
+// ── Phase 6: the order page and the list ──────────────────────────────────
+
+test('search finds an order by code, name, email, postcode and phone, however it is typed', async () => {
+  await isolated(async () => {
+    const id = (await db.query(
+      `insert into public.orders (status, customer_name, customer_email, customer_phone, shipping_address, total_amount)
+       values ('pending_cod', 'Aisha Khan', 'aisha.k@example.com', '07700 900123', '12 Mill Lane, Blackburn, BB2 4QR', 899) returning id`,
+    )).rows[0].id
+    await as('admin')
+    const finds = async q => (await db.query(`select * from public.search_orders($1) as id`, [q])).rows.map(r => r.id).includes(id)
+    for (const q of ['07700900123', '07700 900123', '+44 7700 900123', '447700900123', '900123', 'BB2 4QR', 'bb24qr', 'Khan', 'aisha.k@', id.slice(0, 8), id.slice(0, 8).toUpperCase(), id]) {
+      assert.equal(await finds(q), true, q)
+    }
+    for (const q of ['07700 900124', 'Smith', 'a', '', "'; drop table public.orders; --", '%', '_']) {
+      assert.equal(await finds(q), false, q)
+    }
+    assert.ok((await db.query(`select count(*)::int n from public.orders`)).rows[0].n > 0)
+    await as('customer')
+    assert.match(await refusal(`select * from public.search_orders('Khan')`) ?? 'ALLOWED', /NOT_AUTHORISED/)
+    await db.exec('set local role anon')
+    assert.match(await refusal(`select * from public.search_orders('Khan')`) ?? 'ALLOWED', /permission denied/)
+    await db.exec('reset role')
+  })
+})
+
+test('orders taken on WhatsApp are marked so, and staff can say it was the phone', async () => {
+  await isolated(async () => {
+    const rows = (await db.query(`select customer_name, channel from public.orders order by customer_name`)).rows
+    assert.deepEqual(rows, [{ customer_name: 'Saad', channel: null }, { customer_name: 'Sample', channel: 'whatsapp' }])
+    await as('admin')
+    const id = await newOrder('pending_cod')
+    await db.query(`select public.set_order_channel($1, 'phone')`, [id])
+    assert.equal((await db.query(`select channel from public.orders where id = $1`, [id])).rows[0].channel, 'phone')
+    assert.match(await refusal(`select public.set_order_channel($1, 'fax')`, [id]), /BAD_CHANNEL/)
+    await as('customer')
+    assert.match(await refusal(`select public.set_order_channel($1, 'whatsapp')`, [id]) ?? 'ALLOWED', /NOT_AUTHORISED/)
+    assert.match(await refusal(`select public.send_order_to_orderflow($1)`, [id]) ?? 'ALLOWED', /NOT_AUTHORISED/)
+    assert.match(await refusal(`select public.order_orderflow_sends($1)`, [id]) ?? 'ALLOWED', /NOT_AUTHORISED/)
+  })
+})
+
+/** Values made inside the vm sandbox, brought into this realm for deepEqual. */
+const plain = value => JSON.parse(JSON.stringify(value))
+
+test('the order page has a WhatsApp message for every status, in the shop voice', () => {
+  const { orderWhatsAppMessage, postcodeOf, firstName } = load('src/utils/orderWhatsApp.ts')
+  const site = 'https://www.uksofashop.co.uk'
+  const order = {
+    id: 'abcdef12-0000-4000-8000-000000000001', status: 'pending_cod', customer_name: '  Aisha Khan',
+    total_amount: 1299.5, shipping_address: '12 Mill Lane, Blackburn, bb2 4qr', cancellation_reason: 'Out of stock. ',
+  }
+  assert.equal(postcodeOf(order.shipping_address), 'BB2 4QR')
+  assert.equal(postcodeOf('12 Mill Lane, Blackburn'), '')
+  assert.equal(firstName(order.customer_name), 'Aisha')
+  assert.equal(firstName(''), 'there')
+
+  const waiting = orderWhatsAppMessage(order, site)
+  assert.match(waiting, /^Hi Aisha, /)
+  assert.ok(waiting.includes(`${site}/confirm-order/${order.id}`), 'waiting carries the /confirm-order link')
+  assert.match(waiting, /#ABCDEF12/)
+  assert.match(orderWhatsAppMessage(order, site, { status: 'confirmed' }), /When is a good time to ring you about a delivery day\?/)
+  assert.match(orderWhatsAppMessage(order, site, { status: 'processing' }), /being prepared/)
+  const shipped = orderWhatsAppMessage(order, site, { status: 'shipped' })
+  assert.match(shipped, /£1,299\.50, in cash or by bank transfer/)
+  assert.ok(shipped.includes(`${site}/track-order?ref=ABCDEF12&postcode=BB2%204QR`))
+  assert.ok(orderWhatsAppMessage(order, site, { status: 'delivered', reviewLink: 'https://example.com/r' }).includes('https://example.com/r'))
+  assert.doesNotMatch(orderWhatsAppMessage(order, site, { status: 'delivered' }), /review/)
+  assert.match(orderWhatsAppMessage(order, site, { status: 'cancelled' }), /cancelled: Out of stock\.\n/)
+  for (const status of ['pending_cod', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled']) {
+    assert.doesNotMatch(orderWhatsAppMessage(order, site, { status }), /undefined|null|NaN/, status)
+  }
+  assert.deepEqual(plain([postcodeOf(null), firstName(null)]), ['', 'there'])
+})
+
+test('the search box sends only plain characters, and knows an order code', () => {
+  const { cleanSearch, isOrderCode } = load('src/utils/orderSearch.ts')
+  assert.equal(cleanSearch('  07700   900123 '), '07700 900123')
+  assert.equal(cleanSearch("x'; drop table orders; --"), 'x drop table orders --')
+  assert.equal(cleanSearch('100%_(a)*'), '100_a')
+  assert.equal(cleanSearch('aisha.k+1@example.com'), 'aisha.k+1@example.com')
+  assert.equal(cleanSearch(undefined), '')
+  assert.equal(cleanSearch('x'.repeat(200)).length, 80)
+  assert.equal(isOrderCode('ABCDEF12'), true)
+  assert.equal(isOrderCode('abcdef12-0000-4000-8000-000000000001'), true)
+  assert.equal(isOrderCode('Khan'), false)
 })

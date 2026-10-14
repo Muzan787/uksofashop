@@ -15,7 +15,8 @@
 // form.
 
 import { useMemo, useState, useTransition } from 'react'
-import { MessageCircle, Plus, X, Loader2, Check, Clock3 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { MessageCircle, Plus, X, Loader2, Check, Clock3, Phone } from 'lucide-react'
 import { createWhatsAppOrder, previewWhatsAppTimeMatch, type WhatsAppAttributionMatch } from '@/app/actions/manual-order'
 
 export interface PickerVariant {
@@ -56,11 +57,17 @@ const field =
 export default function NewWhatsAppOrder({
   variants,
   fabrics,
+  initialReference = '',
 }: {
   variants: PickerVariant[]
   fabrics: PickerFabric[]
+  /** A WhatsApp enquiry's reference (?ref= on the orders page): opens the form with it filled in. */
+  initialReference?: string
 }) {
-  const [open, setOpen] = useState(false)
+  const router = useRouter()
+  const [open, setOpen] = useState(Boolean(initialReference))
+  const [channel, setChannel] = useState<'whatsapp' | 'phone'>('whatsapp')
+  const [isTest, setIsTest] = useState(false)
   const [pending, setPending] = useState(false)
   const [matchingTime, startTimeMatch] = useTransition()
   const [timePreview, setTimePreview] = useState<WhatsAppAttributionMatch | null | undefined>(undefined)
@@ -81,7 +88,7 @@ export default function NewWhatsAppOrder({
   const [notes, setNotes] = useState('')
   const [delivery, setDelivery] = useState('')
   const [deliveryDate, setDeliveryDate] = useState('')
-  const [whatsappReference, setWhatsappReference] = useState('')
+  const [whatsappReference, setWhatsappReference] = useState(initialReference.toUpperCase())
   const [matchByTime, setMatchByTime] = useState(false)
   const [leadReference, setLeadReference] = useState('')
   const [contactDate, setContactDate] = useState('')
@@ -115,6 +122,7 @@ export default function NewWhatsAppOrder({
     setNotes(''); setDelivery(''); setWhatsappReference(''); setMatchByTime(false)
     setContactDate(''); setContactHour('10'); setContactMinute('00'); setContactMeridiem('PM')
     setContactTimezone('Asia/Karachi'); setTimePreview(undefined); setLines([{ ...BLANK }]); setError('')
+    setChannel('whatsapp'); setIsTest(false)
   }
 
   const previewTimeMatch = () => {
@@ -173,6 +181,8 @@ export default function NewWhatsAppOrder({
       items,
       whatsappReference: whatsappReference.trim() || undefined,
       leadReference: leadReference.trim() || undefined,
+      channel,
+      isTest,
       contactTime:
         !whatsappReference.trim() && matchByTime
           ? {
@@ -197,6 +207,8 @@ export default function NewWhatsAppOrder({
       searchedTime: res.contactTimeSearched,
     })
     reset()
+    // Straight to the new order, where the next step and its WhatsApp message are.
+    router.push(`/admin/orders/${res.fullOrderId}?done=created`)
   }
 
   if (!open) {
@@ -204,10 +216,10 @@ export default function NewWhatsAppOrder({
       <button
         type="button"
         onClick={() => { setOpen(true); setDone(null) }}
-        className="inline-flex items-center gap-2 rounded-sm bg-stone-900 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-white transition hover:bg-stone-700"
+        className="inline-flex min-h-11 items-center gap-2 rounded-sm bg-stone-900 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-white transition hover:bg-stone-700"
       >
         <MessageCircle className="h-4 w-4" />
-        Take a WhatsApp order
+        Take a WhatsApp or phone order
       </button>
     )
   }
@@ -218,7 +230,7 @@ export default function NewWhatsAppOrder({
         <div>
           <h2 className="flex items-center gap-2 text-base font-bold text-stone-900">
             <MessageCircle className="h-4 w-4" />
-            WhatsApp order
+            {channel === 'phone' ? 'Phone order' : 'WhatsApp order'}
           </h2>
           <p className="mt-1 text-xs leading-relaxed text-stone-500">
             Behaves exactly like a website order: saves as <strong>pending</strong>, emails
@@ -261,13 +273,42 @@ export default function NewWhatsAppOrder({
       )}
 
       <form onSubmit={submit} noValidate className="space-y-5">
+        {/* How it came in. Shown in the admin only - the order is saved the
+            same way either way, so nothing sent to Meta or OrderFlow changes. */}
+        <fieldset className="flex flex-wrap items-center gap-2">
+          <legend className={label}>Taken on</legend>
+          {([['whatsapp', 'WhatsApp', MessageCircle], ['phone', 'Phone', Phone]] as const).map(([value, text, Icon]) => (
+            <label
+              key={value}
+              className={`inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-sm border px-4 py-2 text-sm font-semibold transition ${
+                channel === value ? 'border-stone-900 bg-stone-900 text-white' : 'border-stone-300 bg-white text-stone-700 hover:border-stone-500'
+              }`}
+            >
+              <input
+                type="radio"
+                name="wa-channel"
+                value={value}
+                checked={channel === value}
+                onChange={() => setChannel(value)}
+                className="sr-only"
+              />
+              <Icon className="h-4 w-4" aria-hidden="true" />
+              {text}
+            </label>
+          ))}
+          <label className="inline-flex sm:ml-auto min-h-11 cursor-pointer items-center gap-2 text-sm text-stone-700">
+            <input type="checkbox" checked={isTest} onChange={e => setIsTest(e.target.checked)} className="h-5 w-5 accent-violet-600" />
+            Test order <span className="text-xs text-stone-400">(kept out of reports and ads)</span>
+          </label>
+        </fieldset>
+
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label className={label} htmlFor="wa-name">Name</label>
             <input id="wa-name" className={field} value={name} onChange={e => setName(e.target.value)} autoComplete="off" />
           </div>
           <div>
-            <label className={label} htmlFor="wa-phone">WhatsApp number</label>
+            <label className={label} htmlFor="wa-phone">{channel === 'phone' ? 'Phone number' : 'WhatsApp number'}</label>
             <input id="wa-phone" className={field} value={phone} onChange={e => setPhone(e.target.value)} inputMode="tel" autoComplete="off" />
           </div>
           <div className="sm:col-span-2">

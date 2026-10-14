@@ -8,7 +8,7 @@ import { requireAdmin } from '@/utils/auth'
 /**
  * Mark a swatch request posted, or cancel it.
  *
- * Throws rather than returning an error object, the same as updateOrderStatus:
+ * Throws rather than returning an error object:
  * the admin page discards this action's return value, so anything returned
  * would fail silently.
  */

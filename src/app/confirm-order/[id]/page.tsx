@@ -55,8 +55,8 @@ const money = (n: number) => `£${Number(n ?? 0).toFixed(2)}`
  * So the page reads with order_for_confirmation, which only reads, and the
  * button posts to confirmCustomerOrder, which calls the unchanged confirm_order.
  *
- * The admin route is untouched: "Confirm order" on the order card still moves
- * pending_cod -> confirmed through updateOrderStatus, whether or not the
+ * The admin route is untouched: "Mark confirmed" on the order page still moves
+ * pending_cod -> confirmed through runStatusChange, whether or not the
  * customer ever opens this page. Whichever happens first, both paths stamp
  * confirmed_at once and never move it, so the business-event time stays the
  * first confirmation and this page is safe to open again afterwards.

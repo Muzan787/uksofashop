@@ -94,3 +94,53 @@ export async function runReviewRequests(): Promise<JobOutcome> {
 
   return { status: 'ok', httpStatus: 200, body: { considered: orders?.length ?? 0, sent, skipped } }
 }
+
+/** The review link for each distinct product on an order (one per sofa, not per line). */
+export async function orderReviewLinks(orderId: string): Promise<{ productTitle: string; imageUrl: string | null; reviewLink: string }[]> {
+  const { data } = await createAdminClient()
+    .from('order_items')
+    .select('product_variants(image_url, products(id, title))')
+    .eq('order_id', orderId)
+
+  const byProduct = new Map<string, { productTitle: string; imageUrl: string | null; reviewLink: string }>()
+  for (const line of data ?? []) {
+    const variant = line.product_variants as { image_url?: string | null; products?: { id: string; title: string } | null } | null
+    const product = variant?.products
+    if (!product?.id || byProduct.has(product.id)) continue
+    byProduct.set(product.id, {
+      productTitle: product.title,
+      imageUrl: variant?.image_url ?? null,
+      reviewLink: `${SITE_URL}/review?token=${encodeURIComponent(createReviewToken(orderId, product.id))}`,
+    })
+  }
+  return [...byProduct.values()]
+}
+
+/**
+ * "Send the review email now" on the order page (admin upgrade E8): the same
+ * email the daily job sends three days after delivery, for one order, now.
+ * Stamps review_request_sent_at so the daily job does not ask again.
+ */
+export async function sendReviewEmailNow(orderId: string): Promise<'sent' | 'no-email' | 'no-products' | 'not-delivered' | 'failed'> {
+  const db = createAdminClient()
+  const { data: order } = await db
+    .from('orders')
+    .select('id, status, customer_name, customer_email')
+    .eq('id', orderId)
+    .maybeSingle()
+  if (!order) return 'failed'
+  if (order.status !== 'delivered') return 'not-delivered'
+  if (!order.customer_email) return 'no-email'
+
+  const items = await orderReviewLinks(orderId)
+  if (items.length === 0) return 'no-products'
+
+  try {
+    await sendReviewRequest(order.customer_email, order.customer_name ?? '', orderId.substring(0, 8).toUpperCase(), items)
+  } catch (err) {
+    console.error(`Review email failed for order ${orderId}`, err)
+    return 'failed'
+  }
+  await db.from('orders').update({ review_request_sent_at: new Date().toISOString() }).eq('id', orderId)
+  return 'sent'
+}

@@ -599,7 +599,7 @@ Once it is confirmed we will ring you to arrange delivery.`,
       ${copyText ? forwardBlock(copyText, 'The whole order, to pass on') : ''}
 
       <div style="margin-top: 32px; text-align: center;">
-        <a href="${siteUrl}/admin/orders" style="color: #a8a29e; font-size: 12px; text-decoration: underline;">
+        <a href="${siteUrl}/admin/orders/${encodeURIComponent(fullOrderId)}" style="color: #a8a29e; font-size: 12px; text-decoration: underline;">
           Or view this order in the Admin Dashboard
         </a>
       </div>
@@ -622,9 +622,9 @@ Once it is confirmed we will ring you to arrange delivery.`,
 // the order simply changed colour in the admin panel, which is no use to
 // somebody who is not looking at the admin panel.
 //
-// NOT sent when the shop confirms the order itself from the order card. That
+// NOT sent when the shop confirms the order itself from the order page. That
 // path is a human already sitting in front of the order, and mailing them
-// about a button they just pressed is noise - see updateOrderStatus.
+// about a button they just pressed is noise - see runStatusChange.
 //
 // The action here is the phone call. The customer has said yes and is now
 // waiting to be rung about a delivery day, so the button is the call, and the
@@ -686,7 +686,7 @@ export async function sendAdminOrderConfirmedNotification(
       ${waUrl ? `<a href="${waUrl}" style="background-color: #25D366; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px; display: inline-block; margin: 4px 0 0 8px;">Or message on WhatsApp</a>` : ''}
 
       <div style="margin-top: 32px; text-align: center;">
-        <a href="${siteUrl}/admin/orders" style="color: #a8a29e; font-size: 12px; text-decoration: underline;">
+        <a href="${siteUrl}/admin/orders?q=${encodeURIComponent(shortCode)}" style="color: #a8a29e; font-size: 12px; text-decoration: underline;">
           Open this order in the Admin Dashboard
         </a>
       </div>
