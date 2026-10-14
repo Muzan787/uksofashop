@@ -122,6 +122,39 @@ export type Database = {
         }
         Relationships: []
       }
+      order_events: {
+        Row: {
+          created_at: string
+          from_status: string | null
+          id: number
+          kind: string
+          note: string | null
+          order_id: string
+          staff_id: string | null
+          to_status: string | null
+        }
+        Insert: {
+          created_at?: string
+          from_status?: string | null
+          id?: never
+          kind: string
+          note?: string | null
+          order_id: string
+          staff_id?: string | null
+          to_status?: string | null
+        }
+        Update: {
+          created_at?: string
+          from_status?: string | null
+          id?: never
+          kind?: string
+          note?: string | null
+          order_id?: string
+          staff_id?: string | null
+          to_status?: string | null
+        }
+        Relationships: []
+      }
       health_alerts: {
         Row: {
           check_key: string
@@ -621,6 +654,9 @@ export type Database = {
           confirmed_at: string | null
           cancelled_at: string | null
           cancellation_reason: string | null
+          is_test: boolean
+          test_reason: string | null
+          confirmed_by: string | null
           manual_acquisition_source: string | null
           manual_acquisition_note: string | null
           manual_acquisition_at: string | null
@@ -684,6 +720,9 @@ export type Database = {
           confirmed_at?: string | null
           cancelled_at?: string | null
           cancellation_reason?: string | null
+          is_test?: boolean
+          test_reason?: string | null
+          confirmed_by?: string | null
           manual_acquisition_source?: string | null
           manual_acquisition_note?: string | null
           manual_acquisition_at?: string | null
@@ -745,6 +784,9 @@ export type Database = {
           confirmed_at?: string | null
           cancelled_at?: string | null
           cancellation_reason?: string | null
+          is_test?: boolean
+          test_reason?: string | null
+          confirmed_by?: string | null
           manual_acquisition_source?: string | null
           manual_acquisition_note?: string | null
           manual_acquisition_at?: string | null
@@ -1515,6 +1557,11 @@ export type Database = {
       is_admin: { Args: never; Returns: boolean }
       claim_admin: { Args: never; Returns: boolean }
       admin_status_snapshot: { Args: never; Returns: Json }
+      change_order_status: { Args: { p_order_id: string; p_status: string; p_reason?: string | null }; Returns: Json }
+      set_order_test_flag: { Args: { p_order_id: string; p_is_test: boolean; p_reason?: string | null }; Returns: undefined }
+      add_order_note: { Args: { p_order_id: string; p_note: string }; Returns: number }
+      set_order_source: { Args: { p_order_id: string; p_source: string | null; p_note?: string | null }; Returns: undefined }
+      delete_order: { Args: { p_order_id: string }; Returns: boolean }
       /** Reads an order for /confirm-order/[id]. Confirms nothing. */
       order_for_confirmation: {
         Args: { p_order_id: string }

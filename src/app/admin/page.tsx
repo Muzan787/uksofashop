@@ -13,7 +13,8 @@ export default async function AdminDashboardPage() {
   const supabase = await createClient()
 
   // Fetch metrics silently and rapidly
-  const { data: orders } = await supabase.from('orders').select('total_amount, status')
+  // Test orders are never work to do or money to collect.
+  const { data: orders } = await supabase.from('orders').select('total_amount, status').eq('is_test', false)
 
   /**
    * "Needs attention" rather than a literal status match.

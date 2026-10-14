@@ -29,6 +29,7 @@ type MetaOrder = {
   manual_acquisition_note: string | null
   source: string | null
   cancellation_reason: string | null
+  is_test: boolean | null
 }
 
 type SearchParams = Promise<{ stage?: string; state?: string }>
@@ -142,7 +143,7 @@ export default async function MetaAdminPage(props: { searchParams: SearchParams 
   const { data, error } = await supabase
     .from('orders')
     .select(
-      'id, customer_name, status, total_amount, created_at, confirmed_at, delivered_at, cancelled_at, purchase_event_sent_at, delivered_event_sent_at, utm_source, utm_campaign, manual_acquisition_source, manual_acquisition_note, source, cancellation_reason',
+      'id, customer_name, status, total_amount, created_at, confirmed_at, delivered_at, cancelled_at, purchase_event_sent_at, delivered_event_sent_at, utm_source, utm_campaign, manual_acquisition_source, manual_acquisition_note, source, cancellation_reason, is_test',
     )
     .order('created_at', { ascending: false })
     .limit(5000)

@@ -12,17 +12,16 @@ export interface MetaSignalOrder {
   delivered_event_sent_at: string | null
   utm_campaign: string | null
   cancellation_reason: string | null
+  is_test: boolean | null
 }
 
 /** The fields the rules below read, for a select(). */
 export const META_SIGNAL_COLUMNS =
-  'status, confirmed_at, delivered_at, purchase_event_sent_at, delivered_event_sent_at, utm_campaign, cancellation_reason'
+  'status, confirmed_at, delivered_at, purchase_event_sent_at, delivered_event_sent_at, utm_campaign, cancellation_reason, is_test'
 
+/** A test order never sends a conversion (admin upgrade F5). */
 export function isQa(order: MetaSignalOrder): boolean {
-  return (
-    order.utm_campaign === 'offer-test' ||
-    /(?:^|\b)(?:test|testing|qa)(?:\b|$)/i.test(order.cancellation_reason ?? '')
-  )
+  return order.is_test === true
 }
 
 export function purchaseEligible(order: MetaSignalOrder): boolean {

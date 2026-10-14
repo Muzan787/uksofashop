@@ -156,13 +156,14 @@ export default async function AdminOrdersPage(props: { searchParams: SearchParam
   // It intentionally excludes customer details and line items.
   const { data: overviewRows } = await supabase
     .from('orders')
-    .select('status, total_amount, preferred_delivery_date')
+    .select('status, total_amount, preferred_delivery_date, is_test')
     .limit(5000)
 
   type OverviewRow = {
     status: string | null
     total_amount: number | null
     preferred_delivery_date: string | null
+    is_test: boolean | null
   }
 
   const overview = (overviewRows ?? []) as OverviewRow[]
@@ -171,12 +172,14 @@ export default async function AdminOrdersPage(props: { searchParams: SearchParam
     counts[key] = (counts[key] ?? 0) + 1
     return counts
   }, {})
-  const attentionCount = NEEDS_ATTENTION.reduce((sum, key) => sum + (statusCounts[key] ?? 0), 0)
+  // Test orders never count as work waiting, or as money to collect.
+  const realRows = overview.filter(row => !row.is_test)
+  const attentionCount = realRows.filter(row => NEEDS_ATTENTION.includes(row.status ?? 'pending_cod')).length
   const openStatuses = new Set(['pending_cod', 'confirmed', 'processing', 'shipped'])
-  const openValue = overview
+  const openValue = realRows
     .filter(row => openStatuses.has(row.status ?? 'pending_cod'))
     .reduce((sum, row) => sum + Number(row.total_amount ?? 0), 0)
-  const selectedDeliveryDates = overview.filter(
+  const selectedDeliveryDates = realRows.filter(
     row => openStatuses.has(row.status ?? 'pending_cod') && row.preferred_delivery_date,
   ).length
 
@@ -199,7 +202,7 @@ export default async function AdminOrdersPage(props: { searchParams: SearchParam
       )
     `, { count: 'exact' })
 
-  if (status === 'attention') query = query.in('status', NEEDS_ATTENTION)
+  if (status === 'attention') query = query.in('status', NEEDS_ATTENTION).eq('is_test', false)
   else if (status !== 'all') query = query.eq('status', status)
 
   const { data: orders, error, count } = await query
@@ -358,9 +361,9 @@ export default async function AdminOrdersPage(props: { searchParams: SearchParam
                       Meta delivery sent
                     </span>
                   )}
-                  {order.utm_campaign === 'offer-test' && (
-                    <span className="rounded-pill border border-violet-200 bg-violet-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-violet-700">
-                      QA / test
+                  {order.is_test && (
+                    <span title={order.test_reason ?? undefined} className="rounded-pill border border-violet-200 bg-violet-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-violet-700">
+                      Test order
                     </span>
                   )}
                 </div>
@@ -571,10 +574,10 @@ export default async function AdminOrdersPage(props: { searchParams: SearchParam
                 </div>
               </div>
 
-              {order.utm_campaign === 'offer-test' ? (
+              {order.is_test ? (
                 <div className="flex items-start gap-2 rounded-sm border border-violet-200 bg-violet-50 px-3 py-2 text-xs text-violet-800">
                   <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-                  <span><strong>QA/test order.</strong> Meta conversion sending is blocked.</span>
+                  <span><strong>Test order.</strong> Meta conversion sending is blocked.</span>
                 </div>
               ) : (
                 <div className="grid gap-2 sm:grid-cols-2">

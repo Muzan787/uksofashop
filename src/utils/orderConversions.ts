@@ -78,7 +78,7 @@ export async function reportOrderConversion(
     // which collapses every field below to an error type.
     const { data: order } = await admin
       .from('orders')
-      .select('id, customer_name, customer_email, customer_phone, shipping_address, total_amount, purchase_event_id, ga_client_id, meta_fbp, meta_fbc, customer_user_agent, customer_ip, purchase_event_sent_at, delivered_event_sent_at, source, gclid, gbraid, wbraid, visitor_id, session_id, arrival_id, created_at, confirmed_at, delivered_at, utm_campaign')
+      .select('id, customer_name, customer_email, customer_phone, shipping_address, total_amount, purchase_event_id, ga_client_id, meta_fbp, meta_fbc, customer_user_agent, customer_ip, purchase_event_sent_at, delivered_event_sent_at, source, gclid, gbraid, wbraid, visitor_id, session_id, arrival_id, created_at, confirmed_at, delivered_at, utm_campaign, is_test')
       .eq('id', orderId)
       .single()
 
@@ -87,7 +87,9 @@ export async function reportOrderConversion(
     // Hard safety rail for the explicit QA campaign used while this pipeline
     // was being proved. Even if a test order is accidentally confirmed or an
     // admin presses a conversion button, it must never train Meta or GA4.
-    if (order.utm_campaign === 'offer-test') {
+    // is_test is the flag staff set (admin upgrade F5); the campaign check is
+    // kept as well, so the original QA order stays blocked whatever its flag.
+    if (order.is_test || order.utm_campaign === 'offer-test') {
       console.warn(`Conversion suppressed for QA order ${orderId.substring(0, 8).toUpperCase()}`)
       return
     }

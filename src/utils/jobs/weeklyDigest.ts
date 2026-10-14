@@ -79,6 +79,7 @@ async function readWeek(db: Db, from: Date, to: Date): Promise<DigestWeek> {
     db
       .from('orders')
       .select('status, total_amount, source')
+      .eq('is_test', false)
       .gte('created_at', f)
       .lt('created_at', t),
     db

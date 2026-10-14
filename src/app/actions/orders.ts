@@ -9,7 +9,6 @@ import { reportOrderConversion } from '@/utils/orderConversions'
 import { reportGooglePurchase } from '@/utils/googleServer'
 import { sendOrderStatusUpdate, sendAdminOrderStatusNotification, sendAdminOrderConfirmedNotification } from '@/utils/email'
 import { requireAdmin } from '@/utils/auth'
-import { createAdminClient } from '@/utils/supabase/admin'
 import { z } from 'zod'
 import { isValidUkMobile, UK_MOBILE_ERROR } from '@/utils/phone'
 import type { ConfirmationOrder, TrackedOrder } from '@/types/orders'
@@ -28,6 +27,16 @@ function extractPostcode(address: string | null): string {
   return match ? `${match[1]} ${match[2]}` : ''
 }
 
+/** The database's refusal codes, as a sentence for the admin. */
+function statusChangeError(message: string): string {
+  if (message.includes('NOT_AUTHORISED')) return 'You are not authorised to change orders.'
+  if (message.includes('BAD_STATUS_CHANGE')) return "That status change isn't allowed. A cancelled order can only be reopened as Confirmed, and a confirmed order can't go back to waiting."
+  if (message.includes('REASON_REQUIRED')) return 'Reopening a cancelled order needs a reason.'
+  if (message.includes('STAGE_TIME_LOCKED')) return "A stage time can't be changed once it has been recorded."
+  if (message.includes('NOT_FOUND')) return 'That order no longer exists.'
+  return 'Failed to update order status.'
+}
+
 export async function updateOrderStatus(formData: FormData) {
   // Throws rather than returning an error: the admin orders page discards this
   // action's return value, so an { error } object would be swallowed silently.
@@ -42,66 +51,52 @@ export async function updateOrderStatus(formData: FormData) {
     return { error: 'Missing order ID or status' }
   }
 
-  // shipping_address is fetched so the tracking link in the status email can
-  // carry the postcode - tracking now needs the reference AND the postcode.
-  // confirmed_at/cancelled_at are fetched so they can be stamped once, the
-  // first time an order reaches that status, and never overwritten after -
-  // the same "first time only" guarantee delivered_at already has.
-  const { data: order } = await supabase
-    .from('orders')
-    .select('customer_email, customer_name, customer_phone, shipping_address, confirmed_at, processing_at, shipped_at, delivered_at, cancelled_at')
-    .eq('id', orderId)
-    .single()
+  // The database is the one place a status changes (admin upgrade F4): it
+  // checks the move is allowed, stamps each stage's time the first time it is
+  // reached and never again, records who confirmed it, and writes the order's
+  // history. The reason is kept as the cancellation reason when cancelling,
+  // and is required to reopen a cancelled order.
+  const reason = formData.get('cancellationReason')
+  const { data, error } = await supabase.rpc('change_order_status', {
+    p_order_id: orderId,
+    p_status: newStatus,
+    p_reason: typeof reason === 'string' && reason.trim() ? reason.trim() : null,
+  })
 
-  // delivered_at is stamped the first time an order reaches 'delivered' and
-  // never moved again, so the review-request delay is measured from the real
-  // delivery rather than from a later status correction.
-  const patch: {
-    status: string
-    delivered_at?: string
-    confirmed_at?: string
-    processing_at?: string
-    shipped_at?: string
-    cancelled_at?: string
-    cancellation_reason?: string
-  } = { status: newStatus }
-
-  if (newStatus === 'delivered' && !order?.delivered_at) patch.delivered_at = new Date().toISOString()
-  if (newStatus === 'confirmed' && !order?.confirmed_at) patch.confirmed_at = new Date().toISOString()
-  if (newStatus === 'processing' && !order?.processing_at) patch.processing_at = new Date().toISOString()
-  if (newStatus === 'shipped' && !order?.shipped_at) patch.shipped_at = new Date().toISOString()
-  if (newStatus === 'cancelled' && !order?.cancelled_at) {
-    patch.cancelled_at = new Date().toISOString()
-    const reason = formData.get('cancellationReason')
-    if (typeof reason === 'string' && reason.trim()) patch.cancellation_reason = reason.trim()
+  if (error || !data) {
+    console.error('change_order_status failed:', error?.message)
+    return { error: statusChangeError(error?.message ?? '') }
   }
 
-  const { error } = await supabase
-    .from('orders')
-    .update(patch)
-    .eq('id', orderId)
-
-  if (error) {
-    return { error: 'Failed to update order status.' }
+  const change = data as unknown as {
+    confirmed_now: boolean
+    customer_name: string
+    customer_email: string | null
+    customer_phone: string | null
+    shipping_address: string | null
   }
-  if (patch.confirmed_at) after(()=>reportGooglePurchase(orderId))
+
+  if (change.confirmed_now) after(() => reportGooglePurchase(orderId))
 
   // --- TRIGGER EMAILS ---
+  //
+  // Sent after the page has answered, so a slow mail server never holds up the
+  // change. Exactly the emails this sent before the database took over.
   //
   // Two independent sends. The customer's update needs an email address; a
   // WhatsApp order often has none, and it used to take the shop's own
   // WhatsApp prompt down with it - so an order with only a phone number got
   // no nudge at any stage. The prompt goes whenever there is a number.
-  if (order) {
+  after(async () => {
     const shortCode = orderId.substring(0, 8).toUpperCase()
 
     // 1. The customer's update, when there is somewhere to send it.
-    if (order.customer_email) {
+    if (change.customer_email) {
       try {
-        const postcode = extractPostcode(order.shipping_address)
+        const postcode = extractPostcode(change.shipping_address)
         const { trustpilotInvited } = await sendOrderStatusUpdate(
-          order.customer_email,
-          order.customer_name,
+          change.customer_email,
+          change.customer_name,
           orderId,
           newStatus,
           postcode
@@ -109,8 +104,8 @@ export async function updateOrderStatus(formData: FormData) {
 
         // The delivered email went to Trustpilot's invitation service as well,
         // so this customer is being asked for a review. Stamp the order so the
-        // review-request cron (api/cron/review-requests) does not ask a second
-        // time three days later. One customer, one ask.
+        // review-request job does not ask a second time three days later. One
+        // customer, one ask.
         if (trustpilotInvited) {
           await supabase
             .from('orders')
@@ -124,11 +119,11 @@ export async function updateOrderStatus(formData: FormData) {
     }
 
     // 2. The shop's WhatsApp prompt for this stage, whenever there is a number.
-    if (order.customer_phone) {
+    if (change.customer_phone) {
       try {
         await sendAdminOrderStatusNotification(
-          order.customer_name,
-          order.customer_phone,
+          change.customer_name,
+          change.customer_phone,
           shortCode,
           newStatus
         )
@@ -136,7 +131,7 @@ export async function updateOrderStatus(formData: FormData) {
         console.error('Failed to send the admin status notification', err)
       }
     }
-  }
+  })
 
   // Conversion reporting is deliberately manual from the admin panel.
   // Changing operational status must never silently tell an ad platform that
@@ -147,7 +142,6 @@ export async function updateOrderStatus(formData: FormData) {
   revalidatePath('/admin/meta')
   return { success: true }
 }
-
 
 /**
  * Explicit advertising conversion action for the admin order card.
@@ -169,18 +163,15 @@ export async function sendOrderConversion(formData: FormData) {
   const supabase = await createClient()
   const { data: order, error } = await supabase
     .from('orders')
-    .select('id, status, confirmed_at, delivered_at, purchase_event_sent_at, delivered_event_sent_at, utm_campaign, cancellation_reason')
+    .select('id, status, confirmed_at, delivered_at, purchase_event_sent_at, delivered_event_sent_at, is_test')
     .eq('id', orderId)
     .single()
 
   if (error || !order) return { error: 'Order could not be loaded.' }
 
-  const looksLikeQa =
-    order.utm_campaign === 'offer-test' ||
-    /(?:^|\b)(?:test|testing|qa)(?:\b|$)/i.test(order.cancellation_reason ?? '')
-
-  if (looksLikeQa) {
-    return { error: 'This order is classified as test/QA. Advertising conversion blocked.' }
+  // A test order never trains an ad platform (admin upgrade F5).
+  if (order.is_test) {
+    return { error: 'This is a test order. Advertising conversion blocked.' }
   }
 
   if (order.status === 'cancelled') {
@@ -312,37 +303,25 @@ export async function updateOrderDetails(input: EditOrderInput): Promise<{ succe
  *
  * For test orders and mistakes, not for orders that went wrong: those are
  * cancelled with a reason, so the record of what happened survives. There is
- * no undo, which is why the button that calls this asks twice.
+ * no undo, which is why the button that calls this asks twice. Any order can
+ * be deleted (plan decision 9).
  *
- * Service role, because attribution_actions, conversion_events and
- * google_offline_conversions have no admin write policy of their own and
- * their foreign keys are NO ACTION - the order cannot go until they have.
- * Leads and reviews that pointed at the order are set null by their own
- * foreign keys; a WhatsApp enquiry that converted into it is unlinked here.
+ * The database does it in one transaction (delete_order, admin upgrade F7):
+ * it checks admin rights itself and clears every row that points at the
+ * order first - including the Google rows this used to miss, which made the
+ * delete fail for any order confirmed since 27 Sep. No service-role key.
  */
 export async function deleteOrder(orderId: string): Promise<{ success: true } | { error: string }> {
   await requireAdmin()
   if (!/^[0-9a-f-]{36}$/i.test(orderId)) return { error: 'That order id is not valid.' }
 
-  const db = createAdminClient()
-  const steps = [
-    db.from('attribution_actions').delete().eq('order_id', orderId),
-    db.from('conversion_events').delete().eq('order_id', orderId),
-    db.from('google_offline_conversions').delete().eq('order_id', orderId),
-    db.from('whatsapp_enquiries').update({ converted_order_id: null }).eq('converted_order_id', orderId),
-  ]
-  for (const step of steps) {
-    const { error } = await step
-    if (error) {
-      console.error('deleteOrder: could not clear a dependent row', error)
-      return { error: 'Could not delete the order: a linked record refused. Nothing was removed.' }
-    }
-  }
-
-  const { error } = await db.from('orders').delete().eq('id', orderId)
+  const supabase = await createClient()
+  const { error } = await supabase.rpc('delete_order', { p_order_id: orderId })
   if (error) {
-    console.error('deleteOrder failed', error)
-    return { error: 'Could not delete the order.' }
+    console.error('delete_order failed', error)
+    if (error.message.includes('NOT_FOUND')) return { error: 'That order no longer exists.' }
+    if (error.message.includes('NOT_AUTHORISED')) return { error: 'You are not authorised to delete orders.' }
+    return { error: 'Could not delete the order. Nothing was removed.' }
   }
 
   revalidatePath('/admin/orders')
