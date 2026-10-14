@@ -1,48 +1,75 @@
 'use client'
 // src/components/Admin/AdminSidebarClient.tsx
+//
+// The admin's navigation: a fixed sidebar on desktop, a five-tab bar on
+// phones. The sections and which one is current come from utils/adminNav.ts,
+// shared with the More page. Neither prints (`print:hidden`).
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, ShoppingCart, Package, Tags, LogOut, Star, Palette, UsersRound, Clapperboard, Radio } from 'lucide-react'
+import {
+  LayoutDashboard, ShoppingCart, Package, Tags, LogOut, Star, Palette, UsersRound,
+  Clapperboard, Radio, Route, Ellipsis, type LucideIcon,
+} from 'lucide-react'
 import { logout } from '@/app/actions/auth'
+import {
+  ADMIN_SECTIONS, PHONE_TABS, activePhoneTab, sectionActive,
+  type AdminSectionKey, type PhoneTabKey,
+} from '@/utils/adminNav'
 
-const navItems = [
-  { href: '/admin',            icon: LayoutDashboard, label: 'Home' },
-  { href: '/admin/orders',     icon: ShoppingCart,    label: 'Orders' },
-  { href: '/admin/meta',       icon: Radio,           label: 'Meta' },
-  { href: '/admin/leads',      icon: UsersRound,      label: 'Leads' },
-  { href: '/admin/journeys',   icon: Radio,           label: 'Journeys' },
-  { href: '/admin/inventory',  icon: Package,         label: 'Inventory' },
-  { href: '/admin/categories', icon: Tags,            label: 'Categories' },
-  { href: '/admin/reviews',    icon: Star,            label: 'Reviews' },
-  { href: '/admin/swatches',   icon: Palette,         label: 'Swatches' },
-  { href: '/admin/videos',     icon: Clapperboard,    label: 'Videos' },
-]
+const SECTION_ICONS: Record<AdminSectionKey, LucideIcon> = {
+  home: LayoutDashboard,
+  orders: ShoppingCart,
+  meta: Radio,
+  leads: UsersRound,
+  journeys: Route,
+  inventory: Package,
+  categories: Tags,
+  reviews: Star,
+  swatches: Palette,
+  videos: Clapperboard,
+}
 
-export default function AdminSidebarClient() {
+const TAB_ICONS: Record<PhoneTabKey, LucideIcon> = {
+  home: LayoutDashboard,
+  orders: ShoppingCart,
+  leads: UsersRound,
+  catalogue: Package,
+  more: Ellipsis,
+}
+
+export default function AdminSidebarClient({ email }: { email: string }) {
   const pathname = usePathname()
+  const currentTab = activePhoneTab(pathname)
 
   return (
     <>
       {/* ========================================= */}
       {/* DESKTOP SIDEBAR (Hidden on mobile)          */}
       {/* ========================================= */}
-      <aside className="hidden lg:flex flex-col fixed inset-y-0 left-0 w-64 bg-[#0a0a0a] border-r border-white/10 z-40">
+      <aside className="hidden lg:flex flex-col fixed inset-y-0 left-0 w-64 bg-[#0a0a0a] border-r border-white/10 z-40 print:hidden">
         <div className="p-6 border-b border-white/10">
           <div className="font-serif text-xl font-bold text-white tracking-tight">
             UK Sofa Shop <span className="text-orange-500">Admin</span>
           </div>
+          {email && (
+            <p className="mt-2 truncate text-xs text-zinc-500" title={email}>
+              Signed in as <span className="text-zinc-300">{email}</span>
+            </p>
+          )}
         </div>
 
-        <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-          {navItems.map(({ href, icon: Icon, label }) => {
-            const active = href === '/admin' ? pathname === href : pathname.startsWith(href)
+        <nav aria-label="Admin sections" className="flex-1 p-4 space-y-2 overflow-y-auto">
+          {ADMIN_SECTIONS.map(({ key, href, label }) => {
+            const Icon = SECTION_ICONS[key]
+            const active = sectionActive(pathname, href)
             return (
               <Link key={href} href={href}
+                aria-current={active ? 'page' : undefined}
                 className={`flex items-center gap-3 px-4 py-3 rounded-sm font-medium transition-all ${
                   active ? 'bg-orange-500/10 text-orange-500' : 'text-zinc-400 hover:text-white hover:bg-white/5'
                 }`}
               >
-                <Icon className="w-5 h-5" />
+                <Icon className="w-5 h-5" aria-hidden="true" />
                 {label}
               </Link>
             )
@@ -52,7 +79,7 @@ export default function AdminSidebarClient() {
         <div className="p-4 border-t border-white/10">
           <form action={logout}>
             <button type="submit" className="w-full flex items-center gap-3 px-4 py-3 rounded-sm text-red-400 font-medium hover:bg-red-500/10 transition-colors">
-              <LogOut className="w-5 h-5" />
+              <LogOut className="w-5 h-5" aria-hidden="true" />
               Sign Out
             </button>
           </form>
@@ -62,16 +89,28 @@ export default function AdminSidebarClient() {
       {/* ========================================= */}
       {/* MOBILE BOTTOM TABS (Hidden on desktop)      */}
       {/* ========================================= */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-[#0a0a0a]/90 backdrop-blur-md border-t border-white/10 z-50 pb-safe overflow-x-auto [&::-webkit-scrollbar]:hidden">
-        <div className="flex min-w-max items-center px-2 py-2">
-          {navItems.map(({ href, icon: Icon, label }) => {
-            const active = href === '/admin' ? pathname === href : pathname.startsWith(href)
+      {/* Five tabs that always fit, instead of ten that scrolled sideways.
+          pb-safe keeps them above the home indicator; the layout pads the
+          page by the same amount so nothing sits behind the bar. */}
+      <nav
+        aria-label="Admin sections"
+        className="lg:hidden fixed bottom-0 left-0 right-0 bg-[#0a0a0a]/95 backdrop-blur-md border-t border-white/10 z-50 pb-safe print:hidden"
+      >
+        <div className="grid grid-cols-5 px-1 pt-1">
+          {PHONE_TABS.map(({ key, href, label }) => {
+            const Icon = TAB_ICONS[key]
+            const active = currentTab === key
             return (
-              <Link key={href} href={href} className="flex w-16 shrink-0 flex-col items-center p-2">
-                <div className={`p-1.5 rounded-pill transition-colors ${active ? 'bg-orange-500/10 text-orange-500' : 'text-zinc-400'}`}>
-                  <Icon className="w-6 h-6" />
-                </div>
-                <span className={`text-[10px] mt-1 font-medium ${active ? 'text-orange-500' : 'text-zinc-500'}`}>
+              <Link
+                key={key}
+                href={href}
+                aria-current={active ? 'page' : undefined}
+                className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-sm px-1 py-1.5"
+              >
+                <span className={`grid h-8 w-12 place-items-center rounded-pill transition-colors ${active ? 'bg-orange-500/15 text-orange-500' : 'text-zinc-400'}`}>
+                  <Icon className="h-5 w-5" aria-hidden="true" />
+                </span>
+                <span className={`text-[11px] font-medium leading-none ${active ? 'text-orange-500' : 'text-zinc-400'}`}>
                   {label}
                 </span>
               </Link>

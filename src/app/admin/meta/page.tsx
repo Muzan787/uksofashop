@@ -3,6 +3,9 @@ import Link from 'next/link'
 import { AlertTriangle, CheckCircle2, Clock3, Radio, ShoppingCart, Truck } from 'lucide-react'
 import { createClient } from '@/utils/supabase/server'
 import MetaConversionButton from '@/app/admin/orders/MetaConversionButton'
+import { dualTimeText } from '@/utils/adminTime'
+import { adminStatusLabel } from '@/utils/adminStatus'
+import { deliveredEligible, deliveredPending, isQa, purchaseEligible, purchasePending } from '@/utils/metaSignals'
 
 export const metadata: Metadata = { title: 'Meta' }
 
@@ -30,38 +33,8 @@ type MetaOrder = {
 
 type SearchParams = Promise<{ stage?: string; state?: string }>
 
-const UK_TIME = new Intl.DateTimeFormat('en-GB', {
-  timeZone: 'Europe/London',
-  day: '2-digit',
-  month: 'short',
-  year: 'numeric',
-  hour: '2-digit',
-  minute: '2-digit',
-  hour12: false,
-})
-
-function isQa(order: MetaOrder): boolean {
-  return (
-    order.utm_campaign === 'offer-test' ||
-    /(?:^|\b)(?:test|testing|qa)(?:\b|$)/i.test(order.cancellation_reason ?? '')
-  )
-}
-
-function purchaseEligible(order: MetaOrder): boolean {
-  return Boolean(order.confirmed_at) && order.status !== 'cancelled' && !isQa(order)
-}
-
-function deliveredEligible(order: MetaOrder): boolean {
-  return order.status === 'delivered' && Boolean(order.delivered_at) && !isQa(order)
-}
-
-function purchasePending(order: MetaOrder): boolean {
-  return purchaseEligible(order) && !order.purchase_event_sent_at
-}
-
-function deliveredPending(order: MetaOrder): boolean {
-  return deliveredEligible(order) && !order.delivered_event_sent_at
-}
+// Eligibility and "pending" live in utils/metaSignals.ts, shared with the
+// More page's count, so the menu and this page always agree.
 
 function metaAttributedForAdmin(order: MetaOrder): boolean {
   return (
@@ -98,8 +71,7 @@ function money(value: number | null): string {
 }
 
 function signalTime(value: string | null): string | null {
-  if (!value) return null
-  return UK_TIME.format(new Date(value)) + ' UK'
+  return dualTimeText(value)
 }
 
 function signalStatus(
@@ -391,10 +363,10 @@ export default async function MetaAdminPage(props: { searchParams: SearchParams 
                   </div>
 
                   <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-stone-500">
-                    <span className="font-semibold capitalize text-stone-700">
-                      {(order.status ?? 'pending_cod').replace('_', ' ')}
+                    <span className="font-semibold text-stone-700">
+                      {adminStatusLabel(order.status)}
                     </span>
-                    <span>{UK_TIME.format(new Date(order.created_at))} UK</span>
+                    <span>{dualTimeText(order.created_at)}</span>
                   </div>
                 </div>
 

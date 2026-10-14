@@ -75,7 +75,7 @@ export default async function AdminDashboardPage() {
         </div>
 
         <div className="bg-white p-5 lg:p-6 rounded-md lg:rounded-lg border border-zinc-200 shadow-sm">
-          <h3 className="text-zinc-500 text-xs lg:text-sm font-semibold tracking-wider uppercase mb-2">Pending Orders</h3>
+          <h3 className="text-zinc-500 text-xs lg:text-sm font-semibold tracking-wider uppercase mb-2">Waiting or confirmed</h3>
           <p className="text-2xl lg:text-3xl font-bold text-orange-500">{pendingOrders}</p>
         </div>
 

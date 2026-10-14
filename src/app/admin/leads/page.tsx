@@ -13,6 +13,7 @@ import {
 import { formatUkMobile, whatsAppLink } from '@/utils/phone'
 import { offerHoldsForLeads } from '@/utils/offers/leadHold'
 import { formatOfferDeadline } from '@/utils/offers/deadline'
+import { dualTimeText } from '@/utils/adminTime'
 
 export const metadata: Metadata = { title: 'Leads' }
 export const dynamic = 'force-dynamic'
@@ -57,12 +58,8 @@ function ago(iso: string): string {
   return days === 1 ? 'Yesterday' : `${days} days ago`
 }
 
-/** Pinned to London: the server renders in UTC, and this is read on a phone in Blackburn. */
-const when = (iso: string) =>
-  new Date(iso).toLocaleString('en-GB', {
-    timeZone: 'Europe/London',
-    weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
-  })
+/** UK and Pakistan time together; the server renders in UTC, so the zones are named. */
+const when = (iso: string | null) => dualTimeText(iso) ?? ''
 
 export default async function AdminLeadsPage(props: { searchParams: SearchParams }) {
   const sp = await props.searchParams

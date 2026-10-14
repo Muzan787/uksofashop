@@ -9,6 +9,7 @@ import { deleteVideo, setVideoActive, updateVideo } from '@/app/actions/videos'
 import { videoPoster } from '@/utils/cloudinary'
 import { VIDEO_KINDS, VIDEO_KIND_LABELS, type VideoKind } from '@/constants/videos'
 import VideoUploader from '@/components/Admin/VideoUploader'
+import { dualTimeText } from '@/utils/adminTime'
 
 export const metadata: Metadata = { title: 'Videos' }
 
@@ -27,8 +28,8 @@ interface Row {
   product: { title: string } | null
 }
 
-const when = (iso: string) =>
-  new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+/** When it was added, in UK and Pakistan time. */
+const when = (iso: string | null) => dualTimeText(iso) ?? ''
 
 const length = (s: number | null) => {
   if (!s) return null

@@ -41,6 +41,26 @@ export async function isAdmin(): Promise<boolean> {
 }
 
 /**
+ * The signed-in admin's email address, or null when the caller is not an
+ * admin. For the admin layout, which needs both answers - whether to render
+ * at all, and whose name to show in the sidebar - from one sign-in lookup.
+ */
+export async function currentAdminEmail(): Promise<string | null> {
+  const supabase = await createClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+
+  const { data, error } = await supabase.rpc('is_admin')
+  if (error) {
+    console.error('Admin check failed:', error.message)
+    return null
+  }
+
+  return data === true ? (user.email ?? '') : null
+}
+
+/**
  * Throws unless the caller is an admin. Use at the top of Server Actions that
  * are invoked as `<form action={...}>`, where there is no return value to carry
  * an error. Throwing is the safe default: an action that forgets its guard

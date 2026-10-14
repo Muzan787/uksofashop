@@ -134,7 +134,7 @@ test('admin route handlers check admin rights (the manifest is public on purpose
 
 test('the admin layout refuses non-admins', () => {
   const layout = read('src/app/admin/layout.tsx')
-  assert.match(layout, /if \(!\(await isAdmin\(\)\)\) notFound\(\)/)
+  assert.match(layout, /const adminEmail = await currentAdminEmail\(\)\s+if \(adminEmail === null\) notFound\(\)/)
 })
 
 // ── 2. Sign-in only returns to paths on this site ──────────────────────────
@@ -239,4 +239,71 @@ test('deleting an account unlinks its address instead of forgetting it', async (
 test('addresses are stored lower-case and trimmed', async () => {
   await assert.rejects(db.exec(`insert into public.admins (email) values ('Mixed@Example.com')`))
   await assert.rejects(db.exec(`insert into public.admins (email) values ('not-an-address')`))
+})
+
+// ── 4. Navigation, times and status words (Phase 2) ───────────────────────
+
+/** Values made inside the vm sandbox, brought into this realm for deepEqual. */
+const plain = value => JSON.parse(JSON.stringify(value))
+
+test('the phone bar has five tabs and More stays lit on its sections', () => {
+  const nav = load('src/utils/adminNav.ts')
+  assert.deepEqual(plain(nav.PHONE_TABS.map(t => t.label)), ['Home', 'Orders', 'Leads', 'Catalogue', 'More'])
+  const cases = {
+    '/admin': 'home',
+    '/admin/orders': 'orders',
+    '/admin/leads': 'leads',
+    '/admin/inventory': 'catalogue',
+    '/admin/inventory/new': 'catalogue',
+    '/admin/inventory/abc/edit': 'catalogue',
+    '/admin/more': 'more',
+    '/admin/meta': 'more',
+    '/admin/journeys': 'more',
+    '/admin/reviews': 'more',
+    '/admin/swatches': 'more',
+    '/admin/videos': 'more',
+    '/admin/categories': 'more',
+  }
+  for (const [pathname, tab] of Object.entries(cases)) assert.equal(nav.activePhoneTab(pathname), tab, pathname)
+  // Every section is reachable on a phone: a tab of its own, or behind More.
+  const tabHrefs = new Set(nav.PHONE_TABS.map(t => t.href))
+  for (const s of nav.ADMIN_SECTIONS) {
+    assert.ok(tabHrefs.has(s.href) || nav.MORE_SECTION_KEYS.includes(s.key), `${s.label} is unreachable on a phone`)
+  }
+  assert.equal(nav.sectionActive('/admin/leadsx', '/admin/leads'), false)
+  assert.equal(nav.sectionActive('/admin/orders', '/admin'), false)
+})
+
+test('every admin time reads in UK and Pakistan time', () => {
+  const { dualTime, dualTimeText } = load('src/utils/adminTime.ts')
+  const now = new Date('2026-10-15T09:00:00Z')
+  // British Summer Time: UK is UTC+1, Pakistan UTC+5.
+  assert.equal(dualTimeText('2026-10-14T09:05:00Z', now), '14 Oct 10:05 UK · 14 Oct 14:05 PK')
+  // Winter: UK is UTC+0. Late evening in the UK is already tomorrow in Pakistan.
+  assert.equal(dualTimeText('2026-12-01T21:30:00Z', now), '1 Dec 21:30 UK · 2 Dec 02:30 PK')
+  // Another year carries the year.
+  assert.equal(dualTimeText('2025-10-14T09:05:00Z', now), '14 Oct 2025 10:05 UK · 14 Oct 2025 14:05 PK')
+  assert.equal(dualTimeText(null, now), null)
+  assert.equal(dualTimeText('not a date', now), null)
+  assert.deepEqual(plain(dualTime('2026-10-14T09:05:00Z', now)), { uk: '14 Oct 10:05', pk: '14 Oct 14:05' })
+})
+
+test('no admin page formats a time by itself', () => {
+  const files = [...walk('src/app/admin'), ...walk('src/components/Admin')]
+    .filter(f => !f.endsWith('DirectPrintButton.tsx')) // the printed invoice is the customer's document
+  const offenders = files.filter(f => /toLocale(?:Date|Time)?String\([^)]*(?:hour|timeZone)|new Intl\.DateTimeFormat/.test(read(f)))
+  assert.deepEqual(offenders, [])
+})
+
+test('the admin names every status in its own words', () => {
+  const { adminStatusLabel, ADMIN_STATUS_LABEL } = load('src/utils/adminStatus.ts')
+  assert.deepEqual(plain(ADMIN_STATUS_LABEL), {
+    pending_cod: 'Waiting to confirm', confirmed: 'Confirmed', processing: 'Processing',
+    shipped: 'On its way', delivered: 'Delivered', cancelled: 'Cancelled',
+  })
+  assert.equal(adminStatusLabel(null), 'Waiting to confirm')
+  assert.equal(adminStatusLabel('something_new'), 'something new')
+  for (const f of [...walk('src/app/admin'), ...walk('src/components/Admin')]) {
+    assert.doesNotMatch(read(f), /status[^\n]*\.replace\('_', ' '\)/, `${f} prints a raw status`)
+  }
 })

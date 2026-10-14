@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic';
 import { createClient } from '@/utils/supabase/server'
 import { approveReview, deleteReview } from '@/app/actions/reviews'
 import { Check, Trash2, Star, MessageSquare, Image as ImageIcon, AlertCircle, BadgeCheck } from 'lucide-react'
+import { dualTimeText } from '@/utils/adminTime'
 
 
 export const metadata: Metadata = { title: 'Review Moderation' }
@@ -89,6 +90,11 @@ export default async function AdminReviewsPage() {
                     <p className="text-xs text-stone-500 font-medium">
                       Product: {review.products?.title || 'General Store'}
                     </p>
+                    {review.created_at && (
+                      <p className="mt-1 text-xs text-stone-400">
+                        Sent {dualTimeText(review.created_at)}
+                      </p>
+                    )}
                   </div>
                 </div>
 

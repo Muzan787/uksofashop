@@ -16,6 +16,8 @@ import { asBuildSnapshot, describeBuild } from '@/types/build'
 import { trustpilotInviteLink } from '@/constants/trustpilot'
 import { formatPreferredDeliveryDate } from '@/utils/delivery'
 import { itemTitle } from '@/utils/orderItemTitle'
+import { dualTime } from '@/utils/adminTime'
+import { ADMIN_STATUS_LABEL, adminStatusLabel } from '@/utils/adminStatus'
 
 /**
  * The WhatsApp message that asks a delivered customer for a Trustpilot
@@ -38,24 +40,6 @@ Thank you from all of us at UK Sofa Shop.`,
 
 
 export const metadata: Metadata = { title: 'Orders' }
-
-const UK_TIME = new Intl.DateTimeFormat('en-GB', {
-  timeZone: 'Europe/London',
-  day: '2-digit', month: 'short', year: 'numeric',
-  hour: '2-digit', minute: '2-digit', hour12: false,
-})
-const PK_TIME = new Intl.DateTimeFormat('en-GB', {
-  timeZone: 'Asia/Karachi',
-  day: '2-digit', month: 'short', year: 'numeric',
-  hour: '2-digit', minute: '2-digit', hour12: false,
-})
-
-function dualTime(value: string | null | undefined): { uk: string; pk: string } | null {
-  if (!value) return null
-  const d = new Date(value)
-  if (Number.isNaN(d.getTime())) return null
-  return { uk: UK_TIME.format(d), pk: PK_TIME.format(d) }
-}
 
 function SourceBadge({ source }: { source: string | null }) {
   const label = source === 'whatsapp' ? 'WhatsApp' : source === 'website' ? 'Website' : source || 'Unknown'
@@ -87,7 +71,7 @@ const StatusBadge = ({ status }: { status: string }) => {
 
   return (
     <span className={`px-3 py-1 text-[10px] sm:text-xs font-bold uppercase tracking-wider rounded-pill border ${activeStyle}`}>
-      {status.replace('_', ' ')}
+      {adminStatusLabel(status)}
     </span>
   )
 }
@@ -105,10 +89,10 @@ const NEEDS_ATTENTION = ['pending_cod', 'confirmed', 'processing']
 const FILTERS = [
   { key: 'attention', label: 'Needs attention' },
   { key: 'all',       label: 'All' },
-  { key: 'pending_cod', label: 'Pending' },
+  { key: 'pending_cod', label: 'Waiting to confirm' },
   { key: 'confirmed', label: 'Confirmed' },
   { key: 'processing', label: 'Processing' },
-  { key: 'shipped',   label: 'Shipped' },
+  { key: 'shipped',   label: 'On its way' },
   { key: 'delivered', label: 'Delivered' },
   { key: 'cancelled', label: 'Cancelled' },
 ] as const
@@ -122,9 +106,9 @@ const STATUS_RANK: Record<string, number> = {
 }
 
 const NEXT_STATUS: Record<string, { value: string; label: string }> = {
-  pending_cod: { value: 'confirmed', label: 'Confirm order' },
+  pending_cod: { value: 'confirmed', label: 'Mark confirmed' },
   confirmed: { value: 'processing', label: 'Start processing' },
-  processing: { value: 'shipped', label: 'Mark shipped' },
+  processing: { value: 'shipped', label: 'Mark on its way' },
   shipped: { value: 'delivered', label: 'Mark delivered' },
 }
 
@@ -140,7 +124,7 @@ function furthestRecordedStage(order: OperationalOrder): { status: string; label
   const stages = [
     { status: 'confirmed', label: 'Confirmed', at: order.confirmed_at },
     { status: 'processing', label: 'Processing', at: order.processing_at },
-    { status: 'shipped', label: 'Shipped', at: order.shipped_at },
+    { status: 'shipped', label: 'On its way', at: order.shipped_at },
     { status: 'delivered', label: 'Delivered', at: order.delivered_at },
   ]
   return stages.reduce<{ status: string; label: string; at: string } | null>(
@@ -294,7 +278,7 @@ export default async function AdminOrdersPage(props: { searchParams: SearchParam
         <Link href={href('attention')} className="rounded-md border border-amber-200 bg-amber-50 p-4 transition hover:border-amber-300">
           <p className="m-0 text-[10px] font-bold uppercase tracking-[0.18em] text-amber-700">Needs attention</p>
           <p className="m-0 mt-2 text-2xl font-bold text-stone-900">{attentionCount}</p>
-          <p className="m-0 mt-1 text-xs text-stone-600">Pending, confirmed or processing</p>
+          <p className="m-0 mt-1 text-xs text-stone-600">Waiting to confirm, confirmed or processing</p>
         </Link>
         <Link href={href('attention')} className="rounded-md border border-stone-200 bg-white p-4 transition hover:border-stone-300">
           <p className="m-0 text-[10px] font-bold uppercase tracking-[0.18em] text-stone-500">Open order value</p>
@@ -307,7 +291,7 @@ export default async function AdminOrdersPage(props: { searchParams: SearchParam
           <p className="m-0 mt-1 text-xs text-stone-600">Preparing for dispatch</p>
         </Link>
         <Link href={href('shipped')} className="rounded-md border border-indigo-200 bg-indigo-50 p-4 transition hover:border-indigo-300">
-          <p className="m-0 text-[10px] font-bold uppercase tracking-[0.18em] text-indigo-700">In transit</p>
+          <p className="m-0 text-[10px] font-bold uppercase tracking-[0.18em] text-indigo-700">On its way</p>
           <p className="m-0 mt-2 text-2xl font-bold text-stone-900">{statusCounts.shipped ?? 0}</p>
           <p className="m-0 mt-1 text-xs text-stone-600">
             {selectedDeliveryDates} open {selectedDeliveryDates === 1 ? 'order has' : 'orders have'} a preferred date
@@ -437,7 +421,7 @@ export default async function AdminOrdersPage(props: { searchParams: SearchParam
                   {dualTime(recordedStageAheadOfStatus(order)!.at) ? (
                     <> on {dualTime(recordedStageAheadOfStatus(order)!.at)!.uk} UK</>
                   ) : null},
-                  but the current status is {String(order.status).replace('_', ' ')}.
+                  but the current status is {adminStatusLabel(order.status)}.
                   Use the next-step button below to restore the operational state, or keep it only if the rollback was intentional.
                 </span>
               </div>
@@ -515,7 +499,7 @@ export default async function AdminOrdersPage(props: { searchParams: SearchParam
                 ['Placed', order.created_at],
                 ['Confirmed', order.confirmed_at],
                 ['Processing', order.processing_at],
-                ['Shipped', order.shipped_at],
+                ['On its way', order.shipped_at],
                 ['Delivered', order.delivered_at],
                 ['Cancelled', order.cancelled_at],
               ].map(([label, value]) => {
@@ -748,12 +732,9 @@ export default async function AdminOrdersPage(props: { searchParams: SearchParam
                     defaultValue={order.status ?? 'pending_cod'}
                     className="flex-1 rounded-sm border-2 border-stone-200 bg-white p-3 text-sm font-medium text-stone-700 outline-none focus:border-orange-500 focus:ring-0"
                   >
-                    <option value="pending_cod">Pending (COD)</option>
-                    <option value="confirmed">Confirmed</option>
-                    <option value="processing">Processing</option>
-                    <option value="shipped">Shipped</option>
-                    <option value="delivered">Delivered</option>
-                    <option value="cancelled">Cancelled</option>
+                    {Object.entries(ADMIN_STATUS_LABEL).map(([value, label]) => (
+                      <option key={value} value={value}>{label}</option>
+                    ))}
                   </select>
                   <input
                     type="text"

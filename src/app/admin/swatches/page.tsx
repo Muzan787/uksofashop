@@ -7,6 +7,7 @@ import { whatsAppLink } from '@/utils/phone'
 import Link from 'next/link'
 import SwatchActions from './SwatchActions'
 import { SAMPLE_FEE } from '@/constants/swatches'
+import { dualTimeText } from '@/utils/adminTime'
 
 export const metadata: Metadata = { title: 'Swatch requests' }
 
@@ -64,10 +65,9 @@ function PhoneLine({ phone }: { phone: string }) {
   )
 }
 
-const when = (iso: string) =>
-  new Date(iso).toLocaleDateString('en-GB', {
-    day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
-  })
+/** UK and Pakistan time together. This used to name no zone at all, so the
+ *  server's UTC came through as if it were UK time - an hour out all summer. */
+const when = (iso: string | null) => dualTimeText(iso) ?? ''
 
 /**
  * The swatch queue.

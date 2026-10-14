@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { requireAdmin } from '@/utils/auth'
 import { aggregateJourneys, loadJourneyReport, loadJourneyLifecycle, stageOf } from '@/utils/journeyReport'
 import { JOURNEY_KINDS, PAGE_TYPES } from '@/utils/journeyContract'
+import { dualTimeText } from '@/utils/adminTime'
 export const dynamic='force-dynamic'
 export const metadata:Metadata={title:'Journey Analytics',robots:{index:false,follow:false}}
 export default async function Journeys({searchParams}:{searchParams:Promise<Record<string,string|undefined>>}) {
@@ -62,8 +63,8 @@ export default async function Journeys({searchParams}:{searchParams:Promise<Reco
     </section>)}</div>
     <section className="overflow-auto rounded border bg-white p-4"><h2 className="text-lg font-semibold">Masked journey sequence</h2>
       <p>Select a masked session below for its full measured path. An exit is an observation, not proof of permanent abandonment.</p>
-      <table className="w-full text-sm"><thead><tr><th>PKT</th><th>Session</th><th>Page</th><th>Event</th><th>Detail</th></tr></thead><tbody>
-        {rows.slice(0,200).map((r,i)=><tr key={i} className="border-t"><td className="p-2">{new Date(r.created_at).toLocaleString('en-GB',{timeZone:'Asia/Karachi'})}</td>
+      <table className="w-full text-sm"><thead><tr><th>When (UK · PK)</th><th>Session</th><th>Page</th><th>Event</th><th>Detail</th></tr></thead><tbody>
+        {rows.slice(0,200).map((r,i)=><tr key={i} className="border-t"><td className="p-2 whitespace-nowrap">{dualTimeText(r.created_at)}</td>
           <td><Link className="underline" href={'?'+new URLSearchParams({...Object.fromEntries(query),session:r.session_key})}>{r.session_key}</Link></td>
           <td>{r.page_path}</td><td>{r.event}</td><td>{r.option_code||r.step||r.cta_position||r.section||r.outcome||''}</td></tr>)}
       </tbody></table>
