@@ -462,6 +462,18 @@ he asks, give them as numbered steps with exact clicks.
    issued at future", which is a clock-timing hiccup. The same order is
    accepted on the next 15-minute re-send, so nothing is lost; fixing it
    in OrderFlow would stop the amber notes on Status. (Phase 3.)
+8. Customer status emails: a yes or no to each of these (E14; nothing
+   customers receive was changed without it). (Phase 7.)
+   1. When staff mark an order confirmed, the customer gets "Order Status
+      Updated: There has been an update to your order." Replace it with a
+      proper "Order confirmed: we'll ring you to agree a delivery day".
+   2. The cancelled email doesn't say why. Add the reason given on the
+      order page (the brief's E13 wants it; the WhatsApp message already
+      carries it).
+   3. The on-its-way email doesn't say what to pay. Add "To pay on delivery:
+      £X, in cash or by bank transfer", as the WhatsApp message does.
+   4. Pressing a status that is already set sends that status's email
+      again. Send nothing when nothing changed.
 
 ---
 
