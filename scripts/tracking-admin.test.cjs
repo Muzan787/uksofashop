@@ -49,14 +49,14 @@ function load(file, mocks = {}, globals = {}) {
 
 // ── The browser ─────────────────────────────────────────────────────────────
 
-function browser({ host = 'www.uksofashop.co.uk', search = '', cookies = {}, mode = null } = {}) {
+function browser({ host = 'www.uksofashop.co.uk', pathname = '/', search = '', cookies = {}, mode = null } = {}) {
   const jar = new Map(Object.entries(cookies))
   const document = {
     get cookie() { return [...jar].map(([k, v]) => `${k}=${v}`).join('; ') },
     set cookie(v) { const [k, val] = v.split(';')[0].split('='); jar.set(k.trim(), val) },
     querySelector: sel => (mode && sel.includes('ukss-tracking-mode') ? { getAttribute: () => mode } : null),
   }
-  const window = { location: { hostname: host, search, protocol: 'https:' } }
+  const window = { location: { hostname: host, pathname, search, protocol: 'https:' } }
   return { env: load('src/utils/trackingEnv.ts', {}, { window, document }), jar }
 }
 
@@ -70,6 +70,21 @@ test('the live site counts a customer, and loads the ad tags only on Live', () =
     assert.equal(env.isBrowserTrackingEnabled(), true, `${mode}: the shop's own records carry on`)
   }
   assert.equal(browser({ host: 'localhost' }).env.isBrowserTrackingEnabled(), false)
+})
+
+test('no Meta or Google tag on the admin\'s own pages, on any device (16 Oct 2026)', () => {
+  for (const pathname of ['/admin', '/admin/meta', '/admin/orders/abc']) {
+    const { env } = browser({ pathname })
+    assert.equal(env.isAdTrackingEnabled(), false, pathname)
+  }
+  for (const pathname of ['/', '/administer', '/shop/sofas', '/login']) {
+    assert.equal(browser({ pathname }).env.isAdTrackingEnabled(), true, pathname)
+  }
+  // Google's dataLayer events stop there too, and an admin signs in with a full
+  // page load so a tag loaded on the sign-in page never follows them in.
+  assert.match(read('src/utils/googleMeasurement.ts'), /if \(isAdminPage\(\)\) return/)
+  assert.match(read('src/app/actions/auth.ts'), /if \(await isAdmin\(\)\) \{[\s\S]{0,400}return \{ admin: next \?\? '\/admin' \};/)
+  assert.match(read('src/app/login/page.tsx'), /window\.location\.assign\(res\.admin\)/)
 })
 
 test('a staff device and a test-link visit never count', () => {

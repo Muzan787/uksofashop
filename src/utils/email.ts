@@ -795,7 +795,10 @@ export async function sendOrderStatusUpdate(
   name: string,
   orderId: string,
   status: string,
-  postcode: string = ''
+  postcode: string = '',
+  // What the cancelled and on-its-way emails say (admin upgrade E14): the
+  // reason given on the order page, and the amount to pay at the door.
+  details: { cancellationReason?: string | null; totalAmount?: number | null } = {},
 ): Promise<{ trustpilotInvited: boolean }> {
   const siteUrl = SITE_URL;
   const shortCode = orderId.substring(0, 8).toUpperCase();
@@ -813,7 +816,12 @@ export async function sendOrderStatusUpdate(
     ? `${siteUrl}/track-order?ref=${encodeURIComponent(shortCode)}&postcode=${encodeURIComponent(postcode)}`
     : `${siteUrl}/track-order?ref=${encodeURIComponent(shortCode)}`;
 
+  // The reason as staff wrote it, without a trailing full stop - the sentence adds its own.
+  const reason = (details.cancellationReason ?? '').trim().replace(/[.\s]+$/, '');
+
   const config: Record<string, { color: string, bg: string, title: string, message: string }> = {
+    // Staff have confirmed it; the next step is the phone call (E14, 16 Oct 2026).
+    confirmed: { color: '#0f766e', bg: '#ccfbf1', title: 'Order Confirmed', message: 'Thank you - your order is confirmed. We\'ll ring you to agree a delivery day.' },
     processing: { color: '#2563eb', bg: '#dbeafe', title: 'Order Processing', message: 'Your furniture is currently being processed and prepared for dispatch. We ensure every piece meets our strict quality standards before it leaves.' },
     shipped: { color: '#7e22ce', bg: '#f3e8ff', title: 'Order Shipped!', message: 'Your order has left our warehouse and is on its way! Our delivery team will be in touch shortly to arrange a precise delivery time slot.' },
     delivered: {
@@ -826,10 +834,23 @@ export async function sendOrderStatusUpdate(
         ? 'Your new furniture has been delivered. We hope it looks perfect in your home! In a few days Trustpilot will email you on our behalf to ask how it went - a line or two would help the next person decide.'
         : 'Your new furniture has been delivered. We hope it looks perfect in your home!',
     },
-    cancelled: { color: '#dc2626', bg: '#fee2e2', title: 'Order Cancelled', message: 'Your order has been cancelled. If you have any questions, please contact our support team.' }
+    cancelled: {
+      color: '#dc2626',
+      bg: '#fee2e2',
+      title: 'Order Cancelled',
+      message: reason
+        ? `Your order has been cancelled: ${esc(reason)}. If this isn't what you expected, please contact our support team and we'll sort it out.`
+        : 'Your order has been cancelled. If you have any questions, please contact our support team.',
+    },
   };
 
   const currentConfig = config[status] || { color: '#57534e', bg: '#f5f5f4', title: 'Order Status Updated', message: 'There has been an update to your order.' };
+
+  // On its way: what to have ready at the door, as the WhatsApp message says it.
+  const total = Number(details.totalAmount);
+  const toPay = status === 'shipped' && Number.isFinite(total) && total > 0
+    ? `<p style="color: #1c1917; line-height: 1.6; font-size: 15px; font-weight: bold;">To pay on delivery: £${total.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}, in cash or by bank transfer.</p>`
+    : '';
 
   const content = `
     <div style="text-align: left;">
@@ -839,6 +860,7 @@ export async function sendOrderStatusUpdate(
       
       <h2 style="margin: 0 0 16px 0; font-size: 22px; color: #1c1917;">Hi ${esc(name)},</h2>
       <p style="color: #57534e; line-height: 1.6; font-size: 15px;">${currentConfig.message}</p>
+      ${toPay}
       
       <div style="background-color: #fafaf9; border-left: 3px solid ${currentConfig.color}; padding: 20px; margin: 24px 0;">
         <p style="margin: 0 0 4px 0; color: #78716c; font-size: 11px; text-transform: uppercase; font-weight: bold;">Order Reference</p>

@@ -87,7 +87,7 @@ function googleFixture(consent='granted',storage=new Map()) {
   const window={location:{href:'https://www.uksofashop.co.uk/checkout',pathname:'/checkout',search:''},dataLayer:[]}
   const mod=load('src/utils/googleMeasurement.ts',{
     './consent':{getConsent:()=>consent},
-    './trackingEnv':{isBrowserTrackingEnabled:()=>true},
+    './trackingEnv':{isBrowserTrackingEnabled:()=>true,isAdminPage:()=>false},
     './redactUrl':{isSensitiveUrl:()=>false}},
     {window,document:{title:'Checkout | UK Sofa Shop',referrer:''},
       localStorage:{getItem:k=>storage.get(k)??null,setItem:(k,v)=>storage.set(k,v)}},

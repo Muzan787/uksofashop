@@ -1,6 +1,6 @@
 // Google's public event boundary. Never pass forms, attribution IDs or bearer tokens here.
 import { getConsent } from './consent'
-import { isBrowserTrackingEnabled } from './trackingEnv'
+import { isAdminPage, isBrowserTrackingEnabled } from './trackingEnv'
 import { isSensitiveUrl } from './redactUrl'
 
 export const GOOGLE_GTM_ENABLED = process.env.NEXT_PUBLIC_GOOGLE_TRACKING_MODE === 'gtm-v1'
@@ -105,6 +105,8 @@ export function emitGoogleEvent(event: GoogleEvent, commerce?: GoogleCommerce,
   dedupeKey?: string): void {
   if (typeof window === 'undefined' || !GOOGLE_DATALAYER_ENABLED ||
     (GOOGLE_GTM_QA_ENABLED && isBrowserTrackingEnabled())) return
+  // Nothing from the admin's own pages reaches Google (Muaz, 16 Oct 2026).
+  if (isAdminPage()) return
   if (commerce && !validCommerce(commerce)) return
   if (context.item_id && !UUID.test(context.item_id)) delete context.item_id
   if (context.order_value!==undefined && (!Number.isFinite(context.order_value)||context.order_value<0)) return

@@ -75,7 +75,11 @@ export async function login(formData: FormData) {
   // second definition of 'who is an admin' that can silently disagree with the
   // table.
   if (await isAdmin()) {
-    redirect(next ?? '/admin');
+    // The page loads the admin itself, in full, rather than this redirecting
+    // inside the page: the shop's Meta and Google tags may have loaded on the
+    // sign-in page, and carried across they would see the admin, which they
+    // never should (Muaz, 16 Oct 2026).
+    return { admin: next ?? '/admin' };
   } else {
     redirect(next && !isAdminPath(next) ? next : '/account');
   }

@@ -424,6 +424,27 @@ Muaz does every one of these in one go after the last phase (15 Oct 2026).
 Each phase adds what it creates here, instead of asking him mid-phase. When
 he asks, give them as numbered steps with exact clicks.
 
+**Answered 16 Oct 2026.** The list below is kept as it was asked; this is
+what came of each item.
+
+| # | Answer | What happened |
+| --- | --- | --- |
+| 1 | Done | `TRACKING_ENV=production` is set on Hostinger and `VERCEL_ENV` is gone |
+| 2 | Not doing | Leaked-password protection needs Supabase Pro. The advisor's note stays |
+| 3 | Done | The Cloudinary `products` preset is Signed |
+| 4 | Yes | Built 16 Oct: the Meta and Google tags don't load or send on admin pages on any device, and an admin's sign-in finishes with a full page load so a tag from the sign-in page can't follow |
+| 5 | Done | UptimeRobot watches `/api/health` |
+| 6 | By hand for now | Muaz copies the sales to the Sheet himself; automating waits until he asks |
+| 7 | Skipped | OrderFlow's cold-start hiccup stays as it is |
+| 8 | Yes to all four | Built 16 Oct: the confirmed email, the reason in the cancelled email, the amount to pay in the on-its-way email, and no email when the status pressed is the one the order already has |
+| 9 | No | No fabric extra charges |
+| 10 | Keep | The order code still goes to Meta and GA4 |
+| 11 | Later | Under Future work below |
+| 12 | Keep | Profile-link visitors get the 48-hour offer like everyone |
+| 13 | Done | Muaz's devices are excluded |
+| 14 | Skipped | No test code; Test mode stays unavailable until it is added |
+| 15 | Skipped | The ads keep the URL parameters they have |
+
 1. Hostinger → environment variables: add `TRACKING_ENV=production`.
    Then `VERCEL_ENV` can go. (From the health check, Oct 2026.)
 2. Supabase → Authentication → Passwords: turn on leaked-password
@@ -513,6 +534,17 @@ he asks, give them as numbered steps with exact clicks.
     Destination → URL parameters → paste the block from Admin → Ad links.
     The October ads already use the same parameters; the September ones
     used utm_source=meta, which the shop also reads as Meta. (Phase 11.)
+
+### Future work
+
+Ideas Muaz has put aside for later. Nothing here is built until he asks.
+
+- **Custom labels in the Meta catalogue** (end list 11). The feed sends
+  none. Labels such as the offer tier and the department on each item would
+  let product sets and ads be split by them. It changes what Meta's
+  catalogue receives.
+- **Automating the Google Ads Sheet sync** (end list 6). Needs a Google
+  service account that can edit the Sheet.
 
 ---
 

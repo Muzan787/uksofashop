@@ -21,7 +21,10 @@ export default function LoginPage() {
     const next = new URLSearchParams(window.location.search).get('next')
     if (next) fd.set('next', next)
     const res = await login(fd)
-    // On success `login` redirects, so reaching here at all means it failed.
+    // An admin is sent on with a full page load, so no tag from this page
+    // follows them into the admin. A customer is redirected by `login`
+    // itself, so anything else reaching here is a failure.
+    if (res && 'admin' in res && res.admin) { window.location.assign(res.admin); return }
     if (res?.error) { setError(res.error); setPending(false) }
   }
 

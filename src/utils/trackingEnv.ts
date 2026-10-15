@@ -148,13 +148,24 @@ export function browserTrackingMode(): 'dry_run' | 'test' | 'live' {
 }
 
 /**
+ * The admin's own pages. The Meta and Google tags never load or send there,
+ * on any device (Muaz, 16 Oct 2026): they are the shop's staff at work, not
+ * customers.
+ */
+export function isAdminPage(): boolean {
+  if (typeof window === 'undefined') return false
+  const path = window.location.pathname
+  return path === '/admin' || path.startsWith('/admin/')
+}
+
+/**
  * Whether the Meta Pixel, Google's tags and their browser events may run: the
- * production site, a device and visit that count, and the mode on Live. In
- * Test and Dry run the browser sends nothing to Meta or Google; the server's
- * copies of the events follow the mode instead.
+ * production site, a device and visit that count, not an admin page, and the
+ * mode on Live. In Test and Dry run the browser sends nothing to Meta or
+ * Google; the server's copies of the events follow the mode instead.
  */
 export function isAdTrackingEnabled(): boolean {
-  return isBrowserTrackingEnabled() && browserTrackingMode() === 'live'
+  return isBrowserTrackingEnabled() && !isAdminPage() && browserTrackingMode() === 'live'
 }
 
 /**

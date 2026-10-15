@@ -84,25 +84,35 @@ async function runStatusChange(
   // --- TRIGGER EMAILS ---
   //
   // Sent after the page has answered, so a slow mail server never holds up the
-  // change. Exactly the emails this sent before the database took over.
+  // change. The emails this sent before the database took over, with the
+  // E14 changes Muaz agreed on 16 Oct 2026.
   //
   // Two independent sends. The customer's update needs an email address; a
   // WhatsApp order often has none, and it used to take the shop's own
   // WhatsApp prompt down with it - so an order with only a phone number got
   // no nudge at any stage. The prompt goes whenever there is a number.
-  after(async () => {
+  //
+  // Pressing the status the order already has sends nothing (E14, 16 Oct
+  // 2026): there is nothing new to tell the customer, or the shop.
+  if (change.changed) after(async () => {
     const shortCode = orderId.substring(0, 8).toUpperCase()
 
     // 1. The customer's update, when there is somewhere to send it.
     if (change.customer_email) {
       try {
         const postcode = extractPostcode(change.shipping_address)
+        // The cancelled email gives the reason and the on-its-way email the
+        // amount to pay, both as the order now holds them (E14).
+        const { data: details } = newStatus === 'cancelled' || newStatus === 'shipped'
+          ? await supabase.from('orders').select('cancellation_reason, total_amount').eq('id', orderId).maybeSingle()
+          : { data: null }
         const { trustpilotInvited } = await sendOrderStatusUpdate(
           change.customer_email,
           change.customer_name,
           orderId,
           newStatus,
-          postcode
+          postcode,
+          { cancellationReason: details?.cancellation_reason, totalAmount: details?.total_amount },
         )
 
         // The delivered email went to Trustpilot's invitation service as well,
