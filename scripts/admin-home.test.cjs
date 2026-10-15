@@ -32,7 +32,7 @@ test('the waiting strip says what is waiting, in words, and opens the right scre
   assert.deepEqual(plain(waitingChips({ samples: 0, messages: null, reviews: 0, reminders: 0, enquiries: null })), [])
   const chips = plain(waitingChips({ samples: 2, messages: 1, reviews: 3, reminders: 4, enquiries: 1 }))
   assert.deepEqual(chips.map(c => c.label), ['2 samples to post', '1 message', '3 reviews to check', '4 basket reminders', '1 new WhatsApp enquiry'])
-  assert.deepEqual(chips.map(c => c.href), ['/admin/swatches', '/admin/leads?tab=messages', '/admin/reviews', '/admin/leads', '/admin/leads?tab=enquiries'])
+  assert.deepEqual(chips.map(c => c.href), ['/admin/leads?tab=samples', '/admin/leads?tab=messages', '/admin/reviews', '/admin/leads?tab=reminders', '/admin/leads?tab=enquiries'])
   assert.deepEqual(plain(waitingChips({ samples: 1, messages: null, reviews: 0, reminders: 2, enquiries: null })).map(c => c.label), ['1 sample to post', '2 basket reminders'])
   // A kind that can't be counted yet never shows, even by accident.
   assert.deepEqual(plain(waitingChips({ samples: NaN, messages: null, reviews: -1, reminders: 0, enquiries: null })), [])

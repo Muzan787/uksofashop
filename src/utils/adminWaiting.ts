@@ -5,8 +5,9 @@
 // screen where it gets done. A kind with nothing waiting has no chip, and
 // with no chips at all the strip isn't shown.
 //
-// A count of null means the kind can't be counted yet: messages and WhatsApp
-// enquiries have no tab to open until Phase 8, so they stay null until then.
+// A count of null means the kind can't be counted, and shows no chip. Each
+// chip opens its tab on Leads. "New" WhatsApp enquiries are the last 24
+// hours' taps that haven't become an order - the Enquiries tab's own count.
 
 export interface WaitingCounts {
   samples: number | null
@@ -24,10 +25,10 @@ export interface WaitingChip {
 }
 
 const KINDS: { key: keyof WaitingCounts; one: string; many: string; href: string }[] = [
-  { key: 'samples', one: 'sample to post', many: 'samples to post', href: '/admin/swatches' },
+  { key: 'samples', one: 'sample to post', many: 'samples to post', href: '/admin/leads?tab=samples' },
   { key: 'messages', one: 'message', many: 'messages', href: '/admin/leads?tab=messages' },
   { key: 'reviews', one: 'review to check', many: 'reviews to check', href: '/admin/reviews' },
-  { key: 'reminders', one: 'basket reminder', many: 'basket reminders', href: '/admin/leads' },
+  { key: 'reminders', one: 'basket reminder', many: 'basket reminders', href: '/admin/leads?tab=reminders' },
   { key: 'enquiries', one: 'new WhatsApp enquiry', many: 'new WhatsApp enquiries', href: '/admin/leads?tab=enquiries' },
 ]
 

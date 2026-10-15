@@ -4,6 +4,7 @@ import { headers } from 'next/headers'
 import { z } from 'zod'
 import { sendContactNotification } from '@/utils/email'
 import { rateLimit, callerKey } from '@/utils/rateLimit'
+import { createAdminClient } from '@/utils/supabase/admin'
 
 /**
  * The honeypot field.
@@ -57,6 +58,21 @@ export async function submitContactForm(formData: FormData) {
   }
 
   const { firstName, lastName, email, orderNumber, message } = parsed.data
+
+  // Stored as well as emailed (admin upgrade decision 10), so it shows in
+  // Admin → Leads → Messages. The email below carries on exactly as before,
+  // and a failed save never stops it: the email is still the customer's way in.
+  try {
+    const { error: saveError } = await createAdminClient().from('contact_messages').insert({
+      name: `${firstName} ${lastName}`.trim(),
+      email,
+      order_number: orderNumber || null,
+      message,
+    })
+    if (saveError) console.error('Contact message not stored:', saveError.message)
+  } catch (err) {
+    console.error('Contact message not stored:', err)
+  }
 
   try {
     await sendContactNotification(

@@ -6,7 +6,8 @@ import { headers } from 'next/headers'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { rateLimit, callerKey } from '@/utils/rateLimit'
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, updateTag } from 'next/cache'
+import { redirect } from 'next/navigation'
 import { requireAdmin } from '@/utils/auth'
 import { sendAdminReviewNotification } from '@/utils/email'
 
@@ -128,41 +129,64 @@ export async function submitGlobalReview(formData: FormData, imageUrl: string | 
   return { success: true }
 }
 
+const reviewId = z.string().uuid()
+
+/**
+ * After Publish, Hide or Delete (admin upgrade J2, J3): the review list here,
+ * and every shop page that shows reviews - the product page and the home
+ * page's ticker are cached under these tags, and /reviews by path. The
+ * product's review count and average follow by themselves (a database
+ * trigger keeps them).
+ */
+function refreshShop() {
+  updateTag('product')
+  updateTag('home')
+  revalidatePath('/admin/reviews')
+  revalidatePath('/admin')
+  revalidatePath('/', 'layout')
+}
+
+/** Shows a review in the shop (J2 "Publish"). */
 export async function approveReview(formData: FormData) {
   // Previously this used SUPABASE_SERVICE_ROLE_KEY with no caller check, which
   // let anyone who could reach the action ID publish reviews on the storefront.
   // The cookie-bound client plus the admin RLS policies now do the work.
   await requireAdmin()
+  const id = reviewId.safeParse(formData.get('reviewId'))
+  if (!id.success) redirect('/admin/reviews?error=failed')
 
   const supabase = await createClient()
-  const reviewId = formData.get('reviewId') as string
-  if (!reviewId) throw new Error('Missing review ID')
+  const { error } = await supabase.from('reviews').update({ is_approved: true }).eq('id', id.data)
+  if (error) redirect('/admin/reviews?error=failed')
 
-  const { error } = await supabase
-    .from('reviews')
-    .update({ is_approved: true })
-    .eq('id', reviewId)
-
-  if (error) throw new Error('Failed to approve review')
-
-  revalidatePath('/admin/reviews')
-  revalidatePath('/', 'layout')
+  refreshShop()
+  redirect('/admin/reviews?done=published')
 }
 
-export async function deleteReview(formData: FormData) {
+/** Takes a review off the shop without deleting it (J2 "Hide from the shop"). */
+export async function hideReview(formData: FormData) {
   await requireAdmin()
+  const id = reviewId.safeParse(formData.get('reviewId'))
+  if (!id.success) redirect('/admin/reviews?error=failed')
 
   const supabase = await createClient()
-  const reviewId = formData.get('reviewId') as string
-  if (!reviewId) throw new Error('Missing review ID')
+  const { error } = await supabase.from('reviews').update({ is_approved: false }).eq('id', id.data)
+  if (error) redirect('/admin/reviews?error=failed')
 
-  const { error } = await supabase
-    .from('reviews')
-    .delete()
-    .eq('id', reviewId)
+  refreshShop()
+  redirect('/admin/reviews?done=hidden')
+}
 
-  if (error) throw new Error('Failed to delete review')
+/** Deletes a review for good (J2 "Delete"; the page asks first). */
+export async function deleteReview(formData: FormData) {
+  await requireAdmin()
+  const id = reviewId.safeParse(formData.get('reviewId'))
+  if (!id.success) redirect('/admin/reviews?error=failed')
 
-  revalidatePath('/admin/reviews')
-  revalidatePath('/', 'layout')
+  const supabase = await createClient()
+  const { error } = await supabase.from('reviews').delete().eq('id', id.data)
+  if (error) redirect('/admin/reviews?error=failed')
+
+  refreshShop()
+  redirect('/admin/reviews?done=deleted')
 }

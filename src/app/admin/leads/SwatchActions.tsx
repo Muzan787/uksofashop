@@ -1,5 +1,5 @@
 'use client'
-// src/app/admin/swatches/SwatchActions.tsx
+// src/app/admin/leads/SwatchActions.tsx
 //
 // The two things you do with a swatch request once the samples are in the
 // post: chase it, and pass it on. Same pair the orders card carries, same

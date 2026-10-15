@@ -6,7 +6,7 @@ import type { Metadata } from 'next'
 // On a desktop the sidebar already lists everything, but the page works there
 // too.
 import Link from 'next/link'
-import { Activity, ChevronRight, Clapperboard, LogOut, Palette, Radio, Route, Star, Tags, type LucideIcon } from 'lucide-react'
+import { Activity, ChevronRight, Clapperboard, LogOut, Radio, Route, Star, Tags, type LucideIcon } from 'lucide-react'
 import { createClient } from '@/utils/supabase/server'
 import { logout } from '@/app/actions/auth'
 import { ADMIN_SECTIONS, MORE_SECTION_KEYS, type AdminSectionKey } from '@/utils/adminNav'
@@ -19,7 +19,6 @@ const ICONS: Partial<Record<AdminSectionKey, LucideIcon>> = {
   meta: Radio,
   journeys: Route,
   reviews: Star,
-  swatches: Palette,
   videos: Clapperboard,
   categories: Tags,
   status: Activity,
@@ -36,9 +35,8 @@ interface Note {
 export default async function AdminMorePage() {
   const supabase = await createClient()
 
-  const [reviews, swatches, videos, categories, orders] = await Promise.all([
+  const [reviews, videos, categories, orders] = await Promise.all([
     supabase.from('reviews').select('id', { count: 'exact', head: true }).eq('is_approved', false),
-    supabase.from('swatch_requests').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
     supabase.from('videos').select('id', { count: 'exact', head: true }).eq('is_active', true),
     supabase.from('categories').select('id', { count: 'exact', head: true }),
     supabase.from('orders').select(META_SIGNAL_COLUMNS).limit(5000),
@@ -50,7 +48,6 @@ export default async function AdminMorePage() {
   const deliveries = metaRows.filter(deliveredPending).length
 
   const reviewCount = reviews.count ?? 0
-  const swatchCount = swatches.count ?? 0
 
   const notes: Partial<Record<AdminSectionKey, Note>> = {
     meta: orders.error
@@ -68,9 +65,6 @@ export default async function AdminMorePage() {
     reviews: reviewCount > 0
       ? { text: `${reviewCount} waiting`, waiting: true }
       : { text: 'Nothing waiting', waiting: false },
-    swatches: swatchCount > 0
-      ? { text: `${plural(swatchCount, 'sample request', 'sample requests')} to post`, waiting: true }
-      : { text: 'Nothing to post', waiting: false },
     videos: { text: `${plural(videos.count ?? 0, 'video', 'videos')} on the site`, waiting: false },
     categories: { text: plural(categories.count ?? 0, 'category', 'categories'), waiting: false },
     status: { text: 'Is everything working?', waiting: false },

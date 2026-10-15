@@ -155,6 +155,44 @@ export type Database = {
         }
         Relationships: []
       }
+      // Admin upgrade Phase 8 (20261015000600_leads_tabs.sql): contact-form
+      // messages, stored as well as emailed. Written by the server only.
+      contact_messages: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          message: string
+          name: string
+          order_number: string | null
+          status: string
+          status_changed_at: string | null
+          status_changed_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          message: string
+          name: string
+          order_number?: string | null
+          status?: string
+          status_changed_at?: string | null
+          status_changed_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          message?: string
+          name?: string
+          order_number?: string | null
+          status?: string
+          status_changed_at?: string | null
+          status_changed_by?: string | null
+        }
+        Relationships: []
+      }
       health_alerts: {
         Row: {
           check_key: string
@@ -1569,6 +1607,9 @@ export type Database = {
       search_orders: { Args: { p_query: string }; Returns: string[] }
       order_orderflow_sends: { Args: { p_order_id: string }; Returns: Json }
       send_order_to_orderflow: { Args: { p_order_id: string }; Returns: boolean }
+      set_contact_message_status: { Args: { p_id: string; p_status: string }; Returns: undefined }
+      claim_lead_reminder: { Args: { p_id: string }; Returns: string }
+      release_lead_reminder: { Args: { p_id: string; p_claimed_at: string }; Returns: boolean }
       /** Reads an order for /confirm-order/[id]. Confirms nothing. */
       order_for_confirmation: {
         Args: { p_order_id: string }

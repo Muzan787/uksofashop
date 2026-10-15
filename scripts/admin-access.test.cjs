@@ -260,7 +260,6 @@ test('the phone bar has five tabs and More stays lit on its sections', () => {
     '/admin/meta': 'more',
     '/admin/journeys': 'more',
     '/admin/reviews': 'more',
-    '/admin/swatches': 'more',
     '/admin/videos': 'more',
     '/admin/categories': 'more',
     '/admin/status': 'more',

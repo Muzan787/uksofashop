@@ -1,147 +1,51 @@
 import type { Metadata } from 'next'
 // src/app/admin/reviews/page.tsx
-export const dynamic = 'force-dynamic';
-
+//
+// Reviews (admin upgrade J1-J3). This loads them; ReviewsView.tsx shows them.
+// Publishing or hiding refreshes the shop (app/actions/reviews.ts).
+//
+// Uses the ordinary cookie-bound client. Reading every review - including
+// unpublished ones - is granted by the "admin can view all reviews" RLS
+// policy, so the service-role key is not needed here.
 import { createClient } from '@/utils/supabase/server'
-import { approveReview, deleteReview } from '@/app/actions/reviews'
-import { Check, Trash2, Star, MessageSquare, Image as ImageIcon, AlertCircle, BadgeCheck } from 'lucide-react'
-import { dualTimeText } from '@/utils/adminTime'
+import ReviewsView, { type ReviewRow } from './ReviewsView'
 
+export const metadata: Metadata = { title: 'Reviews' }
+export const dynamic = 'force-dynamic'
 
-export const metadata: Metadata = { title: 'Review Moderation' }
+type SearchParams = Promise<{ done?: string; error?: string }>
 
-export default async function AdminReviewsPage() {
-  // Uses the ordinary cookie-bound client. Reading every review - including
-  // other people's unapproved ones - is granted by the "admin can view all
-  // reviews" RLS policy, so the service-role key is no longer needed here.
+const DONE: Record<string, string> = {
+  published: 'Published. It shows in the shop now.',
+  hidden: "Hidden. It's off the shop, and still here if you want it back.",
+  deleted: 'Deleted.',
+}
+
+export default async function AdminReviewsPage(props: { searchParams: SearchParams }) {
+  const sp = await props.searchParams
   const supabase = await createClient()
 
-  const { data: reviews, error } = await supabase
+  const { data, error } = await supabase
     .from('reviews')
-    .select('*, products(title)')
+    .select('id, rating, comment, customer_name, image_url, order_id, is_approved, created_at, products(title, slug, categories!products_category_id_fkey(slug), product_categories(categories(slug)))')
     .order('created_at', { ascending: false })
+  const reviews = (data ?? []) as unknown as ReviewRow[]
+
+  // reviews.order_id has no foreign key to embed through, so the orders are a
+  // second read: just whether each was a test.
+  const orderIds = [...new Set(reviews.map(r => r.order_id).filter((id): id is string => Boolean(id)))]
+  const { data: orders } = orderIds.length
+    ? await supabase.from('orders').select('id, is_test').in('id', orderIds)
+    : { data: [] as { id: string; is_test: boolean }[] }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 lg:space-y-8 animate-in fade-in duration-500">
-      <div>
-        <h1 className="text-2xl lg:text-3xl font-bold text-stone-900 tracking-tight">Review Moderation</h1>
-        <p className="text-sm text-stone-500 mt-1">Approve or delete customer testimonials.</p>
-      </div>
-
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-sm flex items-start gap-3">
-          <AlertCircle className="w-5 h-5 mt-0.5 shrink-0" />
-          <div>
-            <p className="font-bold text-sm">Database Error</p>
-            <p className="text-sm mt-1">{error.message}</p>
-          </div>
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 gap-4">
-        {reviews?.map(review => {
-          // is_approved is the table's only approval flag; there is no status
-          // column, and the `any` here was hiding a test against one.
-          const isLive = review.is_approved === true
-
-          return (
-            <div key={review.id} className="bg-white rounded-md p-5 sm:p-6 shadow-sm border border-stone-200 flex flex-col sm:flex-row gap-4 sm:gap-6">
-              
-              <div className="flex-1 space-y-3">
-                <div className="flex justify-between items-start">
-                  <div>
-                    {/* Stars and Status Badge */}
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="flex text-amber-500">
-                        {[...Array(5)].map((_, i) => (
-                          <Star key={i} className={`w-4 h-4 ${i < review.rating ? 'fill-current' : 'text-stone-200'}`} />
-                        ))}
-                      </div>
-                      {isLive ? (
-                        <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded-sm text-[10px] font-bold uppercase tracking-widest">Live</span>
-                      ) : (
-                        <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-sm text-[10px] font-bold uppercase tracking-widest">Pending</span>
-                      )}
-                    </div>
-
-                    {/* Customer Name and Verified Tick */}
-                    <div className="mb-2">
-                      <p className="text-base font-bold text-stone-900">
-                        {review.customer_name || 'Anonymous Customer'}
-                      </p>
-                      {/* Shows you which reviews came through the signed link
-                          in a post-delivery email, and which arrived some
-                          other way. Worth knowing before you approve one. */}
-                      {review.order_id ? (
-                        <div className="flex items-center gap-1 mt-0.5">
-                          <BadgeCheck className="w-3.5 h-3.5 text-green-500" />
-                          <span className="text-[11px] font-bold text-green-600 uppercase tracking-wide">
-                            Verified Buyer
-                          </span>
-                        </div>
-                      ) : (
-                        <span className="text-[11px] font-bold text-stone-400 uppercase tracking-wide mt-0.5 inline-block">
-                          Unverified
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Product Name */}
-                    <p className="text-xs text-stone-500 font-medium">
-                      Product: {review.products?.title || 'General Store'}
-                    </p>
-                    {review.created_at && (
-                      <p className="mt-1 text-xs text-stone-400">
-                        Sent {dualTimeText(review.created_at)}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Review Text */}
-                <div className="bg-stone-50 p-4 rounded-sm text-sm text-stone-700 italic border border-stone-100">
-                  &quot;{review.comment}&quot;
-                </div>
-
-                {/* Optional Image */}
-                {review.image_url && (
-                  <a href={review.image_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 bg-blue-50 text-blue-600 px-3 py-1.5 rounded-sm text-xs font-bold hover:bg-blue-100 transition">
-                    <ImageIcon className="w-4 h-4" /> View Customer Photo
-                  </a>
-                )}
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex sm:flex-col gap-2 pt-4 sm:pt-0 border-t sm:border-t-0 sm:border-l border-stone-100 sm:pl-6 shrink-0 justify-end">
-                {!isLive && (
-                  <form action={approveReview} className="flex-1 sm:flex-none">
-                    <input type="hidden" name="reviewId" value={review.id} />
-                    <button type="submit" className="w-full flex items-center justify-center gap-2 bg-stone-900 text-white px-4 py-3 rounded-sm text-sm font-bold shadow-md hover:bg-stone-800 active:scale-95 transition">
-                      <Check className="w-4 h-4" /> Approve
-                    </button>
-                  </form>
-                )}
-                
-                <form action={deleteReview} className="flex-1 sm:flex-none">
-                  <input type="hidden" name="reviewId" value={review.id} />
-                  <button type="submit" className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-sm text-sm font-bold transition active:scale-95 ${isLive ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-stone-100 text-stone-600 hover:bg-stone-200'}`}>
-                    <Trash2 className="w-4 h-4" /> Delete
-                  </button>
-                </form>
-              </div>
-
-            </div>
-          )
-        })}
-
-        {(!reviews || reviews.length === 0) && !error && (
-          <div className="py-16 flex flex-col items-center justify-center bg-white rounded-lg border border-stone-200 shadow-sm">
-            <MessageSquare className="w-12 h-12 text-stone-300 mb-4" />
-            <p className="text-xl font-bold text-stone-900">No reviews yet</p>
-            <p className="text-stone-500 mt-1">Customer feedback will appear here for moderation.</p>
-          </div>
-        )}
-      </div>
-    </div>
+    <ReviewsView
+      reviews={reviews}
+      testOrders={(orders ?? []).filter(o => o.is_test).map(o => o.id)}
+      knownOrders={(orders ?? []).map(o => o.id)}
+      done={sp.done ? DONE[sp.done] ?? null : null}
+      failed={Boolean(sp.error)}
+      loadError={error?.message ?? null}
+    />
   )
 }

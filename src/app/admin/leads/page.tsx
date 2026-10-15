@@ -1,276 +1,173 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
-import { Check, Inbox, RotateCcw } from 'lucide-react'
+// src/app/admin/leads/page.tsx
+//
+// Leads, one page with tabs (admin upgrade I1-I6): samples to post, messages
+// from the contact form, WhatsApp enquiries, basket reminders and the
+// newsletter. Each tab shows its count, and the page opens on the first one
+// with something waiting (utils/leadsTabs.ts). This loads the counts and the
+// open tab; the *Tab.tsx files show them.
+//
+// Everything is read under the signed-in admin's own session: each table
+// admits admins through RLS, so the database checks every row as well as the
+// proxy and the layout.
+import { AlertTriangle, CheckCircle2 } from 'lucide-react'
 import { createClient } from '@/utils/supabase/server'
-import { setLeadDone } from '@/app/actions/leads'
-import EmailLeadButton from './EmailLeadButton'
-import {
-  gbp,
-  recoveryBasketLines,
-  recoveryBasketTotal,
-  recoveryReminderMessage,
-} from '@/utils/recoveryLeadFormat'
-import { formatUkMobile, whatsAppLink } from '@/utils/phone'
 import { offerHoldsForLeads } from '@/utils/offers/leadHold'
-import { formatOfferDeadline } from '@/utils/offers/deadline'
-import { dualTimeText } from '@/utils/adminTime'
+import { newEnquiriesSince, pickLeadsTab, type LeadsCounts } from '@/utils/leadsTabs'
+import LeadsTabNav from './LeadsTabNav'
+import SamplesTab, { SAMPLE_FILTERS, type SampleRequest } from './SamplesTab'
+import MessagesTab, { type ContactMessage } from './MessagesTab'
+import EnquiriesTab, { type Enquiry } from './EnquiriesTab'
+import RemindersTab, { type RecoveryLead } from './RemindersTab'
+import NewsletterTab from './NewsletterTab'
 
 export const metadata: Metadata = { title: 'Leads' }
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
-type RecoveryLead = {
-  id: string
-  /** UKSS-LD-... Minted by a column default, so it is never absent. */
-  reference: string
-  basket: unknown
-  /** The shopper's visitor id - how their ad-offer window is found. */
-  visitor_id: string | null
-  phone: string | null
-  email: string | null
-  whatsapp_opt_in: boolean
-  email_opt_in: boolean
-  updated_at: string
-  done_at: string | null
-  reminder_emailed_at: string | null
+const ENQUIRIES_PER_PAGE = 50
+
+type SearchParams = Promise<{
+  tab?: string; view?: string; status?: string; show?: string; q?: string; page?: string; done?: string; error?: string
+}>
+
+const DONE: Record<string, string> = {
+  replied: 'Marked replied.',
+  closed: 'Closed without a reply.',
+  new: 'Marked as new.',
 }
-
-/**
- * Waiting is the default, the same rule as orders and swatches: the list opens
- * on what still needs doing. Done keeps the last 90 days of concluded leads so
- * a mis-tap can be put back.
- */
-const VIEWS = [
-  { key: 'waiting', label: 'Waiting' },
-  { key: 'done',    label: 'Done' },
-] as const
-
-type SearchParams = Promise<{ view?: string }>
-
-/** "2 hours ago" - how long the lead has been waiting, at a glance. */
-function ago(iso: string): string {
-  const mins = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60_000))
-  if (mins < 1) return 'Just now'
-  if (mins < 60) return `${mins} min ago`
-  const hours = Math.round(mins / 60)
-  if (hours < 24) return `${hours} ${hours === 1 ? 'hour' : 'hours'} ago`
-  const days = Math.round(hours / 24)
-  return days === 1 ? 'Yesterday' : `${days} days ago`
-}
-
-/** UK and Pakistan time together; the server renders in UTC, so the zones are named. */
-const when = (iso: string | null) => dualTimeText(iso) ?? ''
 
 export default async function AdminLeadsPage(props: { searchParams: SearchParams }) {
   const sp = await props.searchParams
-  const view = sp.view === 'done' ? 'done' : 'waiting'
-
-  // The signed-in admin's own session. The leads table admits admins through
-  // RLS (is_admin()), so the database checks every row as well as the proxy
-  // and the layout - the service-role key that used to read this is gone.
   const supabase = await createClient()
-  const { data, error } = await supabase
-    .from('checkout_recovery_leads')
-    .select('id, reference, basket, visitor_id, phone, email, whatsapp_opt_in, email_opt_in, updated_at, done_at, reminder_emailed_at')
-    .eq('status', view === 'done' ? 'done' : 'active')
-    .eq('data_class', 'production_real')
-    // QA/test recovery submissions are deliberately excluded from both views.
-    // Newest shopper activity first while waiting; most recently ticked first once done.
-    .order(view === 'done' ? 'done_at' : 'updated_at', { ascending: false })
-    .limit(500)
+  const dayAgo = newEnquiriesSince()
+  const head = { count: 'exact' as const, head: true }
 
-  if (error) {
-    return (
-      <div className="mx-auto max-w-6xl rounded-md border border-red-200 bg-red-50 p-5 text-sm text-red-700">
-        Could not load checkout leads right now.
-      </div>
+  const [samples, messages, enquiries, reminders, confirmed, waiting, unsubscribed] = await Promise.all([
+    supabase.from('swatch_requests').select('id', head).eq('status', 'pending'),
+    supabase.from('contact_messages').select('id', head).eq('status', 'new'),
+    supabase.from('whatsapp_enquiries').select('id', head).gte('created_at', dayAgo).is('converted_order_id', null),
+    // QA/test recovery submissions are left out everywhere.
+    supabase.from('checkout_recovery_leads').select('id', head).eq('status', 'active').eq('data_class', 'production_real'),
+    supabase.from('newsletter_subscribers').select('id', head).eq('status', 'confirmed'),
+    supabase.from('newsletter_subscribers').select('id', head).eq('status', 'pending'),
+    supabase.from('newsletter_subscribers').select('id', head).eq('status', 'unsubscribed'),
+  ])
+  const counts: LeadsCounts = {
+    samples: samples.count ?? 0,
+    messages: messages.count ?? 0,
+    enquiries: enquiries.count ?? 0,
+    reminders: reminders.count ?? 0,
+    newsletter: confirmed.count ?? 0,
+  }
+  const tab = pickLeadsTab(sp.tab, counts, sp.view)
+
+  let content: React.ReactNode
+  if (tab === 'samples') {
+    const status = SAMPLE_FILTERS.some(f => f.key === sp.status) ? sp.status! : 'pending'
+    let query = supabase
+      .from('swatch_requests')
+      .select(`
+        id, customer_name, customer_email, customer_phone,
+        postcode, shipping_address, status, created_at, posted_at,
+        swatch_request_items ( id, fabric_code, fabric_name, fabric_collection )
+      `)
+    if (status !== 'all') query = query.eq('status', status)
+    const { data, error } = await query.order('created_at', { ascending: false }).limit(100)
+    content = error ? <LoadError /> : <SamplesTab requests={(data ?? []) as unknown as SampleRequest[]} status={status} />
+  } else if (tab === 'messages') {
+    const showAll = sp.show === 'all'
+    let query = supabase
+      .from('contact_messages')
+      .select('id, created_at, name, email, order_number, message, status, status_changed_at')
+    if (!showAll) query = query.eq('status', 'new')
+    const { data, error } = await query.order('created_at', { ascending: false }).limit(200)
+    content = error ? <LoadError /> : <MessagesTab messages={(data ?? []) as ContactMessage[]} showAll={showAll} />
+  } else if (tab === 'enquiries') {
+    const q = (sp.q ?? '').toUpperCase().replace(/[^A-Z0-9-]/g, '').slice(0, 40)
+    const showAll = sp.show === 'all' || Boolean(q)
+    const page = /^\d+$/.test(sp.page ?? '') ? Math.max(1, parseInt(sp.page!, 10)) : 1
+    const from = (page - 1) * ENQUIRIES_PER_PAGE
+    let query = supabase
+      .from('whatsapp_enquiries')
+      .select('id, reference, created_at, page_url, page_context, product_name, utm_source, utm_campaign, fbclid, gclid, gbraid, wbraid, converted_order_id', { count: 'exact' })
+    if (q) query = query.ilike('reference', `%${q}%`)
+    else if (!showAll) query = query.gte('created_at', dayAgo)
+    const { data, error, count } = await query.order('created_at', { ascending: false }).range(from, from + ENQUIRIES_PER_PAGE - 1)
+    content = error ? <LoadError /> : (
+      <EnquiriesTab
+        enquiries={(data ?? []) as Enquiry[]}
+        showAll={sp.show === 'all'}
+        q={q}
+        page={page}
+        total={count ?? 0}
+        lastPage={Math.max(1, Math.ceil((count ?? 0) / ENQUIRIES_PER_PAGE))}
+      />
+    )
+  } else if (tab === 'reminders') {
+    const view = sp.view === 'done' ? 'done' : 'waiting'
+    const { data, error } = await supabase
+      .from('checkout_recovery_leads')
+      .select('id, reference, basket, visitor_id, phone, email, whatsapp_opt_in, email_opt_in, updated_at, done_at, reminder_emailed_at')
+      .eq('status', view === 'done' ? 'done' : 'active')
+      .eq('data_class', 'production_real')
+      // Newest shopper activity first while waiting; most recently ticked first once done.
+      .order(view === 'done' ? 'done_at' : 'updated_at', { ascending: false })
+      .limit(500)
+    if (error) {
+      content = <LoadError />
+    } else {
+      const leads = (data ?? []) as RecoveryLead[]
+      // Each shopper's ad-offer window, if they had one: the reminder quotes it
+      // while it is open, and the card says when it ends - or that it has.
+      const holds = await offerHoldsForLeads(supabase, leads)
+      content = <RemindersTab leads={leads} holds={holds} view={view} />
+    }
+  } else {
+    const { data } = await supabase.from('newsletter_subscribers').select('email').eq('status', 'confirmed').order('confirmed_at', { ascending: true })
+    content = (
+      <NewsletterTab
+        confirmed={confirmed.count ?? 0}
+        waiting={waiting.count ?? 0}
+        unsubscribed={unsubscribed.count ?? 0}
+        confirmedEmails={(data ?? []).map(r => r.email)}
+      />
     )
   }
 
-  const leads = (data ?? []) as RecoveryLead[]
-  // Each shopper's ad-offer window, if they had one: the reminder quotes it
-  // while it is open, and the card says when it ends - or that it has - so a
-  // reply in the chat is answered with the right price. Two queries for the
-  // whole page.
-  const holds = await offerHoldsForLeads(supabase, leads)
+  const done = tab === 'messages' && sp.done ? DONE[sp.done] : null
+  const failed = tab === 'messages' && sp.error
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6 animate-in fade-in duration-500">
-      <header className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.16em] text-orange-600">Checkout recovery</p>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight text-zinc-900 lg:text-3xl">Leads</h1>
-          <p className="mt-1 max-w-2xl text-sm text-zinc-500">
-            Each of these asked for a reminder before leaving checkout. WhatsApp opens the chat with the
-            message already typed; Email sends it straight away. Tick Done once it&apos;s concluded.
-          </p>
-        </div>
-        <p className="text-sm font-medium text-zinc-500">
-          {leads.length} {leads.length === 1 ? 'lead' : 'leads'} {view === 'done' ? 'done' : 'waiting'}
-        </p>
+    <div className="mx-auto max-w-5xl space-y-5 animate-in fade-in duration-500">
+      <header>
+        <h1 className="m-0 text-2xl font-bold tracking-tight text-zinc-900 lg:text-3xl">Leads</h1>
+        <p className="m-0 mt-1 text-sm text-zinc-500">Samples to post, messages, WhatsApp enquiries, basket reminders and the newsletter.</p>
       </header>
 
-      <div className="flex gap-2">
-        {VIEWS.map(v => (
-          <Link
-            key={v.key}
-            href={v.key === 'waiting' ? '/admin/leads' : `/admin/leads?view=${v.key}`}
-            className={`shrink-0 rounded-sm px-3.5 py-2 text-xs font-bold transition ${
-              view === v.key
-                ? 'bg-zinc-900 text-white'
-                : 'border border-zinc-200 bg-white text-zinc-600 hover:border-zinc-300'
-            }`}
-          >
-            {v.label}
-          </Link>
-        ))}
-      </div>
+      <LeadsTabNav tab={tab} counts={counts} />
 
-      {leads.length === 0 ? (
-        <div className="flex min-h-64 flex-col items-center justify-center rounded-md border border-zinc-200 bg-white px-6 py-12 text-center shadow-sm">
-          <span className="grid h-12 w-12 place-items-center rounded-full bg-zinc-100 text-zinc-400">
-            <Inbox className="h-5 w-5" />
-          </span>
-          <h2 className="mt-4 text-base font-bold text-zinc-900">
-            {view === 'done' ? 'Nothing marked done yet' : 'No leads waiting'}
-          </h2>
-          <p className="mt-1 max-w-md text-sm leading-relaxed text-zinc-500">
-            {view === 'done'
-              ? 'Leads you tick off from the waiting list stay here for 90 days, in case one needs putting back.'
-              : 'When an unfinished checkout opts in to a reminder, it appears here with the product details and a message ready to send.'}
-          </p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
-          {leads.map((lead) => {
-            const lines = recoveryBasketLines(lead.basket)
-            const total = recoveryBasketTotal(lines)
-
-            // Only the channel they ticked. The other contact detail is not on
-            // the row at all - the API stores each one only when it was opted in.
-            const hold = holds.get(lead.id)
-            const wa = lead.whatsapp_opt_in && lead.phone
-              ? whatsAppLink(lead.phone, recoveryReminderMessage(lead.basket, lead.reference, hold && !hold.ended ? hold : null))
-              : null
-
-            return (
-              <article key={lead.id} className="flex flex-col rounded-md border border-zinc-200 bg-white p-5 shadow-sm">
-                <div className="mb-4 flex items-start justify-between gap-4">
-                  <div>
-                    {lead.done_at ? (
-                      <p className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-[0.12em] text-whatsapp-dark">
-                        <Check className="h-3.5 w-3.5" aria-hidden="true" /> Done · {when(lead.done_at)}
-                      </p>
-                    ) : (
-                      <p className="text-xs font-bold uppercase tracking-[0.12em] text-orange-600">{ago(lead.updated_at)}</p>
-                    )}
-                    <p className="mt-0.5 text-sm text-zinc-500">{when(lead.updated_at)}</p>
-                    {/* The join between this lead and an order taken by hand.
-                        It goes out in the reminder, so it is already in the
-                        chat - but it is here too for the case that matters
-                        most: the shopper replies, the order is taken in
-                        /admin/orders, and this is what gets pasted into the
-                        "Lead reference" box so the sale keeps its attribution.
-                        Selectable rather than a button: a click-to-copy needs
-                        a client component, and this page is a server one. */}
-                    <p className="mt-1 select-all font-mono text-xs text-zinc-400">{lead.reference}</p>
-                  </div>
-                  {total !== null && (
-                    <p className="text-lg font-bold text-zinc-900">{gbp(total)}</p>
-                  )}
-                </div>
-
-                {/* What they were about to buy. Codes stay here, out of the message. */}
-                {lines.length === 0 ? (
-                  <p className="text-sm text-zinc-400">No product details</p>
-                ) : (
-                  <ul className="divide-y divide-zinc-100 rounded-sm bg-zinc-50 px-4">
-                    {lines.map((line, i) => (
-                      <li key={i} className="flex items-start justify-between gap-4 py-3 text-sm">
-                        <div className="min-w-0">
-                          <p className="font-semibold text-zinc-900">
-                            {line.quantity > 1 && <span className="text-zinc-500">{line.quantity} × </span>}
-                            {line.title}
-                          </p>
-                          {line.detail && <p className="text-zinc-600">{line.detail}</p>}
-                          {(line.sku || line.fabricCode) && (
-                            <p className="mt-0.5 font-mono text-xs text-zinc-400">
-                              {[line.sku, line.fabricCode].filter(Boolean).join(' · ')}
-                            </p>
-                          )}
-                        </div>
-                        {line.lineTotal !== null && (
-                          <span className="shrink-0 font-medium text-zinc-900">{gbp(line.lineTotal)}</span>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-
-                {/* The online offer, stated for the shop: open until when, or over.
-                    This is the deadline to honour in the chat, and no later -
-                    the countdown the shopper saw is only true if it is. */}
-                {hold && (
-                  <p className={`mt-3 rounded-sm px-3 py-2 text-xs font-semibold ${
-                    hold.ended ? 'bg-zinc-100 text-zinc-500' : 'bg-orange-50 text-orange-700'
-                  }`}>
-                    {hold.ended
-                      ? `Online offer (£${Math.round(hold.amount)}) ended ${formatOfferDeadline(hold.expiresAt)} - full price now`
-                      : `Online offer: £${Math.round(hold.amount)} off until ${formatOfferDeadline(hold.expiresAt)}`}
-                  </p>
-                )}
-
-                {/* The reminder, one tap away, on whichever channel they chose: WhatsApp
-                    opens the chat with it typed; Email sends it from here. */}
-                <div className="mt-4 flex items-start gap-2">
-                  {wa && (
-                    <a
-                      href={wa}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-sm bg-whatsapp/10 py-2.5 text-sm font-bold text-whatsapp-dark transition hover:bg-whatsapp/20 active:scale-[0.98]"
-                    >
-                      <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86s.274.072.376-.043c.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.1.824zm-3.423-14.416c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm.029 18.88c-1.161 0-2.305-.292-3.318-.844l-3.677.964.984-3.595c-.607-1.052-.927-2.246-.926-3.468.001-3.825 3.113-6.937 6.937-6.937 3.825 0 6.938 3.112 6.938 6.937 0 3.825-3.113 6.938-6.938 6.938z"/></svg>
-                      WhatsApp
-                    </a>
-                  )}
-                  {lead.email_opt_in && lead.email && (
-                    <EmailLeadButton
-                      id={lead.id}
-                      sentLabel={lead.reminder_emailed_at ? when(lead.reminder_emailed_at) : null}
-                    />
-                  )}
-                </div>
-
-                <div className="mt-3 flex items-center justify-between gap-3">
-                  {/* The details themselves, for when the buttons are not what you
-                      need - reading a number out, or pasting it somewhere else. */}
-                  <p className="min-w-0 break-all text-xs text-zinc-500">
-                    {[lead.phone ? formatUkMobile(lead.phone) : null, lead.email].filter(Boolean).join(' · ')}
-                  </p>
-
-                  {/* Tick it off once it has concluded - bought on WhatsApp, or
-                      said no. Nothing is deleted; it moves to the Done view. */}
-                  <form action={setLeadDone} className="shrink-0">
-                    <input type="hidden" name="id" value={lead.id} />
-                    <input type="hidden" name="done" value={lead.done_at ? 'false' : 'true'} />
-                    <button
-                      type="submit"
-                      className="inline-flex min-h-11 items-center gap-1.5 rounded-sm border border-zinc-200 bg-white px-3.5 text-xs font-bold text-zinc-700 transition hover:border-zinc-300 hover:bg-zinc-50 active:scale-[0.98]"
-                    >
-                      {lead.done_at ? (
-                        <><RotateCcw className="h-4 w-4 text-zinc-400" aria-hidden="true" /> Reopen</>
-                      ) : (
-                        <><Check className="h-4 w-4 text-whatsapp-dark" aria-hidden="true" /> Done</>
-                      )}
-                    </button>
-                  </form>
-                </div>
-              </article>
-            )
-          })}
-        </div>
+      {done && (
+        <p role="status" className="m-0 flex items-center gap-2 rounded-md border border-green-200 bg-green-50 p-3 text-sm font-semibold text-green-900">
+          <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden="true" /> {done}
+        </p>
       )}
+      {failed && (
+        <p role="alert" className="m-0 flex items-center gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-900">
+          <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />
+          {failed === 'not-found' ? 'That message no longer exists.' : "That didn't save. Try again."}
+        </p>
+      )}
+
+      {content}
+    </div>
+  )
+}
+
+function LoadError() {
+  return (
+    <div className="rounded-md border border-red-200 bg-red-50 p-5 text-sm text-red-700">
+      Could not load this tab right now. Try again in a moment.
     </div>
   )
 }

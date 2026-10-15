@@ -145,7 +145,7 @@ export default function HomeView({
             Add New Product
           </Link>
 
-          <Link href="/admin/leads"
+          <Link href="/admin/leads?tab=reminders"
             className="flex items-center justify-between sm:justify-center gap-2 bg-white text-zinc-900 border border-zinc-200 px-5 py-4 rounded-sm font-medium hover:bg-zinc-50 active:scale-[0.98] transition-all">
             <div className="flex items-center gap-2">
               <MessageCircle className="w-5 h-5 text-whatsapp-dark" />

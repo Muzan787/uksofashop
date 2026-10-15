@@ -7,6 +7,7 @@ import type { Metadata } from 'next'
 import { createClient } from '@/utils/supabase/server'
 import { loadHealthReport } from '@/utils/health/loadHealth'
 import { waitingChips } from '@/utils/adminWaiting'
+import { newEnquiriesSince } from '@/utils/leadsTabs'
 import HomeView from './HomeView'
 
 export const metadata: Metadata = { title: 'Overview' }
@@ -34,6 +35,8 @@ export default async function AdminDashboardPage() {
     { count: samples },
     { count: reviews },
     { count: reminders },
+    { count: messages },
+    { count: enquiries },
     { data: latest },
     health,
   ] = await Promise.all([
@@ -45,6 +48,10 @@ export default async function AdminDashboardPage() {
     // The same rows the Leads page lists: waiting, and real shoppers only.
     supabase.from('checkout_recovery_leads').select('id', { count: 'exact', head: true })
       .eq('status', 'active').eq('data_class', 'production_real'),
+    supabase.from('contact_messages').select('id', { count: 'exact', head: true }).eq('status', 'new'),
+    // The Enquiries tab's count: the last 24 hours' taps not yet an order.
+    supabase.from('whatsapp_enquiries').select('id', { count: 'exact', head: true })
+      .gte('created_at', newEnquiriesSince()).is('converted_order_id', null),
     supabase.from('orders').select('id, status, is_test, customer_name, total_amount, created_at')
       .order('created_at', { ascending: false }).limit(5),
     // The same report the Status page shows; the card lists only what isn't green.
@@ -59,8 +66,7 @@ export default async function AdminDashboardPage() {
   const confirmedRevenue = real.filter(o => COUNTS_AS_REVENUE.includes(statusOf(o))).reduce((sum, o) => sum + Number(o.total_amount), 0)
   const leadsWaiting = reminders ?? 0
 
-  // Messages and WhatsApp enquiries get their tabs in Phase 8.
-  const chips = waitingChips({ samples: samples ?? 0, messages: null, reviews: reviews ?? 0, reminders: leadsWaiting, enquiries: null })
+  const chips = waitingChips({ samples: samples ?? 0, messages: messages ?? 0, reviews: reviews ?? 0, reminders: leadsWaiting, enquiries: enquiries ?? 0 })
 
   return (
     <HomeView

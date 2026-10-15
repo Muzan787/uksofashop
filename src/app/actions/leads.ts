@@ -27,8 +27,9 @@ export async function setLeadDone(formData: FormData) {
   }
 
   // The admin's own session. RLS admits admins to read the leads and to
-  // change status, done_at and reminder_emailed_at - nothing else - so the
-  // database checks this write as well as requireAdmin() above.
+  // change status and done_at - nothing else; the reminder stamp moves only
+  // through claim_lead_reminder() - so the database checks this write as
+  // well as requireAdmin() above.
   const supabase = await createClient()
 
   // updated_at is left alone on purpose: it records the shopper's last action,
@@ -103,22 +104,31 @@ export async function sendLeadReminderEmail(
   // window has closed says nothing about an offer.
   const hold = (await offerHoldsForLeads(supabase, [{ id, visitor_id: lead.visitor_id, basket: lead.basket }])).get(id)
 
+  // Only ever once (admin upgrade I4), and the database decides: the claim
+  // stamps the lead as emailed before anything is sent, and only if it had
+  // never been. A second tap, a second tab or a second person gets
+  // REMINDER_ALREADY_SENT and nothing goes.
+  const { data: claimedAt, error: claimError } = await supabase.rpc('claim_lead_reminder', { p_id: id })
+  if (claimError || !claimedAt) {
+    revalidatePath('/admin/leads')
+    const message = claimError?.message ?? ''
+    if (message.includes('REMINDER_ALREADY_SENT')) return { status: 'error', message: 'This reminder has already been emailed. It only ever goes once.' }
+    if (message.includes('NO_EMAIL_REMINDER')) return { status: 'error', message: 'This lead did not ask for an email reminder.' }
+    console.error(`lead reminder claim failed: ${message}`)
+    return { status: 'error', message: 'The email could not be sent. Try again in a moment.' }
+  }
+
   try {
     // `id` is the validated uuid from the form, which is what the row was
     // looked up by — the select does not need to return it again.
     await sendCheckoutReminder(lead.email, lead.basket, id, lead.reference, hold && !hold.ended ? hold : null)
   } catch (err) {
     console.error(`lead reminder email failed: ${err instanceof Error ? err.message : String(err)}`)
+    // Nothing went, so the claim is handed back and it can be tried again.
+    const { error: releaseError } = await supabase.rpc('release_lead_reminder', { p_id: id, p_claimed_at: claimedAt })
+    if (releaseError) console.error(`lead reminder release failed: ${releaseError.message}`)
     return { status: 'error', message: 'The email could not be sent. Try again in a moment.' }
   }
-
-  const { error: stampError } = await supabase
-    .from('checkout_recovery_leads')
-    .update({ reminder_emailed_at: new Date().toISOString() })
-    .eq('id', id)
-  // The email has gone either way; a failed stamp only means the card will
-  // not say so, which is worth logging but not worth reporting as a failure.
-  if (stampError) console.error(`lead reminder stamp failed: ${stampError.message}`)
 
   revalidatePath('/admin/leads')
   return { status: 'sent' }

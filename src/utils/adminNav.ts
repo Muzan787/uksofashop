@@ -11,7 +11,7 @@
 
 export type AdminSectionKey =
   | 'home' | 'orders' | 'meta' | 'leads' | 'journeys'
-  | 'inventory' | 'categories' | 'reviews' | 'swatches' | 'videos' | 'status'
+  | 'inventory' | 'categories' | 'reviews' | 'videos' | 'status'
 
 export interface AdminSection {
   key: AdminSectionKey
@@ -19,7 +19,11 @@ export interface AdminSection {
   label: string
 }
 
-/** Every section, in the desktop sidebar's order. No URL here ever moves. */
+/**
+ * Every section, in the desktop sidebar's order. No URL here ever moves.
+ * Swatches became the Samples tab on Leads (admin upgrade I1); its address
+ * still works and opens that tab.
+ */
 export const ADMIN_SECTIONS: AdminSection[] = [
   { key: 'home',       href: '/admin',            label: 'Home' },
   { key: 'orders',     href: '/admin/orders',     label: 'Orders' },
@@ -29,7 +33,6 @@ export const ADMIN_SECTIONS: AdminSection[] = [
   { key: 'inventory',  href: '/admin/inventory',  label: 'Inventory' },
   { key: 'categories', href: '/admin/categories', label: 'Categories' },
   { key: 'reviews',    href: '/admin/reviews',    label: 'Reviews' },
-  { key: 'swatches',   href: '/admin/swatches',   label: 'Swatches' },
   { key: 'videos',     href: '/admin/videos',     label: 'Videos' },
   { key: 'status',     href: '/admin/status',     label: 'Status' },
 ]
@@ -58,7 +61,7 @@ export const MORE_HREF = '/admin/more'
 
 /** The sections reached through More on a phone, in the More page's order. */
 export const MORE_SECTION_KEYS: AdminSectionKey[] = [
-  'meta', 'journeys', 'reviews', 'swatches', 'videos', 'categories', 'status',
+  'meta', 'journeys', 'reviews', 'videos', 'categories', 'status',
 ]
 
 /** True when `pathname` is `href` or somewhere beneath it. Home matches only itself. */

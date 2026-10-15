@@ -6,7 +6,7 @@ import { revalidatePath } from 'next/cache'
 import { requireAdmin } from '@/utils/auth'
 
 /**
- * Mark a swatch request posted, or cancel it.
+ * Mark a swatch request paid and posted, cancel it, or put it back to waiting.
  *
  * Throws rather than returning an error object:
  * the admin page discards this action's return value, so anything returned
@@ -36,5 +36,7 @@ export async function setSwatchStatus(formData: FormData) {
 
   if (error) throw new Error(error.message)
 
-  revalidatePath('/admin/swatches')
+  // The Samples tab on Leads (admin upgrade I1), and the Home strip's count.
+  revalidatePath('/admin/leads')
+  revalidatePath('/admin')
 }
