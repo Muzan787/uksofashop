@@ -3,7 +3,7 @@
 
 import { useEffect } from 'react'
 import { trackAdsOrderPlaced } from '@/utils/tracking'
-import { isBrowserTrackingEnabled } from '@/utils/trackingEnv'
+import { isAdTrackingEnabled } from '@/utils/trackingEnv'
 
 /**
  * Fires the OPTIONAL, SECONDARY Google Ads "order placed" diagnostic
@@ -82,7 +82,8 @@ interface Props {
 
 export default function AdsPurchaseConversion({ reference, total }: Props) {
   useEffect(() => {
-    if (!isBrowserTrackingEnabled()) return
+    // Live only, never from a staff device or a test-link visit (admin upgrade N2, N6).
+    if (!isAdTrackingEnabled()) return
     // A total of zero is only possible if something upstream is broken, and a
     // zero-value conversion is worse than none.
     if (!reference || !Number.isFinite(total) || total <= 0) return

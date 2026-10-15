@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { createUntypedAdminClient } from '@/utils/supabase/admin'
 import { callerKey, rateLimit } from '@/utils/rateLimit'
 import { isProductionRequestHost, isServerTrackingEnabled } from '@/utils/trackingEnv'
+import { isExcludedRequest } from '@/utils/trackingExclusion'
 import { journeyBatchSchema, receiptAllowsJourney } from '@/utils/journeySchema'
 export const dynamic='force-dynamic'
 export async function POST(request:Request) {
@@ -13,6 +14,8 @@ export async function POST(request:Request) {
   let origin:string|null=null
   try {origin=new URL(h.get('origin')||'').host} catch { /* deny */ }
   if(!isProductionRequestHost(h.get('host')) || !isProductionRequestHost(origin)) return done(403)
+  // A staff device or a test-link visit never counts (admin upgrade N6, N8).
+  if (await isExcludedRequest()) return done()
   if(!rateLimit(callerKey(h,'journey'),30,60000).ok) return done(429)
   if(Number(h.get('content-length')||0)>24576) return done(413)
   let raw:string

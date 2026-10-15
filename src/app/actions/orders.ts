@@ -7,6 +7,7 @@ import { redirect } from 'next/navigation'
 import { after } from 'next/server'
 import { reportOrderConversion } from '@/utils/orderConversions'
 import { reportGooglePurchase } from '@/utils/googleServer'
+import { getTrackingMode } from '@/utils/trackingMode'
 import { sendOrderStatusUpdate, sendAdminOrderStatusNotification, sendAdminOrderConfirmedNotification } from '@/utils/email'
 import { requireAdmin } from '@/utils/auth'
 import { sendReviewEmailNow } from '@/utils/jobs/reviewRequests'
@@ -188,6 +189,31 @@ export async function sendOrderConversion(formData: FormData) {
 
   if (kind === 'delivered' && (!order.delivered_at || order.status !== 'delivered')) {
     return { error: 'Mark the order Delivered first.' }
+  }
+
+  // Held, or marked Don't send, in Admin -> Meta (admin upgrade N4).
+  const { data: hold } = await supabase
+    .from('meta_signal_holds')
+    .select('state')
+    .eq('order_id', orderId)
+    .maybeSingle()
+  if (hold) {
+    return { error: hold.state === 'dont_send' ? 'Marked Don’t send. Undo that first.' : 'On hold. Release it first.' }
+  }
+
+  // Test and Dry run (admin upgrade N2) build and log the event without
+  // marking it sent, so the order stays waiting for the real send.
+  const mode = await getTrackingMode()
+  if (mode !== 'live') {
+    if (kind === 'delivered' && !order.purchase_event_sent_at) await reportOrderConversion(orderId, 'purchase')
+    await reportOrderConversion(orderId, kind)
+    revalidatePath('/admin/meta')
+    return {
+      success: true,
+      notice: mode === 'test'
+        ? 'Test: sent to Meta’s Test events only. It still waits for the real send.'
+        : 'Dry run: built and logged below, not sent. It still waits for the real send.',
+    }
   }
 
   // A delivered sale should never have the deeper signal without the standard

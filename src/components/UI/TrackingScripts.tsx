@@ -31,7 +31,7 @@ import {
   META_PIXEL_READY_EVENT,
 } from '@/utils/consentMode';
 import { isSensitiveUrl } from '@/utils/redactUrl';
-import { isBrowserTrackingEnabled } from '@/utils/trackingEnv';
+import { isAdTrackingEnabled, isProductionHostname, markTestVisit } from '@/utils/trackingEnv';
 import {
   CONSENT_KEY,
   CONSENT_CHANGED_EVENT,
@@ -84,12 +84,26 @@ export default function TrackingScripts() {
    * Production-only gate (utils/trackingEnv.ts). Read the same way as
    * `sensitive` above and for the same reason: it must never affect the
    * server render or the hydration pass, only what mounts afterwards.
+   *
+   * Admin upgrade N2 and N6: off as well on a staff device, on a visit that
+   * came in through the test ad link, and while Admin -> Meta is on Test or
+   * Dry run - the tags only ever send live.
    */
   const productionHost = useSyncExternalStore(
     subscribeToNothing,
-    () => isBrowserTrackingEnabled(),
+    () => isAdTrackingEnabled(),
     () => false,
   );
+  /** The hostname alone, for the QA container below - unchanged by the above. */
+  const productionHostname = useSyncExternalStore(
+    subscribeToNothing,
+    () => isProductionHostname(),
+    () => false,
+  );
+
+  // A visit through the test ad link stays out of every count after its
+  // landing page too (admin upgrade O5).
+  useEffect(() => { markTestVisit(); }, []);
 
   useEffect(() => {
     // grantConsent() dispatches both event names, and both are listened to so
@@ -131,7 +145,7 @@ export default function TrackingScripts() {
   // uksofashop.co.uk - a developer's laptop, a LAN preview and every Vercel
   // preview deployment now send nothing, rather than contributing real
   // traffic to the live ad accounts.
-  const qaHost = GOOGLE_GTM_QA_ENABLED && !productionHost;
+  const qaHost = GOOGLE_GTM_QA_ENABLED && !productionHostname;
   if (!productionHost && !qaHost) return null;
 
   return (

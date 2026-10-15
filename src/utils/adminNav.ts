@@ -11,7 +11,7 @@
 
 export type AdminSectionKey =
   | 'home' | 'orders' | 'meta' | 'leads' | 'journeys'
-  | 'catalogue' | 'inventory' | 'categories' | 'reviews' | 'videos' | 'status' | 'settings'
+  | 'catalogue' | 'inventory' | 'categories' | 'reviews' | 'videos' | 'status' | 'settings' | 'adlinks'
 
 export interface AdminSection {
   key: AdminSectionKey
@@ -37,6 +37,7 @@ export const ADMIN_SECTIONS: AdminSection[] = [
   { key: 'videos',     href: '/admin/videos',     label: 'Videos' },
   { key: 'status',     href: '/admin/status',     label: 'Status' },
   { key: 'settings',   href: '/admin/settings',   label: 'Settings' },
+  { key: 'adlinks',    href: '/admin/ad-links',   label: 'Ad links' },
 ]
 
 export type PhoneTabKey = 'home' | 'orders' | 'leads' | 'catalogue' | 'more'
@@ -63,7 +64,7 @@ export const MORE_HREF = '/admin/more'
 
 /** The sections reached through More on a phone, in the More page's order. */
 export const MORE_SECTION_KEYS: AdminSectionKey[] = [
-  'meta', 'journeys', 'reviews', 'videos', 'status', 'settings',
+  'meta', 'journeys', 'reviews', 'videos', 'status', 'settings', 'adlinks',
 ]
 
 /** The sections the phone's Catalogue tab covers: the hub, products and categories. */

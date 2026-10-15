@@ -14,6 +14,7 @@ import {
 import { z } from 'zod'
 import { cookies, headers } from 'next/headers'
 import { OFFER_ENTITLEMENT_COOKIE } from '@/utils/offers/constants'
+import { exclusionReason } from '@/utils/trackingEnv'
 import { rateLimit, callerKey } from '@/utils/rateLimit'
 import { metaFbcFromTouch } from '@/utils/attribution/fbc'
 import {
@@ -373,6 +374,19 @@ export async function placeOrder(
   // the confirmation email can never disagree with the order record.
   const order = data as unknown as PlacedOrder
   const shortCode = order.id.substring(0, 8).toUpperCase()
+
+  // Placed on a staff device, or in a visit through the test ad link (admin
+  // upgrade N6, N8, O5): it never counts, so it is marked as a test order -
+  // out of Home's figures, and never sent to Meta or staged for Google. It
+  // still goes to OrderFlow like every order (decision 7), and staff can
+  // unmark it on the order page.
+  const exclusion = exclusionReason(name => jar.get(name)?.value)
+  if (exclusion) {
+    const { error: testError } = await orderDb.from('orders')
+      .update({ is_test: true, test_reason: exclusion === 'staff_device' ? 'Placed on a staff device' : 'Placed from the test ad link' })
+      .eq('id', order.id)
+    if (testError) console.error(`Could not mark ${shortCode} as a test order: ${testError.message}`)
+  }
   const breakdown = deliveryBreakdown(opts, shop)
   // The distance charge, as the database settled it, leads the delivery lines
   // in the emails - so "Delivery to Cornwall £80" sits where "FREE" would.

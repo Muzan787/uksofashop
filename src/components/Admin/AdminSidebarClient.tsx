@@ -8,7 +8,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, LayoutGrid, ShoppingCart, Package, Tags, LogOut, Star, UsersRound,
-  Clapperboard, Radio, Route, Ellipsis, Activity, SlidersHorizontal, type LucideIcon,
+  Clapperboard, Radio, Route, Ellipsis, Activity, SlidersHorizontal, Link2, type LucideIcon,
 } from 'lucide-react'
 import { logout } from '@/app/actions/auth'
 import {
@@ -29,6 +29,7 @@ const SECTION_ICONS: Record<AdminSectionKey, LucideIcon> = {
   videos: Clapperboard,
   status: Activity,
   settings: SlidersHorizontal,
+  adlinks: Link2,
 }
 
 const TAB_ICONS: Record<PhoneTabKey, LucideIcon> = {

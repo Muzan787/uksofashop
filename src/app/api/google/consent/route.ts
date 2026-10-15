@@ -5,6 +5,7 @@ import { createHash } from 'node:crypto'
 import { createUntypedAdminClient } from '@/utils/supabase/admin'
 import { callerKey, rateLimit } from '@/utils/rateLimit'
 import { isProductionRequestHost, isServerTrackingEnabled } from '@/utils/trackingEnv'
+import { isExcludedRequest } from '@/utils/trackingExclusion'
 import { GOOGLE_GTM_ENABLED, GOOGLE_POLICY_VERSION } from '@/utils/googleMeasurement'
 const state=z.enum(['granted','denied'])
 const schema=z.object({id:z.string().uuid(),value:state,reason:z.enum(['granted','denied','revoked']),
@@ -31,6 +32,8 @@ export async function POST(req:Request) {
   // so this is the same CSRF guarantee without depending on req.url.
   const originHost=(()=>{const o=h.get('origin');if(!o)return null;try{return new URL(o).host}catch{return null}})()
   if(!isProductionRequestHost(h.get('host')) || !isProductionRequestHost(originHost)) return done(403)
+  // A staff device or a test-link visit never counts (admin upgrade N6, N8).
+  if (await isExcludedRequest()) return done()
   if(!rateLimit(callerKey(h,'google-consent'),60,60_000).ok) return done(429)
   if(Number(h.get('content-length')||0)>4096) return done(413)
   let raw:unknown

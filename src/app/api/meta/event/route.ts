@@ -48,6 +48,7 @@ import { createClient } from '@/utils/supabase/server'
 import { isSensitiveUrl } from '@/utils/redactUrl'
 import { SITE_URL } from '@/constants/site'
 import { isProductionRequestHost, isServerTrackingEnabled } from '@/utils/trackingEnv'
+import { isExcludedRequest } from '@/utils/trackingExclusion'
 import { metaFbcFromTouch } from '@/utils/attribution/fbc'
 
 export const dynamic = 'force-dynamic'
@@ -90,6 +91,8 @@ export async function POST(request: Request) {
 
   const hdrs = await headers()
   if (!isProductionRequestHost(hdrs.get('host'))) return noContent(204)
+  // A staff device or a test-link visit never counts (admin upgrade N6, N8).
+  if (await isExcludedRequest()) return noContent(204)
 
   // Generous, because a real session legitimately fires several of these per
   // page. Low enough that a loop cannot use this endpoint to pump junk into

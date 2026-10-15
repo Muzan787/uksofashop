@@ -12,6 +12,7 @@ import { callerKey, rateLimit } from '@/utils/rateLimit'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { isSensitiveUrl } from '@/utils/redactUrl'
 import { isProductionRequestHost, isServerTrackingEnabled } from '@/utils/trackingEnv'
+import { isExcludedRequest } from '@/utils/trackingExclusion'
 
 export const dynamic = 'force-dynamic'
 
@@ -67,6 +68,8 @@ export async function POST(request: Request) {
 
   const hdrs = await headers()
   if (!isProductionRequestHost(hdrs.get('host'))) return noContent(204)
+  // A staff device or a test-link visit never counts (admin upgrade N6, N8).
+  if (await isExcludedRequest()) return noContent(204)
 
   const limit = rateLimit(callerKey(hdrs, 'attribution-action'), 180, 60 * 1000)
   if (!limit.ok) return noContent(429)

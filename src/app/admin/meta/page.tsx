@@ -5,12 +5,17 @@ import { createClient } from '@/utils/supabase/server'
 import MetaConversionButton from '@/app/admin/orders/MetaConversionButton'
 import { dualTimeText } from '@/utils/adminTime'
 import { adminStatusLabel } from '@/utils/adminStatus'
-import { deliveredEligible, deliveredPending, isQa, purchaseEligible, purchasePending } from '@/utils/metaSignals'
+import { cancelledAfterSending, deliveredEligible, deliveredPending, holdState, isQa, purchaseEligible, purchasePending } from '@/utils/metaSignals'
+import { metaReply, type ConversionAttempt, type MetaReply } from '@/utils/metaReply'
+import { trackingSetup } from '@/utils/trackingSetup'
+import { TRACKING_MODES, type TrackingMode } from '@/utils/shopSettings'
+import MetaHoldButtons from './MetaHoldButtons'
+import { CancelledAfterSending, LatestEvents, ModeAndDevice, ReplyLine, SetupCard, type LoggedEvent } from './TrackingSections'
 
 export const metadata: Metadata = { title: 'Meta' }
 
 type Stage = 'all' | 'purchase' | 'delivered'
-type SignalState = 'all' | 'sent' | 'pending'
+type SignalState = 'all' | 'sent' | 'pending' | 'held'
 
 type MetaOrder = {
   id: string
@@ -30,6 +35,7 @@ type MetaOrder = {
   source: string | null
   cancellation_reason: string | null
   is_test: boolean | null
+  meta_signal_holds?: { state: string } | { state: string }[] | null
 }
 
 type SearchParams = Promise<{ stage?: string; state?: string }>
@@ -88,6 +94,15 @@ function signalStatus(
     }
   }
 
+  const hold = holdState(order)
+  if (hold) {
+    return {
+      label: hold === 'hold' ? 'Held' : 'Won’t send',
+      tone: hold === 'hold' ? 'border-stone-300 bg-stone-100 text-stone-700' : 'border-red-200 bg-red-50 text-red-700',
+      note: hold === 'hold' ? 'On hold until released' : 'Marked Don’t send',
+    }
+  }
+
   if (isQa(order)) {
     return {
       label: 'Blocked',
@@ -138,15 +153,45 @@ export default async function MetaAdminPage(props: { searchParams: SearchParams 
   const stage: Stage =
     sp.stage === 'purchase' || sp.stage === 'delivered' ? sp.stage : 'all'
   const state: SignalState =
-    stage !== 'all' && (sp.state === 'sent' || sp.state === 'pending') ? sp.state : 'all'
+    stage !== 'all' && (sp.state === 'sent' || sp.state === 'pending' || sp.state === 'held') ? sp.state : 'all'
 
-  const { data, error } = await supabase
-    .from('orders')
-    .select(
-      'id, customer_name, status, total_amount, created_at, confirmed_at, delivered_at, cancelled_at, purchase_event_sent_at, delivered_event_sent_at, utm_source, utm_campaign, manual_acquisition_source, manual_acquisition_note, source, cancellation_reason, is_test',
-    )
-    .order('created_at', { ascending: false })
-    .limit(5000)
+  const [{ data, error }, attemptsRes, logRes, settingsRes] = await Promise.all([
+    supabase
+      .from('orders')
+      .select(
+        'id, customer_name, status, total_amount, created_at, confirmed_at, delivered_at, cancelled_at, purchase_event_sent_at, delivered_event_sent_at, utm_source, utm_campaign, manual_acquisition_source, manual_acquisition_note, source, cancellation_reason, is_test, meta_signal_holds(state)',
+      )
+      .order('created_at', { ascending: false })
+      .limit(5000),
+    // Every Meta send attempt, for each order's reply and attempt count (N4).
+    supabase
+      .from('conversion_events')
+      .select('order_id, event_name, status, created_at, response_metadata')
+      .eq('platform', 'meta')
+      .order('created_at', { ascending: false })
+      .limit(5000),
+    // The latest events as they were built (N7).
+    supabase
+      .from('tracking_event_log')
+      .select('id, created_at, platform, event_name, mode, outcome, order_ref, payload')
+      .order('created_at', { ascending: false })
+      .limit(40),
+    supabase.from('shop_settings').select('tracking_mode').maybeSingle(),
+  ])
+  const mode: TrackingMode = TRACKING_MODES.includes(settingsRes.data?.tracking_mode as TrackingMode)
+    ? settingsRes.data?.tracking_mode as TrackingMode
+    : 'live'
+  const setup = trackingSetup()
+  const latestEvents = (logRes.data ?? []) as LoggedEvent[]
+
+  const attemptsBy = new Map<string, ConversionAttempt[]>()
+  for (const a of (attemptsRes.data ?? []) as ConversionAttempt[]) {
+    if (!a.order_id) continue
+    const key = `${a.order_id}:${a.event_name}`
+    attemptsBy.set(key, [...(attemptsBy.get(key) ?? []), a])
+  }
+  const replyFor = (orderId: string, eventName: 'Purchase' | 'OrderDelivered'): MetaReply | null =>
+    metaReply(attemptsBy.get(`${orderId}:${eventName}`) ?? [])
 
   if (error) {
     return (
@@ -162,17 +207,20 @@ export default async function MetaAdminPage(props: { searchParams: SearchParams 
   const purchasePendingRows = orders.filter(purchasePending)
   const deliveredSent = orders.filter(o => Boolean(o.delivered_event_sent_at))
   const deliveredPendingRows = orders.filter(deliveredPending)
+  const cancelledSent = orders.filter(cancelledAfterSending)
 
   let visible = orders.filter(order => {
     if (stage === 'purchase') {
       if (state === 'sent') return Boolean(order.purchase_event_sent_at)
       if (state === 'pending') return purchasePending(order)
+      if (state === 'held') return holdState(order) !== null && !order.purchase_event_sent_at
       return purchaseEligible(order) || Boolean(order.purchase_event_sent_at)
     }
 
     if (stage === 'delivered') {
       if (state === 'sent') return Boolean(order.delivered_event_sent_at)
       if (state === 'pending') return deliveredPending(order)
+      if (state === 'held') return holdState(order) !== null && !order.delivered_event_sent_at
       return deliveredEligible(order) || Boolean(order.delivered_event_sent_at)
     }
 
@@ -210,6 +258,8 @@ export default async function MetaAdminPage(props: { searchParams: SearchParams 
           Delivered becomes eligible only after the order is actually delivered.
         </p>
       </div>
+
+      <CancelledAfterSending orders={cancelledSent} />
 
       <div className="grid gap-3 sm:grid-cols-3">
         <Link
@@ -273,6 +323,10 @@ export default async function MetaAdminPage(props: { searchParams: SearchParams 
         </div>
       </div>
 
+      <ModeAndDevice mode={mode} liveServer={setup.find(item => item.key === 'live-server')?.state !== false} />
+      <SetupCard setup={setup} />
+      <LatestEvents events={latestEvents} />
+
       <div className="space-y-3">
         <div className="flex gap-2 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden">
           {([
@@ -300,6 +354,7 @@ export default async function MetaAdminPage(props: { searchParams: SearchParams 
               ['all', 'All'],
               ['sent', 'Sent'],
               ['pending', 'Pending'],
+              ['held', 'Held'],
             ] as const).map(([key, label]) => (
               <Link
                 key={key}
@@ -404,6 +459,11 @@ export default async function MetaAdminPage(props: { searchParams: SearchParams 
                     </div>
                   )}
 
+                  {(() => { const r = replyFor(order.id, 'Purchase'); return r && <ReplyLine reply={r} /> })()}
+                  {!order.purchase_event_sent_at && (purchasePending(order) || holdState(order) !== null) && (
+                    <MetaHoldButtons orderId={order.id} state={holdState(order)} />
+                  )}
+
                   {order.purchase_event_sent_at && order.status === 'cancelled' && (
                     <div className="mt-3 flex items-start gap-2 rounded-sm border border-red-200 bg-red-50 px-3 py-2 text-[11px] leading-relaxed text-red-800">
                       <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
@@ -439,6 +499,10 @@ export default async function MetaAdminPage(props: { searchParams: SearchParams 
                         </p>
                       )}
                     </div>
+                  )}
+                  {(() => { const r = replyFor(order.id, 'OrderDelivered'); return r && <ReplyLine reply={r} /> })()}
+                  {order.purchase_event_sent_at && !order.delivered_event_sent_at && deliveredEligible(order) && (
+                    <MetaHoldButtons orderId={order.id} state={holdState(order)} />
                   )}
                 </div>
               </div>

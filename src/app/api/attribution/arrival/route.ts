@@ -20,6 +20,7 @@ import { z } from 'zod'
 import { cookies, headers } from 'next/headers'
 import { rateLimit, callerKey } from '@/utils/rateLimit'
 import { isServerTrackingEnabled, isProductionRequestHost } from '@/utils/trackingEnv'
+import { isExcludedRequest } from '@/utils/trackingExclusion'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { metaFbcFromTouch } from '@/utils/attribution/fbc'
 
@@ -50,6 +51,8 @@ export async function POST(request: Request) {
   const hdrs = await headers()
   if (!isServerTrackingEnabled()) return noContent(204)
   if (!isProductionRequestHost(hdrs.get('host'))) return noContent(204)
+  // A staff device or a test-link visit never counts (admin upgrade N6, N8).
+  if (await isExcludedRequest()) return noContent(204)
 
   const limit = rateLimit(callerKey(hdrs, 'attribution-arrival'), 60, 60 * 1000)
   if (!limit.ok) return noContent(429)

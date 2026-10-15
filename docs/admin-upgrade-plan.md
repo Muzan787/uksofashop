@@ -432,8 +432,10 @@ he asks, give them as numbered steps with exact clicks.
    Signing mode to Signed. (Phase 1 already signs every upload, so this
    is safe at any time.)
 4. Decide whether to stop Google/Meta tracking scripts loading on admin
-   pages. The recommendation is yes, together with "exclude this device"
-   in Phase 11. (Phase 2.)
+   pages. Phase 11 built "Exclude this device" (item 13): on an excluded
+   phone or computer no tag loads anywhere, admin pages included. So once
+   item 13 is done this only matters for a device that isn't excluded;
+   the recommendation is to leave it as it is. (Phase 2.)
 5. UptimeRobot: watch the shop and get an email when it's down or a Status
    check is red. (Phase 4.)
    1. Go to uptimerobot.com and sign up for a free account with the email
@@ -480,6 +482,37 @@ he asks, give them as numbered steps with exact clicks.
    fabric screen has an "extra charge" per fabric. Saying yes means a new
    column, the product page showing "+£X" on dearer fabrics, and checkout and
    OrderFlow charging it. (Phase 9.)
+10. The order code in Meta and GA4: keep or remove (N8; nothing changed
+    without a yes). Each Purchase carries the 8-character order code: Meta
+    gets it as order_id, GA4 as transaction_id. The brief says order codes
+    are never sent. The recommendation is to keep it: GA4 uses it to avoid
+    counting one purchase twice, and it is neither personal nor a private
+    link. (Phase 11.)
+11. Custom labels in the Meta catalogue: yes or no (O1). The feed sends none
+    today. Saying yes would add, for example, the offer tier and the
+    department to each item, so product sets and ads can be split by them.
+    It changes what Meta's catalogue receives. (Phase 11.)
+12. Profile links and the offer: yes or no (O4). Every visitor has had the
+    48-hour offer since 12 Oct, so a visitor from the Instagram, Facebook or
+    WhatsApp profile link gets it too. The brief says profile links carry
+    no offer. Saying yes means those visitors get no offer, which changes
+    what customers are offered. (Phase 11.)
+13. Exclude your own devices (N6). On each phone and computer you and the
+    team use, in each browser: sign in to the admin, open More → Meta,
+    and press **Exclude this device** under "This device". Nothing done
+    on it is counted or sent to Meta or Google any more, and an order
+    placed on it is marked as a test. It lasts 400 days; pressing it again
+    renews it. (Phase 11.)
+14. Optional, only to use Test mode (N2): Meta Events Manager → your
+    dataset → Test events → copy the test code. Hostinger → environment
+    variables → add `META_CAPI_TEST_EVENT_CODE` with that code →
+    redeploy. Then Admin → Meta → Mode → Test. When you're done, switch
+    back to Live and delete the variable: while it is set, every server
+    event carries it, Live included, as it did before. (Phase 11.)
+15. Optional: the URL parameters (O2). Ads Manager → each ad → Edit →
+    Destination → URL parameters → paste the block from Admin → Ad links.
+    The October ads already use the same parameters; the September ones
+    used utm_source=meta, which the shop also reads as Meta. (Phase 11.)
 
 ---
 

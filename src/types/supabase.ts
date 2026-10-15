@@ -216,6 +216,7 @@ export type Database = {
           offer_enabled: boolean
           sample_limit: number
           orderflow_enabled: boolean
+          tracking_mode: string
           id: boolean
           updated_at: string
           updated_by: string | null
@@ -241,6 +242,7 @@ export type Database = {
           offer_enabled?: boolean
           sample_limit?: number
           orderflow_enabled?: boolean
+          tracking_mode?: string
           id?: boolean
           updated_at?: string
           updated_by?: string | null
@@ -266,6 +268,7 @@ export type Database = {
           offer_enabled?: boolean
           sample_limit?: number
           orderflow_enabled?: boolean
+          tracking_mode?: string
           id?: boolean
           updated_at?: string
           updated_by?: string | null
@@ -290,6 +293,71 @@ export type Database = {
           label?: string | null
           is_active?: boolean
           created_at?: string
+        }
+        Relationships: []
+      }
+      meta_signal_holds: {
+        Row: {
+          order_id: string
+          state: string
+          set_at: string
+          set_by: string | null
+        }
+        Insert: {
+          order_id: string
+          state: string
+          set_at?: string
+          set_by?: string | null
+        }
+        Update: {
+          order_id?: string
+          state?: string
+          set_at?: string
+          set_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'meta_signal_holds_order_id_fkey'
+            columns: ['order_id']
+            isOneToOne: true
+            referencedRelation: 'orders'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      tracking_event_log: {
+        Row: {
+          id: number
+          created_at: string
+          platform: string
+          event_name: string
+          event_id: string | null
+          mode: string
+          outcome: string
+          order_ref: string | null
+          payload: Json
+        }
+        Insert: {
+          id?: never
+          created_at?: string
+          platform: string
+          event_name: string
+          event_id?: string | null
+          mode: string
+          outcome: string
+          order_ref?: string | null
+          payload: Json
+        }
+        Update: {
+          id?: never
+          created_at?: string
+          platform?: string
+          event_name?: string
+          event_id?: string | null
+          mode?: string
+          outcome?: string
+          order_ref?: string | null
+          payload?: Json
         }
         Relationships: []
       }
@@ -1770,6 +1838,7 @@ export type Database = {
       orderflow_status: { Args: Record<string, never>; Returns: Json }
       orderflow_collect_now: { Args: Record<string, never>; Returns: undefined }
       orderflow_send_test: { Args: Record<string, never>; Returns: string }
+      set_tracking_mode: { Args: { p_mode: string }; Returns: string }
       /** Reads an order for /confirm-order/[id]. Confirms nothing. */
       order_for_confirmation: {
         Args: { p_order_id: string }

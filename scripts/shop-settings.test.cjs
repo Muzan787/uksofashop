@@ -65,7 +65,8 @@ const SETTINGS_MIGRATION = '20261015130831_shop_settings.sql'
 async function checkoutDb() {
   const pg = new PGlite()
   await pg.exec(`create role anon; create role authenticated; create role service_role;
-    create schema private; create schema vault; create schema orderflow; create schema auth;
+    create schema private; create schema vault; create schema orderflow; create schema auth; create schema cron;
+    create function cron.schedule(text, text, text) returns bigint language sql as 'select 1::bigint';
     create function auth.uid() returns uuid language sql as 'select null::uuid';
     create function private.is_admin() returns boolean language sql as 'select false';
     create function private.require_admin() returns void language plpgsql as $$ begin raise exception 'NOT_AUTHORISED'; end $$;
@@ -91,7 +92,11 @@ async function checkoutDb() {
   return pg
 }
 
-const applySettings = pg => pg.exec(read(`supabase/migrations/${SETTINGS_MIGRATION}`))
+// The settings table, then Phase 11's tracking mode column on it.
+const applySettings = async pg => {
+  await pg.exec(read(`supabase/migrations/${SETTINGS_MIGRATION}`))
+  await pg.exec(read('supabase/migrations/20261015135237_tracking_admin.sql'))
+}
 
 /** A window for the test visitor; its token. */
 const issue = async (pg, visitor = VISITOR) => (await pg.query(`select issue_paid_offer_entitlement($1, 'meta_ads', null) r`, [visitor])).rows[0].r
@@ -327,7 +332,7 @@ test('figures are written as the shop writes them', () => {
 })
 
 test('the form covers every figure in the row, once', () => {
-  const columns = settings.SHOP_SETTINGS_COLUMNS.split(', ').filter(c => !['offer_enabled', 'orderflow_enabled'].includes(c))
+  const columns = settings.SHOP_SETTINGS_COLUMNS.split(', ').filter(c => !['offer_enabled', 'orderflow_enabled', 'tracking_mode'].includes(c))
   assert.deepEqual(plain(form.FIGURE_FIELDS.map(f => f.key)).sort(), columns.sort())
   // And the database checks the same keys.
   const sql = read(`supabase/migrations/${SETTINGS_MIGRATION}`)

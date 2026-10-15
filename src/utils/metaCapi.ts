@@ -26,6 +26,9 @@ import 'server-only'
 import { createHash } from 'crypto'
 import { normaliseUkMobile } from '@/utils/phone'
 import { isServerTrackingEnabled } from '@/utils/trackingEnv'
+import { getTrackingMode } from '@/utils/trackingMode'
+import { logTrackingEvent, metaPayloadForLog } from '@/utils/trackingLog'
+import type { TrackingMode } from '@/utils/shopSettings'
 
 const API_VERSION = 'v21.0'
 
@@ -112,6 +115,13 @@ interface CapiEvent {
   orderId?: string
   /** Defaults to 'website', which is where all but the manual orders happen. */
   actionSource?: CapiActionSource
+  /**
+   * Admin -> Meta's mode (admin upgrade N2). Left out, it is read from the
+   * settings. Live sends exactly as before; Test sends to Meta's Test events
+   * only, under its own event id so it can never stand in for the real one;
+   * Dry run builds and logs the event and sends nothing.
+   */
+  mode?: TrackingMode
 }
 
 function userData(u: CapiUser): Record<string, unknown> {
@@ -149,7 +159,9 @@ export interface CapiDeliveryResult {
   events_received?: number
   error_code?: number
   error_subcode?: number
-  reason?: 'not_configured' | 'not_production' | 'invalid_event_time' | 'transport_or_response_error'
+  reason?: 'not_configured' | 'not_production' | 'invalid_event_time' | 'transport_or_response_error' | 'dry_run' | 'no_test_code'
+  /** Present only when the event went out (or not) under Test or Dry run. */
+  mode?: TrackingMode
 }
 
 export async function sendCapiEvent(event: CapiEvent): Promise<CapiDeliveryResult> {
@@ -164,12 +176,15 @@ export async function sendCapiEvent(event: CapiEvent): Promise<CapiDeliveryResul
     return { outcome: 'skipped', reason: 'invalid_event_time' }
   }
 
+  const mode = event.mode ?? await getTrackingMode()
+  const testing = mode === 'test'
+
   const payload = {
     data: [
       {
         event_name: event.eventName,
         event_time: eventTime,
-        event_id: event.eventId,
+        event_id: testing ? `${event.eventId}-test` : event.eventId,
         event_source_url: event.eventSourceUrl,
         action_source: event.actionSource ?? 'website',
         user_data: userData(event.user),
@@ -185,6 +200,27 @@ export async function sendCapiEvent(event: CapiEvent): Promise<CapiDeliveryResul
       },
     ],
     ...(TEST_EVENT_CODE ? { test_event_code: TEST_EVENT_CODE } : {}),
+  }
+
+  // Every event is logged as it was built, personal details hashed (N7).
+  const log = (outcome: string) => logTrackingEvent({
+    platform: 'meta',
+    event_name: event.eventName,
+    event_id: payload.data[0].event_id,
+    mode,
+    outcome,
+    order_ref: event.orderId ?? null,
+    payload: metaPayloadForLog(payload),
+  })
+
+  if (mode === 'dry_run') {
+    await log('dry_run')
+    return { outcome: 'skipped', reason: 'dry_run', mode }
+  }
+  // Test without Meta's test code would land in the live account, so it doesn't go.
+  if (testing && !TEST_EVENT_CODE) {
+    await log('no_test_code')
+    return { outcome: 'skipped', reason: 'no_test_code', mode }
   }
 
   try {
@@ -212,10 +248,12 @@ export async function sendCapiEvent(event: CapiEvent): Promise<CapiDeliveryResul
       ...(numeric(body?.error?.error_subcode) !== undefined ? { error_subcode: numeric(body?.error?.error_subcode) } : {}),
     }
     if (result.outcome !== 'accepted') console.error(`Meta CAPI ${event.eventName} delivery`, result)
-    return result
+    await log(result.outcome)
+    return testing ? { ...result, mode } : result
   } catch {
     // No automatic replay: an interrupted response may have been accepted.
     console.error(`Meta CAPI ${event.eventName} transport/response ambiguous`)
-    return { outcome: 'ambiguous', reason: 'transport_or_response_error' }
+    await log('ambiguous')
+    return { outcome: 'ambiguous', reason: 'transport_or_response_error', ...(testing ? { mode } : {}) }
   }
 }

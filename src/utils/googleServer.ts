@@ -3,6 +3,7 @@ import { createUntypedAdminClient } from './supabase/admin'
 import { GOOGLE_GTM_ENABLED, type GoogleOrderReceipt, type GoogleItem } from './googleMeasurement'
 import { clientIdFromGaCookie, sendGa4Event, isGa4ServerConfigured } from './ga4Server'
 import { isServerTrackingEnabled } from './trackingEnv'
+import { getTrackingMode } from './trackingMode'
 
 /** Prices and discounts come from the committed database record, never cart state. */
 export async function googleOrderReceipt(orderId:string):Promise<GoogleOrderReceipt|null> {
@@ -32,6 +33,9 @@ export async function googleOrderReceipt(orderId:string):Promise<GoogleOrderRece
 /** Independent Google guard, called before the protected Meta send guard. */
 export async function reportGooglePurchase(orderId:string):Promise<void> {
   if (!GOOGLE_GTM_ENABLED || !isServerTrackingEnabled() || !isGa4ServerConfigured()) return
+  // Only on Live (admin upgrade N2): the claim below marks the order done for
+  // Google, so a Test or Dry run send here would stop the real one ever going.
+  if ((await getTrackingMode()) !== 'live') return
   try {
     const db=createUntypedAdminClient()
     const {data:claims,error}=await db.rpc('google_phase2b_claim_ga4',{p_order_id:orderId})

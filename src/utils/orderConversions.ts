@@ -28,6 +28,7 @@ import { sendCapiEvent } from '@/utils/metaCapi'
 import { sendGa4Event, clientIdFromGaCookie } from '@/utils/ga4Server'
 import { SITE_URL } from '@/constants/site'
 import { isServerTrackingEnabled } from '@/utils/trackingEnv'
+import { getTrackingMode } from '@/utils/trackingMode'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { reportGooglePurchase } from './googleServer'
 import { GOOGLE_GTM_ENABLED } from './googleMeasurement'
@@ -64,6 +65,12 @@ export async function reportOrderConversion(
     // reports correctly later if it turns out to belong to production after
     // all - see the note on isServerTrackingEnabled for why that matters.
     if (!isServerTrackingEnabled()) return
+    // Admin -> Meta's mode (admin upgrade N2). Live is everything below,
+    // exactly as before. Test and Dry run build the same events and log
+    // them, but claim nothing and stage nothing for Google, so the order
+    // stays waiting and still sends for real once the mode is Live again.
+    const mode = await getTrackingMode()
+    const live = mode === 'live'
     if (kind === 'purchase') await reportGooglePurchase(orderId)
 
     const sentColumn = SENT_COLUMN[kind]
@@ -94,6 +101,14 @@ export async function reportOrderConversion(
       return
     }
 
+    // Held, or marked Don't send, in Admin -> Meta (admin upgrade N4).
+    const { data: hold } = await admin
+      .from('meta_signal_holds')
+      .select('state')
+      .eq('order_id', orderId)
+      .maybeSingle()
+    if (hold) return
+
     // Never invent the business-event time for a historical row. Future
     // app confirmations stamp these first; a legacy/null timestamp must be
     // corrected explicitly before any Purchase/Delivered conversion runs.
@@ -114,37 +129,40 @@ export async function reportOrderConversion(
     // confirmed->shipped->confirmed toggle never creates a second row.
     const postcode = order.shipping_address?.split(',').pop()?.trim() ?? null
     const conversionStage = kind === 'purchase' ? 'confirmed' : 'delivered'
-    const { data: staged, error: stagingError } = await admin
-      .from('google_offline_conversions')
-      .upsert(
-        {
-          order_id: orderId,
-          conversion_stage: conversionStage,
-          conversion_time: conversionTime,
-          value,
-          currency: 'GBP',
-          gclid: order.gclid,
-          gbraid: order.gbraid,
-          wbraid: order.wbraid,
-          customer_email: order.customer_email,
-          customer_phone: order.customer_phone,
-          customer_first_name: name.split(/\s+/)[0] || null,
-          customer_last_name: name.split(/\s+/).slice(1).join(' ') || null,
-          customer_postcode: postcode,
-        },
-        { onConflict: 'order_id,conversion_stage', ignoreDuplicates: true },
-      ).select('order_id')
+    // Live only: a staged row is a real Google conversion once the Sheet sync runs.
+    if (live) {
+      const { data: staged, error: stagingError } = await admin
+        .from('google_offline_conversions')
+        .upsert(
+          {
+            order_id: orderId,
+            conversion_stage: conversionStage,
+            conversion_time: conversionTime,
+            value,
+            currency: 'GBP',
+            gclid: order.gclid,
+            gbraid: order.gbraid,
+            wbraid: order.wbraid,
+            customer_email: order.customer_email,
+            customer_phone: order.customer_phone,
+            customer_first_name: name.split(/\s+/)[0] || null,
+            customer_last_name: name.split(/\s+/).slice(1).join(' ') || null,
+            customer_postcode: postcode,
+          },
+          { onConflict: 'order_id,conversion_stage', ignoreDuplicates: true },
+        ).select('order_id')
 
-    const stagingAttemptAt = new Date().toISOString()
-    if (stagingError || (staged as unknown[] | null)?.length) await admin.from('conversion_events').insert({
-      order_id: orderId,
-      platform: 'google_offline_staging' as const,
-      event_name: conversionStage,
-      event_id: `${shortCode}-${conversionStage}`,
-      sent_at: stagingError ? null : stagingAttemptAt,
-      status: stagingError ? 'failed' as const : 'sent' as const,
-      error_metadata: stagingError ? { message: stagingError.message } : null,
-    })
+      const stagingAttemptAt = new Date().toISOString()
+      if (stagingError || (staged as unknown[] | null)?.length) await admin.from('conversion_events').insert({
+        order_id: orderId,
+        platform: 'google_offline_staging' as const,
+        event_name: conversionStage,
+        event_id: `${shortCode}-${conversionStage}`,
+        sent_at: stagingError ? null : stagingAttemptAt,
+        status: stagingError ? 'failed' as const : 'sent' as const,
+        error_metadata: stagingError ? { message: stagingError.message } : null,
+      })
+    }
 
     // Google staging remains independent of the advertising consent / CAPI result.
     const advertising = await orderAdvertisingConsent(order)
@@ -155,27 +173,33 @@ export async function reportOrderConversion(
       // A skipped event is not a dispatch and must not claim the business flag.
       // Preserve old rows; diagnostics apply only to this attempted invocation.
       const eventId = kind === 'purchase' ? order.purchase_event_id : `${order.purchase_event_id}-delivered`
-      const { data: previous } = await admin.from('conversion_events').select('id')
-        .eq('order_id', orderId).eq('platform', 'meta').eq('event_id', eventId).limit(1).maybeSingle()
-      if (!previous) await admin.from('conversion_events').insert({
-        order_id: orderId, platform: 'meta', event_name: kind === 'purchase' ? 'Purchase' : 'OrderDelivered',
-        event_id: eventId, status: 'skipped', sent_at: null,
-        response_metadata: { outcome: 'skipped', reason: !advertising.allowed ? advertising.reason : 'invalid_or_aged_event_time' },
-      })
+      // Live only, like every row in that table.
+      if (live) {
+        const { data: previous } = await admin.from('conversion_events').select('id')
+          .eq('order_id', orderId).eq('platform', 'meta').eq('event_id', eventId).limit(1).maybeSingle()
+        if (!previous) await admin.from('conversion_events').insert({
+          order_id: orderId, platform: 'meta', event_name: kind === 'purchase' ? 'Purchase' : 'OrderDelivered',
+          event_id: eventId, status: 'skipped', sent_at: null,
+          response_metadata: { outcome: 'skipped', reason: !advertising.allowed ? advertising.reason : 'invalid_or_aged_event_time' },
+        })
+      }
       return
     }
 
     // Claim it BEFORE sending. The `is null` predicate means two concurrent
     // requests cannot both win, so a double-click in the admin panel reports
     // one conversion rather than two.
-    const { data: claimed } = await admin
-      .from('orders')
-      .update({ [sentColumn]: new Date().toISOString() })
-      .eq('id', orderId)
-      .is(sentColumn, null)
-      .select('id')
+    // Test and Dry run claim nothing: the order stays waiting for the real send.
+    if (live) {
+      const { data: claimed } = await admin
+        .from('orders')
+        .update({ [sentColumn]: new Date().toISOString() })
+        .eq('id', orderId)
+        .is(sentColumn, null)
+        .select('id')
 
-    if (!claimed || claimed.length === 0) return
+      if (!claimed || claimed.length === 0) return
+    }
 
     const { data: lines } = await admin
       .from('order_items')
@@ -248,6 +272,7 @@ export async function reportOrderConversion(
         value,
         currency: 'GBP',
         orderId: shortCode,
+        mode,
       }),
 
       // GA4 only gets a purchase. A second monetary event for the same order
@@ -256,6 +281,8 @@ export async function reportOrderConversion(
         ? sendGa4Event({
             clientId: clientIdFromGaCookie(order.ga_client_id) ?? order.ga_client_id,
             name: 'purchase',
+            mode,
+            orderRef: shortCode,
             params: {
               transaction_id: shortCode,
               currency: 'GBP',
@@ -285,8 +312,9 @@ export async function reportOrderConversion(
     // already happened by this point. 'sent' here
     // means "the attempt completed", not "Meta/Google accepted it" - see
     // utils/metaCapi.ts and utils/ga4Server.ts for the actual acceptance
-    // logging.
-    await admin.from('conversion_events').insert([
+    // logging. Live only: Test and Dry run are in the tracking log (N7)
+    // instead, so this table stays a record of real sends.
+    if (live) await admin.from('conversion_events').insert([
       {
         order_id: orderId,
         platform: 'meta' as const,

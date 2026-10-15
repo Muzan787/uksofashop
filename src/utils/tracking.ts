@@ -28,7 +28,7 @@ import { META_PIXEL_ID, META_PIXEL_READY_EVENT } from '@/utils/consentMode'
 import { getConsent } from '@/utils/consent'
 import { mirrorJourneyAction } from '@/utils/journey'
 import { normaliseUkMobile } from '@/utils/phone'
-import { isBrowserTrackingEnabled } from '@/utils/trackingEnv'
+import { isAdTrackingEnabled, isBrowserTrackingEnabled } from '@/utils/trackingEnv'
 import { GOOGLE_DATALAYER_ENABLED, emitGoogleEvent, googleNavigationId, type GoogleCommerce, type GoogleEvent } from './googleMeasurement'
 
 const CURRENCY = 'GBP'
@@ -119,8 +119,9 @@ function fbq(...args: FbqArgs): void {
   // never has window.fbq defined either (TrackingScripts.tsx does not mount
   // the Pixel there), so this would already queue harmlessly - but checking
   // here means it never even queues, and never fires retroactively if the
-  // Pixel were ever mounted for some other reason.
-  if (!isBrowserTrackingEnabled()) return
+  // Pixel were ever mounted for some other reason. Also off on a staff
+  // device, a test-link visit, and in Test and Dry run (admin upgrade N2, N6).
+  if (!isAdTrackingEnabled()) return
   const w = window as TagWindow
 
   if (typeof w.fbq !== 'function') {
@@ -231,7 +232,7 @@ function ga(event: string, params: Record<string, unknown>): void {
     }
     return
   }
-  if (!isBrowserTrackingEnabled()) return
+  if (!isAdTrackingEnabled()) return
   const w = window as TagWindow
   if (typeof w.gtag !== 'function') return
   w.gtag('event', event, params)

@@ -17,7 +17,10 @@ function load(relative, mocks = {}, globals = {}, env = {}) {
 }
 const capiMocks={'server-only':{},crypto:{createHash},
   '@/utils/phone':{normaliseUkMobile:p=>p.startsWith('07')?'44'+p.slice(1):p},
-  '@/utils/trackingEnv':{isServerTrackingEnabled:()=>true}}
+  '@/utils/trackingEnv':{isServerTrackingEnabled:()=>true},
+  // Live, the default mode (admin upgrade N2); the event log is a no-op here.
+  '@/utils/trackingMode':{getTrackingMode:async()=>'live'},
+  '@/utils/trackingLog':{logTrackingEvent:async()=>{},metaPayloadForLog:p=>p}}
 const env={META_PIXEL_ID:'fixture_dataset',META_CAPI_ACCESS_TOKEN:'fixture_secret'}
 const event={eventName:'Purchase',eventId:'fixture_event',eventTime:1790824320,
   user:{email:' Example@Example.test ',phone:'07123456789',externalId:'fixture_visitor'},value:799,currency:'GBP'}

@@ -7,7 +7,7 @@ import { COOKIE } from '@/utils/attribution/ids'
 import { issueOfferEntitlement, secondsLeft } from '@/utils/offers/issueEntitlement'
 import { verifyOfferEntry } from '@/utils/offers/entryToken'
 import { OFFER_ENTITLEMENT_COOKIE } from '@/utils/offers/constants'
-import { isProductionRequestHost } from '@/utils/trackingEnv'
+import { isProductionRequestHost, TEST_LINK_PARAM } from '@/utils/trackingEnv'
 import { externalOrigin } from '@/utils/requestOrigin'
 
 export const dynamic = 'force-dynamic'
@@ -18,6 +18,8 @@ const ATTRIBUTION_KEYS = new Set([
   'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'utm_id',
   'adset_id', 'ad_id', 'placement', 'utm_source_platform',
   'gclid', 'gbraid', 'wbraid', 'fbclid',
+  // The test ad link's marker (admin upgrade O5), so the visit it opens never counts.
+  TEST_LINK_PARAM,
 ])
 
 function invalid(): NextResponse {

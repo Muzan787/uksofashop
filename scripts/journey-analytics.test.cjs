@@ -161,7 +161,7 @@ function endpoint(origin='https://www.uksofashop.co.uk',cookieReceipt=receipt){
  class NextResponse extends Response {static json(data,opts){return new Response(JSON.stringify(data),opts)}}
  return load('src/app/api/journey/route.ts',{'next/server':{NextResponse},'next/headers':{headers:async()=>h,cookies:async()=>({get:n=>({value:{uksofashop_vid:visitor,uksofashop_sid:session,uksofashop_aid:arrival,ukss_google_consent_receipt:cookieReceipt}[n]})})},
  'zod':{z},'@/utils/supabase/admin':{createUntypedAdminClient:()=>({from:t=>new Query(t)})},
- '@/utils/rateLimit':{callerKey:()=>'',rateLimit:()=>({ok:true})},'@/utils/trackingEnv':{isProductionRequestHost:v=>v==='www.uksofashop.co.uk',isServerTrackingEnabled:()=>true},
+ '@/utils/rateLimit':{callerKey:()=>'',rateLimit:()=>({ok:true})},'@/utils/trackingEnv':{isProductionRequestHost:v=>v==='www.uksofashop.co.uk',isServerTrackingEnabled:()=>true},'@/utils/trackingExclusion':{isExcludedRequest:async()=>false},
  '@/utils/journeySchema':schema},{Response,Request,Headers})
 }
 const request=e=>new Request('https://www.uksofashop.co.uk/api/journey',{method:'POST',body:JSON.stringify({version:contract.JOURNEY_VERSION,events:[e]})})

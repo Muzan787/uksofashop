@@ -12,6 +12,7 @@ import { Toaster } from "react-hot-toast";
 import CookieConsent from '@/components/UI/CookieConsent';
 import AnalyticsRedaction from '@/components/UI/AnalyticsRedaction';
 import TrackingScripts from '@/components/UI/TrackingScripts';
+import { TRACKING_MODE_META } from '@/utils/trackingEnv';
 import AttributionBoot from '@/components/UI/AttributionBoot';
 import JourneyAnalytics from '@/components/UI/JourneyAnalytics';
 import { META_DESCRIPTION } from '@/constants/promises';
@@ -214,6 +215,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             first config has already sent the real URL. See utils/redactUrl.ts. */}
         <script dangerouslySetInnerHTML={{ __html: ANALYTICS_REDACTION_SNIPPET }} />
         <script dangerouslySetInnerHTML={{ __html: ENTRANCE_GATE }} />
+        {/* Admin -> Meta's tracking mode (admin upgrade N2), read by
+            utils/trackingEnv.ts: the ad tags load only on Live. */}
+        <meta name={TRACKING_MODE_META} content={shopSettings.trackingMode} />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: jsonLd(localBusinessSchema()) }}

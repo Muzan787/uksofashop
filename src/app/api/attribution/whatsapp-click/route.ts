@@ -20,6 +20,7 @@ import { z } from 'zod'
 import { cookies, headers } from 'next/headers'
 import { rateLimit, callerKey } from '@/utils/rateLimit'
 import { isServerTrackingEnabled, isProductionRequestHost } from '@/utils/trackingEnv'
+import { isExcludedRequest } from '@/utils/trackingExclusion'
 import { isValidWhatsAppReference } from '@/utils/attribution/whatsapp'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { metaFbcFromTouch } from '@/utils/attribution/fbc'
@@ -50,6 +51,8 @@ export async function POST(request: Request) {
   const hdrs = await headers()
   if (!isServerTrackingEnabled()) return noContent(204)
   if (!isProductionRequestHost(hdrs.get('host'))) return noContent(204)
+  // A staff device or a test-link visit never counts (admin upgrade N6, N8).
+  if (await isExcludedRequest()) return noContent(204)
 
   // Generous: a real visitor fires this at most a handful of times per
   // session. Stops a script from flooding whatsapp_enquiries with junk rows.

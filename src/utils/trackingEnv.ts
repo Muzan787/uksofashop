@@ -63,9 +63,98 @@ export const PRODUCTION_HOSTS = ['uksofashop.co.uk', 'www.uksofashop.co.uk'] as 
  * domain the app might be served from - and false during server rendering,
  * where there is no window to read a hostname from at all.
  */
-export function isBrowserTrackingEnabled(): boolean {
+/** The page is on one of the live hostnames - nothing else considered. */
+export function isProductionHostname(): boolean {
   if (typeof window === 'undefined') return false
   return (PRODUCTION_HOSTS as readonly string[]).includes(window.location.hostname)
+}
+
+export function isBrowserTrackingEnabled(): boolean {
+  if (!isProductionHostname()) return false
+  // Admin upgrade N6 and N8: a staff device, or a visit that came in through
+  // the test ad link, never counts - not with Meta, not with Google, not in
+  // the shop's own journeys and attribution.
+  return !isExcludedBrowser()
+}
+
+// ── Devices and visits that never count (admin upgrade N6, N8, O5) ─────────
+
+/** Set on a phone or computer from Admin -> Meta -> "Exclude this device". */
+export const STAFF_DEVICE_COOKIE = 'ukss_staff'
+/** Set for the rest of a visit that arrived through the test ad link. */
+export const TEST_VISIT_COOKIE = 'ukss_test_visit'
+/** The test ad link carries this, as ?ukss_test=1. */
+export const TEST_LINK_PARAM = 'ukss_test'
+
+/** Why a cookie jar (read through `get`) never counts: a staff device first, then a test-link visit. */
+export function exclusionReason(get: (name: string) => string | undefined): 'staff_device' | 'test_link' | null {
+  if (get(STAFF_DEVICE_COOKIE) === '1') return 'staff_device'
+  if (get(TEST_VISIT_COOKIE) === '1') return 'test_link'
+  return null
+}
+
+/** True when a cookie jar belongs to a staff device or a test-link visit. */
+export function excludedByCookies(get: (name: string) => string | undefined): boolean {
+  return exclusionReason(get) !== null
+}
+
+function browserCookie(name: string): string | undefined {
+  if (typeof document === 'undefined') return undefined
+  for (const part of document.cookie.split(';')) {
+    const [key, ...rest] = part.trim().split('=')
+    if (key === name) return rest.join('=')
+  }
+  return undefined
+}
+
+function landedFromTestLink(): boolean {
+  try {
+    return new URLSearchParams(window.location.search).get(TEST_LINK_PARAM) === '1'
+  } catch {
+    return false
+  }
+}
+
+/** This browser is a staff device, or this visit came in through the test ad link. */
+export function isExcludedBrowser(): boolean {
+  if (typeof window === 'undefined') return false
+  return excludedByCookies(browserCookie) || landedFromTestLink()
+}
+
+/**
+ * Remembers a test-link visit for the rest of the session, so the pages after
+ * the landing page (which have lost the ?ukss_test=1) don't count either, and
+ * an order placed in it is marked as a test. Called after the first paint,
+ * from TrackingScripts.
+ */
+export function markTestVisit(): void {
+  if (typeof window === 'undefined' || !landedFromTestLink()) return
+  try {
+    const secure = window.location.protocol === 'https:' ? '; Secure' : ''
+    document.cookie = `${TEST_VISIT_COOKIE}=1; Path=/; SameSite=Lax${secure}`
+  } catch { /* cookies blocked: the landing page still never counts */ }
+}
+
+// ── The mode (admin upgrade N2) ────────────────────────────────────────────
+
+/** The root layout writes the mode chosen in Admin -> Meta into this meta tag. */
+export const TRACKING_MODE_META = 'ukss-tracking-mode'
+
+/** The mode the page was rendered with. No tag reads as Live, the shop's behaviour before the modes. */
+export function browserTrackingMode(): 'dry_run' | 'test' | 'live' {
+  if (typeof document === 'undefined') return 'live'
+  const value = document.querySelector(`meta[name="${TRACKING_MODE_META}"]`)?.getAttribute('content')
+  return value === 'dry_run' || value === 'test' ? value : 'live'
+}
+
+/**
+ * Whether the Meta Pixel, Google's tags and their browser events may run: the
+ * production site, a device and visit that count, and the mode on Live. In
+ * Test and Dry run the browser sends nothing to Meta or Google; the server's
+ * copies of the events follow the mode instead.
+ */
+export function isAdTrackingEnabled(): boolean {
+  return isBrowserTrackingEnabled() && browserTrackingMode() === 'live'
 }
 
 /**

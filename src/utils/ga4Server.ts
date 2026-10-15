@@ -19,6 +19,9 @@
 
 import 'server-only'
 import { isServerTrackingEnabled } from '@/utils/trackingEnv'
+import { getTrackingMode } from '@/utils/trackingMode'
+import { ga4PayloadForLog, logTrackingEvent } from '@/utils/trackingLog'
+import type { TrackingMode } from '@/utils/shopSettings'
 
 const MEASUREMENT_ID = process.env.GA4_MEASUREMENT_ID
 const API_SECRET = process.env.GA4_API_SECRET
@@ -35,6 +38,14 @@ interface Ga4Event {
   params: Record<string, unknown>
   timestampMicros?: number
   consent?: {ad_user_data:'granted'|'denied';ad_personalization:'granted'|'denied'}
+  /**
+   * Admin -> Meta's mode (admin upgrade N2); read from the settings when left
+   * out. Live sends as before; Test sends to Google's validator only; Dry run
+   * builds and logs the event and sends nothing.
+   */
+  mode?: TrackingMode
+  /** The order's code, for the log only. */
+  orderRef?: string
 }
 
 /**
@@ -49,14 +60,35 @@ export function clientIdFromGaCookie(cookieValue: string | null | undefined): st
 }
 
 /** Never throws: a reporting failure must not affect the order behind it. */
-export async function sendGa4Event(event: Ga4Event): Promise<'transport_accepted'|'failed'|'disabled'> {
+export async function sendGa4Event(event: Ga4Event): Promise<'transport_accepted'|'failed'|'disabled'|'validated'|'dry_run'> {
   if (!isGa4ServerConfigured()) return 'disabled'
   // Production gate (utils/trackingEnv.ts) - see the matching note in
   // utils/metaCapi.ts.
   if (!isServerTrackingEnabled()) return 'disabled'
 
+  const mode = event.mode ?? await getTrackingMode()
+  const body = {
+    client_id: event.clientId,
+    // Without this GA4 treats a server event as a new session and the
+    // engagement metrics for the visit are distorted.
+    non_personalized_ads: event.consent ? event.consent.ad_personalization !== 'granted' : false,
+    ...(event.timestampMicros ? {timestamp_micros:event.timestampMicros} : {}),
+    ...(event.consent ? {consent:{ad_user_data:event.consent.ad_user_data.toUpperCase(),ad_personalization:event.consent.ad_personalization.toUpperCase()}} : {}),
+    events: [{ name: event.name, params: event.params }],
+  }
+  // Every event is logged as it was built, the client id hashed (N7).
+  const log = (outcome: string) => logTrackingEvent({
+    platform: 'ga4', event_name: event.name, event_id: null, mode, outcome,
+    order_ref: event.orderRef ?? null, payload: ga4PayloadForLog(body),
+  })
+  if (mode === 'dry_run') {
+    await log('dry_run')
+    return 'dry_run'
+  }
+
+  // Test goes to the validator, which checks the event and records nothing.
   const url =
-    `https://www.google-analytics.com/mp/collect` +
+    `https://www.google-analytics.com/${mode === 'test' ? 'debug/mp/collect' : 'mp/collect'}` +
     `?measurement_id=${encodeURIComponent(MEASUREMENT_ID!)}` +
     `&api_secret=${encodeURIComponent(API_SECRET!)}`
 
@@ -64,15 +96,7 @@ export async function sendGa4Event(event: Ga4Event): Promise<'transport_accepted
     const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        client_id: event.clientId,
-        // Without this GA4 treats a server event as a new session and the
-        // engagement metrics for the visit are distorted.
-        non_personalized_ads: event.consent ? event.consent.ad_personalization !== 'granted' : false,
-        ...(event.timestampMicros ? {timestamp_micros:event.timestampMicros} : {}),
-        ...(event.consent ? {consent:{ad_user_data:event.consent.ad_user_data.toUpperCase(),ad_personalization:event.consent.ad_personalization.toUpperCase()}} : {}),
-        events: [{ name: event.name, params: event.params }],
-      }),
+      body: JSON.stringify(body),
     })
 
     // The Measurement Protocol answers 204 on success and, unhelpfully, also
@@ -80,11 +104,14 @@ export async function sendGa4Event(event: Ga4Event): Promise<'transport_accepted
     // use the DebugView endpoint if an event does not appear in GA4.
     if (!res.ok) {
       console.error(`GA4 MP ${event.name} rejected (${res.status})`)
+      await log('failed')
       return 'failed'
     }
-    return 'transport_accepted'
+    await log(mode === 'test' ? 'validated' : 'transport_accepted')
+    return mode === 'test' ? 'validated' : 'transport_accepted'
   } catch (err) {
     console.error(`GA4 MP ${event.name} failed to send`, err)
+    await log('failed')
     return 'failed'
   }
 }

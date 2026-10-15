@@ -15,6 +15,17 @@
 
 export type OfferTier = 'ELECTRIC' | 'ROMA' | 'STANDARD' | 'EXCLUDED'
 
+/**
+ * Admin -> Meta (admin upgrade N2). Live sends as the shop always has; Test
+ * sends server events to Meta's Test events and Google's validator only;
+ * Dry run builds and logs every server event and sends nothing. The browser
+ * tags load only on Live. Whatever the mode, nothing is sent from a server
+ * that isn't the production one.
+ */
+export type TrackingMode = 'dry_run' | 'test' | 'live'
+
+export const TRACKING_MODES: TrackingMode[] = ['dry_run', 'test', 'live']
+
 export interface ShopSettings {
   upstairsFirstFloor: number
   upstairsPerExtraFloor: number
@@ -35,6 +46,7 @@ export interface ShopSettings {
   offerEnabled: boolean
   sampleLimit: number
   orderflowEnabled: boolean
+  trackingMode: TrackingMode
 }
 
 export const DEFAULT_SHOP_SETTINGS: ShopSettings = {
@@ -55,6 +67,7 @@ export const DEFAULT_SHOP_SETTINGS: ShopSettings = {
   offerEnabled: true,
   sampleLimit: 5,
   orderflowEnabled: true,
+  trackingMode: 'live',
 }
 
 export interface ShopSettingsRow {
@@ -78,10 +91,11 @@ export interface ShopSettingsRow {
   offer_enabled: boolean | null
   sample_limit: number | null
   orderflow_enabled: boolean | null
+  tracking_mode: string | null
 }
 
 export const SHOP_SETTINGS_COLUMNS =
-  'upstairs_first_floor, upstairs_per_extra_floor, max_floor, assembly_fee, removal_per_seat, removal_min_seats, removal_default_seats, removal_max_seats, delivery_window_from_days, delivery_window_to_days, preferred_earliest_days, preferred_latest_days, tier_electric, tier_roma, tier_standard, tier_excluded, offer_window_hours, offer_enabled, sample_limit, orderflow_enabled'
+  'upstairs_first_floor, upstairs_per_extra_floor, max_floor, assembly_fee, removal_per_seat, removal_min_seats, removal_default_seats, removal_max_seats, delivery_window_from_days, delivery_window_to_days, preferred_earliest_days, preferred_latest_days, tier_electric, tier_roma, tier_standard, tier_excluded, offer_window_hours, offer_enabled, sample_limit, orderflow_enabled, tracking_mode'
 
 /** A figure from the row, or the default when it is missing or not a number. */
 function num(value: number | string | null | undefined, fallback: number): number {
@@ -115,6 +129,7 @@ export function settingsFromRow(row: Partial<ShopSettingsRow> | null | undefined
     offerEnabled: row.offer_enabled ?? d.offerEnabled,
     sampleLimit: num(row.sample_limit, d.sampleLimit),
     orderflowEnabled: row.orderflow_enabled ?? d.orderflowEnabled,
+    trackingMode: TRACKING_MODES.includes(row.tracking_mode as TrackingMode) ? row.tracking_mode as TrackingMode : d.trackingMode,
   }
 }
 

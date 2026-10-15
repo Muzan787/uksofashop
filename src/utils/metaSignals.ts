@@ -13,11 +13,13 @@ export interface MetaSignalOrder {
   utm_campaign: string | null
   cancellation_reason: string | null
   is_test: boolean | null
+  /** Hold or Don't send from Admin -> Meta (admin upgrade N4), embedded from meta_signal_holds. */
+  meta_signal_holds?: { state: string } | { state: string }[] | null
 }
 
 /** The fields the rules below read, for a select(). */
 export const META_SIGNAL_COLUMNS =
-  'status, confirmed_at, delivered_at, purchase_event_sent_at, delivered_event_sent_at, utm_campaign, cancellation_reason, is_test'
+  'status, confirmed_at, delivered_at, purchase_event_sent_at, delivered_event_sent_at, utm_campaign, cancellation_reason, is_test, meta_signal_holds(state)'
 
 /** A test order never sends a conversion (admin upgrade F5). */
 export function isQa(order: MetaSignalOrder): boolean {
@@ -32,10 +34,22 @@ export function deliveredEligible(order: MetaSignalOrder): boolean {
   return order.status === 'delivered' && Boolean(order.delivered_at) && !isQa(order)
 }
 
+/** 'hold' or 'dont_send' when an admin has stopped this order's Meta signals, else null. */
+export function holdState(order: MetaSignalOrder): 'hold' | 'dont_send' | null {
+  const row = Array.isArray(order.meta_signal_holds) ? order.meta_signal_holds[0] : order.meta_signal_holds
+  return row?.state === 'hold' || row?.state === 'dont_send' ? row.state : null
+}
+
+/** Ready and not yet sent. A held order isn't waiting: someone decided it waits. */
 export function purchasePending(order: MetaSignalOrder): boolean {
-  return purchaseEligible(order) && !order.purchase_event_sent_at
+  return purchaseEligible(order) && !order.purchase_event_sent_at && holdState(order) === null
 }
 
 export function deliveredPending(order: MetaSignalOrder): boolean {
-  return deliveredEligible(order) && !order.delivered_event_sent_at
+  return deliveredEligible(order) && !order.delivered_event_sent_at && holdState(order) === null
+}
+
+/** A Purchase that went to Meta for an order cancelled since: Meta can't take it back (N5). */
+export function cancelledAfterSending(order: MetaSignalOrder): boolean {
+  return Boolean(order.purchase_event_sent_at) && order.status === 'cancelled'
 }
