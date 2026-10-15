@@ -31,7 +31,28 @@ export default async function SearchPage(props: { searchParams: SearchParams }) 
   // so the row shape is inferred from the select string instead of erased -
   // a renamed column is now a compile error here rather than an undefined at
   // render time.
-  async function searchProducts(q: string) {
+  async function searchProducts(raw: string) {
+    // Commas and brackets are PostgREST's own syntax inside .or(); a search
+    // that contains them used to break the query rather than find anything.
+    const q = raw.replace(/[,()*\\:"]/g, ' ').replace(/\s+/g, ' ').trim()
+    if (!q) return []
+
+    // A category's search words (Admin → Categories, admin upgrade K5) find
+    // its products too: "l shape" finds the corner sofas. With no search
+    // words set, this adds nothing and the results are as they were.
+    const { data: matched } = await supabase
+      .from('categories')
+      .select('id')
+      .ilike('search_words', `%${q}%`)
+    let alsoIds: string[] = []
+    if (matched?.length) {
+      const { data: links } = await supabase
+        .from('product_categories')
+        .select('product_id')
+        .in('category_id', matched.map(c => c.id))
+      alsoIds = [...new Set((links ?? []).map(l => l.product_id))]
+    }
+
     const { data } = await supabase
       .from('products')
       // categories!products_category_id_fkey is the designated primary
@@ -40,7 +61,7 @@ export default async function SearchPage(props: { searchParams: SearchParams }) 
       // product page's own canonical tag.
       .select('id, title, slug, base_price, was_price, average_rating, review_count, product_variants(image_url, price_adjustment), categories!products_category_id_fkey(slug), product_categories!inner(categories(slug, name))')
       .eq('is_active', true)
-      .or(`title.ilike.%${q}%,description.ilike.%${q}%`)
+      .or(`title.ilike.%${q}%,description.ilike.%${q}%${alsoIds.length ? `,id.in.(${alsoIds.join(',')})` : ''}`)
       .order('created_at', { ascending: false })
       .limit(24)
     return data ?? []

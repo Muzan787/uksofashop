@@ -22,6 +22,8 @@ interface Props {
   priceTo: number | null;
   /** Categories alongside this one, for the row along the bottom edge. */
   siblings: CategoryChip[];
+  /** A line or two from Admin → Categories, under the summary. None, nothing shows. */
+  intro?: string | null;
 }
 
 const MONEY = new Intl.NumberFormat('en-GB', {
@@ -49,7 +51,7 @@ const MONEY = new Intl.NumberFormat('en-GB', {
  * 2.4:1 and was effectively unreadable. Ember 300 is the dark-ground ember.
  */
 export default function CategoryHero({
-  title, slug, image, count, priceFrom, priceTo, siblings,
+  title, slug, image, count, priceFrom, priceTo, siblings, intro,
 }: Props) {
   return (
     <section
@@ -136,6 +138,9 @@ export default function CategoryHero({
           <p className="m-0 mt-3 font-data text-data tabular-nums text-calico-300">
             {summarise(count, priceFrom, priceTo)}
           </p>
+          {intro?.trim() && (
+            <p className="m-0 mt-3 max-w-2xl whitespace-pre-line text-body text-calico-100">{intro.trim()}</p>
+          )}
         </div>
 
         {/* Sideways, along the bottom edge. Somebody looking at corner sofas is

@@ -133,12 +133,12 @@ export default async function CategoryPage(props: { params: Params; searchParams
 
   const supabase = await createClient()
 
-  let categoryData: { id: string; name: string; image_url?: string | null } | null = null
+  let categoryData: { id: string; name: string; image_url?: string | null; intro?: string | null } | null = null
 
   if (decodedCategory !== 'all') {
     const { data } = await supabase
       .from('categories')
-      .select('id, name, image_url')
+      .select('id, name, image_url, intro')
       .eq('slug', decodedCategory)
       .limit(1)
       .maybeSingle()
@@ -192,7 +192,8 @@ export default async function CategoryPage(props: { params: Params; searchParams
   const [heroCount, heroRange, siblingRows] = await Promise.all([
     countMatchingProducts(supabase, heroFilters),
     categoryPriceRange(supabase, heroFilters),
-    supabase.from('categories').select('slug, name, parent_id').order('name'),
+    // Shown categories, in the admin's order (by name until one is set).
+    supabase.from('categories').select('slug, name, parent_id').eq('is_active', true).order('sort').order('name'),
   ])
 
   // Categories alongside this one — the same level of the tree, so the row
@@ -261,6 +262,7 @@ export default async function CategoryPage(props: { params: Params; searchParams
         title={pageTitle}
         slug={decodedCategory}
         image={categoryData?.image_url ?? null}
+        intro={categoryData?.intro ?? null}
         count={heroCount}
         priceFrom={heroRange.from}
         priceTo={heroRange.to}

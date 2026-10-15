@@ -474,6 +474,12 @@ he asks, give them as numbered steps with exact clicks.
       £X, in cash or by bank transfer", as the WhatsApp message does.
    4. Pressing a status that is already set sends that status's email
       again. Send nothing when nothing changed.
+9. Fabric extra charges: yes or no (K5; not built, because it changes what
+   customers pay). Today every fabric costs the same: the fabrics table has
+   no price, and checkout adds nothing for the fabric chosen. The brief's
+   fabric screen has an "extra charge" per fabric. Saying yes means a new
+   column, the product page showing "+£X" on dearer fabrics, and checkout and
+   OrderFlow charging it. (Phase 9.)
 
 ---
 

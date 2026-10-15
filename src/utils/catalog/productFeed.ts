@@ -233,6 +233,10 @@ export async function buildProductFeed(kind: FeedKind): Promise<Response> {
       product_variants ( id, sku, color, material, price_adjustment, image_url )
     `)
     .eq('is_active', true)
+    // A colourway hidden in the admin is off the shop, so it is off the feed.
+    // This reads with the server key, which the shop's own "shown colourways
+    // only" rule does not apply to, so it filters for itself.
+    .eq('product_variants.is_active', true)
 
   if (error) {
     console.error('Error fetching products for feed:', error)

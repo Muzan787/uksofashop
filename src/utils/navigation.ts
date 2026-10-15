@@ -53,6 +53,11 @@ const readNavCategories = unstable_cache(
     const { data, error } = await supabase
       .from('categories')
       .select('id, name, slug, image_url')
+      // Shown ones only, in the order set in Admin → Categories (admin
+      // upgrade K5). Every category is shown with order 99 until changed, so
+      // this is name order, as before.
+      .eq('is_active', true)
+      .order('sort')
       .order('name')
 
     if (error) {

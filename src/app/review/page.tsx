@@ -34,6 +34,8 @@ export default async function ReviewPage(props: { searchParams: SearchParams }) 
       .from('products')
       .select('id, title, slug, categories!products_category_id_fkey(slug), product_categories(categories(slug)), product_variants(image_url, priority)')
       .eq('id', verified.productId)
+      // Shown colourways only, like the shop (this reads with the server key).
+      .eq('product_variants.is_active', true)
       .maybeSingle(),
     supabase
       .from('reviews')

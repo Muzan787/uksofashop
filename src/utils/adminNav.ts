@@ -11,7 +11,7 @@
 
 export type AdminSectionKey =
   | 'home' | 'orders' | 'meta' | 'leads' | 'journeys'
-  | 'inventory' | 'categories' | 'reviews' | 'videos' | 'status'
+  | 'catalogue' | 'inventory' | 'categories' | 'reviews' | 'videos' | 'status'
 
 export interface AdminSection {
   key: AdminSectionKey
@@ -30,7 +30,8 @@ export const ADMIN_SECTIONS: AdminSection[] = [
   { key: 'meta',       href: '/admin/meta',       label: 'Meta' },
   { key: 'leads',      href: '/admin/leads',      label: 'Leads' },
   { key: 'journeys',   href: '/admin/journeys',   label: 'Journeys' },
-  { key: 'inventory',  href: '/admin/inventory',  label: 'Inventory' },
+  { key: 'catalogue',  href: '/admin/catalogue',  label: 'Catalogue' },
+  { key: 'inventory',  href: '/admin/inventory',  label: 'Products' },
   { key: 'categories', href: '/admin/categories', label: 'Categories' },
   { key: 'reviews',    href: '/admin/reviews',    label: 'Reviews' },
   { key: 'videos',     href: '/admin/videos',     label: 'Videos' },
@@ -46,14 +47,14 @@ export interface PhoneTab {
 }
 
 /**
- * The phone's bottom bar. Catalogue opens Inventory until the catalogue hub
- * exists (admin upgrade Phase 9).
+ * The phone's bottom bar. Catalogue opens the catalogue hub (admin upgrade
+ * Phase 9), and stays lit on products and categories too.
  */
 export const PHONE_TABS: PhoneTab[] = [
   { key: 'home',      href: '/admin',           label: 'Home' },
   { key: 'orders',    href: '/admin/orders',    label: 'Orders' },
   { key: 'leads',     href: '/admin/leads',     label: 'Leads' },
-  { key: 'catalogue', href: '/admin/inventory', label: 'Catalogue' },
+  { key: 'catalogue', href: '/admin/catalogue', label: 'Catalogue' },
   { key: 'more',      href: '/admin/more',      label: 'More' },
 ]
 
@@ -61,8 +62,11 @@ export const MORE_HREF = '/admin/more'
 
 /** The sections reached through More on a phone, in the More page's order. */
 export const MORE_SECTION_KEYS: AdminSectionKey[] = [
-  'meta', 'journeys', 'reviews', 'videos', 'categories', 'status',
+  'meta', 'journeys', 'reviews', 'videos', 'status',
 ]
+
+/** The sections the phone's Catalogue tab covers: the hub, products and categories. */
+export const CATALOGUE_SECTION_KEYS: AdminSectionKey[] = ['catalogue', 'inventory', 'categories']
 
 /** True when `pathname` is `href` or somewhere beneath it. Home matches only itself. */
 export function sectionActive(pathname: string, href: string): boolean {
@@ -75,6 +79,8 @@ export function activePhoneTab(pathname: string): PhoneTabKey | null {
   if (sectionActive(pathname, MORE_HREF)) return 'more'
   const moreHrefs = ADMIN_SECTIONS.filter(s => MORE_SECTION_KEYS.includes(s.key)).map(s => s.href)
   if (moreHrefs.some(href => sectionActive(pathname, href))) return 'more'
+  const catalogueHrefs = ADMIN_SECTIONS.filter(s => CATALOGUE_SECTION_KEYS.includes(s.key)).map(s => s.href)
+  if (catalogueHrefs.some(href => sectionActive(pathname, href))) return 'catalogue'
   const tab = PHONE_TABS.find(t => t.key !== 'more' && sectionActive(pathname, t.href))
   return tab?.key ?? null
 }

@@ -81,6 +81,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const { data: categories } = await supabase
     .from('categories')
     .select('slug, created_at')
+    // A category hidden in the admin leaves the sitemap; its page still opens.
+    .eq('is_active', true)
 
   categories?.forEach((cat) => {
     if (!cat.slug) return

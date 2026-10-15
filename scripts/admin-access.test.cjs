@@ -261,14 +261,16 @@ test('the phone bar has five tabs and More stays lit on its sections', () => {
     '/admin/journeys': 'more',
     '/admin/reviews': 'more',
     '/admin/videos': 'more',
-    '/admin/categories': 'more',
+    '/admin/categories': 'catalogue',
+    '/admin/catalogue': 'catalogue',
+    '/admin/catalogue/fabrics': 'catalogue',
     '/admin/status': 'more',
   }
   for (const [pathname, tab] of Object.entries(cases)) assert.equal(nav.activePhoneTab(pathname), tab, pathname)
   // Every section is reachable on a phone: a tab of its own, or behind More.
   const tabHrefs = new Set(nav.PHONE_TABS.map(t => t.href))
   for (const s of nav.ADMIN_SECTIONS) {
-    assert.ok(tabHrefs.has(s.href) || nav.MORE_SECTION_KEYS.includes(s.key), `${s.label} is unreachable on a phone`)
+    assert.ok(tabHrefs.has(s.href) || nav.MORE_SECTION_KEYS.includes(s.key) || nav.CATALOGUE_SECTION_KEYS.includes(s.key), `${s.label} is unreachable on a phone`)
   }
   assert.equal(nav.sectionActive('/admin/leadsx', '/admin/leads'), false)
   assert.equal(nav.sectionActive('/admin/orders', '/admin'), false)

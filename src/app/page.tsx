@@ -46,7 +46,8 @@ const getHomeData = unstable_cache(
       fabricLibrary,
     ] = await Promise.all([
       // Categories
-      supabase.from('categories').select('*').order('name').limit(6),
+      // Shown ones, in the admin's order (by name until one is set).
+      supabase.from('categories').select('*').eq('is_active', true).order('sort').order('name').limit(6),
 
       // Cheapest active product and how many there are, per category. One pass
       // over the active products rather than a query each — the tiles need a

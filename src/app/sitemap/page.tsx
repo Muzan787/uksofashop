@@ -26,6 +26,8 @@ export default async function HTMLSitemapPage() {
   const { data: categories } = await supabase
     .from('categories')
     .select('name, slug')
+    .eq('is_active', true)
+    .order('sort', { ascending: true })
     .order('name', { ascending: true });
 
   // 2. Fetch Active Products

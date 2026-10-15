@@ -312,6 +312,10 @@ export type Database = {
       }
       categories: {
         Row: {
+          intro: string | null
+          is_active: boolean
+          search_words: string | null
+          sort: number
           created_at: string | null
           id: string
           image_url: string | null
@@ -320,6 +324,10 @@ export type Database = {
           slug: string
         }
         Insert: {
+          intro?: string | null
+          is_active?: boolean
+          search_words?: string | null
+          sort?: number
           created_at?: string | null
           id?: string
           image_url?: string | null
@@ -328,6 +336,10 @@ export type Database = {
           slug: string
         }
         Update: {
+          intro?: string | null
+          is_active?: boolean
+          search_words?: string | null
+          sort?: number
           created_at?: string | null
           id?: string
           image_url?: string | null
@@ -1187,6 +1199,7 @@ export type Database = {
       }
       product_variants: {
         Row: {
+          is_active: boolean
           color: string | null
           color_hex: string | null
           created_at: string | null
@@ -1200,6 +1213,7 @@ export type Database = {
           stock_quantity: number | null
         }
         Insert: {
+          is_active?: boolean
           color?: string | null
           color_hex?: string | null
           created_at?: string | null
@@ -1213,6 +1227,7 @@ export type Database = {
           stock_quantity?: number | null
         }
         Update: {
+          is_active?: boolean
           color?: string | null
           color_hex?: string | null
           created_at?: string | null
@@ -1237,6 +1252,8 @@ export type Database = {
       }
       products: {
         Row: {
+          seo_description: string | null
+          seo_title: string | null
           average_rating: number | null
           base_price: number
           category_id: string | null
@@ -1259,6 +1276,8 @@ export type Database = {
           was_price: number | null
         }
         Insert: {
+          seo_description?: string | null
+          seo_title?: string | null
           average_rating?: number | null
           base_price: number
           category_id?: string | null
@@ -1281,6 +1300,8 @@ export type Database = {
           was_price?: number | null
         }
         Update: {
+          seo_description?: string | null
+          seo_title?: string | null
           average_rating?: number | null
           base_price?: number
           category_id?: string | null
@@ -1610,6 +1631,16 @@ export type Database = {
       set_contact_message_status: { Args: { p_id: string; p_status: string }; Returns: undefined }
       claim_lead_reminder: { Args: { p_id: string }; Returns: string }
       release_lead_reminder: { Args: { p_id: string; p_claimed_at: string }; Returns: boolean }
+      // Admin upgrade Phase 9 (20261015064636_catalogue.sql).
+      save_product: {
+        Args: { p_id: string | null; p_product: Json; p_category_ids: string[]; p_canonical_category_id: string | null; p_tier: string | null; p_variants: Json }
+        Returns: Json
+      }
+      delete_product: { Args: { p_id: string }; Returns: undefined }
+      delete_category: { Args: { p_id: string }; Returns: undefined }
+      delete_variant_group: { Args: { p_id: string }; Returns: undefined }
+      delete_fabric: { Args: { p_id: string }; Returns: undefined }
+      delete_fabric_collection: { Args: { p_id: string }; Returns: undefined }
       /** Reads an order for /confirm-order/[id]. Confirms nothing. */
       order_for_confirmation: {
         Args: { p_order_id: string }

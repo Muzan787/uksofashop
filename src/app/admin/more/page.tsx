@@ -20,7 +20,6 @@ const ICONS: Partial<Record<AdminSectionKey, LucideIcon>> = {
   journeys: Route,
   reviews: Star,
   videos: Clapperboard,
-  categories: Tags,
   status: Activity,
 }
 
@@ -35,10 +34,9 @@ interface Note {
 export default async function AdminMorePage() {
   const supabase = await createClient()
 
-  const [reviews, videos, categories, orders] = await Promise.all([
+  const [reviews, videos, orders] = await Promise.all([
     supabase.from('reviews').select('id', { count: 'exact', head: true }).eq('is_approved', false),
     supabase.from('videos').select('id', { count: 'exact', head: true }).eq('is_active', true),
-    supabase.from('categories').select('id', { count: 'exact', head: true }),
     supabase.from('orders').select(META_SIGNAL_COLUMNS).limit(5000),
   ])
 
@@ -66,7 +64,6 @@ export default async function AdminMorePage() {
       ? { text: `${reviewCount} waiting`, waiting: true }
       : { text: 'Nothing waiting', waiting: false },
     videos: { text: `${plural(videos.count ?? 0, 'video', 'videos')} on the site`, waiting: false },
-    categories: { text: plural(categories.count ?? 0, 'category', 'categories'), waiting: false },
     status: { text: 'Is everything working?', waiting: false },
   }
 

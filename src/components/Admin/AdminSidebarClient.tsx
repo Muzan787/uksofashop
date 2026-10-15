@@ -7,7 +7,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
-  LayoutDashboard, ShoppingCart, Package, Tags, LogOut, Star, UsersRound,
+  LayoutDashboard, LayoutGrid, ShoppingCart, Package, Tags, LogOut, Star, UsersRound,
   Clapperboard, Radio, Route, Ellipsis, Activity, type LucideIcon,
 } from 'lucide-react'
 import { logout } from '@/app/actions/auth'
@@ -22,6 +22,7 @@ const SECTION_ICONS: Record<AdminSectionKey, LucideIcon> = {
   meta: Radio,
   leads: UsersRound,
   journeys: Route,
+  catalogue: LayoutGrid,
   inventory: Package,
   categories: Tags,
   reviews: Star,

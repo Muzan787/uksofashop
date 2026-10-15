@@ -164,7 +164,11 @@ export async function generateMetadata(props: { params: Params }): Promise<Metad
   // metaDescription, not the raw column. These run 311-517 characters because
   // they are the page's body copy; untrimmed, every product snippet in search
   // was cut off mid-sentence. The full text still renders on the page.
-  const description = metaDescription(
+  // The search title and description from the admin's editor, when written
+  // (admin upgrade K2). Empty, the page keeps the title and description it
+  // has always had.
+  const seoTitle = product.seo_title?.trim() || product.title;
+  const description = product.seo_description?.trim() || metaDescription(
     product.description ||
       `Buy the ${product.title} at UK Sofa Shop. Free delivery to most of the UK and cash on delivery available.`,
   );
@@ -181,7 +185,7 @@ export async function generateMetadata(props: { params: Params }): Promise<Metad
   const images = [ogImage(cardUrl, product.title)];
 
   return {
-    title: product.title,
+    title: seoTitle,
     description,
     // One product, one indexable URL. Without this the same page is reachable
     // at /shop/<any-category>/<slug> and competes with itself.
@@ -190,14 +194,14 @@ export async function generateMetadata(props: { params: Params }): Promise<Metad
     // shared on WhatsApp or Facebook shows the homepage title and image.
     openGraph: {
       type: 'website',
-      title: product.title,
+      title: seoTitle,
       description,
       url: path,
       images,
     },
     twitter: {
       card: 'summary_large_image',
-      title: product.title,
+      title: seoTitle,
       description,
       images: [cardUrl],
     },
