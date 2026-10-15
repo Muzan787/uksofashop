@@ -339,8 +339,11 @@ function googleAdsCheck({ snapshot, now }: HealthInput): HealthCheck {
     n(q.held) ? `${n(q.held)} held back (missing consent or details)` : '',
   ]
   const oldest = hoursSince(q.oldest_pending_at, now)
+  // Amber, not red (Muaz, 16 Oct 2026): the Sheet is copied by hand when he
+  // chooses, and no sale has come from a Google ad, so a wait here is never
+  // an outage - it mustn't turn /api/health 503 or send an alert.
   if (n(q.pending) > 0 && oldest !== null && oldest > 72) {
-    return check('google-ads', title, 'red', `${plural(n(q.pending), 'sale is', 'sales are')} waiting to go to Google, the oldest since ${ago(q.oldest_pending_at, now)}. The Sheet sync hasn't run.`, details)
+    return check('google-ads', title, 'amber', `${plural(n(q.pending), 'sale is', 'sales are')} waiting to be copied to the Google Sheet by hand, the oldest since ${ago(q.oldest_pending_at, now)}.`, details)
   }
   if (n(q.pending) > 0) {
     return check('google-ads', title, 'ok', `${plural(n(q.pending), 'sale', 'sales')} queued for the next Sheet sync.`, details)

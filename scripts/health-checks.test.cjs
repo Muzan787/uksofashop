@@ -99,7 +99,6 @@ const RED = {
   jobs: i => { i.snapshot.jobs[0].status = 'failed' },
   tracking: i => { i.snapshot.tracking.failed_7d = 1 },
   ga4: i => { i.snapshot.ga4.problems_7d = 2 },
-  'google-ads': i => { Object.assign(i.snapshot.google_offline, { pending: 19, oldest_pending_at: hoursAgo(24 * 11) }) },
   trustpilot: i => { i.snapshot.trustpilot.invites_failed_7d = 1 },
   feed: i => { i.snapshot.feeds[0].last_at = hoursAgo(30) },
 }
@@ -215,9 +214,16 @@ test('amber never sends an alert', () => {
 })
 
 test('the first run after deploy alerts about what is already red', () => {
-  const report = broken(i => { Object.assign(i.snapshot.google_offline, { pending: 19, oldest_pending_at: hoursAgo(24 * 11) }) })
+  const report = broken(i => { i.snapshot.ga4.problems_7d = 2 })
   const plan = planHealthAlerts(report, [], NOW)
-  assert.deepEqual(plain(plan.broke.map(c => c.key)), ['google-ads'])
+  assert.deepEqual(plain(plan.broke.map(c => c.key)), ['ga4'])
+})
+
+test('sales waiting for the hand-copied Google Sheet are amber: no alert, no 503 (16 Oct 2026)', () => {
+  const report = broken(i => { Object.assign(i.snapshot.google_offline, { pending: 19, oldest_pending_at: hoursAgo(24 * 11) }) })
+  assert.equal(stateOf(report, 'google-ads'), 'amber')
+  assert.notEqual(report.state, 'red')
+  assert.equal(hasAlerts(planHealthAlerts(report, [], NOW)), false)
 })
 
 test('a database job starter shows only when it is paused or failing', () => {
