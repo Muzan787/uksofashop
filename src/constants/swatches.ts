@@ -28,6 +28,10 @@
  * /swatches, /build, the emails and the chat assistant - and a limit that
  * says five in one place and three in another is the kind of thing nobody
  * notices until a customer counts.
+ *
+ * The NUMBER moved to Admin -> Settings (admin upgrade M1, 2026-10-15): it is
+ * shop_settings.sample_limit, which request_swatches holds to and every page
+ * reads through getShopSettings()/useShopSettings(). Five is its default.
  */
 export const MAX_SAMPLES = 5;
 

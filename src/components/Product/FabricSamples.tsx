@@ -8,7 +8,8 @@ import { ArrowLeft, Check, Package, Plus } from 'lucide-react'
 import Modal from '@/components/UI/Modal'
 import SwatchRequestForm from '@/components/Product/SwatchRequestForm'
 import { blurDataURL } from '@/utils/cloudinary'
-import { MAX_SAMPLES, SAMPLE_FEE } from '@/constants/swatches'
+import { SAMPLE_FEE } from '@/constants/swatches'
+import { useShopSettings } from '@/components/ShopSettingsProvider'
 import type { Fabric, FabricCollection } from '@/components/Product/types'
 
 /**
@@ -57,7 +58,9 @@ export function SamplesProvider({ collections, initialSamples = [], children }: 
   initialSamples?: Fabric[]
   children: React.ReactNode
 }) {
-  const [samples, setSamples] = useState<Fabric[]>(initialSamples.slice(0, MAX_SAMPLES))
+  // The sample limit from Admin -> Settings, the same one request_swatches holds to.
+  const { sampleLimit } = useShopSettings()
+  const [samples, setSamples] = useState<Fabric[]>(initialSamples.slice(0, sampleLimit))
 
   const holding = (id: string) => samples.some(s => s.id === id)
 
@@ -65,7 +68,7 @@ export function SamplesProvider({ collections, initialSamples = [], children }: 
     setSamples(current =>
       current.some(s => s.id === fabric.id)
         ? current.filter(s => s.id !== fabric.id)
-        : current.length >= MAX_SAMPLES
+        : current.length >= sampleLimit
           ? current
           : [...current, fabric],
     )
@@ -74,7 +77,7 @@ export function SamplesProvider({ collections, initialSamples = [], children }: 
 
   return (
     <Ctx.Provider
-      value={{ collections, samples, toggle, remove, full: samples.length >= MAX_SAMPLES, holding }}
+      value={{ collections, samples, toggle, remove, full: samples.length >= sampleLimit, holding }}
     >
       {children}
     </Ctx.Provider>
@@ -210,6 +213,7 @@ export interface SampleBarSofa {
  */
 export function SampleBar({ sofa }: { sofa?: SampleBarSofa | null }) {
   const { samples, remove } = useSamples()
+  const { sampleLimit } = useShopSettings()
   const [asking, setAsking] = useState(false)
   const [sent, setSent] = useState(false)
 
@@ -273,7 +277,7 @@ export function SampleBar({ sofa }: { sofa?: SampleBarSofa | null }) {
           <div className="mx-auto flex max-w-shell flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
             <div className="flex min-w-0 items-center gap-3">
               <span className="shrink-0 font-data text-caption uppercase tracking-widest text-ink-500">
-                {samples.length} of {MAX_SAMPLES}
+                {samples.length} of {sampleLimit}
               </span>
               <ul className="m-0 flex list-none gap-1.5 p-0">
                 {samples.map(s => (

@@ -30,14 +30,14 @@ import { hasPersonalisedLine } from '@/utils/cancellationRights'
 import { buildSnapshot, describeBuild } from '@/types/build'
 import { isValidUkMobile, UK_MOBILE_ERROR } from '@/utils/phone'
 import {
-  ASSEMBLY_FEE, UPSTAIRS_FIRST_FLOOR, UPSTAIRS_PER_EXTRA_FLOOR,
-  SOFA_REMOVAL_PER_SEAT, SOFA_REMOVAL_MIN_SEATS, SOFA_REMOVAL_MAX_SEATS,
   DELIVERY_AREA_NOTE, NO_EXTRAS, RE_DELIVERY_FEE,
   deliveryBreakdown, deliveryTotal, floorName, sofaRemovalFee,
   type DeliveryOptions,
 } from '@/constants/delivery'
 import { isValidUkPostcode, lookupAddresses, normalisePostcode } from '@/utils/postcode'
 import { isValidPreferredDeliveryDate } from '@/utils/delivery'
+import { useShopSettings } from '@/components/ShopSettingsProvider'
+import { gbpFigure } from '@/utils/shopSettings'
 import { useWhatsAppCTA } from '@/utils/attribution/useWhatsAppCTA'
 import CartStep from './CartStep'
 import Steps from './Steps'
@@ -225,7 +225,9 @@ function OrderSummary({
   distance?: { fee: number; region: string | null } | null
 }) {
   const { cartItems, totalAmount } = useCart()
-  const { lines: extraLines, total: delivery } = deliveryBreakdown(extras)
+  // The figures from Admin -> Settings, the same row place_order charges from.
+  const shop = useShopSettings()
+  const { lines: extraLines, total: delivery } = deliveryBreakdown(extras, shop)
   const discount = offer?.valid ? offer.discountAmount : 0
   const distanceFee = distance?.fee ?? 0
   const grandTotal = Math.max(0, totalAmount - discount) + delivery + distanceFee
@@ -412,7 +414,8 @@ function DetailsStep({
   // cancellation notice applies - and the test for the second one lives in
   // utils/cancellationRights.ts rather than here.
   const madeToOrder = hasPersonalisedLine(cartItems)
-  const extrasTotal = deliveryTotal(extras)
+  const shop = useShopSettings()
+  const extrasTotal = deliveryTotal(extras, shop)
   const offerDiscount = offer?.valid ? offer.discountAmount : 0
   const distanceFee = deliveryCheck?.status === 'mainland' ? deliveryCheck.fee : 0
   const grandTotal = Math.max(0, totalAmount - offerDiscount) + extrasTotal + distanceFee
@@ -518,7 +521,7 @@ function DetailsStep({
     // "Choose a day" with no day chosen is not an order for as soon as
     // possible - it is a question left unanswered, so it is asked again.
     if (choosingDate && !form.preferredDeliveryDate) errs.preferredDeliveryDate = 'Pick a day, or choose "As soon as possible"'
-    else if (form.preferredDeliveryDate && !isValidPreferredDeliveryDate(form.preferredDeliveryDate)) errs.preferredDeliveryDate = 'That day is too soon - pick one at least 4 days ahead'
+    else if (form.preferredDeliveryDate && !isValidPreferredDeliveryDate(form.preferredDeliveryDate, undefined, shop)) errs.preferredDeliveryDate = `That day is too soon - pick one at least ${shop.preferredEarliestDays} days ahead`
     setErrors(errs)
     return Object.keys(errs).length === 0
   }
@@ -577,7 +580,7 @@ function DetailsStep({
         }`
       : 'Offer checked; no product discount applies to this basket'
     : 'No online product offer currently applied'
-  const quoteExtras = deliveryBreakdown(extras).lines
+  const quoteExtras = deliveryBreakdown(extras, shop).lines
     .map(line => `${line.label}${line.detail ? ` (${line.detail})` : ''}`)
     .join(', ') || 'None selected'
   const quoteMessage = [
@@ -917,8 +920,8 @@ function DetailsStep({
             checked={extras.floor > 0}
             onToggle={on => setExtras({ ...extras, floor: on ? 1 : 0, hasLift: on ? extras.hasLift : false })}
             title="Upstairs delivery"
-            note={`£${UPSTAIRS_FIRST_FLOOR} to the first floor or any floor with a lift, £${UPSTAIRS_PER_EXTRA_FLOOR} per extra floor without one.`}
-            price={extras.floor > 0 ? deliveryBreakdown(extras).lines.find(l => l.key === 'upstairs')?.amount ?? 0 : UPSTAIRS_FIRST_FLOOR}
+            note={`${gbpFigure(shop.upstairsFirstFloor)} to the first floor or any floor with a lift, ${gbpFigure(shop.upstairsPerExtraFloor)} per extra floor without one.`}
+            price={extras.floor > 0 ? deliveryBreakdown(extras, shop).lines.find(l => l.key === 'upstairs')?.amount ?? 0 : shop.upstairsFirstFloor}
             priceIsFrom={extras.floor === 0}
           >
             <div className="flex flex-wrap items-center gap-3 pt-3">
@@ -932,7 +935,7 @@ function DetailsStep({
                   </button>
                   <span className="min-w-[30px] text-center text-body-sm font-bold text-ink-900">{extras.floor}</span>
                   <button type="button" aria-label="More floors"
-                    onClick={() => setExtras({ ...extras, floor: Math.min(20, extras.floor + 1) })}
+                    onClick={() => setExtras({ ...extras, floor: Math.min(shop.maxFloor, extras.floor + 1) })}
                     className="flex h-11 w-11 items-center justify-center rounded-sm text-ink-700 hover:bg-calico-200">
                     <Plus aria-hidden="true" className="h-3 w-3" />
                   </button>
@@ -957,15 +960,15 @@ function DetailsStep({
             onToggle={on => setExtras({ ...extras, assembly: on })}
             title="Assembly"
             note="Our team assembles the sofa in the room for you."
-            price={ASSEMBLY_FEE}
+            price={shop.assemblyFee}
           />
 
           <ExtraOption
             checked={extras.sofaRemoval}
             onToggle={on => setExtras({ ...extras, sofaRemoval: on })}
             title="Old sofa removal"
-            note={`We take your old sofa away for £${SOFA_REMOVAL_PER_SEAT} a seat. Count every seat we're collecting — a 3-seater and a 2-seater together is 5. For unusually large items the team will confirm before delivery.`}
-            price={extras.sofaRemoval ? sofaRemovalFee(extras.sofaRemovalSeats) : SOFA_REMOVAL_PER_SEAT}
+            note={`We take your old sofa away for ${gbpFigure(shop.removalPerSeat)} a seat. Count every seat we're collecting — a 3-seater and a 2-seater together is 5. For unusually large items the team will confirm before delivery.`}
+            price={extras.sofaRemoval ? sofaRemovalFee(extras.sofaRemovalSeats, shop) : shop.removalPerSeat}
             priceUnit={extras.sofaRemoval ? undefined : 'per seat'}
           >
             <div className="flex flex-wrap items-center gap-3 pt-3">
@@ -973,19 +976,19 @@ function DetailsStep({
                 <span className="text-caption font-semibold text-ink-500">Seats</span>
                 <div className="flex items-center overflow-hidden rounded-sm border border-calico-300 bg-calico-50">
                   <button type="button" aria-label="Fewer seats"
-                    onClick={() => setExtras({ ...extras, sofaRemovalSeats: Math.max(SOFA_REMOVAL_MIN_SEATS, extras.sofaRemovalSeats - 1) })}
+                    onClick={() => setExtras({ ...extras, sofaRemovalSeats: Math.max(shop.removalMinSeats, extras.sofaRemovalSeats - 1) })}
                     className="flex h-11 w-11 items-center justify-center rounded-sm text-ink-700 hover:bg-calico-200">
                     <Minus aria-hidden="true" className="h-3 w-3" />
                   </button>
                   <span className="min-w-[30px] text-center text-body-sm font-bold text-ink-900">{extras.sofaRemovalSeats}</span>
                   <button type="button" aria-label="More seats"
-                    onClick={() => setExtras({ ...extras, sofaRemovalSeats: Math.min(SOFA_REMOVAL_MAX_SEATS, extras.sofaRemovalSeats + 1) })}
+                    onClick={() => setExtras({ ...extras, sofaRemovalSeats: Math.min(shop.removalMaxSeats, extras.sofaRemovalSeats + 1) })}
                     className="flex h-11 w-11 items-center justify-center rounded-sm text-ink-700 hover:bg-calico-200">
                     <Plus aria-hidden="true" className="h-3 w-3" />
                   </button>
                 </div>
                 <span className="text-caption text-ink-500">
-                  {extras.sofaRemovalSeats} × £{SOFA_REMOVAL_PER_SEAT}
+                  {extras.sofaRemovalSeats} × {gbpFigure(shop.removalPerSeat)}
                 </span>
               </div>
             </div>
@@ -1153,7 +1156,8 @@ export default function CheckoutClient() {
   const [orderDeliveryDate, setOrderDeliveryDate] = useState<string | null>(null)
   const [direction, setDirection] = useState<'forward' | 'back'>('forward')
   const [visible, setVisible] = useState(true)
-  const [extras, setExtras] = useState<DeliveryOptions>(NO_EXTRAS)
+  const shop = useShopSettings()
+  const [extras, setExtras] = useState<DeliveryOptions>({ ...NO_EXTRAS, sofaRemovalSeats: shop.removalDefaultSeats })
   const [form, setForm] = useState<FormState>({
     customerName: '', customerEmail: '', customerPhone: '',
     postcode: '', shippingAddress: '', specialInstructions: '',
@@ -1356,7 +1360,7 @@ export default function CheckoutClient() {
 
         {step !== 'success' && cartItems.length > 0 && (
           <MobileTotalBar
-            total={Math.max(0, totalAmount - effectiveDiscount) + deliveryTotal(extras) + (deliveryCheck?.status === 'mainland' ? deliveryCheck.fee : 0)}
+            total={Math.max(0, totalAmount - effectiveDiscount) + deliveryTotal(extras, shop) + (deliveryCheck?.status === 'mainland' ? deliveryCheck.fee : 0)}
             itemCount={cartItems.reduce((n, i) => n + i.quantity, 0)}
             quoteRequired={quoteRequired}
           >

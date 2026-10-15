@@ -5,7 +5,8 @@ import Link from 'next/link'
 import { Phone } from 'lucide-react'
 import EditorialHero from '@/components/Editorial/EditorialHero'
 import FaqList from './FaqList'
-import { allFaqs } from './faqData'
+import { allFaqsFor, type Faq } from './faqData'
+import { getShopSettings } from '@/utils/shopSettingsServer'
 import { breadcrumbSchema, jsonLd, SITE_URL } from '@/utils/schema'
 import { PHONE_DISPLAY } from '@/constants/contact'
 import PhoneLink from '@/components/UI/PhoneLink'
@@ -23,7 +24,7 @@ export const metadata: Metadata = pageMetadata({
 // sites in 2023, so this will not produce a dropdown in UK results for a
 // retailer — it is here because it is accurate, costs nothing, and helps search
 // engines understand what the page covers.
-const faqSchema = {
+const faqSchema = (allFaqs: Faq[]) => ({
   '@context': 'https://schema.org',
   '@type': 'FAQPage',
   name: 'Frequently Asked Questions',
@@ -39,7 +40,7 @@ const faqSchema = {
     name: q,
     acceptedAnswer: { '@type': 'Answer', text: a },
   })),
-}
+})
 
 // The trail EditorialHero has been drawing on screen all along, which had no
 // markup behind it. "Questions, answered" rather than the metadata title,
@@ -49,12 +50,14 @@ const breadcrumbLd = breadcrumbSchema([
   { name: 'Questions, answered', path: '/faq' },
 ])
 
-export default function FAQPage() {
+export default async function FAQPage() {
+  // The answers quote the figures checkout charges (Admin -> Settings).
+  const allFaqs = allFaqsFor(await getShopSettings())
   return (
     <div className="min-h-screen bg-calico-50">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: jsonLd(faqSchema) }}
+        dangerouslySetInnerHTML={{ __html: jsonLd(faqSchema(allFaqs)) }}
       />
       <script
         type="application/ld+json"

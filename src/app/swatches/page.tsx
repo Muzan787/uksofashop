@@ -5,7 +5,8 @@ import { BookOpen, ChevronRight, MessageCircle, Package, PoundSterling, RotateCc
 import EditorialSchema from '@/components/Editorial/EditorialSchema'
 import { SamplesProvider, SampleBar, type SampleBarSofa } from '@/components/Product/FabricSamples'
 import { getFabricLibrary } from '@/utils/fabrics'
-import { MAX_SAMPLES, SAMPLE_FEE } from '@/constants/swatches'
+import { SAMPLE_FEE } from '@/constants/swatches'
+import { getShopSettings } from '@/utils/shopSettingsServer'
 import WhatsAppLink from '@/components/UI/WhatsAppLink'
 import { leadVariantImage } from '@/utils/socialImage'
 import { pageMetadata } from '@/utils/pageMetadata'
@@ -84,8 +85,9 @@ import SwatchBrowser from './SwatchBrowser'
 // Was 240 characters. It named all six fabrics and was cut off before any of
 // them; the six names are in /fabrics' description, which is the page that
 // ranks for them. What survives here is the offer, which is this page's job.
-const DESCRIPTION =
-  `Pick up to ${MAX_SAMPLES} fabric samples from all 70 made-to-order sofa colours, ` +
+// The sample limit is the one in Admin -> Settings.
+const descriptionFor = (sampleLimit: number) =>
+  `Pick up to ${sampleLimit} fabric samples from all 70 made-to-order sofa colours, ` +
   `posted anywhere on the UK mainland for ${SAMPLE_FEE} — refunded when you order.`
 
 /**
@@ -113,11 +115,13 @@ const CRUMB = 'Fabric samples'
 // The card stays the site-wide room shot rather than a swatch photograph.
 // One square of velvet cropped to 1200x630 reads as a colour block of unknown
 // purpose in a chat window; the room shot at least says "sofas".
-export const metadata: Metadata = pageMetadata({
-  title: TITLE,
-  description: DESCRIPTION,
-  path: '/swatches',
-})
+export async function generateMetadata(): Promise<Metadata> {
+  return pageMetadata({
+    title: TITLE,
+    description: descriptionFor((await getShopSettings()).sampleLimit),
+    path: '/swatches',
+  })
+}
 
 /**
  * Three lines under the heading. Facts, not selling.
@@ -126,8 +130,8 @@ export const metadata: Metadata = pageMetadata({
  * because a customer who finds out about the charge further down the page has
  * been led rather than told.
  */
-const PROMISES = [
-  { icon: Package, label: `Up to ${MAX_SAMPLES} samples`, detail: 'Posted to your door' },
+const promisesFor = (sampleLimit: number) => [
+  { icon: Package, label: `Up to ${sampleLimit} samples`, detail: 'Posted to your door' },
   { icon: PoundSterling, label: `${SAMPLE_FEE} for the set`, detail: 'Settled on the phone, not here' },
   { icon: RotateCcw, label: `${SAMPLE_FEE} back`, detail: 'Comes off your order when you buy' },
 ]
@@ -171,10 +175,13 @@ export default async function SwatchesPage(props: { searchParams: SearchParams }
   const params = await props.searchParams
   const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v)
 
-  const [collections, sofa] = await Promise.all([
+  const [collections, sofa, { sampleLimit }] = await Promise.all([
     getFabricLibrary(),
     sofaFromSlug(one(params.sofa), one(params.from) === 'build'),
+    getShopSettings(),
   ])
+  const DESCRIPTION = descriptionFor(sampleLimit)
+  const PROMISES = promisesFor(sampleLimit)
   const buildTeaser = await getBuildTeaser(collections)
   const total = collections.reduce((n, c) => n + c.fabrics.length, 0)
 
@@ -233,7 +240,7 @@ export default async function SwatchesPage(props: { searchParams: SearchParams }
             </h1>
             <p className="m-0 mt-4 max-w-read text-lead text-calico-300">
               All {total} colours we build sofas in, and every one of them the same price. Tap up
-              to {MAX_SAMPLES} and we&apos;ll put them in the post. The set is {SAMPLE_FEE} — and
+              to {sampleLimit} and we&apos;ll put them in the post. The set is {SAMPLE_FEE} — and
               when you order a sofa from us, that {SAMPLE_FEE} comes off it.
             </p>
 
@@ -270,7 +277,7 @@ export default async function SwatchesPage(props: { searchParams: SearchParams }
             </h2>
             <ol className="m-0 mt-6 grid list-none grid-cols-1 gap-6 p-0 sm:grid-cols-3">
               {[
-                [`Pick up to ${MAX_SAMPLES}`, 'Tap any swatch above, then fill in where to post them.'],
+                [`Pick up to ${sampleLimit}`, 'Tap any swatch above, then fill in where to post them.'],
                 ['We ring you', `Two minutes, to take the ${SAMPLE_FEE} and check five shades of the same grey isn’t what you meant.`],
                 ['They arrive', `Hold them against your own wall, in your own light. Order a sofa and the ${SAMPLE_FEE} comes off it.`],
               ].map(([step, detail], i) => (

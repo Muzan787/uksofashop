@@ -26,7 +26,8 @@ import { saveProduct, createVariantGroup, saveSubgroupTitle, type ColourwayInput
 import {
   slugify, SEO_DESCRIPTION_GUIDE, SEO_DESCRIPTION_MAX, SEO_TITLE_GUIDE, SEO_TITLE_MAX, type EditorField,
 } from '@/utils/catalogue'
-import { OFFER_TIER_AMOUNTS } from '@/utils/offers/constants'
+import { useShopSettings } from '@/components/ShopSettingsProvider'
+import type { OfferTier } from '@/utils/shopSettings'
 
 export interface EditorProps {
   mode: 'new' | 'edit' | 'copy'
@@ -68,6 +69,7 @@ const blankColourway = (priority: number): ColourwayInput => ({
 
 export default function ProductEditor({ mode, initial, categories, groups: initialGroups, subgroupsByGroup, collections }: EditorProps) {
   const router = useRouter()
+  const { tierAmounts, offerWindowHours } = useShopSettings()
   const formRef = useRef<HTMLFormElement>(null)
 
   const [title, setTitle] = useState(initial.title)
@@ -205,11 +207,11 @@ export default function ProductEditor({ mode, initial, categories, groups: initi
           <label className={label} htmlFor="tier">Offer tier</label>
           <select id="tier" value={tier} onChange={e => touch(setTier)(e.target.value)} className={input}>
             <option value="">Not set (no ad offer)</option>
-            {(Object.keys(OFFER_TIER_AMOUNTS) as (keyof typeof OFFER_TIER_AMOUNTS)[]).map(t => (
-              <option key={t} value={t}>{t.charAt(0) + t.slice(1).toLowerCase()} - £{OFFER_TIER_AMOUNTS[t]} off</option>
+            {(Object.keys(tierAmounts) as OfferTier[]).map(t => (
+              <option key={t} value={t}>{t.charAt(0) + t.slice(1).toLowerCase()} - £{tierAmounts[t]} off</option>
             ))}
           </select>
-          <p className={hint}>What an ad visitor gets off this sofa inside their 48-hour window. Changing it changes what customers pay.</p>
+          <p className={hint}>What an ad visitor gets off this sofa inside their {offerWindowHours}-hour window. Changing it changes what customers pay.</p>
           <FieldError text={errors.tier} />
         </div>
 

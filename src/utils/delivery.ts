@@ -15,9 +15,15 @@
 // hydration; every date operation below is pinned to Europe/London rather than
 // to whatever zone the machine happens to be in.
 
-/** Working days added to the order date before the earliest / latest arrival. */
-const DELIVERY_MIN_DAYS = 2
-const DELIVERY_MAX_DAYS = 4
+import { DEFAULT_SHOP_SETTINGS, type ShopSettings } from './shopSettings'
+
+/**
+ * The day counts come from Admin -> Settings (admin upgrade M1): the delivery
+ * window in working days, and the first and last day a customer may choose.
+ * Every function takes them, and falls back to today's figures without them.
+ */
+export type DeliveryDateSettings = Pick<ShopSettings,
+  'deliveryWindowFromDays' | 'deliveryWindowToDays' | 'preferredEarliestDays' | 'preferredLatestDays'>
 
 const LONDON = 'Europe/London'
 
@@ -69,10 +75,10 @@ export interface DeliveryWindow {
  * window the customer reads as approximate — which "2–4 working days" already
  * told them it was.
  */
-export function deliveryWindow(now: Date = new Date()): DeliveryWindow {
+export function deliveryWindow(now: Date = new Date(), s: DeliveryDateSettings = DEFAULT_SHOP_SETTINGS): DeliveryWindow {
   const today = londonToday(now)
-  const from = addWorkingDays(today, DELIVERY_MIN_DAYS)
-  const to = addWorkingDays(today, DELIVERY_MAX_DAYS)
+  const from = addWorkingDays(today, s.deliveryWindowFromDays)
+  const to = addWorkingDays(today, s.deliveryWindowToDays)
 
   const sameMonth = from.getUTCMonth() === to.getUTCMonth() && from.getUTCFullYear() === to.getUTCFullYear()
 
@@ -96,10 +102,8 @@ export function deliveryWindow(now: Date = new Date()): DeliveryWindow {
 // same two limits, so the browser's calendar and the server can never
 // disagree about which days are allowed.
 
-/** Days from today before the first day a customer may ask for. */
-export const PREFERRED_DELIVERY_MIN_DAYS = 4
-/** How far ahead a request is accepted. A sanity ceiling, not a promise. */
-const PREFERRED_DELIVERY_MAX_DAYS = 180
+/** Days from today before the first day a customer may ask for (today's default). */
+export const PREFERRED_DELIVERY_MIN_DAYS = DEFAULT_SHOP_SETTINGS.preferredEarliestDays
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
 
@@ -114,13 +118,14 @@ function addDays(from: Date, n: number): Date {
 }
 
 /** The first day a customer may ask for, as YYYY-MM-DD in Europe/London. */
-export function earliestPreferredDeliveryDate(now: Date = new Date()): string {
-  return isoDate(addDays(londonToday(now), PREFERRED_DELIVERY_MIN_DAYS))
+export function earliestPreferredDeliveryDate(now: Date = new Date(), s: DeliveryDateSettings = DEFAULT_SHOP_SETTINGS): string {
+  return isoDate(addDays(londonToday(now), s.preferredEarliestDays))
 }
 
 /** The last day accepted, as YYYY-MM-DD. */
-export function latestPreferredDeliveryDate(now: Date = new Date()): string {
-  return isoDate(addDays(londonToday(now), PREFERRED_DELIVERY_MAX_DAYS))
+/** How far ahead a request is accepted. A sanity ceiling, not a promise. */
+export function latestPreferredDeliveryDate(now: Date = new Date(), s: DeliveryDateSettings = DEFAULT_SHOP_SETTINGS): string {
+  return isoDate(addDays(londonToday(now), s.preferredLatestDays))
 }
 
 /**
@@ -131,11 +136,11 @@ export function latestPreferredDeliveryDate(now: Date = new Date()): string {
  * through Date is still made, because "2026-02-31" matches the pattern and
  * is not a day.
  */
-export function isValidPreferredDeliveryDate(value: string, now: Date = new Date()): boolean {
+export function isValidPreferredDeliveryDate(value: string, now: Date = new Date(), s: DeliveryDateSettings = DEFAULT_SHOP_SETTINGS): boolean {
   if (!ISO_DATE.test(value)) return false
   const parsed = new Date(`${value}T00:00:00Z`)
   if (Number.isNaN(parsed.getTime()) || isoDate(parsed) !== value) return false
-  return value >= earliestPreferredDeliveryDate(now) && value <= latestPreferredDeliveryDate(now)
+  return value >= earliestPreferredDeliveryDate(now, s) && value <= latestPreferredDeliveryDate(now, s)
 }
 
 /**

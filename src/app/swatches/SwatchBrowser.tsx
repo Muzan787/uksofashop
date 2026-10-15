@@ -4,7 +4,7 @@
 import { useMemo, useState } from 'react'
 import { Search, X } from 'lucide-react'
 import { SwatchTile, useSamples } from '@/components/Product/FabricSamples'
-import { MAX_SAMPLES } from '@/constants/swatches'
+import { useShopSettings } from '@/components/ShopSettingsProvider'
 import type { Fabric } from '@/components/Product/types'
 
 /**
@@ -39,6 +39,7 @@ const ALL = 'all'
 
 export default function SwatchBrowser() {
   const { collections, samples } = useSamples()
+  const { sampleLimit } = useShopSettings()
   const [only, setOnly] = useState<string>(ALL)
   const [query, setQuery] = useState('')
 
@@ -143,7 +144,7 @@ export default function SwatchBrowser() {
           tapping a chip changed what is below it. */}
       <p aria-live="polite" className="m-0 mt-4 text-body-sm text-ink-500">
         {showing === total
-          ? `All ${total} colours. Tap up to ${MAX_SAMPLES}.`
+          ? `All ${total} colours. Tap up to ${sampleLimit}.`
           : `${showing} of ${total} colours.`}
         {samples.length > 0 && (
           <span className="text-ink-700">

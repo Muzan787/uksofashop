@@ -11,6 +11,7 @@ import { createAdminClient } from '@/utils/supabase/admin';
 import { createPublicClient } from '@/utils/supabase/public';
 import type { OfferTier } from '@/types/offers';
 import { deliveryWindow } from '@/utils/delivery';
+import { getShopSettings } from '@/utils/shopSettingsServer';
 import ProductPageClient from '../../../../components/Product/ProductPageClient';
 import { getFabricLibrary } from '@/utils/fabrics';
 import { parseDimensions } from '@/components/Product/dimensions';
@@ -217,6 +218,8 @@ export default async function ProductPage(props: { params: Params, searchParams:
   const initialVariantId = searchParams?.variant as string | undefined;
 
   const supabase = await createClient();
+  // The delivery window from Admin -> Settings.
+  const shopSettings = await getShopSettings();
 
   // ── First round trip ──
   //
@@ -487,7 +490,7 @@ export default async function ProductPage(props: { params: Params, searchParams:
       similarProducts={safeSimilarProducts} 
       categorySlug={category}
       categoryName={categoryName}
-      deliveryEstimate={deliveryWindow()}
+      deliveryEstimate={deliveryWindow(undefined, shopSettings)}
       initialWishlistState={initialWishlistState}
       isLoggedIn={!!user}
       sizeVariants={sizeVariants}

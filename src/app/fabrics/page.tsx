@@ -8,8 +8,10 @@ import EditorialSchema from '@/components/Editorial/EditorialSchema'
 import EditorialLayout, { Note, PullQuote } from '@/components/Editorial/EditorialLayout'
 import { getFabricLibrary } from '@/utils/fabrics'
 import {
-  FABRIC_COLOUR_COUNT, FABRIC_COLLECTION_COUNT, MAX_SAMPLES, SAMPLE_FEE,
+  FABRIC_COLOUR_COUNT, FABRIC_COLLECTION_COUNT, SAMPLE_FEE,
 } from '@/constants/swatches'
+import { getShopSettings } from '@/utils/shopSettingsServer'
+import { countWord } from '@/utils/shopSettings'
 import { SamplesProvider, CollectionSwatches, SampleBar } from '@/components/Product/FabricSamples'
 
 /**
@@ -69,7 +71,8 @@ const TOC = [
 ]
 
 export default async function FabricsPage() {
-  const collections = await getFabricLibrary()
+  // The sample limit from Admin -> Settings, the one request_swatches holds to.
+  const [collections, { sampleLimit }] = await Promise.all([getFabricLibrary(), getShopSettings()])
   const total = collections.reduce((n, c) => n + c.fabrics.length, 0)
   const count = (slug: string) =>
     collections.find(c => c.slug === slug)?.fabrics.length ?? 0
@@ -100,7 +103,7 @@ export default async function FabricsPage() {
             decide is which one you actually want to live with.
           </p>
           <p>
-            Tap any swatch to have it posted to you. Up to {MAX_SAMPLES} samples, {SAMPLE_FEE} for
+            Tap any swatch to have it posted to you. Up to {sampleLimit} samples, {SAMPLE_FEE} for
             the set, anywhere on the UK mainland — and the {SAMPLE_FEE} comes off your order when
             you buy.
           </p>
@@ -247,9 +250,9 @@ export default async function FabricsPage() {
           </p>
           <CollectionSwatches slug="pvc-leather" />
 
-          <h2 id="samples">Five, through your letterbox</h2>
+          <h2 id="samples">{countWord(sampleLimit)}, through your letterbox</h2>
           <p>
-            Tap any of the {total} swatches above and we will post you up to {MAX_SAMPLES} of
+            Tap any of the {total} swatches above and we will post you up to {sampleLimit} of
             them, anywhere on the UK mainland. The set is {SAMPLE_FEE}, and when you order a sofa
             from us that {SAMPLE_FEE} comes off your order — so if you buy, they cost you nothing
             in the end.

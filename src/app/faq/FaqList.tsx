@@ -4,7 +4,8 @@
 import { useMemo, useState } from 'react'
 import { ChevronDown, Search, X } from 'lucide-react'
 import EmptyState from '@/components/UI/EmptyState'
-import { faqGroups, type Faq } from './faqData'
+import { faqGroupsFor, type Faq } from './faqData'
+import { useShopSettings } from '@/components/ShopSettingsProvider'
 
 /**
  * The questions, searchable.
@@ -23,6 +24,9 @@ import { faqGroups, type Faq } from './faqData'
  * that question — only in the answer to it.
  */
 export default function FaqList() {
+  // The answers quote the figures checkout charges (Admin -> Settings).
+  const shop = useShopSettings()
+  const faqGroups = useMemo(() => faqGroupsFor(shop), [shop])
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState<string | null>(null)
 
@@ -38,7 +42,7 @@ export default function FaqList() {
         ),
       }))
       .filter(g => g.items.length > 0)
-  }, [needle])
+  }, [needle, faqGroups])
 
   const hits = groups.reduce((n, g) => n + g.items.length, 0)
 

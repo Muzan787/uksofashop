@@ -10,7 +10,8 @@ import Modal from '@/components/UI/Modal'
 import { DUR, EASE } from '@/components/Motion'
 import { useReducedMotionSafe } from '@/components/Motion/useReducedMotionSafe'
 import { blurDataURL } from '@/utils/cloudinary'
-import { MAX_SAMPLES, SAMPLE_FEE } from '@/constants/swatches'
+import { SAMPLE_FEE } from '@/constants/swatches'
+import { useShopSettings } from '@/components/ShopSettingsProvider'
 import type { Fabric, FabricCollection } from '@/components/Product/types'
 
 interface Props {
@@ -47,6 +48,7 @@ interface Props {
  */
 export default function FabricPicker({ collections, selectedId, onSelect, id, samplesHref, label }: Props) {
   const reduced = useReducedMotionSafe()
+  const { sampleLimit } = useShopSettings()
   const all = collections.flatMap(c => c.fabrics)
   const selected = all.find(f => f.id === selectedId) ?? null
 
@@ -220,7 +222,7 @@ export default function FabricPicker({ collections, selectedId, onSelect, id, sa
         <div className="mt-6 flex flex-col gap-3 rounded-md border border-calico-300 bg-calico-100 p-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="m-0 text-body-sm leading-relaxed text-ink-700">
             <strong className="font-semibold text-ink-900">Not sure from a screen?</strong>{' '}
-            Order up to {MAX_SAMPLES} samples and we&apos;ll post them — {SAMPLE_FEE} for the set,
+            Order up to {sampleLimit} samples and we&apos;ll post them — {SAMPLE_FEE} for the set,
             and it comes off your order when you buy. Your build is saved, so you&apos;ll come
             straight back to this step.
           </p>

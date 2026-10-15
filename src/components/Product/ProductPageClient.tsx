@@ -53,7 +53,7 @@ import VideoStrip from '@/components/UI/VideoStrip';
 import { videoPoster } from '@/utils/cloudinary';
 import type { OfferTier } from '@/types/offers';
 import { useOffer } from '@/components/Offer/OfferProvider';
-import { OFFER_TIER_AMOUNTS } from '@/utils/offers/constants';
+import { useShopSettings } from '@/components/ShopSettingsProvider';
 
 interface Props {
   product: Product;
@@ -406,7 +406,8 @@ export default function ProductPageClient({
   // also carries the offer and its deadline, so the chat says what the
   // customer was promised and until when.
   const offerWindow = useOffer();
-  const offerAmount = offerTier ? OFFER_TIER_AMOUNTS[offerTier] : 0;
+  const { tierAmounts } = useShopSettings();
+  const offerAmount = offerTier ? tierAmounts[offerTier] : 0;
   const offerHold = offerWindow.active && offerWindow.expiresAt && offerAmount > 0
     ? { amount: offerAmount, expiresAt: offerWindow.expiresAt }
     : null;

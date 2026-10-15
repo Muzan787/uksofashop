@@ -16,6 +16,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/supabase'
 import { OFFER_TIER_AMOUNTS } from './constants'
+import { getShopSettings } from '@/utils/shopSettingsServer'
 import type { OfferHold } from './deadline'
 
 type Tier = keyof typeof OFFER_TIER_AMOUNTS
@@ -58,6 +59,8 @@ export async function offerHoldsForLeads(
   leads: LeadForHold[],
 ): Promise<Map<string, LeadHold>> {
   const holds = new Map<string, LeadHold>()
+  // The tier amounts from Admin -> Settings, the same ones checkout takes off.
+  const amounts = (await getShopSettings()).tierAmounts
   const visitorIds = [...new Set(leads.map(l => l.visitor_id).filter((v): v is string => Boolean(v)))]
   if (visitorIds.length === 0) return holds
 
@@ -80,7 +83,7 @@ export async function offerHoldsForLeads(
   }
   const tierFor = new Map<string, Tier>()
   for (const row of (tiers.data ?? []) as { product_id: string; tier: string }[]) {
-    if (row.tier in OFFER_TIER_AMOUNTS) tierFor.set(row.product_id, row.tier as Tier)
+    if (row.tier in amounts) tierFor.set(row.product_id, row.tier as Tier)
   }
 
   const now = Date.now()
@@ -94,7 +97,7 @@ export async function offerHoldsForLeads(
       .filter((t): t is Tier => Boolean(t))
       .sort((a, b) => PRIORITY[b] - PRIORITY[a])[0]
     const basketTotal = items.reduce((sum, i) => sum + i.total, 0)
-    const amount = best ? Math.min(OFFER_TIER_AMOUNTS[best], basketTotal || OFFER_TIER_AMOUNTS[best]) : 0
+    const amount = best ? Math.min(amounts[best], basketTotal || amounts[best]) : 0
     if (amount <= 0) continue
 
     holds.set(lead.id, {

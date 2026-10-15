@@ -21,13 +21,16 @@
 
 import { ADDRESS } from '@/constants/contact'
 import { SITE_URL } from '@/constants/site'
-import { FABRIC_COLOUR_COUNT, MAX_SAMPLES, SAMPLE_FEE } from '@/constants/swatches'
+import { FABRIC_COLOUR_COUNT, SAMPLE_FEE } from '@/constants/swatches'
+import { getShopSettings } from '@/utils/shopSettingsServer'
 import { ARTICLES_BY_DATE } from '@/app/journal/articles'
 
 export const dynamic = 'force-static'
 
-export function GET() {
+export async function GET() {
   const url = (path: string) => `${SITE_URL}${path}`
+  // The sample limit from Admin -> Settings; saving there refreshes this file.
+  const { sampleLimit } = await getShopSettings()
 
   const body = `# UK Sofa Shop
 
@@ -42,8 +45,8 @@ export function GET() {
 ## Buying guides
 
 - [Sofa size and measurement guide](${url('/size-guide')}): whether a sofa fits through a door, hallway or stair turn. Includes a doorway calculator.
-- [Sofa fabric guide](${url('/fabrics')}): all ${FABRIC_COLOUR_COUNT} made-to-order colours across chenille, plush velvet, crushed velvet, naple, marble and PVC leather, and how each behaves. Up to ${MAX_SAMPLES} samples posted for ${SAMPLE_FEE}, refunded against a later order.
-- [Fabric samples](${url('/swatches')}): the same ${FABRIC_COLOUR_COUNT} colours as a filterable picker rather than a guide, for ordering up to ${MAX_SAMPLES} samples posted to the UK mainland. ${SAMPLE_FEE} for the set, settled on a phone call rather than on the site, and refunded against the order if they buy. No account.
+- [Sofa fabric guide](${url('/fabrics')}): all ${FABRIC_COLOUR_COUNT} made-to-order colours across chenille, plush velvet, crushed velvet, naple, marble and PVC leather, and how each behaves. Up to ${sampleLimit} samples posted for ${SAMPLE_FEE}, refunded against a later order.
+- [Fabric samples](${url('/swatches')}): the same ${FABRIC_COLOUR_COUNT} colours as a filterable picker rather than a guide, for ordering up to ${sampleLimit} samples posted to the UK mainland. ${SAMPLE_FEE} for the set, settled on a phone call rather than on the site, and refunded against the order if they buy. No account.
 - [Build your own sofa](${url('/build')}): a step-by-step builder for made-to-order sofas - seats, design, fabric, feet, contrast piping and custom requests - ending in a guide price. Every build is confirmed by phone with a final quotation before it is made. Recliners cannot be customised.
 - [Sofa care and cleaning guide](${url('/care-guide')}): weekly upkeep, what to do in the first thirty seconds of a spill, and separate routines for real leather and tech leather.
 ${ARTICLES_BY_DATE.map(a => `- [${a.title}](${url(`/journal/${a.slug}`)}): ${a.description}`).join('\n')}

@@ -29,7 +29,8 @@
 // worse than the sheet.
 
 import { ChevronRight, Tag } from 'lucide-react'
-import { OFFER_OPEN_EVENT, OFFER_PUBLIC_CODE, OFFER_TIER_AMOUNTS } from '@/utils/offers/constants'
+import { OFFER_OPEN_EVENT, OFFER_PUBLIC_CODE } from '@/utils/offers/constants'
+import { useShopSettings } from '@/components/ShopSettingsProvider'
 import type { OfferTier } from '@/types/offers'
 import { useOfferCountdown } from './useOfferCountdown'
 
@@ -41,7 +42,9 @@ interface Props {
 
 export default function OfferStrip({ tier, className = '' }: Props) {
   const { active, clock, deadline } = useOfferCountdown()
-  const amount = tier ? OFFER_TIER_AMOUNTS[tier] : 0
+  // The tier amounts from Admin -> Settings, the same ones checkout takes off.
+  const { tierAmounts } = useShopSettings()
+  const amount = tier ? tierAmounts[tier] : 0
   if (!active || amount <= 0) return null
 
   const open = () => {

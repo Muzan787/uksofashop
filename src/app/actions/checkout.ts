@@ -3,10 +3,8 @@
 import { after } from 'next/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { sendOrderConfirmation, sendAdminOrderNotification } from '@/utils/email'
-import {
-  deliveryBreakdown, NO_EXTRAS, SOFA_REMOVAL_MAX_SEATS, SOFA_REMOVAL_MIN_SEATS,
-  type DeliveryOptions,
-} from '@/constants/delivery'
+import { deliveryBreakdown, NO_EXTRAS, type DeliveryOptions } from '@/constants/delivery'
+import { getShopSettings } from '@/utils/shopSettingsServer'
 import { isValidUkMobile, UK_MOBILE_ERROR } from '@/utils/phone'
 import { resolveDeliveryPostcode } from '@/utils/postcode'
 import { distanceFeeFor } from '@/utils/deliveryFee'
@@ -87,18 +85,17 @@ const checkoutSchema = z.object({
   // The day they would like the sofa, or nothing for "as soon as you can".
   // The same two limits place_order enforces, checked here first so the
   // customer reads a sentence rather than a database exception.
-  preferredDeliveryDate: z.string().trim().optional().transform(v => (v ? v : undefined)).refine(
-    v => v === undefined || isValidPreferredDeliveryDate(v),
-    { error: () => `Please choose a delivery date from ${formatPreferredDeliveryDate(earliestPreferredDeliveryDate())} onwards.` },
-  ),
+  // The day itself is checked in placeOrder against the days Admin ->
+  // Settings allows, which place_order enforces too.
+  preferredDeliveryDate: z.string().trim().optional().transform(v => (v ? v : undefined)),
 })
 
 const extrasSchema = z.object({
-  floor: z.number().int().min(0).max(20),
+  floor: z.number().int().min(0).max(50),
   hasLift: z.boolean(),
   assembly: z.boolean(),
   sofaRemoval: z.boolean(),
-  sofaRemovalSeats: z.number().int().min(SOFA_REMOVAL_MIN_SEATS).max(SOFA_REMOVAL_MAX_SEATS),
+  sofaRemovalSeats: z.number().int().min(1).max(30),
 })
 
 const itemsSchema = z.array(z.object({
@@ -276,6 +273,16 @@ export async function placeOrder(
   } = validatedData.data
   const opts = validatedExtras.data
 
+  // The figures place_order charges from (Admin -> Settings), checked here
+  // first so the customer reads a sentence rather than a database exception.
+  const shop = await getShopSettings()
+  if (opts.floor > shop.maxFloor || opts.sofaRemovalSeats < shop.removalMinSeats || opts.sofaRemovalSeats > shop.removalMaxSeats) {
+    return { error: 'Those delivery options are not valid. Please review them and try again.' }
+  }
+  if (preferredDeliveryDate !== undefined && !isValidPreferredDeliveryDate(preferredDeliveryDate, undefined, shop)) {
+    return { error: `Please choose a delivery date from ${formatPreferredDeliveryDate(earliestPreferredDeliveryDate(undefined, shop))} onwards.` }
+  }
+
   // CRITICAL PHASE D AUTHORITY. The browser supplies only the actual postcode.
   // It never supplies mainland=true, a delivery zone or a delivery price. This
   // resolver is run again here even if the client already rendered a decision.
@@ -357,7 +364,7 @@ export async function placeOrder(
       return { error: 'One of the fabrics in your basket is no longer available. Please choose another and try again.' }
     }
     if (message.includes('DELIVERY_DATE_TOO_SOON') || message.includes('DELIVERY_DATE_TOO_FAR')) {
-      return { error: `Please choose a delivery date from ${formatPreferredDeliveryDate(earliestPreferredDeliveryDate())} onwards.` }
+      return { error: `Please choose a delivery date from ${formatPreferredDeliveryDate(earliestPreferredDeliveryDate(undefined, shop))} onwards.` }
     }
     return { error: 'We could not place your order. Please try again, or call us on 07476 616022.' }
   }
@@ -366,7 +373,7 @@ export async function placeOrder(
   // the confirmation email can never disagree with the order record.
   const order = data as unknown as PlacedOrder
   const shortCode = order.id.substring(0, 8).toUpperCase()
-  const breakdown = deliveryBreakdown(opts)
+  const breakdown = deliveryBreakdown(opts, shop)
   // The distance charge, as the database settled it, leads the delivery lines
   // in the emails - so "Delivery to Cornwall £80" sits where "FREE" would.
   const distanceFee = Number(order.fee_distance ?? 0)

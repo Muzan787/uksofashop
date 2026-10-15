@@ -23,13 +23,9 @@
 // which is what stops the assistant contradicting the FAQ page: a promise
 // changed in constants/promises.ts changes here on the next build too.
 
-import {
-  ASSEMBLY_FEE,
-  DELIVERY_AREA_NOTE,
-  SOFA_REMOVAL_PER_SEAT,
-  UPSTAIRS_FIRST_FLOOR,
-  UPSTAIRS_PER_EXTRA_FLOOR,
-} from '@/constants/delivery'
+import { DELIVERY_AREA_NOTE } from '@/constants/delivery'
+import { DEFAULT_SHOP_SETTINGS, gbpFigure, type ShopSettings } from '@/utils/shopSettings'
+import { getShopSettings } from '@/utils/shopSettingsServer'
 import { DELIVERY_CHARGE_NOTE, PROMISES } from '@/constants/promises'
 import {
   ADDRESS_LINE,
@@ -37,12 +33,12 @@ import {
   PHONE_DISPLAY,
   SUPPORT_EMAIL,
 } from '@/constants/contact'
-import { faqGroups } from '@/app/faq/faqData'
+import { faqGroupsFor } from '@/app/faq/faqData'
 import { createClient } from '@/utils/supabase/server'
 import { getFabricLibrary } from '@/utils/fabrics'
 import { canonicalProductPath } from '@/utils/productUrl'
 import { percentOff } from '@/utils/pricing'
-import { MAX_SAMPLES, SAMPLE_FEE } from '@/constants/swatches'
+import { SAMPLE_FEE } from '@/constants/swatches'
 
 /** How long a catalogue snapshot is reused before it is fetched again. */
 const CATALOGUE_TTL_MS = 10 * 60 * 1000
@@ -85,7 +81,7 @@ export async function getAssistantKnowledge(): Promise<string> {
         console.error('[chat] catalogue rebuild failed', err)
         // A stale snapshot beats no catalogue. With nothing cached at all,
         // the prompt still carries the policies and the assistant says so.
-        return snapshot?.text ?? renderPrompt(null, null)
+        return snapshot?.text ?? renderPrompt(null, null, DEFAULT_SHOP_SETTINGS)
       })
       .finally(() => {
         building = null
@@ -270,12 +266,13 @@ async function renderFabrics(): Promise<string> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function buildKnowledge(): Promise<string> {
-  const [catalogue, fabrics] = await Promise.all([renderCatalogue(), renderFabrics()])
-  return renderPrompt(catalogue, fabrics)
+  // The figures checkout charges (Admin -> Settings), so the assistant quotes them.
+  const [catalogue, fabrics, settings] = await Promise.all([renderCatalogue(), renderFabrics(), getShopSettings()])
+  return renderPrompt(catalogue, fabrics, settings)
 }
 
-function renderFaqs(): string {
-  return faqGroups
+function renderFaqs(s: ShopSettings): string {
+  return faqGroupsFor(s)
     .map(g => `${g.group}:\n` + g.items.map(f => `Q: ${f.q}\nA: ${f.a}`).join('\n\n'))
     .join('\n\n')
 }
@@ -284,7 +281,7 @@ function renderHours(): string {
   return OPENING_HOURS.map(h => `${h.label} ${h.display}`).join(', ')
 }
 
-function renderPrompt(catalogue: string | null, fabrics: string | null): string {
+function renderPrompt(catalogue: string | null, fabrics: string | null, s: ShopSettings): string {
   return `You are the website assistant for UK Sofa Shop (uksofashop.co.uk), a sofa retailer in Blackburn, Lancashire, delivering across UK Mainland. You answer visitors' questions about the sofas, delivery, payment, guarantees and returns, using only the facts in this document.
 
 # How to answer
@@ -303,7 +300,7 @@ function renderPrompt(catalogue: string | null, fabrics: string | null): string 
 # The business
 
 - Name: UK Sofa Shop. Showroom: ${ADDRESS_LINE} (by appointment). Phone and WhatsApp: ${PHONE_DISPLAY}. Email: ${SUPPORT_EMAIL}. Hours: ${renderHours()}.
-- Website pages worth pointing to: /shop/all (every sofa), /shop/corner-sofa, /shop/fabric-sofa, /shop/leather-sofa, /shop/recliner, /shop/electric-sofa, /shop/3-2-seater, /fabrics (the fabric guide), /swatches (up to ${MAX_SAMPLES} fabric samples posted to UK Mainland for ${SAMPLE_FEE}, refunded against a later order), /size-guide (doorway calculator), /care-guide, /delivery-returns, /faq, /showroom, /contact, /reviews, /track-order.
+- Website pages worth pointing to: /shop/all (every sofa), /shop/corner-sofa, /shop/fabric-sofa, /shop/leather-sofa, /shop/recliner, /shop/electric-sofa, /shop/3-2-seater, /fabrics (the fabric guide), /swatches (up to ${s.sampleLimit} fabric samples posted to UK Mainland for ${SAMPLE_FEE}, refunded against a later order), /size-guide (doorway calculator), /care-guide, /delivery-returns, /faq, /showroom, /contact, /reviews, /track-order.
 
 # Promises
 
@@ -311,16 +308,16 @@ function renderPrompt(catalogue: string | null, fabrics: string | null): string 
 - Delivery charges by distance from Blackburn, by postcode district: ${DELIVERY_CHARGE_NOTE} Everywhere else on UK Mainland is free. If asked about a specific place, say which band it is likely in and that the postcode check on any product page, or checkout, gives the exact figure.
 - Delivery area: ${DELIVERY_AREA_NOTE} The team still delivers to those places - it is quoted individually on WhatsApp before the order is placed.
 - Payment: ${PROMISES.payment.long} Cash or bank transfer at the door. No deposit, no card payments, no finance.
-- Optional extras, chosen at checkout and paid on delivery: upstairs delivery from £${UPSTAIRS_FIRST_FLOOR} (first floor, or any floor with a lift) plus £${UPSTAIRS_PER_EXTRA_FLOOR} per extra floor without a lift; assembly in the room £${ASSEMBLY_FEE}; old sofa removal £${SOFA_REMOVAL_PER_SEAT} per seat (count every seat we collect, so a 3-seater is £${SOFA_REMOVAL_PER_SEAT * 3}), confirmed before delivery for unusually large items. Extras cannot be added on the day.
+- Optional extras, chosen at checkout and paid on delivery: upstairs delivery from ${gbpFigure(s.upstairsFirstFloor)} (first floor, or any floor with a lift) plus ${gbpFigure(s.upstairsPerExtraFloor)} per extra floor without a lift; assembly in the room ${gbpFigure(s.assemblyFee)}; old sofa removal ${gbpFigure(s.removalPerSeat)} per seat (count every seat we collect, so a 3-seater is ${gbpFigure(s.removalPerSeat * 3)}), confirmed before delivery for unusually large items. Extras cannot be added on the day.
 - Guarantee: ${PROMISES.guarantee.long}
 - Returns: ${PROMISES.returns.long}
 - Made to order: ${PROMISES.custom.long} Fabric sofas can be made in a different size on request; recliner and electric ranges come as listed.
-- Fabric samples: up to ${MAX_SAMPLES} samples posted to UK Mainland from /swatches. ${SAMPLE_FEE} for the set, and it is refunded against their order if they buy a sofa. Nothing is charged on the website and there is no card to enter - the team rings to settle the ${SAMPLE_FEE} before anything is posted. No account needed. Do NOT say samples are free.
+- Fabric samples: up to ${s.sampleLimit} samples posted to UK Mainland from /swatches. ${SAMPLE_FEE} for the set, and it is refunded against their order if they buy a sofa. Nothing is charged on the website and there is no card to enter - the team rings to settle the ${SAMPLE_FEE} before anything is posted. No account needed. Do NOT say samples are free.
 - Leather ranges: Roma is real leather with fabric panels; Nova is tech leather, a coated synthetic. Both are stocked in set sizes.
 
 # Frequently asked questions
 
-${renderFaqs()}
+${renderFaqs(s)}
 
 # Fabric library (made-to-order sofas)
 

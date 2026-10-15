@@ -2,16 +2,19 @@
 //
 // The questions themselves, kept out of the page so both the server component
 // (which emits the FAQPage schema) and the client accordion can read them
-// without the client bundle pulling in the page.
+// without the client bundle pulling in the page. The answers that quote a
+// charge take the figures from Admin -> Settings (admin upgrade M1), so they
+// say what checkout will charge.
 
-import { ASSEMBLY_FEE, SOFA_REMOVAL_PER_SEAT, UPSTAIRS_FIRST_FLOOR } from '@/constants/delivery'
+import { gbpFigure, type ShopSettings } from '@/utils/shopSettings'
 import { CANCELLATION, PROMISES } from '@/constants/promises'
 import { SUPPORT_EMAIL } from '@/constants/contact'
 
 export interface Faq { q: string; a: string }
 interface FaqGroup { group: string; items: Faq[] }
 
-export const faqGroups: FaqGroup[] = [
+export function faqGroupsFor(s: Pick<ShopSettings, 'upstairsFirstFloor' | 'assemblyFee' | 'removalPerSeat'>): FaqGroup[] {
+  return [
   {
     group: 'Delivery',
     items: [
@@ -29,15 +32,15 @@ export const faqGroups: FaqGroup[] = [
       },
       {
         q: 'Do you deliver upstairs?',
-        a: `As standard we deliver to the ground floor, or a ground-floor room of your choice. We can take it upstairs for a fee, starting at £${UPSTAIRS_FIRST_FLOOR}, which you can add at checkout. If you’re not sure how many floors are involved or whether it will fit up your stairwell, please check with us before you buy rather than on the day.`,
+        a: `As standard we deliver to the ground floor, or a ground-floor room of your choice. We can take it upstairs for a fee, starting at ${gbpFigure(s.upstairsFirstFloor)}, which you can add at checkout. If you’re not sure how many floors are involved or whether it will fit up your stairwell, please check with us before you buy rather than on the day.`,
       },
       {
         q: 'Do you assemble the sofa?',
-        a: `Yes — assembly in the room costs £${ASSEMBLY_FEE}, and you can add it when you check out. Like everything else, you pay for it on delivery rather than upfront.`,
+        a: `Yes — assembly in the room costs ${gbpFigure(s.assemblyFee)}, and you can add it when you check out. Like everything else, you pay for it on delivery rather than upfront.`,
       },
       {
         q: 'Can you take my old sofa away?',
-        a: `Yes. Old sofa removal is £${SOFA_REMOVAL_PER_SEAT} per seat — £${SOFA_REMOVAL_PER_SEAT * 2} for a two-seater, £${SOFA_REMOVAL_PER_SEAT * 3} for a three-seater — and you add it at checkout, telling us how many seats we’re collecting. For very large or unusual items the charge may be a little different — if so, we’ll tell you as soon as we’ve received your order, well before delivery day.`,
+        a: `Yes. Old sofa removal is ${gbpFigure(s.removalPerSeat)} per seat — ${gbpFigure(s.removalPerSeat * 2)} for a two-seater, ${gbpFigure(s.removalPerSeat * 3)} for a three-seater — and you add it at checkout, telling us how many seats we’re collecting. For very large or unusual items the charge may be a little different — if so, we’ll tell you as soon as we’ve received your order, well before delivery day.`,
       },
       {
         q: 'What happens if I miss my delivery?',
@@ -98,5 +101,9 @@ export const faqGroups: FaqGroup[] = [
     ],
   },
 ]
+}
 
-export const allFaqs = faqGroups.flatMap(g => g.items)
+/** Every question and answer, in order, for the FAQPage schema. */
+export function allFaqsFor(s: Parameters<typeof faqGroupsFor>[0]): Faq[] {
+  return faqGroupsFor(s).flatMap(g => g.items)
+}

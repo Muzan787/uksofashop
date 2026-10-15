@@ -27,6 +27,8 @@ import { isValidUkPostcode, normalisePostcode } from '@/utils/postcode'
 import { formatPreferredDeliveryDate, isValidPreferredDeliveryDate } from '@/utils/delivery'
 import { formatOfferDeadline } from '@/utils/offers/deadline'
 import { useOffer } from '@/components/Offer/OfferProvider'
+import { useShopSettings } from '@/components/ShopSettingsProvider'
+import type { ShopSettings } from '@/utils/shopSettings'
 
 /** Whole pounds read as whole pounds; anything else gets its pence. */
 function pounds(amount: number): string {
@@ -57,6 +59,8 @@ interface OrderMessageContext {
    * later. Filled from OfferProvider by the component, not by callers.
    */
   offerEndsAt?: string | null
+  /** The figures from Admin -> Settings. Filled by the component, not by callers. */
+  settings?: ShopSettings
   /** Whatever is in the postcode field, if the customer got that far. */
   postcode?: string
   /** Delivery extras ticked on the form, if any. */
@@ -117,11 +121,11 @@ function whatsAppOrderMessage(items: DisplayCartItem[], ctx: OrderMessageContext
       : 'Delivery: free')
   }
 
-  const extras = deliveryBreakdown(ctx.extras ?? NO_EXTRAS).lines
+  const extras = deliveryBreakdown(ctx.extras ?? NO_EXTRAS, ctx.settings).lines
     .map(line => `${line.label}${line.detail ? ` (${line.detail})` : ''}`)
   if (extras.length > 0) lines.push(`Delivery extras: ${extras.join(', ')}`)
 
-  if (ctx.preferredDeliveryDate && isValidPreferredDeliveryDate(ctx.preferredDeliveryDate)) {
+  if (ctx.preferredDeliveryDate && isValidPreferredDeliveryDate(ctx.preferredDeliveryDate, undefined, ctx.settings)) {
     lines.push(`Preferred delivery day: ${formatPreferredDeliveryDate(ctx.preferredDeliveryDate)}`)
   }
 
@@ -148,9 +152,10 @@ export default function OrderOnWhatsApp({
   // enquiry row should say which product. A mixed basket has no one answer.
   const only = items.length === 1 ? items[0] : null
   const { active: offerActive, expiresAt } = useOffer()
+  const settings = useShopSettings()
 
   const cta = useWhatsAppCTA({
-    message: whatsAppOrderMessage(items, { ...ctx, offerEndsAt: offerActive ? expiresAt : null }),
+    message: whatsAppOrderMessage(items, { ...ctx, offerEndsAt: offerActive ? expiresAt : null, settings }),
     pageContext,
     variantId: only?.variant_id,
     productName: only?.title,

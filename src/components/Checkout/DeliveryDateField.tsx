@@ -24,9 +24,9 @@ import { CalendarDays, Clock } from 'lucide-react'
 import {
   earliestPreferredDeliveryDate, latestPreferredDeliveryDate,
   formatPreferredDeliveryDate, isValidPreferredDeliveryDate,
-  PREFERRED_DELIVERY_MIN_DAYS,
 } from '@/utils/delivery'
 import { PROMISES } from '@/constants/promises'
+import { useShopSettings } from '@/components/ShopSettingsProvider'
 import { useCart } from '@/context/CartContext'
 import { isRomaProduct } from '@/constants/romaAvailability'
 
@@ -43,9 +43,11 @@ interface Props {
 export default function DeliveryDateField({ value, onChange, choosing, onChoosing, error }: Props) {
   const { cartItems } = useCart()
   const hasRoma = cartItems.some(item => isRomaProduct(item.title))
-  const min = earliestPreferredDeliveryDate()
-  const max = latestPreferredDeliveryDate()
-  const chosen = value && isValidPreferredDeliveryDate(value) ? formatPreferredDeliveryDate(value) : null
+  // The days Admin -> Settings allows, the same ones place_order accepts.
+  const shop = useShopSettings()
+  const min = earliestPreferredDeliveryDate(undefined, shop)
+  const max = latestPreferredDeliveryDate(undefined, shop)
+  const chosen = value && isValidPreferredDeliveryDate(value, undefined, shop) ? formatPreferredDeliveryDate(value) : null
 
   const option =
     'flex min-h-14 flex-1 cursor-pointer items-center gap-3 rounded-sm border-[1.5px] px-4 py-3 text-left ' +
@@ -82,7 +84,7 @@ export default function DeliveryDateField({ value, onChange, choosing, onChoosin
           <CalendarDays aria-hidden="true" className={`h-4 w-4 shrink-0 ${choosing ? 'text-ember-700' : 'text-ink-500'}`} />
           <span className="min-w-0">
             <span className="block text-body-sm font-semibold text-ink-900">Choose a day</span>
-            <span className="block text-caption text-ink-500">{hasRoma ? 'Requested date subject to Roma availability' : <>Any day from {PREFERRED_DELIVERY_MIN_DAYS} days ahead</>}</span>
+            <span className="block text-caption text-ink-500">{hasRoma ? 'Requested date subject to Roma availability' : <>Any day from {shop.preferredEarliestDays} days ahead</>}</span>
           </span>
         </button>
       </div>

@@ -7,7 +7,9 @@ import EditorialHero from '@/components/Editorial/EditorialHero'
 import EditorialSchema from '@/components/Editorial/EditorialSchema'
 import EditorialLayout, { Note, PullQuote } from '@/components/Editorial/EditorialLayout'
 import CoverageMap from '@/components/Editorial/CoverageMap'
-import { ASSEMBLY_FEE, RE_DELIVERY_FEE, SOFA_REMOVAL_PER_SEAT, UPSTAIRS_FIRST_FLOOR } from '@/constants/delivery'
+import { RE_DELIVERY_FEE } from '@/constants/delivery'
+import { getShopSettings } from '@/utils/shopSettingsServer'
+import { gbpFigure, type ShopSettings } from '@/utils/shopSettings'
 import { CANCELLATION, PROMISES } from '@/constants/promises'
 import { ADDRESS_LINE, PHONE_DISPLAY, PHONE_HREF, SUPPORT_EMAIL } from '@/constants/contact'
 
@@ -39,7 +41,8 @@ const TOC = [
   { id: 'bespoke', label: 'Built to your specification' },
 ]
 
-const CHARGES = [
+// The extras come from Admin -> Settings, the figures checkout charges.
+const chargesFor = (s: ShopSettings) => [
   {
     label: 'Delivery to most of the UK, ground floor',
     price: 'Free',
@@ -64,17 +67,17 @@ const CHARGES = [
   },
   {
     label: 'Upstairs delivery',
-    price: `From £${UPSTAIRS_FIRST_FLOOR}`,
+    price: `From ${gbpFigure(s.upstairsFirstFloor)}`,
     note: 'Per flight. Added at checkout',
   },
   {
     label: 'Assembly in the room',
-    price: `£${ASSEMBLY_FEE}`,
+    price: gbpFigure(s.assemblyFee),
     note: 'Added at checkout',
   },
   {
     label: 'Taking your old sofa away',
-    price: `£${SOFA_REMOVAL_PER_SEAT} per seat`,
+    price: `${gbpFigure(s.removalPerSeat)} per seat`,
     note: 'Count every seat we collect. May differ for very large items — we will tell you as soon as your order reaches us',
   },
   {
@@ -91,7 +94,8 @@ const FACTS = [
   { icon: RotateCcw, label: '14 days to change your mind' },
 ]
 
-export default function DeliveryReturnsPage() {
+export default async function DeliveryReturnsPage() {
+  const CHARGES = chargesFor(await getShopSettings())
   return (
     <div className="min-h-screen bg-calico-50">
       <EditorialSchema

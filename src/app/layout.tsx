@@ -6,6 +6,8 @@ import "./globals.css";
 import { CartProvider } from "@/context/CartContext";
 import MainLayoutWrapper from "@/components/Layout/MainLayoutWrapper";
 import { getNavCategories } from '@/utils/navigation';
+import { getShopSettings } from '@/utils/shopSettingsServer';
+import { ShopSettingsProvider } from '@/components/ShopSettingsProvider';
 import { Toaster } from "react-hot-toast";
 import CookieConsent from '@/components/UI/CookieConsent';
 import AnalyticsRedaction from '@/components/UI/AnalyticsRedaction';
@@ -172,6 +174,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // @supabase/supabase-js out of the storefront bundle entirely - see
   // src/utils/navigation.ts for what that was costing.
   const navCategories = await getNavCategories();
+  // The figures checkout charges (Admin -> Settings), so every page shows
+  // what the database will charge. See src/utils/shopSettings.ts.
+  const shopSettings = await getShopSettings();
 
   // The assistant only exists when there is a key to answer with. Decided
   // here, on the server, so a deploy without the key simply has no "Ask us"
@@ -218,6 +223,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         </noscript>
       </head>
       <body className="antialiased bg-calico-50 flex flex-col min-h-screen">
+        <ShopSettingsProvider value={shopSettings}>
         <CartProvider>
           <OfferProvider>
           {/* ── Toasts ─────────────────────────────────────────────────────
@@ -270,6 +276,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           
           </OfferProvider>
         </CartProvider>
+        </ShopSettingsProvider>
       </body>
     </html>
   );

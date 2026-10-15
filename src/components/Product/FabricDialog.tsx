@@ -11,7 +11,8 @@ import PillGroup from './PillGroup';
 import { DUR, EASE } from '@/components/Motion';
 import { useReducedMotionSafe } from '@/components/Motion/useReducedMotionSafe';
 import { blurDataURL } from '@/utils/cloudinary';
-import { MAX_SAMPLES, SAMPLE_FEE } from '@/constants/swatches';
+import { SAMPLE_FEE } from '@/constants/swatches';
+import { useShopSettings } from '@/components/ShopSettingsProvider';
 import type { Fabric, FabricCollection } from './types';
 import { trackJourney } from '@/utils/journey';
 
@@ -76,6 +77,7 @@ interface Props {
  */
 export default function FabricDialog({ collections, selectedId, productSlug, onBuild, onClose, onViewFabric }: Props) {
   const reduced = useReducedMotionSafe();
+  const { sampleLimit } = useShopSettings();
 
   const [activeSlug, setActiveSlug] = useState(collections[0]?.slug ?? '');
   const [zoomedId, setZoomedId] = useState<string | null>(null);
@@ -125,7 +127,7 @@ export default function FabricDialog({ collections, selectedId, productSlug, onB
 
           <p className="m-0 text-center text-caption leading-relaxed text-ink-500 sm:order-first sm:flex-1 sm:text-left">
             Build mine puts the sofa in your cart in this fabric and takes you there.
-            Samples are {SAMPLE_FEE} for up to {MAX_SAMPLES}, refunded when you order.
+            Samples are {SAMPLE_FEE} for up to {sampleLimit}, refunded when you order.
           </p>
         </div>
       ) : undefined}

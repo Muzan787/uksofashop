@@ -7,7 +7,7 @@ import { createClient } from '@/utils/supabase/server'
 import { sendSwatchConfirmation, sendAdminSwatchNotification } from '@/utils/email'
 import { isValidUkMobile, UK_MOBILE_ERROR } from '@/utils/phone'
 import { rateLimit, callerKey } from '@/utils/rateLimit'
-import { MAX_SAMPLES } from '@/constants/swatches'
+import { getShopSettings } from '@/utils/shopSettingsServer'
 
 /**
  * Up to five fabric samples, £5 for the set, refunded against a later order.
@@ -39,7 +39,9 @@ const schema = z.object({
   fabricIds: z
     .array(z.string().uuid())
     .min(1, 'Choose at least one fabric.')
-    .max(MAX_SAMPLES, `${MAX_SAMPLES} samples at a time.`),
+    // The real limit is the one in Admin -> Settings, which request_swatches
+    // holds to; this only stops an absurd list reaching the database.
+    .max(20, 'Too many samples at once.'),
 })
 
 interface SwatchResult {
@@ -77,7 +79,7 @@ export async function requestSwatches(input: unknown): Promise<SwatchResult> {
 
   if (error) {
     const message = error.message ?? ''
-    if (message.includes('SWATCH_LIMIT')) return { error: `${MAX_SAMPLES} samples at a time.` }
+    if (message.includes('SWATCH_LIMIT')) return { error: `${(await getShopSettings()).sampleLimit} samples at a time.` }
     if (message.includes('NO_SWATCHES')) return { error: 'Choose at least one fabric.' }
     if (message.includes('UNAVAILABLE_FABRIC')) {
       return { error: 'One of those fabrics is no longer available. Please pick another.' }

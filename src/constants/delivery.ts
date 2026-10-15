@@ -2,15 +2,16 @@
 //
 // The delivery pricing model, in one place.
 //
-// IMPORTANT: these figures are duplicated inside the place_order database
-// function, which recomputes every fee server-side so the browser cannot set
-// its own prices. If you change a price here you MUST change it there too -
-// see the latest supabase/migrations/*place_order* definition (currently
-// 20260916120000_sofa_removal_per_seat.sql). place_order raises an
-// exception when the client's expected delivery total disagrees with its own
-// calculation, so a drift between the two fails loudly at checkout rather than
-// quietly charging the wrong amount.
+// The figures themselves live in one database row, public.shop_settings,
+// changed in Admin -> Settings (admin upgrade M1). The place_order database
+// function reads that row and recomputes every fee server-side, so the
+// browser cannot set its own prices; the functions here take the same row
+// (getShopSettings / useShopSettings) so the checkout shows what will be
+// charged. place_order raises an exception when the client's expected total
+// disagrees with its own, so a drift fails loudly at checkout rather than
+// quietly charging the wrong amount. Change a figure in the admin, never here.
 
+import { DEFAULT_SHOP_SETTINGS, gbpFigure, type ShopSettings } from '@/utils/shopSettings'
 
 /**
  * Charged when a confirmed delivery slot is missed and the journey has to be
@@ -26,14 +27,21 @@
  */
 export const RE_DELIVERY_FEE = 50
 
+/**
+ * The figures below are today's defaults. What checkout actually charges comes
+ * from Admin -> Settings (public.shop_settings, admin upgrade M1): every
+ * function here takes those settings, and falls back to these when it isn't
+ * given them. place_order reads the same row, so the two always agree.
+ */
+
 /** First floor, or any floor when there's a lift. */
-export const UPSTAIRS_FIRST_FLOOR = 20
+export const UPSTAIRS_FIRST_FLOOR = DEFAULT_SHOP_SETTINGS.upstairsFirstFloor
 
 /** Each floor above the first, when there is no lift. */
-export const UPSTAIRS_PER_EXTRA_FLOOR = 10
+export const UPSTAIRS_PER_EXTRA_FLOOR = DEFAULT_SHOP_SETTINGS.upstairsPerExtraFloor
 
 /** Assembling the sofa in the room. */
-export const ASSEMBLY_FEE = 20
+export const ASSEMBLY_FEE = DEFAULT_SHOP_SETTINGS.assemblyFee
 
 /**
  * Taking the old sofa away, priced per seat so a corner sofa pays more than a
@@ -41,11 +49,14 @@ export const ASSEMBLY_FEE = 20
  * a 2-seater going together is 5. Unusual items are still confirmed before
  * delivery, and the customer is told this on the checkout.
  */
-export const SOFA_REMOVAL_PER_SEAT = 10
-export const SOFA_REMOVAL_MIN_SEATS = 1
-export const SOFA_REMOVAL_MAX_SEATS = 10
-/** What the seat stepper opens on: a 3-seater is the most common old sofa. */
-const SOFA_REMOVAL_DEFAULT_SEATS = 3
+export const SOFA_REMOVAL_PER_SEAT = DEFAULT_SHOP_SETTINGS.removalPerSeat
+export const SOFA_REMOVAL_MIN_SEATS = DEFAULT_SHOP_SETTINGS.removalMinSeats
+export const SOFA_REMOVAL_MAX_SEATS = DEFAULT_SHOP_SETTINGS.removalMaxSeats
+
+/** The delivery figures a calculation needs: a subset of the shop settings. */
+export type DeliverySettings = Pick<ShopSettings,
+  'upstairsFirstFloor' | 'upstairsPerExtraFloor' | 'maxFloor' | 'assemblyFee' |
+  'removalPerSeat' | 'removalMinSeats' | 'removalDefaultSeats' | 'removalMaxSeats'>
 
 export interface DeliveryOptions {
   /** 0 = ground floor. 1 = first floor, 2 = second, and so on. */
@@ -58,30 +69,34 @@ export interface DeliveryOptions {
   sofaRemovalSeats: number
 }
 
+/** Nothing extra; the seat stepper opens on a 3-seater, the most common old sofa. */
 export const NO_EXTRAS: DeliveryOptions = {
   floor: 0,
   hasLift: false,
   assembly: false,
   sofaRemoval: false,
-  sofaRemovalSeats: SOFA_REMOVAL_DEFAULT_SEATS,
+  sofaRemovalSeats: DEFAULT_SHOP_SETTINGS.removalDefaultSeats,
 }
 
 /** Seat count held to the range the checkout and place_order both accept. */
-function clampRemovalSeats(seats: number): number {
-  if (!Number.isFinite(seats)) return SOFA_REMOVAL_DEFAULT_SEATS
-  return Math.min(SOFA_REMOVAL_MAX_SEATS, Math.max(SOFA_REMOVAL_MIN_SEATS, Math.floor(seats)))
+function clampRemovalSeats(seats: number, s: DeliverySettings): number {
+  if (!Number.isFinite(seats)) return s.removalDefaultSeats
+  return Math.min(s.removalMaxSeats, Math.max(s.removalMinSeats, Math.floor(seats)))
 }
 
 /** Removal charge for a given number of seats. */
-export function sofaRemovalFee(seats: number): number {
-  return clampRemovalSeats(seats) * SOFA_REMOVAL_PER_SEAT
+export function sofaRemovalFee(seats: number, s: DeliverySettings = DEFAULT_SHOP_SETTINGS): number {
+  return clampRemovalSeats(seats, s) * s.removalPerSeat
 }
 
-/** Carrying charge for the chosen floor. Ground floor is free. */
-function upstairsFee(floor: number, hasLift: boolean): number {
+/**
+ * Carrying charge for the chosen floor. Ground floor is free. The floor is
+ * held to the highest one we carry to, as place_order holds it.
+ */
+function upstairsFee(floor: number, hasLift: boolean, s: DeliverySettings): number {
   if (!Number.isFinite(floor) || floor <= 0) return 0
-  if (hasLift) return UPSTAIRS_FIRST_FLOOR
-  return UPSTAIRS_FIRST_FLOOR + (Math.floor(floor) - 1) * UPSTAIRS_PER_EXTRA_FLOOR
+  if (hasLift) return s.upstairsFirstFloor
+  return s.upstairsFirstFloor + (Math.min(Math.floor(floor), s.maxFloor) - 1) * s.upstairsPerExtraFloor
 }
 
 interface DeliveryBreakdownLine {
@@ -103,10 +118,10 @@ export interface DeliveryBreakdown {
 }
 
 /** Every chargeable extra, ready to render as its own line. */
-export function deliveryBreakdown(opts: DeliveryOptions): DeliveryBreakdown {
+export function deliveryBreakdown(opts: DeliveryOptions, s: DeliverySettings = DEFAULT_SHOP_SETTINGS): DeliveryBreakdown {
   const lines: DeliveryBreakdownLine[] = []
 
-  const upstairs = upstairsFee(opts.floor, opts.hasLift)
+  const upstairs = upstairsFee(opts.floor, opts.hasLift, s)
   if (upstairs > 0) {
     lines.push({
       key: 'upstairs',
@@ -119,16 +134,16 @@ export function deliveryBreakdown(opts: DeliveryOptions): DeliveryBreakdown {
   }
 
   if (opts.assembly) {
-    lines.push({ key: 'assembly', label: 'Assembly', amount: ASSEMBLY_FEE })
+    lines.push({ key: 'assembly', label: 'Assembly', amount: s.assemblyFee })
   }
 
   if (opts.sofaRemoval) {
-    const seats = clampRemovalSeats(opts.sofaRemovalSeats)
+    const seats = clampRemovalSeats(opts.sofaRemovalSeats, s)
     lines.push({
       key: 'sofaRemoval',
       label: 'Old sofa removal',
-      detail: `${seats} ${seats === 1 ? 'seat' : 'seats'} at £${SOFA_REMOVAL_PER_SEAT} each`,
-      amount: sofaRemovalFee(seats),
+      detail: `${seats} ${seats === 1 ? 'seat' : 'seats'} at ${gbpFigure(s.removalPerSeat)} each`,
+      amount: sofaRemovalFee(seats, s),
     })
   }
 
@@ -136,8 +151,8 @@ export function deliveryBreakdown(opts: DeliveryOptions): DeliveryBreakdown {
 }
 
 /** Total of the chargeable extras. Base delivery is always free. */
-export function deliveryTotal(opts: DeliveryOptions): number {
-  return deliveryBreakdown(opts).total
+export function deliveryTotal(opts: DeliveryOptions, s: DeliverySettings = DEFAULT_SHOP_SETTINGS): number {
+  return deliveryBreakdown(opts, s).total
 }
 
 export function floorName(floor: number): string {

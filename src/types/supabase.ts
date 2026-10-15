@@ -193,6 +193,130 @@ export type Database = {
         }
         Relationships: []
       }
+      // Admin upgrade Phase 10 (20261015130831_shop_settings.sql).
+      shop_settings: {
+        Row: {
+          upstairs_first_floor: number
+          upstairs_per_extra_floor: number
+          max_floor: number
+          assembly_fee: number
+          removal_per_seat: number
+          removal_min_seats: number
+          removal_default_seats: number
+          removal_max_seats: number
+          delivery_window_from_days: number
+          delivery_window_to_days: number
+          preferred_earliest_days: number
+          preferred_latest_days: number
+          tier_electric: number
+          tier_roma: number
+          tier_standard: number
+          tier_excluded: number
+          offer_window_hours: number
+          offer_enabled: boolean
+          sample_limit: number
+          orderflow_enabled: boolean
+          id: boolean
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          upstairs_first_floor?: number
+          upstairs_per_extra_floor?: number
+          max_floor?: number
+          assembly_fee?: number
+          removal_per_seat?: number
+          removal_min_seats?: number
+          removal_default_seats?: number
+          removal_max_seats?: number
+          delivery_window_from_days?: number
+          delivery_window_to_days?: number
+          preferred_earliest_days?: number
+          preferred_latest_days?: number
+          tier_electric?: number
+          tier_roma?: number
+          tier_standard?: number
+          tier_excluded?: number
+          offer_window_hours?: number
+          offer_enabled?: boolean
+          sample_limit?: number
+          orderflow_enabled?: boolean
+          id?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          upstairs_first_floor?: number
+          upstairs_per_extra_floor?: number
+          max_floor?: number
+          assembly_fee?: number
+          removal_per_seat?: number
+          removal_min_seats?: number
+          removal_default_seats?: number
+          removal_max_seats?: number
+          delivery_window_from_days?: number
+          delivery_window_to_days?: number
+          preferred_earliest_days?: number
+          preferred_latest_days?: number
+          tier_electric?: number
+          tier_roma?: number
+          tier_standard?: number
+          tier_excluded?: number
+          offer_window_hours?: number
+          offer_enabled?: boolean
+          sample_limit?: number
+          orderflow_enabled?: boolean
+          id?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      offer_codes: {
+        Row: {
+          code: string
+          label: string | null
+          is_active: boolean
+          created_at: string
+        }
+        Insert: {
+          code?: string
+          label?: string | null
+          is_active?: boolean
+          created_at?: string
+        }
+        Update: {
+          code?: string
+          label?: string | null
+          is_active?: boolean
+          created_at?: string
+        }
+        Relationships: []
+      }
+      delivery_distance_fees: {
+        Row: {
+          outcode: string
+          fee: number
+          region: string
+          miles: number | null
+          updated_at: string
+        }
+        Insert: {
+          outcode: string
+          fee: number
+          region: string
+          miles?: number | null
+          updated_at?: string
+        }
+        Update: {
+          outcode?: string
+          fee?: number
+          region?: string
+          miles?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       health_alerts: {
         Row: {
           check_key: string
@@ -1641,6 +1765,11 @@ export type Database = {
       delete_variant_group: { Args: { p_id: string }; Returns: undefined }
       delete_fabric: { Args: { p_id: string }; Returns: undefined }
       delete_fabric_collection: { Args: { p_id: string }; Returns: undefined }
+      // Admin upgrade Phase 10.
+      save_shop_settings: { Args: { p: Json }; Returns: undefined }
+      orderflow_status: { Args: Record<string, never>; Returns: Json }
+      orderflow_collect_now: { Args: Record<string, never>; Returns: undefined }
+      orderflow_send_test: { Args: Record<string, never>; Returns: string }
       /** Reads an order for /confirm-order/[id]. Confirms nothing. */
       order_for_confirmation: {
         Args: { p_order_id: string }

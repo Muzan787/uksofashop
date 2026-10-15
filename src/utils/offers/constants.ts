@@ -3,8 +3,9 @@ export const OFFER_ENTITLEMENT_COOKIE = 'uksofashop_offer'
  * How long a visitor's offer runs, from their first visit (every visitor
  * since 2026-10-12; only ad visitors before that).
  * Fixed: a later click does not extend it, and once it ends it does not come
- * back. The database sets it (issue_paid_offer_entitlement); this is the same
- * figure for copy that needs to say it.
+ * back. The database sets it (issue_paid_offer_entitlement) from
+ * shop_settings.offer_window_hours, which Admin -> Settings changes; this is
+ * the default, and the copy reads the live figure through getShopSettings().
  */
 export const OFFER_WINDOW_HOURS = 48
 /**
@@ -28,7 +29,12 @@ export type OfferSource = PaidOfferSource | 'site_visit'
  * every order itself; these numbers exist so the product page can say
  * "£30 off this sofa" rather than "extra savings on selected sofas". If the
  * two ever disagree the strip shows the wrong figure and the checkout charges
- * the right one - so keep them in step with the migration that sets them.
+ * the right one.
+ *
+ * Since admin upgrade M1 (2026-10-15) both read shop_settings, which Admin ->
+ * Settings changes, and the shop takes the live figures from
+ * getShopSettings()/useShopSettings(). These are the defaults (the same as
+ * DEFAULT_SHOP_SETTINGS.tierAmounts) and the list of tiers.
  */
 export const OFFER_TIER_AMOUNTS: Record<'ELECTRIC' | 'ROMA' | 'STANDARD' | 'EXCLUDED', number> = {
   ELECTRIC: 50,
