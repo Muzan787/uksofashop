@@ -11,7 +11,7 @@
 //   * a code is accepted only while it is on, and only inside a window;
 //   * the sample limit and the delivery dates follow the row;
 //   * no delivery day is a Monday, and a charged area's first day is later
-//     (20261017184918_far_delivery_window.sql, 20261017140100_place_order_delivery_days.sql);
+//     (20261017184918_far_delivery_window.sql, 20261017190729_place_order_delivery_days.sql);
 // plus the pure rules in src/utils/shopSettings.ts and shopSettingsForm.ts.
 const { test, before } = require('node:test')
 const assert = require('node:assert/strict')
@@ -64,7 +64,7 @@ const BEFORE = [
 ]
 const SETTINGS_MIGRATION = '20261015130831_shop_settings.sql'
 const FAR_WINDOW_MIGRATION = '20261017184918_far_delivery_window.sql'
-const DELIVERY_DAYS_MIGRATION = '20261017140100_place_order_delivery_days.sql'
+const DELIVERY_DAYS_MIGRATION = '20261017190729_place_order_delivery_days.sql'
 
 async function checkoutDb() {
   const pg = new PGlite()
