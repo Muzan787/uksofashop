@@ -35,7 +35,7 @@ const PANELS = [
     step: 'Three',
     heading: 'Nothing is paid for until\nit is in the room.',
     body:
-      `Cash on delivery means what it says. Our team carries it in, you look at it, and only then does any money change hands — by cash or bank transfer, on the doorstep. Delivery across UK Mainland is free. ${PROMISES.delivery.timingLong}`,
+      `Cash on delivery means what it says. Our team carries it in, you look at it, and only then does any money change hands — by cash or bank transfer, on the doorstep. Delivery is free to most of the UK. ${PROMISES.delivery.timingLong}`,
     image: 'https://res.cloudinary.com/dmlna04yk/image/upload/v1782255178/Home-Page-Furniture-Background-Image-4_j5camh.jpg',
     alt: 'A sofa delivered into a living room',
   },

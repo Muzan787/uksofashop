@@ -7,10 +7,13 @@ import { PROMISES } from '@/constants/promises';
 import { trackOperationalAction } from '@/utils/tracking';
 import { checkDeliveryPostcode } from '@/app/actions/checkout';
 import { classifyDeliveryPostcode, normalisePostcode } from '@/utils/postcode';
+import { useParams } from 'next/navigation';
+import { useShopSettings } from '@/components/ShopSettingsProvider';
+import { isRomaProduct } from '@/constants/romaAvailability';
 
 type Result =
-  | { kind: 'free'; postcode: string }
-  | { kind: 'charge'; postcode: string; fee: number; region: string | null }
+  | { kind: 'free'; postcode: string; window: string }
+  | { kind: 'charge'; postcode: string; fee: number; region: string | null; window: string }
   | { kind: 'offMainland'; postcode: string }
   | { kind: 'error'; message: string };
 
@@ -20,13 +23,21 @@ type Result =
  * Asks the checkout's own server action, so the answer here - free, a
  * distance charge (£40-£100 for Devon, Cornwall and the far north of
  * Scotland), or a custom quote - is the same one the checkout gives and the
- * same figure place_order charges. The mixed IV40 and PA34 districts are
+ * same figure place_order charges. It answers "when" with dates: 2-4 days, or
+ * 5-7 in a charged area, never a Monday (utils/delivery). The mixed IV40 and PA34 districts are
  * resolved there from trusted postcode-lookup evidence, as before.
  *
  * A postcode that is plainly not one, or plainly an island, is answered here
  * without a round trip.
  */
+/** Roma models keep their own lead time, whatever the postcode. */
+const ROMA_TIMING = 'Roma models: approximately 10–14 days';
+
 export default function DeliveryEstimator() {
+  const shop = useShopSettings();
+  // The same test HowItWorks makes, from the page's own slug.
+  const params = useParams<{ slug?: string }>();
+  const roma = isRomaProduct((params.slug ?? '').replace(/-/g, ' '));
   const [value, setValue] = useState('');
   const [pending, setPending] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
@@ -67,8 +78,8 @@ export default function DeliveryEstimator() {
       const answer = await checkDeliveryPostcode(postcode);
       if (answer.status === 'mainland') {
         settle(answer.fee > 0
-          ? { kind: 'charge', postcode: answer.postcode, fee: answer.fee, region: answer.region }
-          : { kind: 'free', postcode: answer.postcode });
+          ? { kind: 'charge', postcode: answer.postcode, fee: answer.fee, region: answer.region, window: answer.window.label }
+          : { kind: 'free', postcode: answer.postcode, window: answer.window.label });
       } else if (answer.status === 'custom_quote') {
         settle({ kind: 'offMainland', postcode: answer.postcode });
       } else {
@@ -126,9 +137,10 @@ export default function DeliveryEstimator() {
               Free delivery to {result.postcode}
             </p>
             <p className="m-0 mt-2 text-body font-semibold text-ink-900">
-              {PROMISES.delivery.timingLong}
+              {roma ? ROMA_TIMING : <>Arrives {result.window}</>}
             </p>
             <p className="m-0 mt-2 text-caption leading-relaxed text-ink-500">
+              {!roma && <>{shop.deliveryWindowFromDays}–{shop.deliveryWindowToDays} days. {PROMISES.delivery.deliveryDays} </>}
               Ground floor, or a ground-floor room of your choice. {PROMISES.payment.long}
             </p>
           </div>
@@ -144,9 +156,10 @@ export default function DeliveryEstimator() {
               </span>
             </p>
             <p className="m-0 mt-2 text-body font-semibold text-ink-900">
-              {PROMISES.delivery.timingLong}
+              {roma ? ROMA_TIMING : <>Arrives {result.window}</>}
             </p>
             <p className="m-0 mt-2 text-caption leading-relaxed text-ink-500">
+              {!roma && <>{shop.farWindowFromDays}–{shop.farWindowToDays} days to your area. {PROMISES.delivery.deliveryDays} </>}
               Delivery is free to most of the UK; the far ends of the mainland pay by distance from our
               Blackburn showroom. It is added to your total at checkout and paid on delivery with the sofa.
             </p>
@@ -159,8 +172,9 @@ export default function DeliveryEstimator() {
               <Truck aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-ember-700" />
               <span>
                 <strong className="text-ink-900">{result.postcode} needs a custom delivery quote.</strong>{' '}
-                We may still be able to deliver there. Standard online checkout covers UK Mainland,
-                so message us and we&apos;ll confirm availability and the delivery charge before you order.
+                We take website orders for UK mainland only. For the islands, Northern Ireland and
+                anywhere off the mainland, message us and we&apos;ll give you the details and the
+                delivery charge before you order.
               </span>
             </p>
           </div>

@@ -10,6 +10,8 @@
 //     its token, its deadline and its discount;
 //   * a code is accepted only while it is on, and only inside a window;
 //   * the sample limit and the delivery dates follow the row;
+//   * no delivery day is a Monday, and a charged area's first day is later
+//     (20261017184918_far_delivery_window.sql, 20261017140100_place_order_delivery_days.sql);
 // plus the pure rules in src/utils/shopSettings.ts and shopSettingsForm.ts.
 const { test, before } = require('node:test')
 const assert = require('node:assert/strict')
@@ -61,6 +63,8 @@ const BEFORE = [
   '20261012125526_place_order_distance_fee.sql',
 ]
 const SETTINGS_MIGRATION = '20261015130831_shop_settings.sql'
+const FAR_WINDOW_MIGRATION = '20261017184918_far_delivery_window.sql'
+const DELIVERY_DAYS_MIGRATION = '20261017140100_place_order_delivery_days.sql'
 
 async function checkoutDb() {
   const pg = new PGlite()
@@ -92,10 +96,13 @@ async function checkoutDb() {
   return pg
 }
 
-// The settings table, then Phase 11's tracking mode column on it.
+// The settings table, then Phase 11's tracking mode column on it, then the
+// charged areas' window and the delivery-day rules.
 const applySettings = async pg => {
   await pg.exec(read(`supabase/migrations/${SETTINGS_MIGRATION}`))
   await pg.exec(read('supabase/migrations/20261015135237_tracking_admin.sql'))
+  await pg.exec(read(`supabase/migrations/${FAR_WINDOW_MIGRATION}`))
+  await pg.exec(read(`supabase/migrations/${DELIVERY_DAYS_MIGRATION}`))
 }
 
 /** A window for the test visitor; its token. */
@@ -258,18 +265,41 @@ test('a code labels an order only while it is on, and only inside a window', asy
   await assert.rejects(() => pg.exec(`insert into offer_codes (code) values ('WITH-DASH')`), /check/)
 })
 
+const day = n => (new Date(Date.now() + n * 86400000)).toISOString().slice(0, 10)
+const weekday = iso => new Date(`${iso}T00:00:00Z`).getUTCDay()
+/** The first day at least n days out that is not a Monday - or that is one. */
+const dayFrom = (n, monday = false) => { while ((weekday(day(n)) === 1) !== monday) n++; return day(n) }
+const dated = (d, address = ADDRESSES[0]) => ({ items: [{ variant_id: V_NONE, quantity: 1 }], address, floor: 0, lift: false, assembly: false, removal: false, seats: null, code: null, token: null, date: d })
+
 test('the delivery dates follow the row', async () => {
   const pg = await checkoutDb()
   await applySettings(pg)
-  const day = n => (new Date(Date.now() + n * 86400000)).toISOString().slice(0, 10)
-  const basket = d => ({ items: [{ variant_id: V_NONE, quantity: 1 }], address: ADDRESSES[0], floor: 0, lift: false, assembly: false, removal: false, seats: null, code: null, token: null, date: d })
   // London's today can differ from UTC's around midnight, so keep a day clear of each edge.
-  assert.equal(await quote(pg, basket(day(5))), 15)
-  assert.match(String(await quote(pg, basket(day(1)))), /DELIVERY_DATE_TOO_SOON/)
-  assert.match(String(await quote(pg, basket(day(200)))), /DELIVERY_DATE_TOO_FAR/)
+  assert.equal(await quote(pg, dated(dayFrom(5))), 15)
+  assert.match(String(await quote(pg, dated(day(1)))), /DELIVERY_DATE_TOO_SOON/)
+  assert.match(String(await quote(pg, dated(dayFrom(200)))), /DELIVERY_DATE_TOO_FAR/)
   await pg.exec(`update shop_settings set preferred_earliest_days = 10, preferred_latest_days = 250`)
-  assert.match(String(await quote(pg, basket(day(5)))), /DELIVERY_DATE_TOO_SOON/)
-  assert.equal(await quote(pg, basket(day(200))), 15)
+  assert.match(String(await quote(pg, dated(day(5)))), /DELIVERY_DATE_TOO_SOON/)
+  assert.equal(await quote(pg, dated(dayFrom(200))), 15)
+})
+
+test('no delivery on a Monday, and a charged area chooses from the end of its window', async () => {
+  const pg = await checkoutDb()
+  await applySettings(pg)
+  assert.match(String(await quote(pg, dated(dayFrom(10, true)))), /DELIVERY_DATE_MONDAY/)
+  assert.equal(await quote(pg, dated(dayFrom(11))), 15)
+  // Penzance pays £80 and takes 5-7 days: five days out is too soon there,
+  // though not in Blackburn; nine is fine.
+  assert.match(String(await quote(pg, dated(dayFrom(5), ADDRESSES[1]))), /DELIVERY_DATE_TOO_SOON/)
+  assert.equal(await quote(pg, dated(dayFrom(5), ADDRESSES[0])), 15)
+  assert.equal(await quote(pg, dated(dayFrom(9), ADDRESSES[1])), 95)
+  assert.match(String(await quote(pg, dated(dayFrom(10, true), ADDRESSES[2]))), /DELIVERY_DATE_MONDAY/)
+  // The window's end is the row's.
+  await pg.exec(`update shop_settings set far_window_to_days = 12`)
+  assert.match(String(await quote(pg, dated(dayFrom(9), ADDRESSES[1]))), /DELIVERY_DATE_TOO_SOON/)
+  assert.equal(await quote(pg, dated(dayFrom(14), ADDRESSES[1])), 95)
+  // As soon as possible is never refused.
+  assert.equal(await quote(pg, dated(null, ADDRESSES[2])), 115)
 })
 
 test('the table refuses figures out of order or out of range', async () => {
@@ -277,6 +307,7 @@ test('the table refuses figures out of order or out of range', async () => {
   await applySettings(pg)
   for (const bad of [
     'delivery_window_from_days = 5, delivery_window_to_days = 3',
+    'far_window_from_days = 8, far_window_to_days = 6',
     'preferred_earliest_days = 10, preferred_latest_days = 10',
     'tier_roma = 60',
     'removal_default_seats = 12',
@@ -297,6 +328,8 @@ test('saving the settings is for admins only', async () => {
   assert.equal(Number((await pg.query(`select assembly_fee from shop_settings`)).rows[0].assembly_fee), 30)
   for (const [p, code] of [
     ['{"delivery_window_from_days": 9}', 'WINDOW_ORDER'],
+    ['{"far_window_from_days": 9}', 'WINDOW_ORDER'],
+    ['{"far_window_to_days": 1.5}', 'BAD_WHOLE_NUMBER'],
     ['{"preferred_latest_days": 2}', 'DATES_ORDER'],
     ['{"tier_standard": 45}', 'TIERS_ORDER'],
     ['{"removal_min_seats": 4}', 'SEATS_ORDER'],
@@ -324,6 +357,38 @@ test('settingsFromRow falls back to today\'s figures, field by field', () => {
   assert.equal(s.sampleLimit, 5)
 })
 
+test('delivery windows count every day but Monday, and never land on one', () => {
+  const dates = load('src/utils/delivery.ts')
+  const s = settings.DEFAULT_SHOP_SETTINGS
+  // Friday 16 October 2026, midday in London.
+  const friday = new Date('2026-10-16T11:00:00Z')
+  // 2-4 days: Sat (1), Sun (2), Monday skipped, Tue (3), Wed (4).
+  assert.deepEqual(plain(dates.deliveryWindow(friday, s)), { label: 'Sun 18 – Wed 21 October', fromISO: '2026-10-18', toISO: '2026-10-21' })
+  // 5-7 days in a charged area: Thu (5), Fri (6), Sat (7).
+  assert.deepEqual(plain(dates.deliveryWindow(friday, s, true)), { label: 'Thu 22 – Sat 24 October', fromISO: '2026-10-22', toISO: '2026-10-24' })
+  // Thursday: four days out is a Monday, so the first day is the Tuesday; a
+  // charged area's first day is a week out.
+  const thursday = new Date('2026-10-15T11:00:00Z')
+  assert.equal(dates.earliestPreferredDeliveryDate(thursday, s), '2026-10-20')
+  assert.equal(dates.earliestPreferredDeliveryDate(thursday, s, true), '2026-10-22')
+  assert.equal(dates.isValidPreferredDeliveryDate('2026-10-20', thursday, s), true)
+  assert.equal(dates.isValidPreferredDeliveryDate('2026-10-26', thursday, s), false, 'a Monday')
+  assert.equal(dates.isValidPreferredDeliveryDate('2026-10-20', thursday, s, true), false, 'too soon for Cornwall')
+  assert.equal(dates.isValidPreferredDeliveryDate('2026-10-25', thursday, s, true), true, 'a Sunday is a delivery day')
+  assert.equal(dates.preferredDeliveryDateProblem('2026-10-26', thursday, s), 'We don’t deliver on Mondays. Please choose another day.')
+  assert.equal(dates.preferredDeliveryDateProblem('2026-10-21', thursday, s, true), 'Please choose a day from Thursday 22 October onwards.')
+  assert.equal(dates.preferredDeliveryDateProblem('2026-10-21', thursday, s), null)
+  // Every window for a year of order days: neither end is ever a Monday.
+  for (let i = 0; i < 366; i++) {
+    const now = new Date(Date.UTC(2026, 0, 1 + i, 12))
+    for (const far of [false, true]) {
+      const w = dates.deliveryWindow(now, s, far)
+      for (const iso of [w.fromISO, w.toISO]) assert.notEqual(new Date(`${iso}T00:00:00Z`).getUTCDay(), 1, `${now.toISOString()} ${far}`)
+    }
+    assert.notEqual(new Date(`${dates.earliestPreferredDeliveryDate(now, s)}T00:00:00Z`).getUTCDay(), 1)
+  }
+})
+
 test('figures are written as the shop writes them', () => {
   assert.equal(settings.gbpFigure(20), '£20')
   assert.equal(settings.gbpFigure(12.5), '£12.50')
@@ -334,8 +399,9 @@ test('figures are written as the shop writes them', () => {
 test('the form covers every figure in the row, once', () => {
   const columns = settings.SHOP_SETTINGS_COLUMNS.split(', ').filter(c => !['offer_enabled', 'orderflow_enabled', 'tracking_mode'].includes(c))
   assert.deepEqual(plain(form.FIGURE_FIELDS.map(f => f.key)).sort(), columns.sort())
-  // And the database checks the same keys.
-  const sql = read(`supabase/migrations/${SETTINGS_MIGRATION}`)
+  // And the database checks the same keys (save_shop_settings, as replaced
+  // when the charged areas' window was added).
+  const sql = read(`supabase/migrations/${FAR_WINDOW_MIGRATION}`)
   for (const key of columns) assert.ok(sql.includes(`'${key}'`), `save_shop_settings checks ${key}`)
 })
 
@@ -356,6 +422,7 @@ test('the form refuses a window that ends before it starts, and tiers out of ord
   assert.deepEqual(plain(check({ removal_default_seats: '11' })), { ok: false, field: 'removal_default_seats', text: form.SETTINGS_REFUSALS.SEATS_ORDER })
   assert.equal(check({ tier_roma: '50' }).ok, true, 'equal tiers are in order')
   assert.equal(check({ delivery_window_from_days: '4' }).ok, true, 'a one-day window is fine')
+  assert.deepEqual(plain(check({ far_window_from_days: '8' })), { ok: false, field: 'far_window_to_days', text: form.SETTINGS_REFUSALS.WINDOW_ORDER })
 })
 
 test('the form wants pounds where it says pounds, and whole numbers elsewhere', () => {

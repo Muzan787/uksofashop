@@ -125,7 +125,7 @@ function whatsAppOrderMessage(items: DisplayCartItem[], ctx: OrderMessageContext
     .map(line => `${line.label}${line.detail ? ` (${line.detail})` : ''}`)
   if (extras.length > 0) lines.push(`Delivery extras: ${extras.join(', ')}`)
 
-  if (ctx.preferredDeliveryDate && isValidPreferredDeliveryDate(ctx.preferredDeliveryDate, undefined, ctx.settings)) {
+  if (ctx.preferredDeliveryDate && isValidPreferredDeliveryDate(ctx.preferredDeliveryDate, undefined, ctx.settings, (ctx.deliveryFee ?? 0) > 0)) {
     lines.push(`Preferred delivery day: ${formatPreferredDeliveryDate(ctx.preferredDeliveryDate)}`)
   }
 

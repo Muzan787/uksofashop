@@ -20,7 +20,7 @@ export function faqGroupsFor(s: Pick<ShopSettings, 'upstairsFirstFloor' | 'assem
     items: [
       {
         q: 'How long does delivery take?',
-        a: `${PROMISES.delivery.timingLong} Around 90% arrive inside the window for their delivery band, unless you have asked us to hold it back. Northern Ireland, the Isle of Man and the Scottish Islands sit outside the standard service, so please get in touch before ordering and we will arrange it.`,
+        a: `${PROMISES.delivery.timingLong} Enter your postcode on any product page to see the dates for your address. Website orders are for UK Mainland only: for Northern Ireland, the Isle of Man and the Scottish islands, please get in touch before ordering and we will give you the details.`,
       },
       {
         q: 'Where do you deliver?',
@@ -28,7 +28,7 @@ export function faqGroupsFor(s: Pick<ShopSettings, 'upstairsFirstFloor' | 'assem
       },
       {
         q: 'Do you deliver to Northern Ireland or the Scottish Islands?',
-        a: `Yes, we do — we just can’t quote for it automatically on the website. Get in touch before you order, at ${SUPPORT_EMAIL} or on 07476 616022, and we’ll arrange it with you directly.`,
+        a: `Not through the website: website orders are for UK Mainland only, and that includes the Isle of Wight and the Isles of Scilly. Get in touch before you order, at ${SUPPORT_EMAIL}, on 07476 616022 or on WhatsApp, and we’ll give you the details and arrange it with you directly.`,
       },
       {
         q: 'Do you deliver upstairs?',

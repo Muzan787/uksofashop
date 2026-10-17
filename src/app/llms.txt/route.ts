@@ -36,8 +36,8 @@ export async function GET() {
 
 > A furniture retailer in Blackburn, Lancashire, selling sofas, corner sofas
 > and recliners across UK Mainland. Delivery is free to most of it (Devon, Cornwall and the
-> north of Scotland pay £40-£100); most UK Mainland orders arrive
-> in 2-4 working days, while some Wales and Scotland postcodes take 5-7. Payment
+> north of Scotland pay £40-£100); most of the UK gets delivery in 2-4 days
+> and those charged areas in 5-7, Tuesday to Sunday (no Monday deliveries). Payment
 > is cash or bank transfer on the doorstep rather than upfront. Fabric sofas
 > are made to order in the customer's own size and any of ${FABRIC_COLOUR_COUNT} colours; leather
 > sofas are stocked in set sizes.
@@ -79,7 +79,7 @@ ${ARTICLES_BY_DATE.map(a => `- [${a.title}](${url(`/journal/${a.slug}`)}): ${a.d
 
 ## Facts worth quoting correctly
 
-- Delivery is free to most UK Mainland addresses with no minimum order. Devon and the Aberdeen area pay £40, Cornwall and the Scottish Highlands £80, and the far north of Scotland £100, by postcode district. Most UK Mainland orders arrive in 2-4 working days; some Wales and Scotland postcodes take 5-7 working days. Northern Ireland, the Isle of Man and the Scottish Islands are arranged individually rather than quoted online.
+- Delivery is free to most UK Mainland addresses with no minimum order. Devon and the Aberdeen area pay £40, Cornwall and the Scottish Highlands £80, and the far north of Scotland £100, by postcode district. Most of the UK gets delivery in 2-4 days; Devon, Cornwall, the Aberdeen area and the north of Scotland take 5-7 days. Deliveries run Tuesday to Sunday, never on Mondays. Website orders are for UK Mainland only; Northern Ireland, the Isle of Man and the Scottish Islands are arranged individually by contacting the shop rather than ordered online.
 - Payment is cash or bank transfer on delivery. No deposit, no card payments, no finance.
 - Optional extras, booked at checkout and not addable on the day: upstairs delivery from GBP 20, assembly GBP 20, old sofa removal GBP 10 per seat.
 - Every sofa carries a 1-year guarantee covering structural faults in the wooden frame and the springs.

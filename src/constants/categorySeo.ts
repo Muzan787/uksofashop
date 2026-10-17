@@ -51,7 +51,7 @@ export interface CategoryCopy {
    * which Google cut off mid-clause: the delivery promise was the part that
    * got dropped, so the long timing string bought nothing and cost the end of
    * every sentence. Timing belongs in `body`, where there is room for the
-   * Wales and Scotland exception that makes it true.
+   * 5-7 day areas that make it true.
    */
   description: string
   /** The H2 introducing the copy under the grid. */

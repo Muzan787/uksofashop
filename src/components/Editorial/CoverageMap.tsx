@@ -1,5 +1,7 @@
 // src/components/Editorial/CoverageMap.tsx
 
+import { DELIVERY_DAYS, PROMISES } from '@/constants/promises'
+
 /**
  * Where we deliver, and how long it takes to get there.
  *
@@ -23,38 +25,32 @@ interface Band {
   swatch: string
 }
 
+// Muaz, 2026-10-17: the postcodes that pay a distance charge take 5-7 days,
+// everywhere else on the mainland 2-4, and no van goes out on a Monday. The
+// charged band is exactly delivery_distance_fees, so a customer's postcode
+// check on the product page always agrees with the band they find here.
 const BANDS: Band[] = [
   {
     id: 'core',
-    label: 'The North & Midlands',
-    window: '2–3 working days',
-    places: 'Lancashire, Greater Manchester, Yorkshire, Merseyside, Cheshire, the Midlands',
+    label: 'Most of the UK',
+    window: `${DELIVERY_DAYS.usual} · free`,
+    places: 'England, Wales and Scotland as far as Perth, Dundee and Fort William: London, the Midlands, the North, Somerset and Dorset included',
     fill: 'fill-ember-500',
     swatch: 'bg-ember-500',
   },
   {
-    id: 'south',
-    label: 'The South & East',
-    window: '3–4 working days',
-    places: 'London, the Home Counties, the South West, East Anglia, the North East',
-    fill: 'fill-ember-500/45',
-    swatch: 'bg-ember-500/45',
-  },
-  {
     id: 'far',
-    label: 'Wales & Scotland',
-    // Slower mainland band. Keep this explicit rather than deriving it from
-    // a postcode prefix: the site has no maintained region-to-postcode map.
-    window: '5–7 working days',
-    places: 'All of Wales, and Scotland up to the central belt and beyond',
-    fill: 'fill-ember-500/20',
-    swatch: 'bg-ember-500/20',
+    label: 'Devon, Cornwall & the north of Scotland',
+    window: `${DELIVERY_DAYS.far} · £40–£100`,
+    places: 'Devon and the Aberdeen area £40; Cornwall, the Highlands, Moray and North East Scotland £80; Caithness and Sutherland £100',
+    fill: 'fill-ember-500/30',
+    swatch: 'bg-ember-500/30',
   },
   {
     id: 'ask',
     label: 'Islands & Northern Ireland',
-    window: 'Ask us first',
-    places: 'Northern Ireland, the Scottish Islands, the Isle of Man, the Channel Islands',
+    window: 'Contact us first',
+    places: 'Website orders are for UK Mainland only. For Northern Ireland, the Isle of Man, the Channel Islands, the Scottish islands, the Isle of Wight and the Isles of Scilly, message us for the details',
     fill: 'fill-calico-200',
     swatch: 'bg-calico-200 border border-calico-300',
   },
@@ -80,32 +76,43 @@ export default function CoverageMap() {
         <svg
           viewBox="0 0 200 280"
           role="img"
-          aria-label="A schematic map of Great Britain shaded into three delivery bands, darkest across the North and Midlands where delivery is quickest."
+          aria-label="A schematic map of Great Britain: most of it shaded as the free 2 to 4 day band, with Devon, Cornwall and the north of Scotland paler as the 5 to 7 day band."
           className="mx-auto w-full max-w-[200px]"
         >
-          {/* Scotland — the far band, palest. */}
+          {/* The north of Scotland - the charged band: the Highlands, Moray,
+              Aberdeen and the far north. */}
           <path
-            className={BANDS[2].fill}
-            d="M92 8 L112 4 L126 16 L124 34 L134 44 L130 60 L118 70 L120 84 L104 92 L88 84 L78 68 L82 48 L74 34 L80 16 Z"
+            className={BANDS[1].fill}
+            d="M92 8 L112 4 L126 16 L124 34 L134 44 L132 52 L81 52 L82 48 L74 34 L80 16 Z"
           />
-          {/* Wales — the same band. */}
+          {/* The rest of Scotland - free, the usual band. */}
           <path
-            className={BANDS[2].fill}
+            className={BANDS[0].fill}
+            d="M81 52 L132 52 L130 60 L118 70 L120 84 L104 92 L88 84 L78 68 Z"
+          />
+          {/* Wales - the usual band. */}
+          <path
+            className={BANDS[0].fill}
             d="M62 168 L80 164 L88 176 L84 196 L72 210 L58 206 L52 190 L54 176 Z"
           />
-          {/* The North and the Midlands — the darkest band, and where we are. */}
+          {/* The North and the Midlands - where we are. */}
           <path
             className={BANDS[0].fill}
             d="M88 92 L110 96 L124 106 L128 124 L134 142 L126 160 L112 172 L90 176 L74 168 L64 150 L70 128 L78 108 Z"
           />
           {/* The South and East. */}
           <path
-            className={BANDS[1].fill}
+            className={BANDS[0].fill}
             d="M90 176 L112 172 L134 180 L152 194 L156 212 L142 226 L112 236 L82 232 L60 220 L52 204 L58 206 L72 210 L84 196 Z"
           />
+          {/* Devon and Cornwall - the charged band. */}
+          <path
+            className={BANDS[1].fill}
+            d="M82 232 L60 220 L40 232 L24 244 L28 252 L48 248 L70 242 Z"
+          />
 
-          {/* Blackburn. Where every van leaves from, which is the reason the
-              band around it is the quick one. */}
+          {/* Blackburn. Where every van leaves from, which is why the far
+              ends of the mainland are the slow, charged band. */}
           <g>
             <circle cx="96" cy="132" r="11" className="fill-ink-900/10" />
             <circle cx="96" cy="132" r="4.5" className="fill-ink-900" />
@@ -152,9 +159,8 @@ export default function CoverageMap() {
       </div>
 
       <p className="m-0 border-t border-calico-300 bg-calico-100 px-5 py-4 text-caption leading-relaxed text-ink-500">
-        Around 90% of orders arrive inside the window for their band. We cannot always tell which
-        band a postcode falls into at the point of ordering — if yours is going to take longer,
-        we will tell you as soon as the order reaches us, not on the day.
+        Enter your postcode on any sofa page to see the charge and the dates for your address,
+        before you order. {PROMISES.delivery.deliveryDays}
       </p>
     </section>
   )

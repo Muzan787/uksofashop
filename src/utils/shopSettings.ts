@@ -35,9 +35,12 @@ export interface ShopSettings {
   removalMinSeats: number
   removalDefaultSeats: number
   removalMaxSeats: number
-  /** The delivery window, in working days from today. */
+  /** The delivery window, in delivery days (every day but Monday) from today. */
   deliveryWindowFromDays: number
   deliveryWindowToDays: number
+  /** The same for the areas that pay a distance charge: Devon, Cornwall, the Aberdeen area, the north of Scotland. */
+  farWindowFromDays: number
+  farWindowToDays: number
   /** The days a customer can choose, counted from today. */
   preferredEarliestDays: number
   preferredLatestDays: number
@@ -60,6 +63,8 @@ export const DEFAULT_SHOP_SETTINGS: ShopSettings = {
   removalMaxSeats: 10,
   deliveryWindowFromDays: 2,
   deliveryWindowToDays: 4,
+  farWindowFromDays: 5,
+  farWindowToDays: 7,
   preferredEarliestDays: 4,
   preferredLatestDays: 180,
   tierAmounts: { ELECTRIC: 50, ROMA: 30, STANDARD: 20, EXCLUDED: 0 },
@@ -81,6 +86,8 @@ export interface ShopSettingsRow {
   removal_max_seats: number | null
   delivery_window_from_days: number | null
   delivery_window_to_days: number | null
+  far_window_from_days: number | null
+  far_window_to_days: number | null
   preferred_earliest_days: number | null
   preferred_latest_days: number | null
   tier_electric: number | string | null
@@ -95,7 +102,7 @@ export interface ShopSettingsRow {
 }
 
 export const SHOP_SETTINGS_COLUMNS =
-  'upstairs_first_floor, upstairs_per_extra_floor, max_floor, assembly_fee, removal_per_seat, removal_min_seats, removal_default_seats, removal_max_seats, delivery_window_from_days, delivery_window_to_days, preferred_earliest_days, preferred_latest_days, tier_electric, tier_roma, tier_standard, tier_excluded, offer_window_hours, offer_enabled, sample_limit, orderflow_enabled, tracking_mode'
+  'upstairs_first_floor, upstairs_per_extra_floor, max_floor, assembly_fee, removal_per_seat, removal_min_seats, removal_default_seats, removal_max_seats, delivery_window_from_days, delivery_window_to_days, far_window_from_days, far_window_to_days, preferred_earliest_days, preferred_latest_days, tier_electric, tier_roma, tier_standard, tier_excluded, offer_window_hours, offer_enabled, sample_limit, orderflow_enabled, tracking_mode'
 
 /** A figure from the row, or the default when it is missing or not a number. */
 function num(value: number | string | null | undefined, fallback: number): number {
@@ -117,6 +124,8 @@ export function settingsFromRow(row: Partial<ShopSettingsRow> | null | undefined
     removalMaxSeats: num(row.removal_max_seats, d.removalMaxSeats),
     deliveryWindowFromDays: num(row.delivery_window_from_days, d.deliveryWindowFromDays),
     deliveryWindowToDays: num(row.delivery_window_to_days, d.deliveryWindowToDays),
+    farWindowFromDays: num(row.far_window_from_days, d.farWindowFromDays),
+    farWindowToDays: num(row.far_window_to_days, d.farWindowToDays),
     preferredEarliestDays: num(row.preferred_earliest_days, d.preferredEarliestDays),
     preferredLatestDays: num(row.preferred_latest_days, d.preferredLatestDays),
     tierAmounts: {

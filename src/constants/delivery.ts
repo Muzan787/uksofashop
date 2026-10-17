@@ -169,4 +169,4 @@ export function floorName(floor: number): string {
  * delivery charge before taking the order.
  */
 export const DELIVERY_AREA_NOTE =
-  'FREE delivery applies to most of UK Mainland (Devon, Cornwall and the north of Scotland pay £40 to £100). Northern Ireland, the Isle of Man, Channel Islands, Scottish islands, Isle of Wight, Isles of Scilly and other non-mainland destinations need a custom delivery quote first.'
+  'FREE delivery to most of UK Mainland in 2–4 days; Devon, Cornwall, the Aberdeen area and the north of Scotland pay £40 to £100 and take 5–7 days. No deliveries on Mondays. Website orders are for UK Mainland only: for Northern Ireland, the Isle of Man, Channel Islands, Scottish islands, Isle of Wight, Isles of Scilly and anywhere else off the mainland, message us for the details and a custom delivery quote first.'

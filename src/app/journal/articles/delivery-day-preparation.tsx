@@ -20,7 +20,7 @@
 //   upstairs £20 / +£10, assembly £20,
 //   removal £10 per seat                        constants/delivery.ts
 //   ground floor or a ground-floor room         /delivery-returns
-//   most 2-4; some Wales/Scotland 5-7          /delivery-returns
+//   most 2-4; charged areas 5-7; no Mondays     /delivery-returns
 //   arrives in pieces, feet unscrew ~10cm       /size-guide
 //   30cm from a radiator                        /care-guide
 //
@@ -71,9 +71,10 @@ export default function DeliveryDayPreparation() {
 
       <h2 id="slot">Confirm the day, and protect it</h2>
       <p>
-        Most UK Mainland orders arrive in two to four working days; some Wales and Scotland
-        postcodes take five to seven. Either way the day can come round quickly, which is the reason
-        to have the rest of this list done before it does.
+        Most of the UK gets delivery in two to four days; Devon, Cornwall, the Aberdeen area and
+        the north of Scotland take five to seven, and there are no deliveries on Mondays. Either
+        way the day can come round quickly, which is the reason to have the rest of this list done
+        before it does.
       </p>
       <p>
         Once a slot has actually been <strong>confirmed</strong> with you, treat it as fixed. A

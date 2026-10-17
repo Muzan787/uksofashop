@@ -9,7 +9,8 @@ import { isValidUkMobile, UK_MOBILE_ERROR } from '@/utils/phone'
 import { resolveDeliveryPostcode } from '@/utils/postcode'
 import { distanceFeeFor } from '@/utils/deliveryFee'
 import {
-  earliestPreferredDeliveryDate, formatPreferredDeliveryDate, isValidPreferredDeliveryDate,
+  deliveryWindow, earliestPreferredDeliveryDate, formatPreferredDeliveryDate, latestPreferredDeliveryDate,
+  preferredDeliveryDateProblem, type DeliveryWindow,
 } from '@/utils/delivery'
 import { z } from 'zod'
 import { cookies, headers } from 'next/headers'
@@ -164,8 +165,10 @@ export type DeliveryCheckResult =
    * fee: the distance delivery charge in pounds, 0 for free (within 250
    * miles of Blackburn). region names the band when there is one. Read from
    * the same table place_order totals with - see utils/deliveryFee.
+   * window is when it would arrive as dates: 2-4 days, or 5-7 in a charged
+   * area (utils/delivery).
    */
-  | { status: 'mainland'; postcode: string; fee: number; region: string | null }
+  | { status: 'mainland'; postcode: string; fee: number; region: string | null; window: DeliveryWindow }
   | { status: 'custom_quote'; postcode: string }
   /** The postcode was fine but the delivery charge could not be read. */
   | { status: 'unavailable'; postcode: string; message: string }
@@ -192,8 +195,8 @@ export async function checkDeliveryPostcode(rawPostcode: string): Promise<Delive
     return { status: 'custom_quote', postcode: result.postcode }
   }
   try {
-    const { fee, region } = await distanceFeeFor(result.postcode)
-    return { status: 'mainland', postcode: result.postcode, fee, region }
+    const [{ fee, region }, shop] = await Promise.all([distanceFeeFor(result.postcode), getShopSettings()])
+    return { status: 'mainland', postcode: result.postcode, fee, region, window: deliveryWindow(undefined, shop, fee > 0) }
   } catch (err) {
     console.error('Delivery fee lookup failed:', err)
     return {
@@ -280,10 +283,6 @@ export async function placeOrder(
   if (opts.floor > shop.maxFloor || opts.sofaRemovalSeats < shop.removalMinSeats || opts.sofaRemovalSeats > shop.removalMaxSeats) {
     return { error: 'Those delivery options are not valid. Please review them and try again.' }
   }
-  if (preferredDeliveryDate !== undefined && !isValidPreferredDeliveryDate(preferredDeliveryDate, undefined, shop)) {
-    return { error: `Please choose a delivery date from ${formatPreferredDeliveryDate(earliestPreferredDeliveryDate(undefined, shop))} onwards.` }
-  }
-
   // CRITICAL PHASE D AUTHORITY. The browser supplies only the actual postcode.
   // It never supplies mainland=true, a delivery zone or a delivery price. This
   // resolver is run again here even if the client already rendered a decision.
@@ -296,8 +295,24 @@ export async function placeOrder(
     deliveryDecision.zone !== 'MAINLAND_STANDARD'
   ) {
     return {
-      error: 'Standard online checkout covers UK Mainland. This postcode needs a custom delivery quote on WhatsApp.',
+      error: 'We take website orders for UK mainland only. For this postcode, message us on WhatsApp for a custom delivery quote and the details.',
     }
+  }
+
+  // The day asked for, checked once the postcode is known: a charged area
+  // (Devon, Cornwall, the Aberdeen area, the north of Scotland) takes 5-7
+  // days, so its first day is later. If the charge can't be read here the
+  // usual rule is checked, and place_order - which reads the same table -
+  // still refuses a day too soon for the area.
+  let far = false
+  try {
+    far = (await distanceFeeFor(deliveryDecision.postcode)).fee > 0
+  } catch (err) {
+    console.error('Delivery fee lookup failed before ordering:', err)
+  }
+  if (preferredDeliveryDate !== undefined) {
+    const problem = preferredDeliveryDateProblem(preferredDeliveryDate, undefined, shop, far)
+    if (problem) return { error: problem }
   }
 
   // Store exactly one normalized postcode at the end of the address. The
@@ -343,8 +358,8 @@ export async function placeOrder(
     // tier, discount and final total; the browser never supplies those values.
     p_promotion_code: promotionCode,
     p_offer_entitlement_token: entitlementCookie.success ? entitlementCookie.data : null,
-    // Null for "as soon as you can". place_order re-checks the four-day lead
-    // against today in the UK and refuses anything sooner.
+    // Null for "as soon as you can". place_order re-checks the lead against
+    // today in the UK - longer in a charged area - and refuses a Monday.
     p_preferred_delivery_date: preferredDeliveryDate ?? null,
   })
 
@@ -364,8 +379,16 @@ export async function placeOrder(
     if (message.includes('UNAVAILABLE_FABRIC')) {
       return { error: 'One of the fabrics in your basket is no longer available. Please choose another and try again.' }
     }
-    if (message.includes('DELIVERY_DATE_TOO_SOON') || message.includes('DELIVERY_DATE_TOO_FAR')) {
-      return { error: `Please choose a delivery date from ${formatPreferredDeliveryDate(earliestPreferredDeliveryDate(undefined, shop))} onwards.` }
+    if (message.includes('DELIVERY_DATE_MONDAY')) {
+      return { error: 'We don’t deliver on Mondays. Please choose another day.' }
+    }
+    if (message.includes('DELIVERY_DATE_TOO_FAR')) {
+      return { error: `Please choose a delivery date no later than ${formatPreferredDeliveryDate(latestPreferredDeliveryDate(undefined, shop))}.` }
+    }
+    if (message.includes('DELIVERY_DATE_TOO_SOON')) {
+      // The checks above passed, so the database saw a charged area the fee
+      // lookup here did not: name that area's first day.
+      return { error: `Please choose a delivery date from ${formatPreferredDeliveryDate(earliestPreferredDeliveryDate(undefined, shop, true))} onwards.` }
     }
     return { error: 'We could not place your order. Please try again, or call us on 07476 616022.' }
   }

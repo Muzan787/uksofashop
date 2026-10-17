@@ -2,13 +2,18 @@
 //
 // "When will it arrive" — computed once, here.
 //
-// The site promises delivery in 2–4 working days (see ANNOUNCEMENTS in
-// src/constants/promises.ts). Printing that sentence is not the same as
-// answering the question: a customer paying cash on the doorstep is deciding
-// whether they will be in the house, and "2–4 working days" makes them do the
-// arithmetic themselves — including working out which days are working days.
+// The site promises delivery in 2–4 days to most of the UK, and 5–7 to the
+// areas that pay a distance charge (see PROMISES in src/constants/promises.ts).
+// Printing that sentence is not the same as answering the question: a
+// customer paying cash on the doorstep is deciding whether they will be in
+// the house, and "2–4 days" makes them do the arithmetic themselves.
 //
 // This turns the promise into two dates.
+//
+// THE DAYS ARE DELIVERY DAYS. Muaz, 2026-10-17: the vans go out every day of
+// the week except Monday - Saturday and Sunday included. So a window counts
+// every day but Monday, no date the shop gives ever lands on one, and a
+// customer cannot ask for one.
 //
 // Deliberately server-side. The window is rendered into the HTML on the server
 // so it is in the markup for a crawler and cannot disagree with itself after
@@ -19,11 +24,16 @@ import { DEFAULT_SHOP_SETTINGS, type ShopSettings } from './shopSettings'
 
 /**
  * The day counts come from Admin -> Settings (admin upgrade M1): the delivery
- * window in working days, and the first and last day a customer may choose.
- * Every function takes them, and falls back to today's figures without them.
+ * windows in delivery days - one for most of the UK, one for the charged
+ * areas - and the first and last day a customer may choose. Every function
+ * takes them, and falls back to today's figures without them.
  */
 export type DeliveryDateSettings = Pick<ShopSettings,
-  'deliveryWindowFromDays' | 'deliveryWindowToDays' | 'preferredEarliestDays' | 'preferredLatestDays'>
+  'deliveryWindowFromDays' | 'deliveryWindowToDays' | 'farWindowFromDays' | 'farWindowToDays'
+  | 'preferredEarliestDays' | 'preferredLatestDays'>
+
+/** getUTCDay() of the one day there is no delivery. */
+const NO_DELIVERY_DAY = 1 // Monday
 
 const LONDON = 'Europe/London'
 
@@ -42,14 +52,13 @@ function londonToday(now: Date): Date {
   return new Date(Date.UTC(get('year'), get('month') - 1, get('day')))
 }
 
-/** Advances `n` working days, skipping Saturday and Sunday. */
-function addWorkingDays(from: Date, n: number): Date {
+/** Advances `n` delivery days, skipping Mondays. */
+function addDeliveryDays(from: Date, n: number): Date {
   const d = new Date(from)
   let left = n
   while (left > 0) {
     d.setUTCDate(d.getUTCDate() + 1)
-    const day = d.getUTCDay()
-    if (day !== 0 && day !== 6) left--
+    if (d.getUTCDay() !== NO_DELIVERY_DAY) left--
   }
   return d
 }
@@ -70,15 +79,18 @@ export interface DeliveryWindow {
 /**
  * The delivery window for an order placed now.
  *
+ * `far` is a postcode in a charged area (delivery_distance_fees), which gets
+ * that area's longer window. Before a postcode is known, it is the usual one.
+ *
  * Bank holidays are not modelled. Adding a hardcoded list would go stale
  * silently and start under-promising a year from now, which is worse than a
- * window the customer reads as approximate — which "2–4 working days" already
- * told them it was.
+ * window the customer reads as approximate — which "2–4 days" already told
+ * them it was.
  */
-export function deliveryWindow(now: Date = new Date(), s: DeliveryDateSettings = DEFAULT_SHOP_SETTINGS): DeliveryWindow {
+export function deliveryWindow(now: Date = new Date(), s: DeliveryDateSettings = DEFAULT_SHOP_SETTINGS, far = false): DeliveryWindow {
   const today = londonToday(now)
-  const from = addWorkingDays(today, s.deliveryWindowFromDays)
-  const to = addWorkingDays(today, s.deliveryWindowToDays)
+  const from = addDeliveryDays(today, far ? s.farWindowFromDays : s.deliveryWindowFromDays)
+  const to = addDeliveryDays(today, far ? s.farWindowToDays : s.deliveryWindowToDays)
 
   const sameMonth = from.getUTCMonth() === to.getUTCMonth() && from.getUTCFullYear() === to.getUTCFullYear()
 
@@ -97,10 +109,11 @@ export function deliveryWindow(now: Date = new Date(), s: DeliveryDateSettings =
 //
 // The customer may pick the day they want the sofa, at checkout. A request,
 // not a booking - the team rings to agree the slot - but it tells them which
-// week to aim for. Muaz's rule (2026-09-18): any day at all, as long as it is
-// at least four days away. The database function place_order enforces the
-// same two limits, so the browser's calendar and the server can never
-// disagree about which days are allowed.
+// week to aim for. Muaz's rules: at least four days away (2026-09-18); never a
+// Monday, and in a charged area no sooner than the end of that area's 5-7 day
+// window (2026-10-17). The database function place_order enforces the same
+// rules, so the browser's calendar and the server can never disagree about
+// which days are allowed.
 
 /** Days from today before the first day a customer may ask for (today's default). */
 export const PREFERRED_DELIVERY_MIN_DAYS = DEFAULT_SHOP_SETTINGS.preferredEarliestDays
@@ -117,9 +130,21 @@ function addDays(from: Date, n: number): Date {
   return d
 }
 
-/** The first day a customer may ask for, as YYYY-MM-DD in Europe/London. */
-export function earliestPreferredDeliveryDate(now: Date = new Date(), s: DeliveryDateSettings = DEFAULT_SHOP_SETTINGS): string {
-  return isoDate(addDays(londonToday(now), s.preferredEarliestDays))
+/** Whether a YYYY-MM-DD is a Monday, the day there is no delivery. */
+export function isNoDeliveryDay(value: string): boolean {
+  if (!ISO_DATE.test(value)) return false
+  return new Date(`${value}T00:00:00Z`).getUTCDay() === NO_DELIVERY_DAY
+}
+
+/**
+ * The first day a customer may ask for, as YYYY-MM-DD in Europe/London.
+ * `far` is a postcode in a charged area. A first day that falls on a Monday
+ * moves to the Tuesday, the same as place_order.
+ */
+export function earliestPreferredDeliveryDate(now: Date = new Date(), s: DeliveryDateSettings = DEFAULT_SHOP_SETTINGS, far = false): string {
+  const lead = far ? Math.max(s.preferredEarliestDays, s.farWindowToDays) : s.preferredEarliestDays
+  const first = addDays(londonToday(now), lead)
+  return isoDate(first.getUTCDay() === NO_DELIVERY_DAY ? addDays(first, 1) : first)
 }
 
 /** The last day accepted, as YYYY-MM-DD. */
@@ -136,11 +161,26 @@ export function latestPreferredDeliveryDate(now: Date = new Date(), s: DeliveryD
  * through Date is still made, because "2026-02-31" matches the pattern and
  * is not a day.
  */
-export function isValidPreferredDeliveryDate(value: string, now: Date = new Date(), s: DeliveryDateSettings = DEFAULT_SHOP_SETTINGS): boolean {
+export function isValidPreferredDeliveryDate(value: string, now: Date = new Date(), s: DeliveryDateSettings = DEFAULT_SHOP_SETTINGS, far = false): boolean {
   if (!ISO_DATE.test(value)) return false
   const parsed = new Date(`${value}T00:00:00Z`)
   if (Number.isNaN(parsed.getTime()) || isoDate(parsed) !== value) return false
-  return value >= earliestPreferredDeliveryDate(now, s) && value <= latestPreferredDeliveryDate(now, s)
+  if (isNoDeliveryDay(value)) return false
+  return value >= earliestPreferredDeliveryDate(now, s, far) && value <= latestPreferredDeliveryDate(now, s)
+}
+
+/**
+ * What is wrong with a chosen day, as one sentence for the customer, or null.
+ * Checkout's form, its server action and place_order's refusals all say it
+ * the same way.
+ */
+export function preferredDeliveryDateProblem(value: string, now: Date = new Date(), s: DeliveryDateSettings = DEFAULT_SHOP_SETTINGS, far = false): string | null {
+  if (isValidPreferredDeliveryDate(value, now, s, far)) return null
+  if (isNoDeliveryDay(value)) return 'We don’t deliver on Mondays. Please choose another day.'
+  if (ISO_DATE.test(value) && value > latestPreferredDeliveryDate(now, s)) {
+    return `Please choose a day no later than ${formatPreferredDeliveryDate(latestPreferredDeliveryDate(now, s), now)}.`
+  }
+  return `Please choose a day from ${formatPreferredDeliveryDate(earliestPreferredDeliveryDate(now, s, far), now)} onwards.`
 }
 
 /**

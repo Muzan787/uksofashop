@@ -10,7 +10,7 @@ import CoverageMap from '@/components/Editorial/CoverageMap'
 import { RE_DELIVERY_FEE } from '@/constants/delivery'
 import { getShopSettings } from '@/utils/shopSettingsServer'
 import { gbpFigure, type ShopSettings } from '@/utils/shopSettings'
-import { CANCELLATION, PROMISES } from '@/constants/promises'
+import { CANCELLATION, DELIVERY_DAYS, PROMISES } from '@/constants/promises'
 import { ADDRESS_LINE, PHONE_DISPLAY, PHONE_HREF, SUPPORT_EMAIL } from '@/constants/contact'
 
 /**
@@ -20,8 +20,8 @@ import { ADDRESS_LINE, PHONE_DISPLAY, PHONE_HREF, SUPPORT_EMAIL } from '@/consta
  */
 // timingShort rather than timingLong: with the long form this ran to 236
 // characters and was truncated before the returns clause, which is the half
-// of the page people search for. The Wales and Scotland exception is on the
-// page itself, where somebody checking their own postcode will be looking.
+// of the page people search for. The 5-7 day areas are on the page itself,
+// where somebody checking their own postcode will be looking.
 const DESCRIPTION =
   `${PROMISES.delivery.short}. ${PROMISES.delivery.timingShort}. Pay on the doorstep, plus the damage procedure and your 14-day right to change your mind.`
 
@@ -53,17 +53,17 @@ const chargesFor = (s: ShopSettings) => [
   {
     label: 'Delivery to Devon or the Aberdeen area',
     price: '£40',
-    note: 'Added at checkout from your postcode',
+    note: `Added at checkout from your postcode. Takes ${DELIVERY_DAYS.far}`,
   },
   {
     label: 'Delivery to Cornwall or the Scottish Highlands',
     price: '£80',
-    note: 'Includes Inverness, Moray and North East Scotland beyond 250 miles',
+    note: `Includes Inverness, Moray and North East Scotland beyond 250 miles. Takes ${DELIVERY_DAYS.far}`,
   },
   {
     label: 'Delivery to the far north of Scotland',
     price: '£100',
-    note: 'Caithness and Sutherland, including Thurso and Wick',
+    note: `Caithness and Sutherland, including Thurso and Wick. Takes ${DELIVERY_DAYS.far}`,
   },
   {
     label: 'Upstairs delivery',
@@ -103,7 +103,7 @@ export default async function DeliveryReturnsPage() {
         headline="Delivery & Returns"
         current="Delivery & returns"
         path="/delivery-returns"
-        updated="2026-10-05"
+        updated="2026-10-17"
         description={DESCRIPTION}
       />
       <EditorialHero
@@ -131,13 +131,15 @@ export default async function DeliveryReturnsPage() {
           mainland pay by distance from our Blackburn showroom: £40 to Devon and the Aberdeen area,
           £80 to Cornwall and the Scottish Highlands, and £100 to the far north of Scotland. The
           exact figure for your postcode is shown on every product page and at checkout, before you
-          order. Most UK Mainland orders arrive in two to four working days. Some Wales and Scotland
-          postcodes take five to seven working days.
+          order. Most of the UK gets delivery in two to four days. Devon, Cornwall, the Aberdeen
+          area and the north of Scotland take five to seven days. We deliver Tuesday to Sunday,
+          weekends included; there are no deliveries on Mondays.
         </p>
         <p>
-          Northern Ireland, the Isle of Man and the Scottish Islands sit outside that service. They
-          are not refused; we simply do not quote for them automatically, so please get in touch
-          before ordering and we will arrange delivery for you.
+          We take website orders for UK Mainland only. Northern Ireland, the Isle of Man, the
+          Channel Islands, the Scottish islands, the Isle of Wight and the Isles of Scilly sit
+          outside that service, so please get in touch before ordering and we will give you the
+          details for your address.
         </p>
 
         <CoverageMap />

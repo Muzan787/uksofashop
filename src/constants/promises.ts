@@ -13,6 +13,21 @@
 // Text only, no icons: each surface picks its own icon, so the copy stays
 // framework-agnostic and can also be used in metadata and email.
 
+/**
+ * How long delivery takes, in delivery days - every day but Monday (Muaz,
+ * 2026-10-17: the vans go out Tuesday to Sunday). Most of the UK takes 2-4;
+ * the areas that pay a distance charge (delivery_distance_fees: Devon,
+ * Cornwall, the Aberdeen area, the north of Scotland) take 5-7. The dates the
+ * shop shows are worked out from Admin -> Settings (utils/delivery); keep
+ * these words in step with those figures.
+ */
+export const DELIVERY_DAYS = {
+  usual: '2–4 days',
+  far: '5–7 days',
+  /** Where the longer window applies, as a customer would say it. */
+  farAreas: 'Devon, Cornwall, the Aberdeen area and the north of Scotland',
+} as const
+
 export const PROMISES = {
   // Free to most of the UK since 2026-10-12, not to every mainland address:
   // Devon, Cornwall and the north of Scotland pay by distance from
@@ -24,7 +39,7 @@ export const PROMISES = {
     sub: 'Most of the UK, ground floor',
     short: 'Free delivery to most of the UK',
     long: 'Free delivery to most of the UK, brought to the ground floor or a ground-floor room of your choice.',
-    timingShort: 'Most UK Mainland: 2–4 working days',
+    timingShort: `Most of the UK: ${DELIVERY_DAYS.usual}`,
     /**
      * The timing clause as it reads inside a meta description, where
      * timingLong does not fit: four category descriptions interpolated it and
@@ -32,9 +47,11 @@ export const PROMISES = {
      * the delivery promise was the part that got dropped. Short enough to
      * survive, and still the only place the figure is written.
      */
-    timingMeta: 'most orders in 2–4 working days',
-    timingException: 'Some Wales and Scotland postcodes take 5–7 working days.',
-    timingLong: 'Most UK Mainland orders arrive in 2–4 working days. Some Wales and Scotland postcodes take 5–7 working days.',
+    timingMeta: `most orders in ${DELIVERY_DAYS.usual}`,
+    timingException: `${DELIVERY_DAYS.farAreas} take ${DELIVERY_DAYS.far}.`,
+    timingLong: `Most of the UK gets delivery in ${DELIVERY_DAYS.usual}, and ${DELIVERY_DAYS.farAreas} in ${DELIVERY_DAYS.far}. We deliver Tuesday to Sunday, not on Mondays.`,
+    /** The one day there is no delivery, said plainly. */
+    deliveryDays: 'We deliver Tuesday to Sunday - no deliveries on Mondays.',
   },
   guarantee: {
     label: '1-Year Guarantee',
@@ -82,7 +99,7 @@ export const ANNOUNCEMENTS = [
   'Free Delivery to Most of the UK',
   'Fabric Sofas Made to Your Own Size and Colour',
   'Pay Cash or by Bank Transfer on Delivery',
-  'Most UK Mainland Orders: 2-4 Working Days',
+  'Delivery in 2-4 Days to Most of the UK',
 ] as const
 
 /**

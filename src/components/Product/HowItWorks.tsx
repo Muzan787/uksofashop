@@ -27,9 +27,10 @@ import type { DeliveryWindow } from '@/utils/delivery';
  * word, so this block cannot drift from the footer, checkout or delivery page.
  *
  * The delivery dates are worked out on the server - `deliveryWindow()` turns
- * the 2–4-working-day mainland window into two calendar dates, qualified by
- * the Wales/Scotland exception because no regional postcode mapping exists.
- * Roma models carry their own longer notice instead.
+ * the 2–4 day window for most of the UK into two calendar dates (never a
+ * Monday), qualified by the 5–7 days the charged areas take; the postcode
+ * check below gives that area's own dates. Roma models carry their own longer
+ * notice instead.
  */
 export default function HowItWorks({ estimate, madeToOrder }: {
   estimate: DeliveryWindow;
@@ -62,7 +63,7 @@ export default function HowItWorks({ estimate, madeToOrder }: {
             <span className="block text-ink-900">{ROMA_DELIVERY_NOTICE}</span>
           ) : (
             <span className="block font-semibold text-ink-900">
-              Most UK Mainland: arrives{' '}
+              Most of the UK: arrives{' '}
               <time dateTime={estimate.fromISO} className="font-data tabular-nums">{from}</time>
               {' – '}
               <time dateTime={estimate.toISO} className="font-data tabular-nums">{to}</time>
@@ -70,7 +71,7 @@ export default function HowItWorks({ estimate, madeToOrder }: {
           )}
           <span className="mt-1 block">{PROMISES.delivery.long} {PROMISES.payment.long}</span>
           {!isRoma && (
-            <span className="mt-1 block text-caption">{PROMISES.delivery.timingException}</span>
+            <span className="mt-1 block text-caption">{PROMISES.delivery.timingException} {PROMISES.delivery.deliveryDays}</span>
           )}
           {/* The exception to "free", said where the promise is made. The
               exact figure for a postcode is in the check further down. */}

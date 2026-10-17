@@ -206,6 +206,8 @@ export type Database = {
           removal_max_seats: number
           delivery_window_from_days: number
           delivery_window_to_days: number
+          far_window_from_days: number
+          far_window_to_days: number
           preferred_earliest_days: number
           preferred_latest_days: number
           tier_electric: number
@@ -232,6 +234,8 @@ export type Database = {
           removal_max_seats?: number
           delivery_window_from_days?: number
           delivery_window_to_days?: number
+          far_window_from_days?: number
+          far_window_to_days?: number
           preferred_earliest_days?: number
           preferred_latest_days?: number
           tier_electric?: number
@@ -258,6 +262,8 @@ export type Database = {
           removal_max_seats?: number
           delivery_window_from_days?: number
           delivery_window_to_days?: number
+          far_window_from_days?: number
+          far_window_to_days?: number
           preferred_earliest_days?: number
           preferred_latest_days?: number
           tier_electric?: number

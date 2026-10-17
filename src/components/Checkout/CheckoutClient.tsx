@@ -35,7 +35,8 @@ import {
   type DeliveryOptions,
 } from '@/constants/delivery'
 import { isValidUkPostcode, lookupAddresses, normalisePostcode } from '@/utils/postcode'
-import { isValidPreferredDeliveryDate } from '@/utils/delivery'
+import { preferredDeliveryDateProblem } from '@/utils/delivery'
+import { isRomaProduct } from '@/constants/romaAvailability'
 import { useShopSettings } from '@/components/ShopSettingsProvider'
 import { gbpFigure } from '@/utils/shopSettings'
 import { useWhatsAppCTA } from '@/utils/attribution/useWhatsAppCTA'
@@ -414,6 +415,7 @@ function DetailsStep({
   // cancellation notice applies - and the test for the second one lives in
   // utils/cancellationRights.ts rather than here.
   const madeToOrder = hasPersonalisedLine(cartItems)
+  const hasRoma = cartItems.some(item => isRomaProduct(item.title))
   const shop = useShopSettings()
   const extrasTotal = deliveryTotal(extras, shop)
   const offerDiscount = offer?.valid ? offer.discountAmount : 0
@@ -521,7 +523,11 @@ function DetailsStep({
     // "Choose a day" with no day chosen is not an order for as soon as
     // possible - it is a question left unanswered, so it is asked again.
     if (choosingDate && !form.preferredDeliveryDate) errs.preferredDeliveryDate = 'Pick a day, or choose "As soon as possible"'
-    else if (form.preferredDeliveryDate && !isValidPreferredDeliveryDate(form.preferredDeliveryDate, undefined, shop)) errs.preferredDeliveryDate = `That day is too soon - pick one at least ${shop.preferredEarliestDays} days ahead`
+    else if (form.preferredDeliveryDate) {
+      // Never a Monday; and later in a charged area, which takes 5-7 days.
+      const problem = preferredDeliveryDateProblem(form.preferredDeliveryDate, undefined, shop, distanceFee > 0)
+      if (problem) errs.preferredDeliveryDate = problem
+    }
     setErrors(errs)
     return Object.keys(errs).length === 0
   }
@@ -628,6 +634,15 @@ function DetailsStep({
       }
       if (currentDecision?.status === 'unavailable') setServerError(currentDecision.message)
       return
+    }
+    // The postcode may only just have been checked, and a charged area moves
+    // the first day a customer can choose.
+    if (form.preferredDeliveryDate) {
+      const problem = preferredDeliveryDateProblem(form.preferredDeliveryDate, undefined, shop, currentDecision.fee > 0)
+      if (problem) {
+        setErrors(e => ({ ...e, preferredDeliveryDate: problem }))
+        return
+      }
     }
     // The total as the database will compute it - with the distance charge
     // for the postcode just confirmed, which may not be the one the screen
@@ -774,12 +789,22 @@ function DetailsStep({
               className="mt-2 grid grid-rows-[1fr] transition-[grid-template-rows] duration-base ease-out-expo"
               aria-live="polite"
             >
-              <p className="m-0 flex items-center gap-2 overflow-hidden rounded-sm border border-sage-300 bg-sage-50 px-3 py-2 text-body-sm font-semibold text-sage-700">
-                <Check aria-hidden="true" className="h-4 w-4 shrink-0" />
-                {deliveryCheck.fee > 0
-                  ? <>Delivery to {confirmed} ({deliveryCheck.region}): £{deliveryCheck.fee.toFixed(0)}, added to your total</>
-                  : <>FREE delivery to {confirmed}</>}
-              </p>
+              <div className="overflow-hidden rounded-sm border border-sage-300 bg-sage-50 px-3 py-2">
+                <p className="m-0 flex items-center gap-2 text-body-sm font-semibold text-sage-700">
+                  <Check aria-hidden="true" className="h-4 w-4 shrink-0" />
+                  {deliveryCheck.fee > 0
+                    ? <>Delivery to {confirmed} ({deliveryCheck.region}): £{deliveryCheck.fee.toFixed(0)}, added to your total</>
+                    : <>FREE delivery to {confirmed}</>}
+                </p>
+                {/* Roma models have their own 10-14 days, which the delivery
+                    day field already says; the dates here would contradict it. */}
+                {!hasRoma && (
+                  <p className="m-0 mt-1 pl-6 text-caption text-ink-700">
+                    As soon as possible: {deliveryCheck.fee > 0 ? `${shop.farWindowFromDays}–${shop.farWindowToDays}` : `${shop.deliveryWindowFromDays}–${shop.deliveryWindowToDays}`} days,{' '}
+                    <span className="font-semibold text-ink-900">{deliveryCheck.window.label}</span>. No deliveries on Mondays.
+                  </p>
+                )}
+              </div>
             </div>
           )}
           {deliveryCheck?.status === 'unavailable' && !checkingDelivery && (
@@ -792,8 +817,9 @@ function DetailsStep({
                 Custom delivery quote needed for {deliveryCheck.postcode}
               </p>
               <p className="m-0 mt-1 text-caption leading-relaxed text-ink-500">
-                We may still be able to deliver to you. Standard online checkout covers UK Mainland,
-                so this address needs a custom delivery quote first.
+                We take website orders for UK mainland only. For the islands, Northern Ireland and
+                anywhere off the mainland, message us on WhatsApp and we&apos;ll give you the details
+                and the delivery charge before you order.
               </p>
             </div>
           )}
@@ -854,6 +880,7 @@ function DetailsStep({
             if (errors.preferredDeliveryDate) setErrors(e => { const n = { ...e }; delete n.preferredDeliveryDate; return n })
           }}
           error={errors.preferredDeliveryDate}
+          far={distanceFee > 0}
         />
 
         <details className="rounded-sm border border-calico-300 bg-calico-50">
@@ -1007,7 +1034,7 @@ function DetailsStep({
         </div>
         <p className="mb-3 text-caption leading-relaxed text-ink-500">
           Nothing is taken now. For a UK Mainland order, you pay once your sofa has arrived and you&apos;re happy with it.
-          For a custom-quote destination, we agree the delivery charge with you first.
+          Website orders are for UK mainland only; anywhere else, we agree the details with you on WhatsApp first.
         </p>
 
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -1082,7 +1109,7 @@ function DetailsStep({
         <div className="rounded-md border border-calico-300 bg-calico-100 p-4 sm:p-5">
           <p className="m-0 text-body font-bold text-ink-900">Let&apos;s confirm delivery first</p>
           <p className="m-0 mt-2 text-body-sm leading-relaxed text-ink-500">
-            We may still be able to deliver to your postcode. Your basket, configuration and online product offer stay unchanged; only the delivery charge and availability need confirming.
+            We take website orders for UK mainland only. Message us and we&apos;ll give you the details for your postcode. Your basket, configuration and online product offer stay unchanged; only the delivery charge and availability need confirming.
           </p>
           <a
             href={deliveryQuoteCta.href}

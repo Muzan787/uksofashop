@@ -133,7 +133,7 @@ export function webSiteSchema() {
 // ─── Product ─────────────────────────────────────────────────────────────────
 
 /**
- * Free to most of UK Mainland, ground floor, 2-4 working days. The paid extras
+ * Free to most of UK Mainland, ground floor, 2-4 days (5-7 in the charged areas). The paid extras
  * (upstairs, assembly, old sofa removal) are deliberately not modelled here:
  * they're optional services chosen at checkout, not a shipping rate, and
  * putting them in shippingRate would misstate the delivery price.
@@ -161,8 +161,8 @@ function shippingDetails() {
     deliveryTime: {
       '@type': 'ShippingDeliveryTime',
       handlingTime: { '@type': 'QuantitativeValue', minValue: 0, maxValue: 1, unitCode: 'DAY' },
-      // 2-4 working days on most of UK Mainland, 5-7 on some Wales and
-      // Scotland postcodes - so the range is 2-7. It said 2-4, which is the
+      // 2-4 days on most of UK Mainland, 5-7 in the areas that pay a distance
+      // charge (Devon, Cornwall, the north of Scotland) - so the range is 2-7. It said 2-4, which is the
       // headline figure rather than the whole promise, and a delivery estimate
       // in a Shopping result that the order then misses is the one kind of
       // inaccuracy Google acts on. PROMISES.delivery.timingLong is the source.

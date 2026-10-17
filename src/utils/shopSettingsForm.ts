@@ -13,6 +13,7 @@ export type FigureKey =
   | 'upstairs_first_floor' | 'upstairs_per_extra_floor' | 'max_floor' | 'assembly_fee'
   | 'removal_per_seat' | 'removal_min_seats' | 'removal_default_seats' | 'removal_max_seats'
   | 'delivery_window_from_days' | 'delivery_window_to_days'
+  | 'far_window_from_days' | 'far_window_to_days'
   | 'preferred_earliest_days' | 'preferred_latest_days'
   | 'tier_electric' | 'tier_roma' | 'tier_standard' | 'tier_excluded'
   | 'offer_window_hours' | 'sample_limit'
@@ -55,10 +56,12 @@ export const FIGURE_GROUPS: FigureGroup[] = [
   {
     id: 'dates',
     title: 'Delivery dates',
-    intro: 'The window the shop quotes, and the days a customer may ask for at checkout.',
+    intro: 'The windows the shop quotes, and the days a customer may ask for at checkout. Days are counted without Mondays, when there is no delivery.',
     fields: [
-      { key: 'delivery_window_from_days', label: 'Delivery window starts', kind: 'whole', min: 0, max: 60, unit: 'working days', hint: 'The "2-4 working days" on the product page and at checkout.' },
-      { key: 'delivery_window_to_days', label: 'Delivery window ends', kind: 'whole', min: 0, max: 60, unit: 'working days' },
+      { key: 'delivery_window_from_days', label: 'Delivery window starts', kind: 'whole', min: 0, max: 60, unit: 'delivery days', hint: 'The dates shown for most of the UK, on the product page and at checkout.' },
+      { key: 'delivery_window_to_days', label: 'Delivery window ends', kind: 'whole', min: 0, max: 60, unit: 'delivery days' },
+      { key: 'far_window_from_days', label: 'Charged areas: window starts', kind: 'whole', min: 0, max: 60, unit: 'delivery days', hint: 'Devon, Cornwall, the Aberdeen area and the north of Scotland - the postcodes that pay a distance charge.' },
+      { key: 'far_window_to_days', label: 'Charged areas: window ends', kind: 'whole', min: 0, max: 60, unit: 'delivery days', hint: 'Also the earliest day a customer there can choose.' },
       { key: 'preferred_earliest_days', label: 'Earliest day a customer can choose', kind: 'whole', min: 0, max: 365, unit: 'days from today' },
       { key: 'preferred_latest_days', label: 'Latest day a customer can choose', kind: 'whole', min: 1, max: 365, unit: 'days from today' },
     ],
@@ -109,6 +112,8 @@ export function figuresFromSettings(s: ShopSettings): Record<FigureKey, string> 
     removal_max_seats: n(s.removalMaxSeats),
     delivery_window_from_days: n(s.deliveryWindowFromDays),
     delivery_window_to_days: n(s.deliveryWindowToDays),
+    far_window_from_days: n(s.farWindowFromDays),
+    far_window_to_days: n(s.farWindowToDays),
     preferred_earliest_days: n(s.preferredEarliestDays),
     preferred_latest_days: n(s.preferredLatestDays),
     tier_electric: n(s.tierAmounts.ELECTRIC),
@@ -144,6 +149,9 @@ export function checkFigures(raw: Partial<Record<string, unknown>>): FiguresChec
   }
   if (figures.delivery_window_to_days < figures.delivery_window_from_days) {
     return { ok: false, field: 'delivery_window_to_days', text: SETTINGS_REFUSALS.WINDOW_ORDER }
+  }
+  if (figures.far_window_to_days < figures.far_window_from_days) {
+    return { ok: false, field: 'far_window_to_days', text: SETTINGS_REFUSALS.WINDOW_ORDER }
   }
   if (figures.preferred_latest_days <= figures.preferred_earliest_days) {
     return { ok: false, field: 'preferred_latest_days', text: SETTINGS_REFUSALS.DATES_ORDER }
