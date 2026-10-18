@@ -2,7 +2,7 @@ const {test}=require('node:test'),assert=require('node:assert/strict')
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm')
 const {PGlite}=require('@electric-sql/pglite'),ts=require('typescript')
 const root=path.join(__dirname,'..'),read=p=>fs.readFileSync(path.join(root,p),'utf8')
-const migration=read('supabase/migrations/20261018103544_google_reporting_holds_and_sessions.sql')
+const migration=read('supabase/migrations/20261018104539_google_reporting_holds_and_sessions.sql')
 const oid='11111111-1111-4111-8111-111111111111',rid='22222222-2222-4222-8222-222222222222'
 function load(file,mocks={}) {const m={exports:{}};vm.runInNewContext(ts.transpileModule(read(file),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,{module:m,exports:m.exports,require(n){if(n in mocks)return mocks[n];throw Error(n)},Date,Number,Math,Promise});return m.exports}
 const session=load('src/utils/googleSession.ts')
