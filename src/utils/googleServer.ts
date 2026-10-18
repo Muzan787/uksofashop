@@ -4,6 +4,7 @@ import { GOOGLE_GTM_ENABLED, type GoogleOrderReceipt, type GoogleItem } from './
 import { clientIdFromGaCookie, sendGa4Event, isGa4ServerConfigured } from './ga4Server'
 import { isServerTrackingEnabled } from './trackingEnv'
 import { getTrackingMode } from './trackingMode'
+import { googlePurchaseSession } from './googleSession'
 
 /** Prices and discounts come from the committed database record, never cart state. */
 export async function googleOrderReceipt(orderId:string):Promise<GoogleOrderReceipt|null> {
@@ -47,8 +48,13 @@ export async function reportGooglePurchase(orderId:string):Promise<void> {
       await db.from('google_ga4_delivery').update({status:'held',error_code:'missing_receipt_or_client'}).eq('order_id',orderId)
       return
     }
+    const {data:attachment}=await db.from('google_order_consent').select('receipt_id').eq('order_id',orderId).maybeSingle()
+    const context=attachment?.receipt_id
+      ? (await db.from('google_consent_receipts').select('ga_session_id,ga_session_client_id').eq('id',attachment.receipt_id).maybeSingle()).data
+      : null
+    const session=googlePurchaseSession(context?.ga_session_id,context?.ga_session_client_id,clientId,c.conversion_time)
     const result=await sendGa4Event({clientId,name:'purchase',timestampMicros:Math.floor(Date.parse(c.conversion_time)*1000),
-      consent:{ad_user_data:c.ad_user_data,ad_personalization:c.ad_personalization},params:{...receipt.commerce,transaction_id:receipt.reference}})
+      consent:{ad_user_data:c.ad_user_data,ad_personalization:c.ad_personalization},params:{...receipt.commerce,...session,transaction_id:receipt.reference}})
     await db.from('google_ga4_delivery').update({status:result==='transport_accepted'?'transport_accepted':'ambiguous',completed_at:new Date().toISOString()}).eq('order_id',orderId)
   } catch { /* Google never blocks the order or Meta */ }
 }

@@ -10,7 +10,7 @@
 // selected and you would lose your place.
 
 export type AdminSectionKey =
-  | 'home' | 'orders' | 'meta' | 'leads' | 'journeys'
+  | 'home' | 'orders' | 'meta' | 'google' | 'leads' | 'journeys'
   | 'catalogue' | 'inventory' | 'categories' | 'reviews' | 'videos' | 'status' | 'settings' | 'adlinks'
 
 export interface AdminSection {
@@ -28,6 +28,7 @@ export const ADMIN_SECTIONS: AdminSection[] = [
   { key: 'home',       href: '/admin',            label: 'Home' },
   { key: 'orders',     href: '/admin/orders',     label: 'Orders' },
   { key: 'meta',       href: '/admin/meta',       label: 'Meta' },
+  { key: 'google',     href: '/admin/google',     label: 'Google' },
   { key: 'leads',      href: '/admin/leads',      label: 'Leads' },
   { key: 'journeys',   href: '/admin/journeys',   label: 'Journeys' },
   { key: 'catalogue',  href: '/admin/catalogue',  label: 'Catalogue' },
@@ -64,7 +65,7 @@ export const MORE_HREF = '/admin/more'
 
 /** The sections reached through More on a phone, in the More page's order. */
 export const MORE_SECTION_KEYS: AdminSectionKey[] = [
-  'meta', 'journeys', 'reviews', 'videos', 'status', 'settings', 'adlinks',
+  'meta', 'google', 'journeys', 'reviews', 'videos', 'status', 'settings', 'adlinks',
 ]
 
 /** The sections the phone's Catalogue tab covers: the hub, products and categories. */

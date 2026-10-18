@@ -20,6 +20,7 @@ const SECTION_ICONS: Record<AdminSectionKey, LucideIcon> = {
   home: LayoutDashboard,
   orders: ShoppingCart,
   meta: Radio,
+  google: Activity,
   leads: UsersRound,
   journeys: Route,
   catalogue: LayoutGrid,

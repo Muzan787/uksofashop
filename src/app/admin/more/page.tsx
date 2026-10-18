@@ -17,6 +17,7 @@ export const dynamic = 'force-dynamic'
 
 const ICONS: Partial<Record<AdminSectionKey, LucideIcon>> = {
   meta: Radio,
+  google: Activity,
   journeys: Route,
   reviews: Star,
   videos: Clapperboard,
@@ -62,6 +63,7 @@ export default async function AdminMorePage() {
             waiting: true,
           },
     journeys: { text: 'What visitors do on the site', waiting: false },
+    google: { text: 'Purchase reporting, offline queue and conversion holds', waiting: false },
     reviews: reviewCount > 0
       ? { text: `${reviewCount} waiting`, waiting: true }
       : { text: 'Nothing waiting', waiting: false },

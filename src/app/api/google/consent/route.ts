@@ -7,6 +7,9 @@ import { callerKey, rateLimit } from '@/utils/rateLimit'
 import { isProductionRequestHost, isServerTrackingEnabled } from '@/utils/trackingEnv'
 import { isExcludedRequest } from '@/utils/trackingExclusion'
 import { GOOGLE_GTM_ENABLED, GOOGLE_POLICY_VERSION } from '@/utils/googleMeasurement'
+import { GA_ID } from '@/utils/consentMode'
+import { googleSessionId } from '@/utils/googleSession'
+import { clientIdFromGaCookie } from '@/utils/ga4Server'
 const state=z.enum(['granted','denied'])
 const schema=z.object({id:z.string().uuid(),value:state,reason:z.enum(['granted','denied','revoked']),
   captured_at:z.iso.datetime(),policy_version:z.literal(GOOGLE_POLICY_VERSION),surface:z.literal('cookie_banner'),
@@ -48,9 +51,18 @@ export async function POST(req:Request) {
   // A restored decision retains its original capture time while each session gets its own receipt.
   const hex=createHash('sha256').update([p.id,vid.data,sid.data,aid.data].join(':')).digest('hex').slice(0,32)
   const receiptId=`${hex.slice(0,8)}-${hex.slice(8,12)}-4${hex.slice(13,16)}-a${hex.slice(17,20)}-${hex.slice(20)}`
-  const {error}=await createUntypedAdminClient().from('google_consent_receipts').upsert({id:receiptId,decision_id:p.id,visitor_id:vid.data,session_id:sid.data,arrival_id:aid.data,
+  const db=createUntypedAdminClient()
+  const {error}=await db.from('google_consent_receipts').upsert({id:receiptId,decision_id:p.id,visitor_id:vid.data,session_id:sid.data,arrival_id:aid.data,
     ...p.consent,captured_at:p.captured_at,policy_version:p.policy_version,surface:p.surface,reason:p.reason},{onConflict:'id',ignoreDuplicates:true})
   if(error) return done(503)
+  // The bounded retry may arrive after Google creates its cookies. Fill once,
+  // only on an explicit grant; a later visit cannot replace the original pair.
+  if(p.value==='granted') {
+    const gaSession=googleSessionId(jar.get('_ga_'+GA_ID.slice(2))?.value)
+    const gaClient=clientIdFromGaCookie(jar.get('_ga')?.value)
+    if(gaSession && gaClient) await db.from('google_consent_receipts')
+      .update({ga_session_id:gaSession,ga_session_client_id:gaClient}).eq('id',receiptId).is('ga_session_id',null)
+  }
   jar.set('ukss_google_consent_receipt',receiptId,{httpOnly:true,secure:true,sameSite:'lax',path:'/',maxAge:365*86400})
   return done()
 }
