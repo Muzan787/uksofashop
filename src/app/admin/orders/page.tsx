@@ -83,7 +83,7 @@ export default async function AdminOrdersPage(props: { searchParams: SearchParam
   let query = supabase
     .from('orders')
     .select(
-      'id, status, source, channel, has_made_to_order, is_test, test_reason, customer_name, customer_phone, shipping_address, total_amount, created_at, preferred_delivery_date, order_items ( quantity )',
+      'id, status, source, channel, utm_source, manual_acquisition_source, gclid, gbraid, wbraid, fbclid, has_made_to_order, is_test, test_reason, customer_name, customer_phone, shipping_address, total_amount, created_at, preferred_delivery_date, order_items ( quantity )',
       { count: 'exact' },
     )
 

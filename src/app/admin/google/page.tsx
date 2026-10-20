@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
 import { requireAdmin } from '@/utils/auth'
 import { createUntypedAdminClient } from '@/utils/supabase/admin'
 import { dualTimeText } from '@/utils/adminTime'
@@ -6,17 +7,18 @@ import { dualTimeText } from '@/utils/adminTime'
 export const dynamic = 'force-dynamic'
 export const metadata: Metadata = { title: 'Google conversions', robots: { index: false, follow: false } }
 
-type Order = { id: string; status: string; source: string | null; utm_source: string | null; utm_campaign: string | null }
+type Order = { id: string; status: string; source: string | null; utm_source: string | null; utm_campaign: string | null; manual_acquisition_source: string | null; gclid: string | null; gbraid: string | null; wbraid: string | null }
 type Offline = { id: string; order_id: string; stage: string; conversion_time: string; value: number; status: string; google_import_status: string; sheet_synced_at: string | null; orders: Order | Order[] | null }
 type Analytics = { order_id: string; conversion_time: string; status: string; error_code: string | null }
 const orderOf = (row: Offline) => Array.isArray(row.orders) ? row.orders[0] : row.orders
 const reference = (id: string) => id.slice(0, 8).toUpperCase()
+const googleOrigin = (order: Order | null) => Boolean(order && (order.manual_acquisition_source === 'google' || (order.utm_source === 'google' && (order.gclid || order.gbraid || order.wbraid))))
 
 export default async function GoogleConversions() {
   await requireAdmin()
   const db = createUntypedAdminClient()
   const [outbox, analytics, holds, sync] = await Promise.all([
-    db.from('google_conversion_outbox').select('id,order_id,stage,conversion_time,value,status,google_import_status,sheet_synced_at,orders(id,status,source,utm_source,utm_campaign)').order('conversion_time', { ascending: false }).limit(501),
+    db.from('google_conversion_outbox').select('id,order_id,stage,conversion_time,value,status,google_import_status,sheet_synced_at,orders(id,status,source,utm_source,utm_campaign,manual_acquisition_source,gclid,gbraid,wbraid)').order('conversion_time', { ascending: false }).limit(501),
     db.from('google_ga4_delivery').select('order_id,conversion_time,status,error_code').order('conversion_time', { ascending: false }).limit(501),
     db.from('meta_signal_holds').select('order_id,state').limit(5001),
     db.from('google_sheet_sync_runs').select('completed_at,verified_count').eq('status', 'verified').order('completed_at', { ascending: false }).limit(1),
@@ -32,6 +34,11 @@ export default async function GoogleConversions() {
   return <div className="mx-auto max-w-6xl space-y-6">
     <header><h1 className="text-3xl font-bold">Google conversions</h1>
       <p className="mt-2 text-stone-600">Website and WhatsApp orders share the same consent and conversion-hold checks. A Google click or campaign link is acquisition evidence; it does not prove Google Ads credited the order.</p></header>
+    <nav className="flex flex-wrap gap-3 text-sm" aria-label="Google conversion actions">
+      <Link className="rounded border bg-white px-3 py-2 font-semibold underline" href="/admin/google">Refresh Google status</Link>
+      <a className="rounded border bg-white px-3 py-2 font-semibold underline" href="https://docs.google.com/spreadsheets/d/18rbA__A2xyMk02EjXHqIFCq4g_CRRFlUrdqL9c0butU/edit#gid=2021732675" target="_blank" rel="noopener noreferrer">Open import Sheet</a>
+      <a className="rounded border bg-white px-3 py-2 font-semibold underline" href="https://ads.google.com/" target="_blank" rel="noopener noreferrer">Open Google Ads</a>
+    </nav>
     {failed && <p role="alert" className="rounded border border-red-300 bg-red-50 p-4">Some Google records could not be loaded. Counts below may be incomplete; do not treat missing rows as zero.</p>}
     {limited && <p role="status">Showing the latest 500 records per stream. Counts cover this selection only.</p>}
     <section className="grid gap-3 sm:grid-cols-3" aria-label="Reporting summary">
@@ -48,14 +55,14 @@ export default async function GoogleConversions() {
     </section>
     <section className="overflow-x-auto rounded border bg-white p-4">
       <h2 className="mb-3 text-xl font-semibold">Offline confirmed and delivered orders</h2>
-      <table className="w-full text-left text-sm"><thead><tr><th scope="col">Order</th><th scope="col">Stage / time (UK · PK)</th><th scope="col">Value</th><th scope="col">Source evidence</th><th scope="col">Queue / sheet</th><th scope="col">Internal import flag</th></tr></thead>
+      <table className="w-full text-left text-sm"><thead><tr><th scope="col">Order</th><th scope="col">Stage / time (UK · PK)</th><th scope="col">Value</th><th scope="col">Source evidence</th><th scope="col">Queue / sheet</th><th scope="col">Internal import flag</th><th scope="col">Review</th></tr></thead>
         <tbody>{rows.slice(0, 500).map(r => { const order = orderOf(r); return <tr className="border-t align-top" key={r.id}>
           <th scope="row" className="py-3 pr-3">{reference(r.order_id)}<span className="block font-normal">{order?.status ?? 'Order unavailable'}</span></th>
           <td className="py-3 pr-3">{r.stage}<span className="block">{dualTimeText(r.conversion_time)}</span></td>
           <td className="py-3 pr-3">{new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(Number(r.value))}</td>
-          <td className="py-3 pr-3">{order?.utm_source || 'Unattributed'} · {order?.source || 'unknown'}<span className="block break-all">{order?.utm_campaign || 'No campaign recorded'}</span></td>
+          <td className="py-3 pr-3">{order?.utm_source || 'Unattributed'} · {order?.source || 'unknown'}{googleOrigin(order) && <span className="block font-semibold text-sky-700">Google acquisition identified</span>}<span className="block break-all">{order?.utm_campaign || 'No campaign recorded'}</span></td>
           <td className="py-3 pr-3">{held.has(r.order_id) ? `Blocked: ${held.get(r.order_id)}` : blocked(r) ? 'Blocked: cancelled' : r.status}<span className="block">{r.sheet_synced_at ? dualTimeText(r.sheet_synced_at) : 'Not synced'}</span></td>
-          <td className="py-3">{r.google_import_status.replaceAll('_', ' ')}</td>
+          <td className="py-3">{r.google_import_status.replaceAll('_', ' ')}</td><td className="py-3"><Link className="text-blue-700 underline" href={`/admin/orders/${r.order_id}`}>Review order / source</Link></td>
         </tr> })}</tbody></table>
       {!rows.length && !outbox.error && <p>No offline conversion records.</p>}
     </section>

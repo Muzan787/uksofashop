@@ -188,7 +188,7 @@ export default function OrderView({ order, events, sends, reviewLinks, pickers, 
     : order.shipping_address
   const extrasFromCheckout = Number(order.fee_distance ?? 0) + Number(order.fee_upstairs ?? 0) + Number(order.fee_assembly ?? 0) + Number(order.fee_sofa_removal ?? 0)
   const agreedDelivery = Number(order.delivery_total ?? 0) > 0 && extrasFromCheckout === 0
-  const metaAttributed = order.utm_source === 'meta' || order.manual_acquisition_source === 'meta' || order.purchase_event_sent_at || order.delivered_event_sent_at
+  const googleAttributed = order.manual_acquisition_source === 'google' || (!order.manual_acquisition_source && order.utm_source === 'google' && Boolean(order.gclid || order.gbraid || order.wbraid) && !order.fbclid)
   const corrections = movesFrom(status)
 
   return (
@@ -220,11 +220,8 @@ export default function OrderView({ order, events, sends, reviewLinks, pickers, 
         </div>
         <div className="mt-2 flex flex-wrap gap-1.5">
           <OrderTags order={order} long />
-          {metaAttributed && (
-            <span className="inline-flex items-center rounded-pill border border-blue-200 bg-blue-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-blue-800">Meta attributed</span>
-          )}
           {order.purchase_event_sent_at && (
-            <span className="inline-flex items-center rounded-pill border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-800">Meta purchase sent</span>
+            <span className="inline-flex items-center rounded-pill border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-800">Meta purchase sent{googleAttributed ? ' (historical, not acquisition)' : ''}</span>
           )}
           {order.delivered_event_sent_at && (
             <span className="inline-flex items-center rounded-pill border border-green-200 bg-green-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-green-800">Meta delivery sent</span>

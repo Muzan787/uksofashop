@@ -29,6 +29,12 @@ export interface ListOrder {
   id: string
   status: string | null
   source: string | null
+  utm_source: string | null
+  manual_acquisition_source: string | null
+  gclid: string | null
+  gbraid: string | null
+  wbraid: string | null
+  fbclid: string | null
   channel: string | null
   has_made_to_order: boolean | null
   is_test: boolean | null

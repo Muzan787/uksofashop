@@ -27,6 +27,15 @@ const tag = 'inline-flex items-center rounded-pill border px-2.5 py-1 text-[10px
 
 export interface TaggableOrder {
   source: string | null
+  utm_source?: string | null
+  manual_acquisition_source?: string | null
+  gclid?: string | null
+  gbraid?: string | null
+  wbraid?: string | null
+  fbclid?: string | null
+  preferred_delivery_date?: string | null
+  created_at?: string | null
+  status?: string | null
   channel?: string | null
   has_made_to_order?: boolean | null
   is_test?: boolean | null
@@ -36,11 +45,20 @@ export interface TaggableOrder {
 /** Where it came from (if not the website), made to order, and Test. */
 export function OrderTags({ order, long = false }: { order: TaggableOrder; long?: boolean }) {
   const channel = order.channel ?? (order.source === 'whatsapp' ? 'whatsapp' : null)
+  const override = order.manual_acquisition_source?.toLowerCase()
+  const google = override === 'google' || (!override && order.utm_source?.toLowerCase() === 'google' && Boolean(order.gclid || order.gbraid || order.wbraid) && !order.fbclid)
+  const meta = !google && (override === 'meta' || (!override && ['fb','ig','meta','facebook','instagram'].includes((order.utm_source || '').toLowerCase())))
+  const futureRequested = Boolean(order.preferred_delivery_date && order.created_at &&
+    Date.parse(order.preferred_delivery_date + 'T12:00:00Z') - Date.parse(order.created_at) > 14 * 86400 * 1000 &&
+    !['delivered','cancelled'].includes(order.status || ''))
   return (
     <>
       {channel === 'whatsapp' && <span className={`${tag} border-green-200 bg-green-50 text-green-800`}>WhatsApp</span>}
       {channel === 'phone' && <span className={`${tag} border-sky-200 bg-sky-50 text-sky-800`}>Phone</span>}
       {!channel && <span className={`${tag} border-stone-200 bg-stone-50 text-stone-600`}>Website</span>}
+      {google && <span className={`${tag} border-sky-200 bg-sky-50 text-sky-800`}>Google attributed (click evidence)</span>}
+      {meta && <span className={`${tag} border-blue-200 bg-blue-50 text-blue-800`}>Meta ad origin</span>}
+      {futureRequested && <span className={`${tag} border-amber-200 bg-amber-50 text-amber-900`}>Future delivery request · reconfirm</span>}
       {order.has_made_to_order && (
         <span className={`${tag} border-amber-200 bg-amber-50 text-amber-800`}>
           {long ? 'Made to order: ring to confirm' : 'Made to order'}
