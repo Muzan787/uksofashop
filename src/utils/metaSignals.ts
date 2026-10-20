@@ -6,6 +6,12 @@
 
 export interface MetaSignalOrder {
   status: string | null
+  utm_source?: string | null
+  manual_acquisition_source?: string | null
+  gclid?: string | null
+  gbraid?: string | null
+  wbraid?: string | null
+  fbclid?: string | null
   confirmed_at: string | null
   delivered_at: string | null
   purchase_event_sent_at: string | null
@@ -19,19 +25,27 @@ export interface MetaSignalOrder {
 
 /** The fields the rules below read, for a select(). */
 export const META_SIGNAL_COLUMNS =
-  'status, confirmed_at, delivered_at, purchase_event_sent_at, delivered_event_sent_at, utm_campaign, cancellation_reason, is_test, meta_signal_holds(state)'
+  'status, utm_source, manual_acquisition_source, gclid, gbraid, wbraid, fbclid, confirmed_at, delivered_at, purchase_event_sent_at, delivered_event_sent_at, utm_campaign, cancellation_reason, is_test, meta_signal_holds(state)'
 
 /** A test order never sends a conversion (admin upgrade F5). */
 export function isQa(order: MetaSignalOrder): boolean {
   return order.is_test === true
 }
 
+/** Google-only acquisition must not produce NEW Meta Purchase or delivery signals. */
+export function isGoogleOnlyAcquisition(order: MetaSignalOrder): boolean {
+  const override = order.manual_acquisition_source?.toLowerCase()
+  if (override) return override === 'google'
+  return order.utm_source?.toLowerCase() === 'google' &&
+    Boolean(order.gclid || order.gbraid || order.wbraid) && !order.fbclid
+}
+
 export function purchaseEligible(order: MetaSignalOrder): boolean {
-  return Boolean(order.confirmed_at) && order.status !== 'cancelled' && !isQa(order)
+  return Boolean(order.confirmed_at) && order.status !== 'cancelled' && !isQa(order) && !isGoogleOnlyAcquisition(order)
 }
 
 export function deliveredEligible(order: MetaSignalOrder): boolean {
-  return order.status === 'delivered' && Boolean(order.delivered_at) && !isQa(order)
+  return order.status === 'delivered' && Boolean(order.delivered_at) && !isQa(order) && !isGoogleOnlyAcquisition(order)
 }
 
 /** 'hold' or 'dont_send' when an admin has stopped this order's Meta signals, else null. */

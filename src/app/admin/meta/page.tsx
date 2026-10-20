@@ -5,7 +5,7 @@ import { createClient } from '@/utils/supabase/server'
 import MetaConversionButton from '@/app/admin/orders/MetaConversionButton'
 import { dualTimeText } from '@/utils/adminTime'
 import { adminStatusLabel } from '@/utils/adminStatus'
-import { cancelledAfterSending, deliveredEligible, deliveredPending, holdState, isQa, purchaseEligible, purchasePending } from '@/utils/metaSignals'
+import { cancelledAfterSending, deliveredEligible, deliveredPending, holdState, isGoogleOnlyAcquisition, isQa, purchaseEligible, purchasePending } from '@/utils/metaSignals'
 import { metaReply, type ConversionAttempt, type MetaReply } from '@/utils/metaReply'
 import { trackingSetup } from '@/utils/trackingSetup'
 import { TRACKING_MODES, type TrackingMode } from '@/utils/shopSettings'
@@ -29,6 +29,10 @@ type MetaOrder = {
   purchase_event_sent_at: string | null
   delivered_event_sent_at: string | null
   utm_source: string | null
+  gclid: string | null
+  gbraid: string | null
+  wbraid: string | null
+  fbclid: string | null
   utm_campaign: string | null
   manual_acquisition_source: string | null
   manual_acquisition_note: string | null
@@ -45,14 +49,14 @@ type SearchParams = Promise<{ stage?: string; state?: string }>
 
 function metaAttributedForAdmin(order: MetaOrder): boolean {
   return (
-    order.utm_source === 'meta' ||
-    order.manual_acquisition_source === 'meta' ||
-    Boolean(order.purchase_event_sent_at) ||
-    Boolean(order.delivered_event_sent_at)
+    !isGoogleOnlyAcquisition(order) &&
+    (['meta', 'fb', 'ig', 'facebook', 'instagram'].includes((order.utm_source || '').toLowerCase()) ||
+      order.manual_acquisition_source === 'meta')
   )
 }
 
 function attributionTitle(order: MetaOrder): string {
+  if (isGoogleOnlyAcquisition(order)) return 'Google acquisition evidence; a historical Meta send is not Meta attribution.'
   if (order.manual_acquisition_source === 'meta') {
     return order.manual_acquisition_note ?? 'Staff-confirmed Meta acquisition source'
   }
@@ -90,8 +94,14 @@ function signalStatus(
     return {
       label: 'Sent',
       tone: 'border-green-200 bg-green-50 text-green-700',
-      note: signalTime(sentAt) ?? '',
+      note: isGoogleOnlyAcquisition(order) ? 'Historical Meta dispatch; recorded acquisition is Google.' : signalTime(sentAt) ?? '',
     }
+  }
+
+  if (isGoogleOnlyAcquisition(order)) return {
+    label: 'Google origin',
+    tone: 'border-sky-200 bg-sky-50 text-sky-700',
+    note: 'No new Meta signals; Google reporting remains separate.',
   }
 
   const hold = holdState(order)
@@ -159,7 +169,7 @@ export default async function MetaAdminPage(props: { searchParams: SearchParams 
     supabase
       .from('orders')
       .select(
-        'id, customer_name, status, total_amount, created_at, confirmed_at, delivered_at, cancelled_at, purchase_event_sent_at, delivered_event_sent_at, utm_source, utm_campaign, manual_acquisition_source, manual_acquisition_note, source, cancellation_reason, is_test, meta_signal_holds(state)',
+        'id, customer_name, status, total_amount, created_at, confirmed_at, delivered_at, cancelled_at, purchase_event_sent_at, delivered_event_sent_at, utm_source, gclid, gbraid, wbraid, fbclid, utm_campaign, manual_acquisition_source, manual_acquisition_note, source, cancellation_reason, is_test, meta_signal_holds(state)',
       )
       .order('created_at', { ascending: false })
       .limit(5000),
@@ -398,6 +408,9 @@ export default async function MetaAdminPage(props: { searchParams: SearchParams 
                     <span className="rounded-pill border border-stone-200 bg-stone-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-stone-600">
                       {sourceLabel(order.source)}
                     </span>
+                    {isGoogleOnlyAcquisition(order) && (
+                      <span className="rounded-pill border border-sky-200 bg-sky-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-sky-700">Google ad origin</span>
+                    )}
                     {attributed && (
                       <span
                         title={attributionTitle(order)}

@@ -8,6 +8,7 @@ import { after } from 'next/server'
 import { reportOrderConversion } from '@/utils/orderConversions'
 import { reportGooglePurchase } from '@/utils/googleServer'
 import { getTrackingMode } from '@/utils/trackingMode'
+import { isGoogleOnlyAcquisition } from '@/utils/metaSignals'
 import { sendOrderStatusUpdate, sendAdminOrderStatusNotification, sendAdminOrderConfirmedNotification } from '@/utils/email'
 import { requireAdmin } from '@/utils/auth'
 import { sendReviewEmailNow } from '@/utils/jobs/reviewRequests'
@@ -178,11 +179,12 @@ export async function sendOrderConversion(formData: FormData) {
   const supabase = await createClient()
   const { data: order, error } = await supabase
     .from('orders')
-    .select('id, status, confirmed_at, delivered_at, purchase_event_sent_at, delivered_event_sent_at, is_test')
+    .select('id, status, confirmed_at, delivered_at, purchase_event_sent_at, delivered_event_sent_at, is_test, utm_source, manual_acquisition_source, gclid, gbraid, wbraid, fbclid')
     .eq('id', orderId)
     .single()
 
   if (error || !order) return { error: 'Order could not be loaded.' }
+  if (isGoogleOnlyAcquisition(order)) return { error: 'Google acquisition verified. Meta signals are blocked; Google reporting is separate.' }
 
   // A test order never trains an ad platform (admin upgrade F5).
   if (order.is_test) {

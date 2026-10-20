@@ -33,6 +33,7 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import { reportGooglePurchase } from './googleServer'
 import { GOOGLE_GTM_ENABLED } from './googleMeasurement'
 import { orderAdvertisingConsent } from './metaOrderConsent'
+import { isGoogleOnlyAcquisition } from './metaSignals'
 
 type ConversionKind = 'purchase' | 'delivered'
 
@@ -85,7 +86,7 @@ export async function reportOrderConversion(
     // which collapses every field below to an error type.
     const { data: order } = await admin
       .from('orders')
-      .select('id, customer_name, customer_email, customer_phone, shipping_address, total_amount, purchase_event_id, ga_client_id, meta_fbp, meta_fbc, customer_user_agent, customer_ip, purchase_event_sent_at, delivered_event_sent_at, source, gclid, gbraid, wbraid, visitor_id, session_id, arrival_id, created_at, confirmed_at, delivered_at, utm_campaign, is_test')
+      .select('id, customer_name, customer_email, customer_phone, shipping_address, total_amount, purchase_event_id, ga_client_id, meta_fbp, meta_fbc, customer_user_agent, customer_ip, purchase_event_sent_at, delivered_event_sent_at, source, gclid, gbraid, wbraid, visitor_id, session_id, arrival_id, created_at, confirmed_at, delivered_at, utm_source, manual_acquisition_source, fbclid, utm_campaign, is_test')
       .eq('id', orderId)
       .single()
 
@@ -163,6 +164,10 @@ export async function reportOrderConversion(
         error_metadata: stagingError ? { message: stagingError.message } : null,
       })
     }
+
+    // Google staging remains intact. Never dispatch a NEW Meta event for a
+    // Google-only acquisition; preserve any older event history unchanged.
+    if (isGoogleOnlyAcquisition(order)) return
 
     // Google staging remains independent of the advertising consent / CAPI result.
     const advertising = await orderAdvertisingConsent(order)
