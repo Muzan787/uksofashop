@@ -132,6 +132,9 @@ export default function CartStep({ onNext, discount = 0 }: {
         Continue to delivery
         <ArrowRight aria-hidden="true" className="h-4 w-4" />
       </button>
+      <p className="m-0 mt-2 text-center text-caption leading-relaxed text-ink-600">
+        Next: just your delivery details. No deposit or payment today; pay on arrival.
+      </p>
 
       {/* The same door at the same weight. Most of this shop's orders are
           agreed in a chat, so the chat is not a footnote under the form —
