@@ -128,7 +128,7 @@ export default function DeliveryDateField({ value, onChange, choosing, onChoosin
               {hasRoma
                 ? <>Roma models take approximately 10–14 days. {chosen && <>Your requested date is <strong className="font-semibold text-ink-900">{chosen}</strong>. </>}We’ll confirm availability and delivery timing before dispatch.</>
                 : chosen
-                ? <>Requested for <strong className="font-semibold text-ink-900">{chosen}</strong>. We ring beforehand to agree the time slot.</>
+                ? <>Requested for <strong className="font-semibold text-ink-900">{chosen}</strong>. This is a preferred day, not a booked delivery slot. We confirm timing before dispatch. Pay on arrival; no deposit required.</>
                 : <>Earliest is {formatPreferredDeliveryDate(min)}. We deliver Tuesday to Sunday, weekends included. We ring beforehand to agree the time slot.</>}
             </p>
           )}

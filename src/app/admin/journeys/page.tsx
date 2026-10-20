@@ -21,6 +21,7 @@ export default async function Journeys({searchParams}:{searchParams:Promise<Reco
     ['Fabric / configuration',aggregateJourneys(rows.filter(r=>stageOf(r.event)==='configuration'),r=>r.event+' / '+(r.option_code||'no catalogue code'))],
     ['Cart progression',aggregateJourneys(rows.filter(r=>stageOf(r.event)==='cart'),r=>r.event+' / '+(r.cta_position||'other'))],
     ['Checkout progression',aggregateJourneys(rows.filter(r=>stageOf(r.event)==='checkout'),r=>r.event+' / '+(r.step||r.error_code||''))],
+    ['Checkout exits: last observed field',aggregateJourneys(rows.filter(r=>r.event==='checkout_exit'),r=>(r.step||'unknown step')+' / '+(r.field_category||'no field observed')+' / '+(r.error_code||'no active validation error'))],
     ['WhatsApp / phone',aggregateJourneys(rows.filter(r=>stageOf(r.event)==='enquiry'),r=>r.event+' / '+(r.cta_position||'other'))],
     ['Device',aggregateJourneys(rows,r=>r.device)],
     ['Navigation',aggregateJourneys(rows.filter(r=>r.destination),r=>r.page_path+' → '+r.destination)],
@@ -48,7 +49,7 @@ export default async function Journeys({searchParams}:{searchParams:Promise<Reco
     {report.truncated && <p role="status">Limited to the first 5,000 events. Narrow the date or source filter before interpreting totals.</p>}
     <p>{rows.length.toLocaleString()} events · {sessions.toLocaleString()} masked sessions · {new Set(rows.map(r=>r.page_view_key)).size} page views.
       <Link className="ml-3 underline" href={'/admin/journeys/export?'+query}>Download filtered CSV</Link></p>
-    <p>Rates below use observed consented sessions, not all visitors. Session linkage is limited to the established browser identity; cross-device continuity is not inferred.</p>
+    <p>Rates below use observed consented sessions, not all visitors. Session linkage is limited to the established browser identity; cross-device continuity is not inferred. An exit reports the last touched field and active validation category, not a proven cause of abandonment. No typed values are captured.</p>
     <section className="rounded border bg-white p-4"><h2 className="text-lg font-semibold">Session funnel and lawful order association</h2>
       <p>These are established browser-session associations across retained history, not a claim that an interaction caused an order. Confirmed orders are not delivered revenue.</p>
       {lifecycle.error && <p role="status">{lifecycle.error}</p>}

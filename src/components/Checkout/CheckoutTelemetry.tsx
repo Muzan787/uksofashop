@@ -104,6 +104,8 @@ export default function CheckoutTelemetry() {
     let placeOrderAttempt = 0
     let placeOrderFailureAttempt = 0
     let currentStep = detectStep()
+    let lastField: CheckoutField | undefined
+    let lastValidationError: Meta['error_code'] | undefined
     let scanQueued = false
 
     const transmit = (action: TelemetryAction, metadata: Meta = {}, retry = true) => {
@@ -152,11 +154,13 @@ export default function CheckoutTelemetry() {
         if (!activeErrors.has(el.name)) {
           const described = el.getAttribute('aria-describedby')
           const message = described ? document.getElementById(described)?.textContent ?? '' : ''
-          transmit('checkout_validation_error', { field, error_code: errorCode(field, message) })
+          lastValidationError = errorCode(field, message)
+          transmit('checkout_validation_error', { field, error_code: lastValidationError })
         }
       }
       for (const name of Array.from(activeErrors)) if (!nowInvalid.has(name)) activeErrors.delete(name)
       for (const name of nowInvalid) activeErrors.add(name)
+      if (nowInvalid.size === 0) lastValidationError = undefined
 
       const body = document.body.textContent ?? ''
       if (postcodeAttempt > postcodeResultAttempt) {
@@ -213,6 +217,7 @@ export default function CheckoutTelemetry() {
       if (!(el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement)) return
       const field = fieldMap[el.name]
       if (!field) return
+      lastField = field // Enum only: no personal information or typed input.
       transmitOnce(`field-start:${field}`, 'checkout_field_started', { field })
     }
 
@@ -270,7 +275,8 @@ export default function CheckoutTelemetry() {
     }
 
     const onPageHide = () => {
-      transmit('checkout_exit', { step: currentStep }, false)
+      // Successful checkout is not abandonment. Categorise exits, not entered values.
+      if (currentStep !== 'success') transmitOnce('exit', 'checkout_exit', { step: currentStep, field: lastField, error_code: lastValidationError })
     }
 
     document.addEventListener('focusin', onFocusIn)
@@ -284,6 +290,7 @@ export default function CheckoutTelemetry() {
     recordStep()
 
     return () => {
+      onPageHide() // Also records client-side route exits without pagehide.
       observer.disconnect()
       document.removeEventListener('focusin', onFocusIn)
       document.removeEventListener('focusout', onFocusOut)
