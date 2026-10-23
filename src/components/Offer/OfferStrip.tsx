@@ -24,9 +24,10 @@
 // moving number. The ticking digits are hidden from screen readers, which
 // would otherwise announce every second; they get the deadline as text.
 //
-// Nothing renders for a product in the EXCLUDED tier or with no tier row -
-// a strip promising savings on a sofa that gets none would be the one thing
-// worse than the sheet.
+// Nothing renders for a product in the EXCLUDED tier, with no tier row, taken
+// off the offer by hand in Admin -> Settings, or priced under the floor in
+// those settings (£400 since 2026-10-24) - a strip promising savings on a
+// sofa that gets none would be the one thing worse than the sheet.
 
 import { ChevronRight, Tag } from 'lucide-react'
 import { OFFER_OPEN_EVENT, OFFER_PUBLIC_CODE } from '@/utils/offers/constants'
@@ -35,17 +36,29 @@ import type { OfferTier } from '@/types/offers'
 import { useOfferCountdown } from './useOfferCountdown'
 
 interface Props {
-  /** This product's tier, read on the server. Null when it has no row. */
+  /**
+   * This product's tier, read on the server. Null when it has no row, or when
+   * it is on the excluded list.
+   */
   tier: OfferTier | null
+  /**
+   * The price of the colourway on screen. Under the offer's floor nothing is
+   * shown, because calculate_order_offer will take nothing off it - and a
+   * £399 sofa with a £450 colourway is two different answers, which is why
+   * this is checked here rather than on the server.
+   */
+  price?: number
   className?: string
 }
 
-export default function OfferStrip({ tier, className = '' }: Props) {
+export default function OfferStrip({ tier, price, className = '' }: Props) {
   const { active, clock, deadline } = useOfferCountdown()
-  // The tier amounts from Admin -> Settings, the same ones checkout takes off.
-  const { tierAmounts } = useShopSettings()
+  // The tier amounts and the floor from Admin -> Settings, the same ones
+  // checkout prices by.
+  const { tierAmounts, offerMinPrice } = useShopSettings()
   const amount = tier ? tierAmounts[tier] : 0
   if (!active || amount <= 0) return null
+  if (price !== undefined && price < offerMinPrice) return null
 
   const open = () => {
     window.dispatchEvent(new CustomEvent(OFFER_OPEN_EVENT, { detail: { amount } }))

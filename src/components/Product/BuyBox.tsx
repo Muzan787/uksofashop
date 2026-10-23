@@ -257,7 +257,7 @@ export default function BuyBox({
         {/* The paid-traffic offer, as a line rather than a dialog. Only a
             visitor holding an entitlement sees it, and only for a product
             with a tier - see components/Offer/OfferStrip. */}
-        <OfferStrip tier={offerTier} className="mt-4" />
+        <OfferStrip tier={offerTier} price={price} className="mt-4" />
       </div>
 
       {/* ── What happens next, and when it arrives ──────────────────────── */}

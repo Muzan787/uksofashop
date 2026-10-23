@@ -31,7 +31,7 @@ import { buildSnapshot, describeBuild } from '@/types/build'
 import { isValidUkMobile, UK_MOBILE_ERROR } from '@/utils/phone'
 import {
   DELIVERY_AREA_NOTE, NO_EXTRAS, RE_DELIVERY_FEE,
-  deliveryBreakdown, deliveryTotal, floorName, sofaRemovalFee,
+  deliveryBreakdown, deliveryTotal, floorName, sofaRemovalFee, sofaRemovalPriceSentence,
   type DeliveryOptions,
 } from '@/constants/delivery'
 import { isValidUkPostcode, lookupAddresses, normalisePostcode } from '@/utils/postcode'
@@ -172,7 +172,7 @@ function ExtraOption({
   note: string
   price: number
   priceIsFrom?: boolean
-  /** Shown after the price when it is a rate rather than a total, e.g. "per seat". */
+  /** Shown after the price when it is not yet the total, e.g. "up to 5 seats". */
   priceUnit?: string
   children?: React.ReactNode
 }) {
@@ -994,9 +994,9 @@ function DetailsStep({
             checked={extras.sofaRemoval}
             onToggle={on => setExtras({ ...extras, sofaRemoval: on })}
             title="Old sofa removal"
-            note={`We take your old sofa away for ${gbpFigure(shop.removalPerSeat)} a seat. Count every seat we're collecting — a 3-seater and a 2-seater together is 5. For unusually large items the team will confirm before delivery.`}
-            price={extras.sofaRemoval ? sofaRemovalFee(extras.sofaRemovalSeats, shop) : shop.removalPerSeat}
-            priceUnit={extras.sofaRemoval ? undefined : 'per seat'}
+            note={`We take your old sofa away for ${sofaRemovalPriceSentence(shop)}. Count every seat we're collecting — a 3-seater and a 2-seater together is 5. For unusually large items the team will confirm before delivery.`}
+            price={extras.sofaRemoval ? sofaRemovalFee(extras.sofaRemovalSeats, shop) : shop.removalBaseFee}
+            priceUnit={extras.sofaRemoval ? undefined : `up to ${shop.removalIncludedSeats} seats`}
           >
             <div className="flex flex-wrap items-center gap-3 pt-3">
               <div className="flex items-center gap-2">
@@ -1015,7 +1015,9 @@ function DetailsStep({
                   </button>
                 </div>
                 <span className="text-caption text-ink-500">
-                  {extras.sofaRemovalSeats} × {gbpFigure(shop.removalPerSeat)}
+                  {extras.sofaRemovalSeats <= shop.removalIncludedSeats
+                    ? `${gbpFigure(shop.removalBaseFee)} up to ${shop.removalIncludedSeats} seats`
+                    : `${gbpFigure(shop.removalBaseFee)} + ${extras.sofaRemovalSeats - shop.removalIncludedSeats} × ${gbpFigure(shop.removalPerSeat)}`}
                 </span>
               </div>
             </div>

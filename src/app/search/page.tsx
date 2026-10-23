@@ -62,6 +62,8 @@ export default async function SearchPage(props: { searchParams: SearchParams }) 
       .select('id, title, slug, base_price, was_price, average_rating, review_count, product_variants(image_url, price_adjustment), categories!products_category_id_fkey(slug), product_categories!inner(categories(slug, name))')
       .eq('is_active', true)
       .or(`title.ilike.%${q}%,description.ilike.%${q}%${alsoIds.length ? `,id.in.(${alsoIds.join(',')})` : ''}`)
+      // Dearest first, like every other listing (Muaz, 2026-10-24).
+      .order('base_price', { ascending: false })
       .order('created_at', { ascending: false })
       .limit(24)
     return data ?? []

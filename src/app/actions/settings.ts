@@ -126,6 +126,38 @@ export async function deleteOfferCode(rawCode: string): Promise<SettingsResult> 
   return { ok: true }
 }
 
+// ── The products the offer never applies to ──────────────────────────────────
+
+const productIdInput = z.string().uuid()
+
+/**
+ * Take a sofa off the visitor offer, or put it back.
+ *
+ * Its own list rather than the EXCLUDED tier, so a sofa keeps the tier it was
+ * in while it is off the offer and gets it back when it goes on again. An
+ * excluded product also cannot be the tier a mixed basket is priced at, which
+ * the EXCLUDED tier never managed - it only meant "worth £0".
+ *
+ * calculate_order_offer reads the list, so this changes what checkout
+ * charges; the shop's caches are refreshed so the product pages stop
+ * promising money off it.
+ */
+export async function setProductOfferExcluded(rawProductId: string, excluded: boolean): Promise<SettingsResult> {
+  if (await adminGuard()) return NOT_ADMIN
+  const id = productIdInput.safeParse(rawProductId)
+  if (!id.success || !onOff.safeParse(excluded).success) return { ok: false, text: 'That sofa no longer exists.' }
+
+  const supabase = await createClient()
+  const { error } = excluded
+    // ignoreDuplicates, so excluding something already excluded is a no-op
+    // rather than an error - and so the insert needs no UPDATE privilege.
+    ? await supabase.from('offer_excluded_products').upsert({ product_id: id.data }, { onConflict: 'product_id', ignoreDuplicates: true })
+    : await supabase.from('offer_excluded_products').delete().eq('product_id', id.data)
+  if (error) return { ok: false, text: settingsRefusal(error.message) }
+  refreshShop()
+  return { ok: true }
+}
+
 // ── M4: OrderFlow ────────────────────────────────────────────────────────────
 
 /**

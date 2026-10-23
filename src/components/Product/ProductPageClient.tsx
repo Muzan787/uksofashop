@@ -406,8 +406,10 @@ export default function ProductPageClient({
   // also carries the offer and its deadline, so the chat says what the
   // customer was promised and until when.
   const offerWindow = useOffer();
-  const { tierAmounts } = useShopSettings();
-  const offerAmount = offerTier ? tierAmounts[offerTier] : 0;
+  const { tierAmounts, offerMinPrice } = useShopSettings();
+  // Nothing under the floor in Admin -> Settings carries the offer, so the
+  // WhatsApp message must not promise one on it either.
+  const offerAmount = offerTier && price >= offerMinPrice ? tierAmounts[offerTier] : 0;
   const offerHold = offerWindow.active && offerWindow.expiresAt && offerAmount > 0
     ? { amount: offerAmount, expiresAt: offerWindow.expiresAt }
     : null;

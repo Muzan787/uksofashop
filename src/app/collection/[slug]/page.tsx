@@ -159,7 +159,8 @@ export default async function CollectionPage(props: { params: Params }) {
       `)
       .eq('main_collection_id', main.id)
       .eq('is_active', true)
-      .order('base_price', { ascending: true })
+      // Dearest first, like every other listing (Muaz, 2026-10-24).
+      .order('base_price', { ascending: false })
       .order('priority', { referencedTable: 'product_variants', ascending: true })
 
     return (
@@ -192,7 +193,10 @@ export default async function CollectionPage(props: { params: Params }) {
     `)
     .eq('variant_group_id', group.id)
     .eq('is_active', true)
-    .order('base_price', { ascending: true }) // Natural sort by price (e.g., 1 Seater -> 2 Seater -> Corner)
+    // Dearest first (Muaz, 2026-10-24), which for a range is the corner sofa
+    // down to the single seat. It used to run the other way, up the size
+    // ladder.
+    .order('base_price', { ascending: false })
     .order('priority', { referencedTable: 'product_variants', ascending: true })
 
   // What the header says about the set, counted from the rows just fetched so

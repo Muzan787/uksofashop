@@ -54,9 +54,11 @@ const getHomeData = unstable_cache(
       // price anchor and a count, and neither is worth six round trips.
       supabase.from('products').select('title, base_price, product_categories!inner(category_id)').eq('is_active', true),
 
-      // Featured products: is_featured first, then newest — the same order the
-      // shop's "Featured" sort uses, so ticking a product in the admin moves it
-      // in both places. categories!products_category_id_fkey is the designated
+      // Featured products: the ones ticked in the admin first, then the
+      // dearest - the order every listing now opens in (Muaz, 2026-10-24).
+      // The tick stays the first key because it is a decision he has made
+      // about those sofas; price decides everything after it.
+      // categories!products_category_id_fkey is the designated
       // primary category and the first thing canonicalProductPath looks at, so
       // the card's link has to have it or it silently falls back to the
       // priority order and can name a different URL than the product page's
@@ -66,6 +68,7 @@ const getHomeData = unstable_cache(
         .select('id, title, slug, base_price, was_price, gallery_images, average_rating, review_count, product_variants(id, image_url, color, color_hex, price_adjustment, priority), categories!products_category_id_fkey(slug, name), product_categories(categories(slug, name))')
         .eq('is_active', true)
         .order('is_featured', { ascending: false, nullsFirst: false })
+        .order('base_price', { ascending: false })
         .order('created_at', { ascending: false })
         .order('priority', { referencedTable: 'product_variants', ascending: true })
         .limit(6),

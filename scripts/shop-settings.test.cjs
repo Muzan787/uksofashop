@@ -65,6 +65,10 @@ const BEFORE = [
 const SETTINGS_MIGRATION = '20261015130831_shop_settings.sql'
 const FAR_WINDOW_MIGRATION = '20261017184918_far_delivery_window.sql'
 const DELIVERY_DAYS_MIGRATION = '20261017190729_place_order_delivery_days.sql'
+// The offer's price floor and excluded products, and removal in one band. It
+// is applied AFTER the parity measurement below, because unlike the settings
+// table it is meant to change what a basket costs.
+const OFFER_FLOOR_MIGRATION = '20261023200444_offer_floor_exclusions_removal_band.sql'
 
 async function checkoutDb() {
   const pg = new PGlite()
@@ -104,6 +108,12 @@ const applySettings = async pg => {
   await pg.exec(read(`supabase/migrations/${FAR_WINDOW_MIGRATION}`))
   await pg.exec(read(`supabase/migrations/${DELIVERY_DAYS_MIGRATION}`))
 }
+
+/** The offer floor, the excluded products and the removal band. */
+const applyOfferFloor = pg => pg.exec(read(`supabase/migrations/${OFFER_FLOOR_MIGRATION}`))
+
+/** Everything, as production has it. */
+const applyAll = async pg => { await applySettings(pg); await applyOfferFloor(pg) }
 
 /** A window for the test visitor; its token. */
 const issue = async (pg, visitor = VISITOR) => (await pg.query(`select issue_paid_offer_entitlement($1, 'meta_ads', null) r`, [visitor])).rows[0].r
@@ -155,6 +165,9 @@ before(async () => {
   await applySettings(pg)
   const after = []
   for (const b of all) after.push(await quote(pg, b))
+  // Only now the rules that are meant to change a price, so every test below
+  // this one sees the shop as production has it.
+  await applyOfferFloor(pg)
   parity = { pg, token, all, before, after }
 })
 
@@ -185,15 +198,16 @@ test('the shop\'s sum of the extras is what place_order charges', async () => {
 
 test('a changed figure changes the next quote, and the shop says the same', async () => {
   const pg = await checkoutDb()
-  await applySettings(pg)
+  await applyAll(pg)
   const basket = { items: [{ variant_id: V_STANDARD, quantity: 1 }], address: ADDRESSES[0], floor: 2, lift: false, assembly: true, removal: true, seats: 3, code: null, token: null }
-  assert.equal(await quote(pg, basket), 699 + 30 + 20 + 30)
+  // Three seats sit inside the band, so removal is the base fee on its own.
+  assert.equal(await quote(pg, basket), 699 + 30 + 20 + 50)
 
-  await pg.exec(`update shop_settings set assembly_fee = 25, upstairs_first_floor = 15, upstairs_per_extra_floor = 12.5, removal_per_seat = 9`)
-  assert.equal(await quote(pg, basket), 699 + 27.5 + 25 + 27)
+  await pg.exec(`update shop_settings set assembly_fee = 25, upstairs_first_floor = 15, upstairs_per_extra_floor = 12.5, removal_base_fee = 45, removal_per_seat = 9`)
+  assert.equal(await quote(pg, basket), 699 + 27.5 + 25 + 45)
   const row = (await pg.query(`select ${settings.SHOP_SETTINGS_COLUMNS} from shop_settings`)).rows[0]
   const shop = settings.settingsFromRow(row)
-  assert.equal(delivery.deliveryTotal({ floor: 2, hasLift: false, assembly: true, sofaRemoval: true, sofaRemovalSeats: 3 }, shop), 27.5 + 25 + 27)
+  assert.equal(delivery.deliveryTotal({ floor: 2, hasLift: false, assembly: true, sofaRemoval: true, sofaRemovalSeats: 3 }, shop), 27.5 + 25 + 45)
 
   // The tier amounts.
   const token = (await issue(pg)).token
@@ -207,12 +221,77 @@ test('a changed figure changes the next quote, and the shop says the same', asyn
   const high = { ...basket, assembly: false, removal: true, seats: 9, floor: 9 }
   const s2 = settings.settingsFromRow((await pg.query(`select ${settings.SHOP_SETTINGS_COLUMNS} from shop_settings`)).rows[0])
   assert.equal(await quote(pg, high), 699 + delivery.deliveryTotal({ floor: 9, hasLift: false, assembly: false, sofaRemoval: true, sofaRemovalSeats: 9 }, s2))
-  assert.equal(await quote(pg, high), 699 + (15 + 2 * 12.5) + 5 * 9)
+  // Nine seats held to five, which is the whole band: the base fee alone.
+  assert.equal(await quote(pg, high), 699 + (15 + 2 * 12.5) + 45)
+})
+
+test('old sofa removal is one fee up to the band, then the per-seat rate', async () => {
+  const pg = await checkoutDb()
+  await applyAll(pg)
+  const s = settings.DEFAULT_SHOP_SETTINGS
+  const removing = (seats, removal = true) => ({
+    items: [{ variant_id: V_NONE, quantity: 1 }], address: ADDRESSES[0],
+    floor: 0, lift: false, assembly: false, removal, seats, code: null, token: null,
+  })
+  for (const [seats, fee] of [[1, 50], [3, 50], [5, 50], [6, 60], [10, 100]]) {
+    assert.equal(await quote(pg, removing(seats)), 15 + fee, `${seats} seats`)
+    assert.equal(delivery.sofaRemovalFee(seats, s), fee, `${seats} seats, in the shop`)
+  }
+  // Seats above the most a customer can pick are held to it, not charged for.
+  assert.equal(await quote(pg, removing(99)), 15 + 100)
+  // Nothing at all when it is not wanted, whatever the seat count says.
+  assert.equal(await quote(pg, removing(6, false)), 15)
+
+  // The band itself is a figure: widen it and a seven-seater is the base fee.
+  await pg.exec(`update shop_settings set removal_included_seats = 8`)
+  assert.equal(await quote(pg, removing(7)), 15 + 50)
+})
+
+test('the offer passes over anything under the floor, and anything excluded', async () => {
+  const pg = await checkoutDb()
+  await applyAll(pg)
+  const token = (await issue(pg)).token
+  const offer = async items =>
+    (await pg.query(`select calculate_order_offer($1::jsonb, null, $2) r`, [JSON.stringify(items), token])).rows[0].r
+  const off = async items => Number((await offer(items)).discount_amount)
+  const electric = [{ variant_id: V_ELECTRIC, quantity: 1 }]   // £1,299, ELECTRIC
+  const standard = [{ variant_id: V_STANDARD, quantity: 1 }]   // £699, STANDARD
+  const both = [...standard, ...electric]
+
+  assert.equal(await off(electric), 50)
+  assert.equal(await off(standard), 20)
+  // £15, no tier row: it never got anything and still does not.
+  assert.equal(await off([{ variant_id: V_NONE, quantity: 1 }]), 0)
+
+  // Raise the floor above the standard sofa: it gets nothing, and no tier is
+  // recorded for it either. A basket with the electric one still gets £50.
+  await pg.exec(`update shop_settings set offer_min_price = 700`)
+  const under = await offer(standard)
+  assert.equal(Number(under.discount_amount), 0)
+  assert.equal(under.discount_tier, null)
+  assert.equal(await off(electric), 50)
+  assert.equal(await off(both), 50)
+
+  // Excluding the electric sofa takes the basket to nothing: the only other
+  // line is under the floor.
+  await pg.query(`insert into offer_excluded_products (product_id) values ($1)`, [P_ELECTRIC])
+  assert.equal(await off(electric), 0)
+  assert.equal(await off(both), 0)
+
+  // Back at £400 the standard sofa carries the basket on its own tier, even
+  // though the dearer line is excluded - which the EXCLUDED tier never did.
+  await pg.exec(`update shop_settings set offer_min_price = 400`)
+  assert.equal(await off(both), 20)
+
+  // Put it back on the offer and its own tier is still there.
+  await pg.query(`delete from offer_excluded_products where product_id = $1`, [P_ELECTRIC])
+  assert.equal(await off(electric), 50)
+  assert.equal(await off(both), 50)
 })
 
 test('the offer switch stops new windows only', async () => {
   const pg = await checkoutDb()
-  await applySettings(pg)
+  await applyAll(pg)
   const given = await issue(pg)
   assert.equal(given.revoked, false)
   await pg.exec(`update shop_settings set offer_enabled = false`)
@@ -243,7 +322,7 @@ test('the offer switch stops new windows only', async () => {
 
 test('a code labels an order only while it is on, and only inside a window', async () => {
   const pg = await checkoutDb()
-  await applySettings(pg)
+  await applyAll(pg)
   const token = (await issue(pg)).token
   const items = JSON.stringify([{ variant_id: V_STANDARD, quantity: 1 }])
   const offer = async (code, tok) => (await pg.query(`select calculate_order_offer($1::jsonb, $2, $3) r`, [items, code, tok])).rows[0].r
@@ -273,7 +352,7 @@ const dated = (d, address = ADDRESSES[0]) => ({ items: [{ variant_id: V_NONE, qu
 
 test('the delivery dates follow the row', async () => {
   const pg = await checkoutDb()
-  await applySettings(pg)
+  await applyAll(pg)
   // London's today can differ from UTC's around midnight, so keep a day clear of each edge.
   assert.equal(await quote(pg, dated(dayFrom(5))), 15)
   assert.match(String(await quote(pg, dated(day(1)))), /DELIVERY_DATE_TOO_SOON/)
@@ -285,7 +364,7 @@ test('the delivery dates follow the row', async () => {
 
 test('no delivery on a Monday, and a charged area chooses from the end of its window', async () => {
   const pg = await checkoutDb()
-  await applySettings(pg)
+  await applyAll(pg)
   assert.match(String(await quote(pg, dated(dayFrom(10, true)))), /DELIVERY_DATE_MONDAY/)
   assert.equal(await quote(pg, dated(dayFrom(11))), 15)
   // Penzance pays £80 and takes 5-7 days: five days out is too soon there,
@@ -304,7 +383,7 @@ test('no delivery on a Monday, and a charged area chooses from the end of its wi
 
 test('the table refuses figures out of order or out of range', async () => {
   const pg = await checkoutDb()
-  await applySettings(pg)
+  await applyAll(pg)
   for (const bad of [
     'delivery_window_from_days = 5, delivery_window_to_days = 3',
     'far_window_from_days = 8, far_window_to_days = 6',
@@ -315,13 +394,16 @@ test('the table refuses figures out of order or out of range', async () => {
     'sample_limit = 0',
     'offer_window_hours = 0',
     'assembly_fee = -1',
+    'removal_base_fee = -1',
+    'removal_included_seats = 0',
+    'offer_min_price = -1',
   ]) await assert.rejects(() => pg.exec(`update shop_settings set ${bad}`), /check/, bad)
   await assert.rejects(() => pg.exec(`insert into shop_settings (id) values (false)`), /check|duplicate/)
 })
 
 test('saving the settings is for admins only', async () => {
   const pg = await checkoutDb()
-  await applySettings(pg)
+  await applyAll(pg)
   await assert.rejects(() => pg.query(`select save_shop_settings('{"assembly_fee": 30}'::jsonb)`), /NOT_AUTHORISED/)
   await pg.exec(`create or replace function private.require_admin() returns void language plpgsql as $$ begin end $$`)
   await pg.query(`select save_shop_settings('{"assembly_fee": 30}'::jsonb)`)
@@ -333,6 +415,9 @@ test('saving the settings is for admins only', async () => {
     ['{"preferred_latest_days": 2}', 'DATES_ORDER'],
     ['{"tier_standard": 45}', 'TIERS_ORDER'],
     ['{"removal_min_seats": 4}', 'SEATS_ORDER'],
+    ['{"removal_included_seats": 11}', 'BAND_SEATS'],
+    ['{"removal_base_fee": "fifty"}', 'BAD_NUMBER'],
+    ['{"offer_min_price": 50000}', 'OUT_OF_RANGE'],
     ['{"assembly_fee": "thirty"}', 'BAD_NUMBER'],
     ['{"sample_limit": 2.5}', 'BAD_WHOLE_NUMBER'],
     ['{"sample_limit": 50}', 'OUT_OF_RANGE'],
@@ -399,9 +484,9 @@ test('figures are written as the shop writes them', () => {
 test('the form covers every figure in the row, once', () => {
   const columns = settings.SHOP_SETTINGS_COLUMNS.split(', ').filter(c => !['offer_enabled', 'orderflow_enabled', 'tracking_mode'].includes(c))
   assert.deepEqual(plain(form.FIGURE_FIELDS.map(f => f.key)).sort(), columns.sort())
-  // And the database checks the same keys (save_shop_settings, as replaced
-  // when the charged areas' window was added).
-  const sql = read(`supabase/migrations/${FAR_WINDOW_MIGRATION}`)
+  // And the database checks the same keys - save_shop_settings as the LAST
+  // migration to replace it left it, which is the one production runs.
+  const sql = read(`supabase/migrations/${OFFER_FLOOR_MIGRATION}`)
   for (const key of columns) assert.ok(sql.includes(`'${key}'`), `save_shop_settings checks ${key}`)
 })
 
@@ -420,6 +505,8 @@ test('the form refuses a window that ends before it starts, and tiers out of ord
   assert.deepEqual(plain(check({ tier_roma: '60' })), { ok: false, field: 'tier_roma', text: form.SETTINGS_REFUSALS.TIERS_ORDER })
   assert.deepEqual(plain(check({ tier_excluded: '25' })), { ok: false, field: 'tier_roma', text: form.SETTINGS_REFUSALS.TIERS_ORDER })
   assert.deepEqual(plain(check({ removal_default_seats: '11' })), { ok: false, field: 'removal_default_seats', text: form.SETTINGS_REFUSALS.SEATS_ORDER })
+  assert.deepEqual(plain(check({ removal_included_seats: '11' })), { ok: false, field: 'removal_included_seats', text: form.SETTINGS_REFUSALS.BAND_SEATS })
+  assert.equal(check({ removal_included_seats: '10' }).ok, true, 'the band may be every seat on offer')
   assert.equal(check({ tier_roma: '50' }).ok, true, 'equal tiers are in order')
   assert.equal(check({ delivery_window_from_days: '4' }).ok, true, 'a one-day window is fine')
   assert.deepEqual(plain(check({ far_window_from_days: '8' })), { ok: false, field: 'far_window_to_days', text: form.SETTINGS_REFUSALS.WINDOW_ORDER })
@@ -439,9 +526,9 @@ test('the form wants pounds where it says pounds, and whole numbers elsewhere', 
 })
 
 test('every database code has a sentence', () => {
-  const sql = read(`supabase/migrations/${SETTINGS_MIGRATION}`)
+  const sql = read(`supabase/migrations/${SETTINGS_MIGRATION}`) + read(`supabase/migrations/${OFFER_FLOOR_MIGRATION}`)
   const raised = new Set([...sql.matchAll(/raise exception '([A-Z_]+)'/g)].map(m => m[1]))
-  for (const code of ['BAD_NUMBER', 'BAD_WHOLE_NUMBER', 'WINDOW_ORDER', 'DATES_ORDER', 'TIERS_ORDER', 'SEATS_ORDER', 'OUT_OF_RANGE', 'ORDERFLOW_NOT_CONNECTED', 'ORDERFLOW_SWITCHED_OFF', 'NO_TEST_ORDER']) {
+  for (const code of ['BAD_NUMBER', 'BAD_WHOLE_NUMBER', 'WINDOW_ORDER', 'DATES_ORDER', 'TIERS_ORDER', 'SEATS_ORDER', 'BAND_SEATS', 'OUT_OF_RANGE', 'ORDERFLOW_NOT_CONNECTED', 'ORDERFLOW_SWITCHED_OFF', 'NO_TEST_ORDER']) {
     assert.ok(raised.has(code), `${code} is raised`)
     assert.equal(form.settingsRefusal(`ERROR: ${code}`), form.SETTINGS_REFUSALS[code])
   }

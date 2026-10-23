@@ -31,6 +31,13 @@ export interface ShopSettings {
   upstairsPerExtraFloor: number
   maxFloor: number
   assemblyFee: number
+  /**
+   * Old sofa removal: one fee up to removalIncludedSeats, then
+   * removalPerSeat for every seat above it. £50 up to five seats, then £10
+   * each (2026-10-24); it used to be removalPerSeat all the way.
+   */
+  removalBaseFee: number
+  removalIncludedSeats: number
   removalPerSeat: number
   removalMinSeats: number
   removalDefaultSeats: number
@@ -45,6 +52,12 @@ export interface ShopSettings {
   preferredEarliestDays: number
   preferredLatestDays: number
   tierAmounts: Record<OfferTier, number>
+  /**
+   * The cheapest a sofa can be and still carry the offer. A line under it is
+   * not looked at when the basket's tier is chosen, so nothing under £400
+   * gets money off - the Roma tier included (2026-10-24).
+   */
+  offerMinPrice: number
   offerWindowHours: number
   offerEnabled: boolean
   sampleLimit: number
@@ -57,6 +70,8 @@ export const DEFAULT_SHOP_SETTINGS: ShopSettings = {
   upstairsPerExtraFloor: 10,
   maxFloor: 20,
   assemblyFee: 20,
+  removalBaseFee: 50,
+  removalIncludedSeats: 5,
   removalPerSeat: 10,
   removalMinSeats: 1,
   removalDefaultSeats: 3,
@@ -68,6 +83,7 @@ export const DEFAULT_SHOP_SETTINGS: ShopSettings = {
   preferredEarliestDays: 4,
   preferredLatestDays: 180,
   tierAmounts: { ELECTRIC: 50, ROMA: 30, STANDARD: 20, EXCLUDED: 0 },
+  offerMinPrice: 400,
   offerWindowHours: 48,
   offerEnabled: true,
   sampleLimit: 5,
@@ -80,6 +96,8 @@ export interface ShopSettingsRow {
   upstairs_per_extra_floor: number | string | null
   max_floor: number | null
   assembly_fee: number | string | null
+  removal_base_fee: number | string | null
+  removal_included_seats: number | null
   removal_per_seat: number | string | null
   removal_min_seats: number | null
   removal_default_seats: number | null
@@ -94,6 +112,7 @@ export interface ShopSettingsRow {
   tier_roma: number | string | null
   tier_standard: number | string | null
   tier_excluded: number | string | null
+  offer_min_price: number | string | null
   offer_window_hours: number | null
   offer_enabled: boolean | null
   sample_limit: number | null
@@ -102,7 +121,7 @@ export interface ShopSettingsRow {
 }
 
 export const SHOP_SETTINGS_COLUMNS =
-  'upstairs_first_floor, upstairs_per_extra_floor, max_floor, assembly_fee, removal_per_seat, removal_min_seats, removal_default_seats, removal_max_seats, delivery_window_from_days, delivery_window_to_days, far_window_from_days, far_window_to_days, preferred_earliest_days, preferred_latest_days, tier_electric, tier_roma, tier_standard, tier_excluded, offer_window_hours, offer_enabled, sample_limit, orderflow_enabled, tracking_mode'
+  'upstairs_first_floor, upstairs_per_extra_floor, max_floor, assembly_fee, removal_base_fee, removal_included_seats, removal_per_seat, removal_min_seats, removal_default_seats, removal_max_seats, delivery_window_from_days, delivery_window_to_days, far_window_from_days, far_window_to_days, preferred_earliest_days, preferred_latest_days, tier_electric, tier_roma, tier_standard, tier_excluded, offer_min_price, offer_window_hours, offer_enabled, sample_limit, orderflow_enabled, tracking_mode'
 
 /** A figure from the row, or the default when it is missing or not a number. */
 function num(value: number | string | null | undefined, fallback: number): number {
@@ -118,6 +137,8 @@ export function settingsFromRow(row: Partial<ShopSettingsRow> | null | undefined
     upstairsPerExtraFloor: num(row.upstairs_per_extra_floor, d.upstairsPerExtraFloor),
     maxFloor: num(row.max_floor, d.maxFloor),
     assemblyFee: num(row.assembly_fee, d.assemblyFee),
+    removalBaseFee: num(row.removal_base_fee, d.removalBaseFee),
+    removalIncludedSeats: num(row.removal_included_seats, d.removalIncludedSeats),
     removalPerSeat: num(row.removal_per_seat, d.removalPerSeat),
     removalMinSeats: num(row.removal_min_seats, d.removalMinSeats),
     removalDefaultSeats: num(row.removal_default_seats, d.removalDefaultSeats),
@@ -134,6 +155,7 @@ export function settingsFromRow(row: Partial<ShopSettingsRow> | null | undefined
       STANDARD: num(row.tier_standard, d.tierAmounts.STANDARD),
       EXCLUDED: num(row.tier_excluded, d.tierAmounts.EXCLUDED),
     },
+    offerMinPrice: num(row.offer_min_price, d.offerMinPrice),
     offerWindowHours: num(row.offer_window_hours, d.offerWindowHours),
     offerEnabled: row.offer_enabled ?? d.offerEnabled,
     sampleLimit: num(row.sample_limit, d.sampleLimit),

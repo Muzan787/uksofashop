@@ -34,6 +34,7 @@ export const metadata: Metadata = pageMetadata({
 const TOC = [
   { id: 'delivery', label: 'Getting it to you' },
   { id: 'costs', label: 'What things cost' },
+  { id: 'paying', label: 'Paying at the door' },
   { id: 'access', label: 'Access and upstairs' },
   { id: 'damaged', label: 'If it arrives damaged' },
   { id: 'returns', label: 'Changing your mind' },
@@ -77,8 +78,8 @@ const chargesFor = (s: ShopSettings) => [
   },
   {
     label: 'Taking your old sofa away',
-    price: `${gbpFigure(s.removalPerSeat)} per seat`,
-    note: 'Count every seat we collect. May differ for very large items — we will tell you as soon as your order reaches us',
+    price: `${gbpFigure(s.removalBaseFee)} up to ${s.removalIncludedSeats} seats`,
+    note: `Then ${gbpFigure(s.removalPerSeat)} for each seat above ${s.removalIncludedSeats}. Count every seat we collect, so a three-seater and a two-seater going together is ${s.removalIncludedSeats} seats. May differ for very large items — we will tell you as soon as your order reaches us`,
   },
   {
     label: 'Re-delivery after a missed slot',
@@ -103,7 +104,7 @@ export default async function DeliveryReturnsPage() {
         headline="Delivery & Returns"
         current="Delivery & returns"
         path="/delivery-returns"
-        updated="2026-10-17"
+        updated="2026-10-24"
         description={DESCRIPTION}
       />
       <EditorialHero
@@ -190,6 +191,29 @@ export default async function DeliveryReturnsPage() {
             </tbody>
           </table>
         </div>
+
+        <h2 id="paying">Paying at the door</h2>
+        <p>
+          The order is settled at the door, before the sofa comes inside. The crew bring it to
+          your doorway and unwrap as much of it as you want to see: look at the frame, the fabric,
+          the stitching, the feet, every cushion, from any angle you like, for as long as you
+          need. Nothing is rushed and nothing is hidden. If it is not what you ordered or it has
+          been damaged in transit, say so then and there and it goes back on the van — you pay
+          nothing.
+        </p>
+        <p>
+          <strong>Once you are happy with it, you pay — and then it comes in.</strong> Carrying it
+          into the room, upstairs and assembly all happen after payment has been made, in cash to
+          the crew or by bank transfer completed at the door. That is the order of things on every
+          delivery: inspect, pay, then in. It is not a judgement about you; it is simply how a
+          cash-on-delivery service works with two people and a van full of other people&rsquo;s
+          sofas.
+        </p>
+        <p className="fine">
+          None of this affects your rights. You still have the full 14 days to change your mind
+          once it is delivered, and the Consumer Rights Act 2015 still covers anything that turns
+          out to be faulty later — see below.
+        </p>
 
         <h2 id="access">Access and upstairs</h2>
         <p>

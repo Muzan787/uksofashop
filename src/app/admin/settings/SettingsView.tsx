@@ -8,6 +8,7 @@ import { gbpFigure, type OfferTier, type ShopSettings } from '@/utils/shopSettin
 import { figuresFromSettings } from '@/utils/shopSettingsForm'
 import FiguresForm from './FiguresForm'
 import OfferControls from './OfferControls'
+import OfferExclusions, { type OfferProductRow } from './OfferExclusions'
 import OrderFlowControls from './OrderFlowControls'
 
 export interface OfferCodeRow {
@@ -51,6 +52,8 @@ export interface SettingsViewProps {
   updatedAt: string | null
   codes: OfferCodeRow[]
   tierCounts: Record<OfferTier, number>
+  /** Every sofa on sale, with its tier and whether it is off the offer. */
+  offerProducts: OfferProductRow[]
   fees: DistanceFee[]
   openWindows: number | null
   orderflow: OrderFlowStatus | null
@@ -83,7 +86,7 @@ function feeGroups(fees: DistanceFee[]) {
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
 
 export default function SettingsView(props: SettingsViewProps) {
-  const { settings, settingsMissing, updatedAt, codes, tierCounts, fees, openWindows, orderflow } = props
+  const { settings, settingsMissing, updatedAt, codes, tierCounts, offerProducts, fees, openWindows, orderflow } = props
   const changed = dualTimeText(updatedAt)
   const groups = feeGroups(fees)
 
@@ -118,10 +121,22 @@ export default function SettingsView(props: SettingsViewProps) {
       <section className={section} aria-labelledby="offer-heading">
         <h2 id="offer-heading" className={sectionTitle}>Visitor offer</h2>
         <p className={sectionIntro}>
-          Each new visitor gets a {settings.offerWindowHours}-hour window with money off ({gbpFigure(settings.tierAmounts.ELECTRIC)}, {gbpFigure(settings.tierAmounts.ROMA)} or {gbpFigure(settings.tierAmounts.STANDARD)} by tier). A window never moves and never comes back once it ends.
+          Each new visitor gets a {settings.offerWindowHours}-hour window with money off ({gbpFigure(settings.tierAmounts.ELECTRIC)}, {gbpFigure(settings.tierAmounts.ROMA)} or {gbpFigure(settings.tierAmounts.STANDARD)} by tier) on sofas at {gbpFigure(settings.offerMinPrice)} or more. A window never moves and never comes back once it ends.
         </p>
         <div className="mt-4">
           <OfferControls enabled={settings.offerEnabled} openWindows={openWindows} codes={codes} />
+        </div>
+      </section>
+
+      {/* ── The sofas the offer never applies to ────────────────────────── */}
+      <section className={section} aria-labelledby="exclusions-heading">
+        <h2 id="exclusions-heading" className={sectionTitle}>Sofas off the offer</h2>
+        <p className={sectionIntro}>
+          Checkout takes nothing off these, whatever tier they are in, and their pages say nothing
+          about an offer. A sofa keeps its tier while it is off, and gets it back when you put it on again.
+        </p>
+        <div className="mt-4">
+          <OfferExclusions products={offerProducts} minPrice={settings.offerMinPrice} />
         </div>
       </section>
 

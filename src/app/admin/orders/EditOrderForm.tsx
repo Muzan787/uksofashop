@@ -10,10 +10,11 @@
 // the database and the card re-renders; nothing else happens - no email, no
 // status change, no signal to an ad platform. That is the brief (2026-09-20).
 //
-// The sofa and fabric pickers are the same lists the WhatsApp order form
-// uses. A line on an old order may name a product since withdrawn, which the
-// picker no longer lists; that line keeps a single option of its own so it
-// can still be corrected rather than being blanked.
+// The sofa and fabric pickers are the same lists, and the same typed-into
+// control, the WhatsApp order form uses. A line on an old order may name a
+// product since withdrawn, which the picker no longer lists; that line shows
+// what the order says plus "(no longer listed)" so it can still be corrected
+// rather than being blanked.
 
 import { useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
@@ -22,6 +23,7 @@ import { updateOrderDetails } from '@/app/actions/orders'
 import type { AdminOrderDisplay } from '@/types/adminOrders'
 import { splitAddress } from './CopyOrderButton'
 import type { PickerFabric, PickerVariant } from './NewWhatsAppOrder'
+import SearchSelect from '@/components/Admin/SearchSelect'
 import { describeFinish } from '@/utils/orderFinish'
 import { itemTitle } from '@/utils/orderItemTitle'
 
@@ -88,6 +90,12 @@ export default function EditOrderForm({
     const m = new Map(variants.map(v => [v.id, v.price]))
     return (id: string) => m.get(id) ?? 0
   }, [variants])
+
+  const variantOptions = useMemo(
+    () => variants.map(v => ({ id: v.id, label: v.label, hint: `£${v.price.toFixed(2)}` })),
+    [variants],
+  )
+  const fabricOptions = useMemo(() => fabrics.map(f => ({ id: f.id, label: f.label })), [fabrics])
 
   const total = useMemo(() => {
     const items = lines.reduce((sum, l) => {
@@ -207,20 +215,15 @@ export default function EditOrderForm({
           {lines.map((line, i) => (
             <div key={line.itemId ?? `new-${i}`} className="rounded-sm border border-stone-200 bg-stone-50/60 p-3">
               <div className="flex gap-2">
-                <select
-                  className={`${field} flex-1`}
+                <SearchSelect
+                  className="flex-1"
+                  options={variantOptions}
                   value={line.variantId}
-                  onChange={e => setLine(i, { variantId: e.target.value })}
-                  aria-label="Sofa"
-                >
-                  <option value="">Choose a sofa…</option>
-                  {line.variantId && !known.has(line.variantId) && (
-                    <option value={line.variantId}>{line.fallbackLabel} (no longer listed)</option>
-                  )}
-                  {variants.map(v => (
-                    <option key={v.id} value={v.id}>{v.label} — £{v.price.toFixed(2)}</option>
-                  ))}
-                </select>
+                  onChange={id => setLine(i, { variantId: id })}
+                  ariaLabel="Sofa"
+                  placeholder="Search by name, colour or SKU…"
+                  fallbackLabel={`${line.fallbackLabel} (no longer listed)`}
+                />
                 {lines.length > 1 && (
                   <button
                     type="button"
@@ -264,17 +267,14 @@ export default function EditOrderForm({
                   autoComplete="off"
                 />
                 {fabrics.length > 0 && (
-                  <select
-                    className={field}
+                  <SearchSelect
+                    options={fabricOptions}
                     value={line.fabricId}
-                    onChange={e => setLine(i, { fabricId: e.target.value })}
-                    aria-label="Fabric"
-                  >
-                    <option value="">No fabric chosen</option>
-                    {fabrics.map(f => (
-                      <option key={f.id} value={f.id}>{f.label}</option>
-                    ))}
-                  </select>
+                    onChange={id => setLine(i, { fabricId: id })}
+                    ariaLabel="Fabric"
+                    placeholder="Search fabrics by name or code…"
+                    emptyOptionLabel="No fabric chosen"
+                  />
                 )}
               </div>
             </div>

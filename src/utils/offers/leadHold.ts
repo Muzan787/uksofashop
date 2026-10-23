@@ -9,9 +9,11 @@
 // true reason to come back. Saying nothing once it has ended is the rule: a
 // reminder never mentions an offer it cannot give.
 //
-// The amount follows calculate_order_offer: the highest tier in the basket,
-// never more than the basket itself. Display only - the checkout prices the
-// order, and a WhatsApp sale is priced in the chat.
+// The amount follows calculate_order_offer: the highest tier in the basket
+// among the lines that can carry the offer - priced at or above the floor in
+// Admin -> Settings and not on the excluded list - and never more than the
+// basket itself. Display only: the checkout prices the order, and a WhatsApp
+// sale is priced in the chat.
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/supabase'
@@ -33,16 +35,18 @@ export interface LeadHold extends OfferHold {
   ended: boolean
 }
 
-function basketItems(basket: unknown): { productId: string; total: number }[] {
+function basketItems(basket: unknown): { productId: string; unitPrice: number; total: number }[] {
   if (!Array.isArray(basket)) return []
   return basket.flatMap(raw => {
     const item = (raw ?? {}) as { product_id?: unknown; unit_price_gbp?: unknown; quantity?: unknown }
     if (typeof item.product_id !== 'string') return []
     const price = Number(item.unit_price_gbp)
     const qty = Number(item.quantity)
+    const unitPrice = Number.isFinite(price) ? price : 0
     return [{
       productId: item.product_id,
-      total: (Number.isFinite(price) ? price : 0) * (Number.isFinite(qty) && qty > 0 ? qty : 1),
+      unitPrice,
+      total: unitPrice * (Number.isFinite(qty) && qty > 0 ? qty : 1),
     }]
   })
 }
@@ -59,23 +63,28 @@ export async function offerHoldsForLeads(
   leads: LeadForHold[],
 ): Promise<Map<string, LeadHold>> {
   const holds = new Map<string, LeadHold>()
-  // The tier amounts from Admin -> Settings, the same ones checkout takes off.
-  const amounts = (await getShopSettings()).tierAmounts
+  // The tier amounts and the price floor from Admin -> Settings, the same
+  // ones checkout prices by.
+  const { tierAmounts: amounts, offerMinPrice } = await getShopSettings()
   const visitorIds = [...new Set(leads.map(l => l.visitor_id).filter((v): v is string => Boolean(v)))]
   if (visitorIds.length === 0) return holds
 
   const productIds = [...new Set(leads.flatMap(l => basketItems(l.basket).map(i => i.productId)))]
 
-  const [entitlements, tiers] = await Promise.all([
+  const [entitlements, tiers, excluded] = await Promise.all([
     db.from('offer_entitlements').select('visitor_id, expires_at, revoked_at').in('visitor_id', visitorIds),
     productIds.length
       ? db.from('offer_product_tiers').select('product_id, tier').in('product_id', productIds)
       : Promise.resolve({ data: [], error: null }),
+    productIds.length
+      ? db.from('offer_excluded_products').select('product_id').in('product_id', productIds)
+      : Promise.resolve({ data: [], error: null }),
   ])
-  if (entitlements.error || tiers.error) {
-    console.error('Lead offer lookup failed:', entitlements.error?.message ?? tiers.error?.message)
+  if (entitlements.error || tiers.error || excluded.error) {
+    console.error('Lead offer lookup failed:', entitlements.error?.message ?? tiers.error?.message ?? excluded.error?.message)
     return holds
   }
+  const offerExcluded = new Set((excluded.data ?? []).map(row => (row as { product_id: string }).product_id))
 
   const windowFor = new Map<string, { expires_at: string; revoked_at: string | null }>()
   for (const row of (entitlements.data ?? []) as { visitor_id: string; expires_at: string; revoked_at: string | null }[]) {
@@ -93,6 +102,7 @@ export async function offerHoldsForLeads(
 
     const items = basketItems(lead.basket)
     const best = items
+      .filter(i => i.unitPrice >= offerMinPrice && !offerExcluded.has(i.productId))
       .map(i => tierFor.get(i.productId))
       .filter((t): t is Tier => Boolean(t))
       .sort((a, b) => PRIORITY[b] - PRIORITY[a])[0]

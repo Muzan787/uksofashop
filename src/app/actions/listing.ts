@@ -3,7 +3,7 @@
 
 import { z } from 'zod'
 import { createClient } from '@/utils/supabase/server'
-import { fetchProductCards, SORTS, type GridCard, type SortKey } from '@/app/shop/[category]/productQuery'
+import { DEFAULT_SORT, fetchProductCards, SORTS, type GridCard, type SortKey } from '@/app/shop/[category]/productQuery'
 
 /**
  * The next page of a listing, for the "Load more" button.
@@ -25,7 +25,7 @@ const schema = z.object({
   color: z.string().trim().max(80).optional(),
   minPrice: z.number().int().min(0).max(1_000_000).optional(),
   maxPrice: z.number().int().min(0).max(1_000_000).optional(),
-  sort: z.enum(SORTS).default('featured'),
+  sort: z.enum(SORTS).default(DEFAULT_SORT),
 })
 
 export async function loadMoreProducts(

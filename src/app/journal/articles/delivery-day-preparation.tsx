@@ -18,7 +18,7 @@
 //   £50 re-delivery after a confirmed slot,
 //   free to move an unconfirmed date            /delivery-returns CHARGES
 //   upstairs £20 / +£10, assembly £20,
-//   removal £10 per seat                        constants/delivery.ts
+//   removal £50 to 5 seats, then £10 a seat     constants/delivery.ts
 //   ground floor or a ground-floor room         /delivery-returns
 //   most 2-4; charged areas 5-7; no Mondays     /delivery-returns
 //   arrives in pieces, feet unscrew ~10cm       /size-guide
@@ -60,7 +60,9 @@ export default function DeliveryDayPreparation() {
           <strong>Assembly in the room — £20.</strong>
         </li>
         <li>
-          <strong>Old sofa taken away — £10 per seat</strong>, so £30 for a three-seater. A very large or unusual item can cost more
+          <strong>Old sofa taken away — £50</strong> for anything up to five seats, so a
+          three-seater and a two-seater going together are still £50; <strong>£10</strong> for each
+          seat above five. A very large or unusual item can cost more
           and we confirm that with you once the order reaches us, not on the doorstep.
         </li>
       </ul>

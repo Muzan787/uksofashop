@@ -20,9 +20,18 @@ type Client = SupabaseClient<Database>
 export const ITEMS_PER_PAGE = 12
 
 /** The query parameters that narrow the result set. `page` is not one of them. */
-/** Sort keys, as they appear in the URL. */
-export const SORTS = ['featured', 'price-asc', 'price-desc', 'newest'] as const
+/** Sort keys, as they appear in the URL, in the order the control lists them. */
+export const SORTS = ['price-desc', 'price-asc', 'featured', 'newest'] as const
 export type SortKey = (typeof SORTS)[number]
+
+/**
+ * Dearest first, everywhere a listing has no sort of its own in the URL
+ * (Muaz, 2026-10-24). It was 'featured'. It is spelled by ABSENCE from the
+ * URL - see SortSelect - so there is only ever one URL for the default order,
+ * and it is the one key that must not appear in a ?sort= parameter the shop
+ * links to itself.
+ */
+export const DEFAULT_SORT: SortKey = 'price-desc'
 
 export const SORT_LABELS: Record<SortKey, string> = {
   featured: 'Featured',
@@ -31,11 +40,11 @@ export const SORT_LABELS: Record<SortKey, string> = {
   newest: 'Newest first',
 }
 
-/** Anything unrecognised is Featured rather than an error. */
+/** Anything unrecognised is the default order rather than an error. */
 export function parseSort(raw: string | string[] | undefined): SortKey {
   return typeof raw === 'string' && (SORTS as readonly string[]).includes(raw)
     ? (raw as SortKey)
-    : 'featured'
+    : DEFAULT_SORT
 }
 
 /** A price bound from the URL. Non-numeric or negative is treated as absent. */
@@ -204,19 +213,27 @@ export interface GridCard {
  *
  * Featured is is_featured first and then newest, which is what the flag on
  * the products table is for; without the second key every unfeatured product
- * would come back in whatever order Postgres felt like.
+ * would come back in whatever order Postgres felt like. It is no longer the
+ * default - dearest first is - but it is still on offer in the control.
+ *
+ * Every branch ends on created_at so two sofas at the same price always come
+ * back in the same order; without it a page boundary can repeat or drop a
+ * card between requests.
  */
 function applySort<T>(query: T, sort: SortKey): T {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- see above
   const q = query as any
   switch (sort) {
-    case 'price-asc':  return q.order('base_price', { ascending: true }) as T
-    case 'price-desc': return q.order('base_price', { ascending: false }) as T
-    case 'newest':     return q.order('created_at', { ascending: false }) as T
-    default:
+    case 'price-asc':
+      return q.order('base_price', { ascending: true }).order('created_at', { ascending: false }) as T
+    case 'newest':
+      return q.order('created_at', { ascending: false }) as T
+    case 'featured':
       return q
         .order('is_featured', { ascending: false, nullsFirst: false })
         .order('created_at', { ascending: false }) as T
+    default:
+      return q.order('base_price', { ascending: false }).order('created_at', { ascending: false }) as T
   }
 }
 
@@ -225,7 +242,7 @@ export async function fetchProductCards(
   filters: ProductFilters,
   page: number,
   categorySegment: string,
-  sort: SortKey = 'featured',
+  sort: SortKey = DEFAULT_SORT,
 ): Promise<{ cards: GridCard[]; count: number }> {
   const from = (page - 1) * ITEMS_PER_PAGE
 

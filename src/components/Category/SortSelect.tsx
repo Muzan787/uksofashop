@@ -3,7 +3,7 @@
 
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { ChevronDown } from 'lucide-react';
-import { SORTS, SORT_LABELS, type SortKey } from '@/app/shop/[category]/productQuery';
+import { DEFAULT_SORT, SORTS, SORT_LABELS, type SortKey } from '@/app/shop/[category]/productQuery';
 import { trackJourney } from '@/utils/journey';
 
 /**
@@ -28,9 +28,9 @@ export default function SortSelect({ value }: { value: SortKey }) {
   function change(next: string) {
     if (SORTS.includes(next as SortKey)) trackJourney('sort_changed',{option_code:next,surface:'collection'});
     const params = new URLSearchParams(sp.toString());
-    // Featured is the default, so it is spelled by ABSENCE. Writing it in would
-    // give the same rows two URLs.
-    if (next === 'featured') params.delete('sort');
+    // The default order (dearest first) is spelled by ABSENCE. Writing it in
+    // would give the same rows two URLs.
+    if (next === DEFAULT_SORT) params.delete('sort');
     else params.set('sort', next);
     params.delete('page');
 

@@ -200,6 +200,8 @@ export type Database = {
           upstairs_per_extra_floor: number
           max_floor: number
           assembly_fee: number
+          removal_base_fee: number
+          removal_included_seats: number
           removal_per_seat: number
           removal_min_seats: number
           removal_default_seats: number
@@ -214,6 +216,7 @@ export type Database = {
           tier_roma: number
           tier_standard: number
           tier_excluded: number
+          offer_min_price: number
           offer_window_hours: number
           offer_enabled: boolean
           sample_limit: number
@@ -228,6 +231,8 @@ export type Database = {
           upstairs_per_extra_floor?: number
           max_floor?: number
           assembly_fee?: number
+          removal_base_fee?: number
+          removal_included_seats?: number
           removal_per_seat?: number
           removal_min_seats?: number
           removal_default_seats?: number
@@ -242,6 +247,7 @@ export type Database = {
           tier_roma?: number
           tier_standard?: number
           tier_excluded?: number
+          offer_min_price?: number
           offer_window_hours?: number
           offer_enabled?: boolean
           sample_limit?: number
@@ -256,6 +262,8 @@ export type Database = {
           upstairs_per_extra_floor?: number
           max_floor?: number
           assembly_fee?: number
+          removal_base_fee?: number
+          removal_included_seats?: number
           removal_per_seat?: number
           removal_min_seats?: number
           removal_default_seats?: number
@@ -270,6 +278,7 @@ export type Database = {
           tier_roma?: number
           tier_standard?: number
           tier_excluded?: number
+          offer_min_price?: number
           offer_window_hours?: number
           offer_enabled?: boolean
           sample_limit?: number
@@ -754,6 +763,32 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      offer_excluded_products: {
+        Row: {
+          product_id: string
+          created_at: string
+          created_by: string | null
+        }
+        Insert: {
+          product_id: string
+          created_at?: string
+          created_by?: string | null
+        }
+        Update: {
+          product_id?: string
+          created_at?: string
+          created_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offer_excluded_products_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: true
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       offer_product_tiers: {
         Row: {

@@ -18,6 +18,7 @@ import { useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { MessageCircle, Plus, X, Loader2, Check, Clock3, Phone } from 'lucide-react'
 import { createWhatsAppOrder, previewWhatsAppTimeMatch, type WhatsAppAttributionMatch } from '@/app/actions/manual-order'
+import SearchSelect from '@/components/Admin/SearchSelect'
 
 export interface PickerVariant {
   id: string
@@ -105,6 +106,15 @@ export default function NewWhatsAppOrder({
     const m = new Map(variants.map(v => [v.id, v.price]))
     return (id: string) => m.get(id) ?? 0
   }, [variants])
+
+  // Both pickers are typed into rather than scrolled: every live colourway of
+  // every sofa, and the whole fabric library, are too long to pick from a
+  // wheel on a phone. See components/Admin/SearchSelect.
+  const variantOptions = useMemo(
+    () => variants.map(v => ({ id: v.id, label: v.label, hint: `£${v.price.toFixed(2)}` })),
+    [variants],
+  )
+  const fabricOptions = useMemo(() => fabrics.map(f => ({ id: f.id, label: f.label })), [fabrics])
 
   /** What the customer has agreed to, as the form currently stands. */
   const total = useMemo(() => {
@@ -343,17 +353,14 @@ export default function NewWhatsAppOrder({
             {lines.map((line, i) => (
               <div key={i} className="rounded-sm border border-stone-200 bg-stone-50/60 p-3">
                 <div className="flex gap-2">
-                  <select
-                    className={`${field} flex-1`}
+                  <SearchSelect
+                    className="flex-1"
+                    options={variantOptions}
                     value={line.variantId}
-                    onChange={e => setLine(i, { variantId: e.target.value })}
-                    aria-label="Sofa"
-                  >
-                    <option value="">Choose a sofa…</option>
-                    {variants.map(v => (
-                      <option key={v.id} value={v.id}>{v.label} — £{v.price.toFixed(2)}</option>
-                    ))}
-                  </select>
+                    onChange={id => setLine(i, { variantId: id })}
+                    ariaLabel="Sofa"
+                    placeholder="Search by name, colour or SKU…"
+                  />
                   {lines.length > 1 && (
                     <button
                       type="button"
@@ -400,17 +407,14 @@ export default function NewWhatsAppOrder({
                     autoComplete="off"
                   />
                   {fabrics.length > 0 && (
-                    <select
-                      className={field}
+                    <SearchSelect
+                      options={fabricOptions}
                       value={line.fabricId}
-                      onChange={e => setLine(i, { fabricId: e.target.value })}
-                      aria-label="Fabric"
-                    >
-                      <option value="">No fabric chosen</option>
-                      {fabrics.map(f => (
-                        <option key={f.id} value={f.id}>{f.label}</option>
-                      ))}
-                    </select>
+                      onChange={id => setLine(i, { fabricId: id })}
+                      ariaLabel="Fabric"
+                      placeholder="Search fabrics by name or code…"
+                      emptyOptionLabel="No fabric chosen"
+                    />
                   )}
                 </div>
               </div>

@@ -11,12 +11,13 @@ import type { ShopSettings } from './shopSettings'
 
 export type FigureKey =
   | 'upstairs_first_floor' | 'upstairs_per_extra_floor' | 'max_floor' | 'assembly_fee'
+  | 'removal_base_fee' | 'removal_included_seats'
   | 'removal_per_seat' | 'removal_min_seats' | 'removal_default_seats' | 'removal_max_seats'
   | 'delivery_window_from_days' | 'delivery_window_to_days'
   | 'far_window_from_days' | 'far_window_to_days'
   | 'preferred_earliest_days' | 'preferred_latest_days'
   | 'tier_electric' | 'tier_roma' | 'tier_standard' | 'tier_excluded'
-  | 'offer_window_hours' | 'sample_limit'
+  | 'offer_min_price' | 'offer_window_hours' | 'sample_limit'
 
 export interface FigureField {
   key: FigureKey
@@ -47,7 +48,9 @@ export const FIGURE_GROUPS: FigureGroup[] = [
       { key: 'upstairs_per_extra_floor', label: 'Each extra floor without a lift', kind: 'money', min: 0, max: 1000 },
       { key: 'max_floor', label: 'Highest floor a customer can choose', kind: 'whole', min: 1, max: 50, unit: 'floor' },
       { key: 'assembly_fee', label: 'Assembly in the room', kind: 'money', min: 0, max: 1000 },
-      { key: 'removal_per_seat', label: 'Old sofa removal, per seat', kind: 'money', min: 0, max: 1000 },
+      { key: 'removal_base_fee', label: 'Old sofa removal, up to the seats below', kind: 'money', min: 0, max: 1000, hint: 'One fee covers everything up to that many seats. Seats above it add the per-seat rate.' },
+      { key: 'removal_included_seats', label: 'Removal: seats that fee covers', kind: 'whole', min: 1, max: 30, unit: 'seats' },
+      { key: 'removal_per_seat', label: 'Removal: each seat above that', kind: 'money', min: 0, max: 1000 },
       { key: 'removal_min_seats', label: 'Removal: fewest seats', kind: 'whole', min: 1, max: 30, unit: 'seats' },
       { key: 'removal_default_seats', label: 'Removal: seats chosen to start with', kind: 'whole', min: 1, max: 30, unit: 'seats' },
       { key: 'removal_max_seats', label: 'Removal: most seats', kind: 'whole', min: 1, max: 30, unit: 'seats' },
@@ -75,6 +78,7 @@ export const FIGURE_GROUPS: FigureGroup[] = [
       { key: 'tier_roma', label: 'Roma', kind: 'money', min: 0, max: 1000 },
       { key: 'tier_standard', label: 'Standard', kind: 'money', min: 0, max: 1000 },
       { key: 'tier_excluded', label: 'Excluded', kind: 'money', min: 0, max: 1000 },
+      { key: 'offer_min_price', label: 'Cheapest sofa the offer applies to', kind: 'money', min: 0, max: 9999, hint: 'Nothing under this gets money off, whatever tier it is in. A basket of nothing but cheaper sofas gets no discount at all.' },
       { key: 'offer_window_hours', label: 'How long a window lasts', kind: 'whole', min: 1, max: 720, unit: 'hours', hint: 'For windows given from now on. A window already given keeps its own deadline; it never moves.' },
     ],
   },
@@ -106,6 +110,8 @@ export function figuresFromSettings(s: ShopSettings): Record<FigureKey, string> 
     upstairs_per_extra_floor: n(s.upstairsPerExtraFloor),
     max_floor: n(s.maxFloor),
     assembly_fee: n(s.assemblyFee),
+    removal_base_fee: n(s.removalBaseFee),
+    removal_included_seats: n(s.removalIncludedSeats),
     removal_per_seat: n(s.removalPerSeat),
     removal_min_seats: n(s.removalMinSeats),
     removal_default_seats: n(s.removalDefaultSeats),
@@ -120,6 +126,7 @@ export function figuresFromSettings(s: ShopSettings): Record<FigureKey, string> 
     tier_roma: n(s.tierAmounts.ROMA),
     tier_standard: n(s.tierAmounts.STANDARD),
     tier_excluded: n(s.tierAmounts.EXCLUDED),
+    offer_min_price: n(s.offerMinPrice),
     offer_window_hours: n(s.offerWindowHours),
     sample_limit: n(s.sampleLimit),
   }
@@ -162,6 +169,9 @@ export function checkFigures(raw: Partial<Record<string, unknown>>): FiguresChec
   if (!(figures.removal_min_seats <= figures.removal_default_seats && figures.removal_default_seats <= figures.removal_max_seats)) {
     return { ok: false, field: 'removal_default_seats', text: SETTINGS_REFUSALS.SEATS_ORDER }
   }
+  if (!(figures.removal_included_seats >= figures.removal_min_seats && figures.removal_included_seats <= figures.removal_max_seats)) {
+    return { ok: false, field: 'removal_included_seats', text: SETTINGS_REFUSALS.BAND_SEATS }
+  }
   return { ok: true, figures }
 }
 
@@ -173,6 +183,7 @@ export const SETTINGS_REFUSALS = {
   DATES_ORDER: 'The latest day a customer can choose has to come after the earliest.',
   TIERS_ORDER: 'The tiers have to stay in order: Electric at least as much as Roma, Roma at least as much as Standard, Standard at least as much as Excluded.',
   SEATS_ORDER: 'Removal seats have to go fewest ≤ to start with ≤ most.',
+  BAND_SEATS: 'The seats the removal fee covers have to be between the fewest and the most a customer can pick.',
   OUT_OF_RANGE: 'One of the figures is outside what the shop allows.',
   ORDERFLOW_NOT_CONNECTED: 'OrderFlow isn’t connected: its address and key aren’t in Supabase Vault, so it can’t be switched on.',
   ORDERFLOW_SWITCHED_OFF: 'Sending to OrderFlow is switched off. Switch it on first.',

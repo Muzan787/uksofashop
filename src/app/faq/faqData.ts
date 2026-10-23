@@ -13,7 +13,9 @@ import { SUPPORT_EMAIL } from '@/constants/contact'
 export interface Faq { q: string; a: string }
 interface FaqGroup { group: string; items: Faq[] }
 
-export function faqGroupsFor(s: Pick<ShopSettings, 'upstairsFirstFloor' | 'assemblyFee' | 'removalPerSeat'>): FaqGroup[] {
+export function faqGroupsFor(
+  s: Pick<ShopSettings, 'upstairsFirstFloor' | 'assemblyFee' | 'removalBaseFee' | 'removalIncludedSeats' | 'removalPerSeat'>,
+): FaqGroup[] {
   return [
   {
     group: 'Delivery',
@@ -40,7 +42,7 @@ export function faqGroupsFor(s: Pick<ShopSettings, 'upstairsFirstFloor' | 'assem
       },
       {
         q: 'Can you take my old sofa away?',
-        a: `Yes. Old sofa removal is ${gbpFigure(s.removalPerSeat)} per seat — ${gbpFigure(s.removalPerSeat * 2)} for a two-seater, ${gbpFigure(s.removalPerSeat * 3)} for a three-seater — and you add it at checkout, telling us how many seats we’re collecting. For very large or unusual items the charge may be a little different — if so, we’ll tell you as soon as we’ve received your order, well before delivery day.`,
+        a: `Yes. Old sofa removal is ${gbpFigure(s.removalBaseFee)} for anything up to ${s.removalIncludedSeats} seats — so a two-seater, a three-seater, or a three and a two going together are all ${gbpFigure(s.removalBaseFee)} — and ${gbpFigure(s.removalPerSeat)} for each seat above ${s.removalIncludedSeats}. You add it at checkout, telling us how many seats we’re collecting. For very large or unusual items the charge may be a little different — if so, we’ll tell you as soon as we’ve received your order, well before delivery day.`,
       },
       {
         q: 'What happens if I miss my delivery?',

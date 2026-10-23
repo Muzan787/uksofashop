@@ -86,7 +86,7 @@ const getProductPageData = unstable_cache(
     // else below, so it is one round trip. A product with no variant_group_id
     // asks nothing of variant_groups, and a stocked recliner does not load 70
     // fabrics.
-    const [group, related, fabrics, videos, offerTierRow] = await Promise.all([
+    const [group, related, fabrics, videos, offerTierRow, offerExcludedRow] = await Promise.all([
       product.variant_group_id
         ? Promise.all([
             db
@@ -142,9 +142,19 @@ const getProductPageData = unstable_cache(
         .eq('product_id', product.id)
         .maybeSingle()
         .then(r => r.data),
+
+      // Taken off the offer by hand in Admin -> Settings. Nothing is said
+      // about an offer on this sofa whatever tier it carries, because
+      // calculate_order_offer will not take a penny off it.
+      createAdminClient()
+        .from('offer_excluded_products')
+        .select('product_id')
+        .eq('product_id', product.id)
+        .maybeSingle()
+        .then(r => r.data),
     ]);
 
-    return { product, categoryData, group, related, fabrics, videos, offerTierRow };
+    return { product, categoryData, group, related, fabrics, videos, offerTierRow, offerExcludedRow };
   },
   ['uksofashop-product-page-v1'],
   { revalidate: 300, tags: ['product'] },
@@ -240,7 +250,7 @@ export default async function ProductPage(props: { params: Params, searchParams:
   ]);
 
   if (!data) notFound();
-  const { product, group, related, fabrics, videos, offerTierRow } = data;
+  const { product, group, related, fabrics, videos, offerTierRow, offerExcludedRow } = data;
 
   // The category in the URL has to be one this product genuinely belongs to.
   // Otherwise /shop/anything/<slug> renders the same page and Google sees as
@@ -288,11 +298,17 @@ export default async function ProductPage(props: { params: Params, searchParams:
         .then(r => r.data)
     : null;
 
+  // An excluded product has no tier as far as the page is concerned. The
+  // price floor is applied where the chosen colourway's price is known
+  // (components/Offer/OfferStrip), because a £399 sofa and a £450 colourway
+  // of it are not the same answer.
   const offerTier: OfferTier | null =
-    offerTierRow?.tier === 'ELECTRIC' || offerTierRow?.tier === 'ROMA' ||
-    offerTierRow?.tier === 'STANDARD' || offerTierRow?.tier === 'EXCLUDED'
-      ? offerTierRow.tier
-      : null;
+    offerExcludedRow
+      ? null
+      : offerTierRow?.tier === 'ELECTRIC' || offerTierRow?.tier === 'ROMA' ||
+        offerTierRow?.tier === 'STANDARD' || offerTierRow?.tier === 'EXCLUDED'
+        ? offerTierRow.tier
+        : null;
 
   const initialWishlistState = Boolean(wishlistItem);
 
@@ -324,6 +340,9 @@ export default async function ProductPage(props: { params: Params, searchParams:
       .flat()
       .filter((p): p is RelatedProductRow => Boolean(p) && p!.id !== product.id && p!.is_active !== false);
 
+    // Sofas from the same range first, then the dearest - the order every
+    // listing opens in (Muaz, 2026-10-24). Without the second key the rest of
+    // the rail came back in whatever order the join produced.
     relatedProducts.sort((a, b) => {
       const aFirstWord = a.title.trim().split(' ')[0].toLowerCase();
       const bFirstWord = b.title.trim().split(' ')[0].toLowerCase();
@@ -331,7 +350,7 @@ export default async function ProductPage(props: { params: Params, searchParams:
       const matchA = aFirstWord === currentFirstWord ? 1 : 0;
       const matchB = bFirstWord === currentFirstWord ? 1 : 0;
 
-      return matchB - matchA;
+      return matchB - matchA || Number(b.base_price) - Number(a.base_price);
     });
 
     safeSimilarProducts = relatedProducts.slice(0, 4).map(p => ({

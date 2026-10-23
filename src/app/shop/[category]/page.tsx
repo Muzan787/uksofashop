@@ -13,6 +13,7 @@ import {
   parseSort,
   parsePrice,
   categoryPriceRange,
+  DEFAULT_SORT,
 } from './productQuery'
 import ProductGrid from './ProductGrid'
 import CategoryFilters from './CategoryFilters'
@@ -57,7 +58,7 @@ export async function generateMetadata(
   // A sorted listing is the same rows in a different order, which is a
   // duplicate as far as an index is concerned — so it is kept out of one
   // exactly like a filtered view is.
-  const sorted = parseSort(sp.sort) !== 'featured'
+  const sorted = parseSort(sp.sort) !== DEFAULT_SORT
   const filtered = hasActiveFilters({ style, material, color, minPrice, maxPrice }) || sorted
 
   const basePath = `/shop/${decodedCategory}`
@@ -241,7 +242,7 @@ export default async function CategoryPage(props: { params: Params; searchParams
   const introCopy = CATEGORY_COPY[decodedCategory]
   const showIntro = Boolean(introCopy) && currentPage === 1 && !hasActiveFilters({
     style, material, color, minPrice, maxPrice,
-  }) && sort === 'featured'
+  }) && sort === DEFAULT_SORT
 
   // Matches the visual breadcrumb rendered below, which had no markup behind it.
   const breadcrumbLd = breadcrumbSchema(
@@ -325,7 +326,7 @@ export default async function CategoryPage(props: { params: Params; searchParams
             <ActiveFilterChips
               basePath={basePath}
               chips={chips}
-              sort={sort === 'featured' ? undefined : sort}
+              sort={sort === DEFAULT_SORT ? undefined : sort}
             />
 
             <Suspense key={gridKey} fallback={<ProductGridSkeleton />}>

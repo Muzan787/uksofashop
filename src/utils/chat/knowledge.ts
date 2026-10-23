@@ -23,7 +23,7 @@
 // which is what stops the assistant contradicting the FAQ page: a promise
 // changed in constants/promises.ts changes here on the next build too.
 
-import { DELIVERY_AREA_NOTE } from '@/constants/delivery'
+import { DELIVERY_AREA_NOTE, sofaRemovalPriceSentence } from '@/constants/delivery'
 import { DEFAULT_SHOP_SETTINGS, gbpFigure, type ShopSettings } from '@/utils/shopSettings'
 import { getShopSettings } from '@/utils/shopSettingsServer'
 import { DELIVERY_CHARGE_NOTE, PROMISES } from '@/constants/promises'
@@ -308,7 +308,7 @@ function renderPrompt(catalogue: string | null, fabrics: string | null, s: ShopS
 - Delivery charges by distance from Blackburn, by postcode district: ${DELIVERY_CHARGE_NOTE} Everywhere else on UK Mainland is free. If asked about a specific place, say which band it is likely in and that the postcode check on any product page, or checkout, gives the exact figure.
 - Delivery area: ${DELIVERY_AREA_NOTE} The team still delivers to those places - it is quoted individually on WhatsApp before the order is placed.
 - Payment: ${PROMISES.payment.long} Cash or bank transfer at the door. No deposit, no card payments, no finance.
-- Optional extras, chosen at checkout and paid on delivery: upstairs delivery from ${gbpFigure(s.upstairsFirstFloor)} (first floor, or any floor with a lift) plus ${gbpFigure(s.upstairsPerExtraFloor)} per extra floor without a lift; assembly in the room ${gbpFigure(s.assemblyFee)}; old sofa removal ${gbpFigure(s.removalPerSeat)} per seat (count every seat we collect, so a 3-seater is ${gbpFigure(s.removalPerSeat * 3)}), confirmed before delivery for unusually large items. Extras cannot be added on the day.
+- Optional extras, chosen at checkout and paid on delivery: upstairs delivery from ${gbpFigure(s.upstairsFirstFloor)} (first floor, or any floor with a lift) plus ${gbpFigure(s.upstairsPerExtraFloor)} per extra floor without a lift; assembly in the room ${gbpFigure(s.assemblyFee)}; old sofa removal ${sofaRemovalPriceSentence(s)} (count every seat we collect, so a 3-seater and a 2-seater together is 5 seats and still ${gbpFigure(s.removalBaseFee)}), confirmed before delivery for unusually large items. Extras cannot be added on the day.
 - Guarantee: ${PROMISES.guarantee.long}
 - Returns: ${PROMISES.returns.long}
 - Made to order: ${PROMISES.custom.long} Fabric sofas can be made in a different size on request; recliner and electric ranges come as listed.

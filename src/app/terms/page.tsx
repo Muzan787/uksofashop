@@ -6,7 +6,9 @@ import EditorialHero from '@/components/Editorial/EditorialHero'
 import EditorialLayout, { LastUpdated } from '@/components/Editorial/EditorialLayout'
 import EditorialSchema from '@/components/Editorial/EditorialSchema'
 import { CANCELLATION } from '@/constants/promises'
-import { RE_DELIVERY_FEE } from '@/constants/delivery'
+import { RE_DELIVERY_FEE, sofaRemovalPriceSentence } from '@/constants/delivery'
+import { getShopSettings } from '@/utils/shopSettingsServer'
+import { gbpFigure } from '@/utils/shopSettings'
 import {
   ADDRESS_LINE, PHONE_DISPLAY, PHONE_HREF, SUPPORT_EMAIL, traderIdentityLine,
 } from '@/constants/contact'
@@ -27,7 +29,7 @@ export const metadata: Metadata = pageMetadata({
  * was agreed and when, that is a false statement rather than a cosmetic bug.
  * Change it when the terms change; not otherwise.
  */
-const LAST_UPDATED = '2026-10-05'
+const LAST_UPDATED = '2026-10-24'
 
 const TOC = [
   { id: 'introduction', label: 'Who we are' },
@@ -40,8 +42,11 @@ const TOC = [
   { id: 'law', label: 'Governing law' },
 ]
 
-export default function TermsPage() {
+export default async function TermsPage() {
   const traderIdentity = traderIdentityLine()
+  // The same figures checkout charges, from Admin -> Settings, so the terms
+  // cannot quote a price the till does not.
+  const shop = await getShopSettings()
 
   return (
     <div className="min-h-screen bg-calico-50">
@@ -96,7 +101,20 @@ export default function TermsPage() {
         </p>
         <p>
           Optional services — upstairs delivery, assembly, removal of your old sofa — are added at
-          checkout and paid on the same day, in the same way.
+          checkout and paid on the same day, in the same way. Taking your old sofa away is{' '}
+          {sofaRemovalPriceSentence(shop)}: one charge of{' '}
+          {gbpFigure(shop.removalBaseFee)} covers anything up to {shop.removalIncludedSeats} seats,
+          counting every seat we collect, and each seat above {shop.removalIncludedSeats} adds{' '}
+          {gbpFigure(shop.removalPerSeat)}. For an unusually large or awkward item the charge may
+          differ, and we tell you as soon as your order reaches us rather than on delivery day.
+        </p>
+        <p>
+          Where a promotional offer is running, it applies only to sofas priced at{' '}
+          {gbpFigure(shop.offerMinPrice)} or more, and not to products we have excluded from it.
+          Nothing below {gbpFigure(shop.offerMinPrice)} carries a promotional discount, whichever
+          range it is in. One offer applies per order, it is taken off the sofa rather than the
+          delivery charges, and it is only valid while the window shown to you is still open — we
+          honour the deadline you were given, and we do not extend or reissue it.
         </p>
 
         <h2 id="delivery">4. Delivery</h2>

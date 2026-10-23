@@ -44,10 +44,12 @@ export const UPSTAIRS_PER_EXTRA_FLOOR = DEFAULT_SHOP_SETTINGS.upstairsPerExtraFl
 export const ASSEMBLY_FEE = DEFAULT_SHOP_SETTINGS.assemblyFee
 
 /**
- * Taking the old sofa away, priced per seat so a corner sofa pays more than a
- * two-seater. The customer counts every seat we are taking, so a 3-seater and
- * a 2-seater going together is 5. Unusual items are still confirmed before
- * delivery, and the customer is told this on the checkout.
+ * Taking the old sofa away. One fee covers the seats in the band - £50 for
+ * one to five - and every seat above it adds the per-seat rate, so a corner
+ * sofa pays more than a two-seater without a two-seater paying by the seat.
+ * The customer counts every seat we are taking, so a 3-seater and a 2-seater
+ * going together is 5. Unusual items are still confirmed before delivery, and
+ * the customer is told this on the checkout.
  */
 export const SOFA_REMOVAL_PER_SEAT = DEFAULT_SHOP_SETTINGS.removalPerSeat
 export const SOFA_REMOVAL_MIN_SEATS = DEFAULT_SHOP_SETTINGS.removalMinSeats
@@ -56,6 +58,7 @@ export const SOFA_REMOVAL_MAX_SEATS = DEFAULT_SHOP_SETTINGS.removalMaxSeats
 /** The delivery figures a calculation needs: a subset of the shop settings. */
 export type DeliverySettings = Pick<ShopSettings,
   'upstairsFirstFloor' | 'upstairsPerExtraFloor' | 'maxFloor' | 'assemblyFee' |
+  'removalBaseFee' | 'removalIncludedSeats' |
   'removalPerSeat' | 'removalMinSeats' | 'removalDefaultSeats' | 'removalMaxSeats'>
 
 export interface DeliveryOptions {
@@ -84,9 +87,24 @@ function clampRemovalSeats(seats: number, s: DeliverySettings): number {
   return Math.min(s.removalMaxSeats, Math.max(s.removalMinSeats, Math.floor(seats)))
 }
 
-/** Removal charge for a given number of seats. */
+/**
+ * Removal charge for a given number of seats: the base fee, plus the
+ * per-seat rate for every seat beyond the band. Five seats or fewer is the
+ * base fee on its own.
+ */
 export function sofaRemovalFee(seats: number, s: DeliverySettings = DEFAULT_SHOP_SETTINGS): number {
-  return clampRemovalSeats(seats, s) * s.removalPerSeat
+  const extra = Math.max(0, clampRemovalSeats(seats, s) - s.removalIncludedSeats)
+  return s.removalBaseFee + extra * s.removalPerSeat
+}
+
+/**
+ * The removal price in one sentence, for the pages that quote it: the terms,
+ * the charges table, the FAQ, the journal and what the assistant is told.
+ * Written from the settings so a change in Admin -> Settings reaches all of
+ * them rather than six hand-typed figures drifting apart.
+ */
+export function sofaRemovalPriceSentence(s: DeliverySettings = DEFAULT_SHOP_SETTINGS): string {
+  return `${gbpFigure(s.removalBaseFee)} for up to ${s.removalIncludedSeats} seats, then ${gbpFigure(s.removalPerSeat)} for each extra seat`
 }
 
 /**
@@ -139,10 +157,13 @@ export function deliveryBreakdown(opts: DeliveryOptions, s: DeliverySettings = D
 
   if (opts.sofaRemoval) {
     const seats = clampRemovalSeats(opts.sofaRemovalSeats, s)
+    const extra = Math.max(0, seats - s.removalIncludedSeats)
     lines.push({
       key: 'sofaRemoval',
       label: 'Old sofa removal',
-      detail: `${seats} ${seats === 1 ? 'seat' : 'seats'} at ${gbpFigure(s.removalPerSeat)} each`,
+      detail: extra > 0
+        ? `${seats} seats: ${gbpFigure(s.removalBaseFee)} up to ${s.removalIncludedSeats}, then ${extra} × ${gbpFigure(s.removalPerSeat)}`
+        : `${seats} ${seats === 1 ? 'seat' : 'seats'}, up to ${s.removalIncludedSeats} included`,
       amount: sofaRemovalFee(seats, s),
     })
   }
