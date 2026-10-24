@@ -84,7 +84,7 @@ function reporter(outcome='accepted'){
  const sends=[],google=[]
  const mod=load('src/utils/orderConversions.ts',{'server-only':{},'@/utils/metaCapi':{sendCapiEvent:async e=>{sends.push(e);return {outcome,http_status:outcome==='rejected'?400:200,events_received:outcome==='accepted'?1:undefined}}},
  '@/utils/ga4Server':{sendGa4Event:async()=>{},clientIdFromGaCookie:v=>v},'@/constants/site':{SITE_URL:'https://www.uksofashop.co.uk'},'@/utils/trackingEnv':{isServerTrackingEnabled:()=>true},'@/utils/trackingMode':{getTrackingMode:async()=>'live'},
- '@/utils/supabase/admin':{createAdminClient:()=>client},'./googleServer':{reportGooglePurchase:async id=>google.push(id)},'./googleMeasurement':{GOOGLE_GTM_ENABLED:true},'./metaOrderConsent':consent()})
+ '@/utils/supabase/admin':{createAdminClient:()=>client},'./googleServer':{reportGooglePurchase:async id=>google.push(id)},'./googleMeasurement':{GOOGLE_GTM_ENABLED:true},'./metaSignals':load('src/utils/metaSignals.ts',{}),'./metaOrderConsent':consent()})
  return {mod,sends,google}
 }
 async function confirmed(){await db.exec("update orders set status='confirmed',confirmed_at=now()-interval '1 hour'");return order()}

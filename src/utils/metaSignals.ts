@@ -4,14 +4,29 @@
 // whether it has been sent. Shared by Admin → Meta and the More page's
 // one-line note, so the count on the menu is the count on the page.
 
-export interface MetaSignalOrder {
-  status: string | null
+/**
+ * The acquisition evidence isGoogleOnlyAcquisition weighs, and nothing else.
+ *
+ * Its own type because two callers ask only that one question, about orders
+ * they fetched for their own reasons: the admin card's "Send Purchase"
+ * action (actions/orders.ts) and the conversion reporter
+ * (orderConversions.ts). Asking them for the whole of MetaSignalOrder meant
+ * asking them to select columns no rule in this file reads - utm_campaign
+ * and cancellation_reason, which Admin → Meta fetches to display - and the
+ * build failed on the two that reasonably do not.
+ */
+export interface MetaAcquisitionOrder {
   utm_source?: string | null
   manual_acquisition_source?: string | null
   gclid?: string | null
   gbraid?: string | null
   wbraid?: string | null
   fbclid?: string | null
+}
+
+/** Everything the rules below read: what META_SIGNAL_COLUMNS fetches. */
+export interface MetaSignalOrder extends MetaAcquisitionOrder {
+  status: string | null
   confirmed_at: string | null
   delivered_at: string | null
   purchase_event_sent_at: string | null
@@ -33,7 +48,7 @@ export function isQa(order: MetaSignalOrder): boolean {
 }
 
 /** Google-only acquisition must not produce NEW Meta Purchase or delivery signals. */
-export function isGoogleOnlyAcquisition(order: MetaSignalOrder): boolean {
+export function isGoogleOnlyAcquisition(order: MetaAcquisitionOrder): boolean {
   const override = order.manual_acquisition_source?.toLowerCase()
   if (override) return override === 'google'
   return order.utm_source?.toLowerCase() === 'google' &&
