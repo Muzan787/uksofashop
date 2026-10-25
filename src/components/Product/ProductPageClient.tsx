@@ -9,6 +9,7 @@
 //   BuyBox       title, price, how ordering works, the choices, add to cart
 //   AddToCartFab the floating add-to-cart pill, bottom left (on a phone, only
 //                once the price has scrolled away)
+//   ShopReviews  three reviews of the shop, under the photograph
 //   Details      description, specifications, delivery, dimensions
 //   Reviews      the reviews and the form, after the shop's 5-star Trustpilot
 //                carousel (TrustpilotReviews) once the widgets are on
@@ -46,6 +47,7 @@ import Gallery from './Gallery';
 import RecentlyViewed from './RecentlyViewed';
 import Reviews from './Reviews';
 import SecondaryActions from './SecondaryActions';
+import ShopReviews from './ShopReviews';
 import Similar from './Similar';
 import TrustpilotReviews from './TrustpilotReviews';
 import WhatsAppIcon from './WhatsAppIcon';
@@ -622,7 +624,7 @@ export default function ProductPageClient({
               And nothing follows the buy box in this column. A sibling after a
               sticky element scrolls over it from the instant it pins; the
               made-to-order and WhatsApp blocks are in the left column now. */}
-          <div className="order-2 md:col-start-2 md:row-start-1 md:row-span-3">
+          <div className="order-2 md:col-start-2 md:row-start-1 md:row-span-4">
             <div className="md:sticky md:top-[76px]">
               <BuyBox
                 product={product}
@@ -673,13 +675,20 @@ export default function ProductPageClient({
             />
           </div>
 
+          {/* Three reviews of the shop and a link to all of them, under the
+              photograph on desktop and after the agent and postcode blocks on
+              a phone. */}
+          <div className="order-4 md:col-start-1 md:row-start-3">
+            <ShopReviews />
+          </div>
+
           {/* The accordion is what gives the pin its travel. The buy box is
               877px tall and the photograph is 643px, so without something
               below it the left column is the SHORTER one and a sticky buy box
               has nowhere to go — which is exactly what happened the first time
               this was built. Details here makes the left column ~1,265px and
               the pin real. */}
-          <div className="order-4 md:col-start-1 md:row-start-3">
+          <div className="order-5 md:col-start-1 md:row-start-4">
             <Details
               description={product.description || ''}
               specs={specs}

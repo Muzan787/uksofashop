@@ -7,7 +7,7 @@ import { getFabricLibrary } from '@/utils/fabrics';
 import { getBuildTeaser } from '@/utils/buildTeaser';
 import HomeClient from '@/components/Home/HomeClient';
 import { HERO_PRODUCT_SLUG } from '@/constants/homeArt';
-import { SOCIAL_REVIEWS, channelLabel } from '@/constants/socialReviews';
+import { CUSTOMER_REVIEWS, channelLabel } from '@/constants/socialReviews';
 import type { HomeReview } from '@/components/Home/ReviewTicker';
 import { organizationSchema, webSiteSchema, jsonLd } from '@/utils/schema';
 
@@ -188,8 +188,9 @@ export default async function HomePage() {
 
   const collectionsData = summariseCollections(groupsData);
 
-  // The site's own reviews first, then what customers said on Facebook,
-  // WhatsApp and Messenger, which carries no rating and says where it came from.
+  // The site's own reviews first, then what customers said on Trustpilot,
+  // Facebook, WhatsApp and Messenger - stars only where they gave some, and
+  // always where it was said.
   const reviews: HomeReview[] = [
     ...(reviewRows ?? []).map(r => ({
       id: r.id,
@@ -199,12 +200,12 @@ export default async function HomePage() {
       verified: Boolean(r.order_id),
       productTitle: r.products?.title ?? null,
     })),
-    ...SOCIAL_REVIEWS.map(r => ({
+    ...CUSTOMER_REVIEWS.map(r => ({
       id: r.id,
-      rating: null,
+      rating: r.rating ?? null,
       comment: r.truncated ? `${r.quote}…` : r.quote,
       customerName: r.name,
-      verified: false,
+      verified: Boolean(r.verified),
       source: channelLabel(r),
       prompt: r.prompt,
     })),

@@ -212,6 +212,9 @@ export default function ReviewTicker({ reviews }: { reviews: HomeReview[] }) {
                   {firstName(review.customerName)}
                 </span>
                 {review.productTitle && <> · {review.productTitle}</>}
+                {/* A starred review from elsewhere (Trustpilot) still says
+                    where it came from; the unstarred ones say it up top. */}
+                {!review.productTitle && review.rating !== null && review.source && <> · {review.source}</>}
               </p>
             </article>
           ))}

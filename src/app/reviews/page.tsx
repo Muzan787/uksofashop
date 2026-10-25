@@ -4,11 +4,12 @@ import { pageMetadata } from '@/utils/pageMetadata'
 import { createClient } from '@/utils/supabase/server'
 import Link from 'next/link'
 import Image from 'next/image'
-import { Star, BadgeCheck, MessageCircle, MessageSquare, Quote, ThumbsUp } from 'lucide-react'
+import { Star, BadgeCheck } from 'lucide-react'
 import ReviewFormModal from './ReviewFormModal'
 import EditorialSchema from '@/components/Editorial/EditorialSchema'
 import VideoStrip from '@/components/UI/VideoStrip'
-import { EARLIER_PAGES, SOCIAL_REVIEWS, channelLabel, type SocialReview } from '@/constants/socialReviews'
+import ReviewCard from '@/components/UI/ReviewCard'
+import { CUSTOMER_REVIEWS } from '@/constants/socialReviews'
 
 
 const DESCRIPTION =
@@ -55,7 +56,7 @@ export default async function ReviewsPage() {
   const { data: { user } } = await supabase.auth.getUser()
 
   const siteReviews = reviews ?? []
-  const total = siteReviews.length + SOCIAL_REVIEWS.length
+  const total = siteReviews.length + CUSTOMER_REVIEWS.length
 
   return (
     <div className="min-h-screen bg-calico-50 pt-24 pb-16 px-4 sm:px-6 lg:px-8">
@@ -63,7 +64,7 @@ export default async function ReviewsPage() {
           people's writing, not ours. The individual ratings are already
           marked up per product where they belong, so no aggregateRating is
           claimed here - one on a page that mixes products would be an
-          average of unrelated things, and most of what is here carries no
+          average of unrelated things, and much of what is here carries no
           rating at all. */}
       <EditorialSchema
         type="CollectionPage"
@@ -76,11 +77,11 @@ export default async function ReviewsPage() {
       <div className="max-w-shell mx-auto">
 
         {/* Header Section */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-12 gap-6 lg:mb-16">
           <div>
             <p className="eyebrow m-0 mb-3 flex items-center gap-3 text-fern-700">
               <span aria-hidden="true" className="block h-px w-8 bg-fern-500" />
-              {total > 0 ? `${total} customers` : 'Reviews'}
+              {total > 0 ? `${total} reviews` : 'Reviews'}
             </p>
             <h1 className="text-h1 font-display font-bold text-ink-900 mb-2">
               Customer Reviews
@@ -90,24 +91,6 @@ export default async function ReviewsPage() {
 
           <ReviewFormModal isLoggedIn={!!user} />
         </div>
-
-        {/* Where the messages and comments below came from. Said once, up
-            front, so no card has to explain why it names a different page. */}
-        {SOCIAL_REVIEWS.length > 0 && (
-          <div className="mb-12 flex gap-4 rounded-md border border-fern-500/30 bg-fern-50 p-5 sm:p-6 lg:mb-16">
-            <MessageCircle aria-hidden="true" className="mt-0.5 h-6 w-6 shrink-0 text-fern-700" />
-            <div>
-              <p className="m-0 text-body font-semibold text-ink-900">In their own words.</p>
-              <p className="m-0 mt-2 max-w-[68ch] text-body-sm leading-relaxed text-ink-700">
-                Most of our customers order on WhatsApp or Facebook, so that is where they
-                tell us how it went. These are their messages and comments, copied as they
-                wrote them. Some were left on our Facebook pages from before the website,
-                under our earlier names: {new Intl.ListFormat('en-GB').format(EARLIER_PAGES)}.
-                None of them came with a star rating, so we haven&apos;t given them one.
-              </p>
-            </div>
-          </div>
-        )}
 
         <VideoStrip
           videos={customerVideos}
@@ -205,7 +188,9 @@ export default async function ReviewsPage() {
               )
             })}
 
-            {SOCIAL_REVIEWS.map(review => <SocialCard key={review.id} review={review} />)}
+            {CUSTOMER_REVIEWS.map(review => (
+              <ReviewCard key={review.id} review={review} className="mb-6 break-inside-avoid" />
+            ))}
           </div>
         ) : (
           <div className="text-center py-16 px-6 bg-white rounded-sm border border-calico-300">
@@ -236,61 +221,5 @@ export default async function ReviewsPage() {
         )}
       </div>
     </div>
-  )
-}
-
-/**
- * A message or comment from Facebook, WhatsApp or Messenger.
- *
- * No stars, because none was given; where it was said takes their place, so a
- * visitor can see what kind of thing they are reading.
- */
-function SocialCard({ review }: { review: SocialReview }) {
-  const name = review.name ?? 'A customer'
-  const Icon = review.recommends ? ThumbsUp : review.channel === 'facebook' ? MessageSquare : MessageCircle
-  const earlierPage = review.page && review.page !== 'UK SOFA SHOP' ? review.page : null
-
-  return (
-    <figure className="m-0 mb-6 break-inside-avoid overflow-hidden rounded-md border border-calico-300 border-t-[3px] border-t-fern-500 bg-white shadow-e1">
-      {review.photo && (
-        <Image
-          src={review.photo.src}
-          alt={review.photo.alt}
-          width={review.photo.width}
-          height={review.photo.height}
-          sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
-          // Capped, because the tallest of these filled a whole phone screen
-          // before the customer's words began.
-          className="block h-auto max-h-[22rem] w-full object-cover"
-        />
-      )}
-
-      <div className="p-6">
-        <Quote aria-hidden="true" className="h-6 w-6 text-fern-500" strokeWidth={1.75} />
-
-        {review.prompt && (
-          <p className="m-0 mt-3 text-caption italic text-ink-500">
-            We asked: &ldquo;{review.prompt}&rdquo;
-          </p>
-        )}
-
-        <blockquote className="m-0 mt-3 text-body-sm leading-relaxed text-ink-700">
-          &ldquo;{review.quote}{review.truncated ? '…' : ''}&rdquo;
-        </blockquote>
-
-        <figcaption className="mt-5 border-t border-calico-300 pt-4">
-          <span className="block text-body-sm font-semibold text-ink-900">{name}</span>
-          <span className="mt-1 flex items-center gap-1.5 text-caption text-fern-700">
-            <Icon aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
-            {channelLabel(review)}
-          </span>
-          {earlierPage && (
-            <span className="mt-0.5 block text-caption text-ink-500">
-              On our earlier page, {earlierPage}
-            </span>
-          )}
-        </figcaption>
-      </div>
-    </figure>
   )
 }
