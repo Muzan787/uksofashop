@@ -1,7 +1,7 @@
 // src/components/Home/ReviewTicker.tsx
 
 import Link from 'next/link';
-import { Star, BadgeCheck, ArrowRight, MessageCircle, Quote } from 'lucide-react';
+import { Star, BadgeCheck, ArrowRight, Quote } from 'lucide-react';
 import { Marquee, Reveal } from '@/components/Motion';
 import SectionHeading from '@/components/UI/SectionHeading';
 import TrustBox from '@/components/UI/TrustBox';
@@ -16,7 +16,7 @@ export interface HomeReview {
   /** True where the review is attached to a real order. */
   verified: boolean;
   productTitle?: string | null;
-  /** Where it was said — "WhatsApp message" — in place of the stars. */
+  /** Where it was said — "Review on Trustpilot". Set for Trustpilot only. */
   source?: string;
   /** What we had asked, where the answer makes no sense without it. */
   prompt?: string;
@@ -175,33 +175,28 @@ export default function ReviewTicker({ reviews }: { reviews: HomeReview[] }) {
                 strokeWidth={1.5}
               />
 
-              {/* Stars where the customer gave some; where they didn't, the
-                  place they said it, rather than a rating we would have had
-                  to make up. */}
-              <div className="relative flex items-center gap-3">
-                {review.rating !== null ? (
-                  <Stars rating={review.rating} />
-                ) : review.source && (
-                  <span className="flex items-center gap-1.5 font-data text-caption text-fern-700">
-                    <MessageCircle aria-hidden="true" className="h-3.5 w-3.5" />
-                    {review.source}
-                  </span>
-                )}
-                {review.verified && (
-                  <span className="flex items-center gap-1 font-data text-caption text-fern-700">
-                    <BadgeCheck aria-hidden="true" className="h-3.5 w-3.5" />
-                    Verified
-                  </span>
-                )}
-              </div>
+              {/* Stars only where the customer gave some - never a rating we
+                  would have had to make up - so a Facebook or WhatsApp
+                  review simply starts with its words. */}
+              {(review.rating !== null || review.verified) && (
+                <div className="relative mb-4 flex items-center gap-3">
+                  {review.rating !== null && <Stars rating={review.rating} />}
+                  {review.verified && (
+                    <span className="flex items-center gap-1 font-data text-caption text-fern-700">
+                      <BadgeCheck aria-hidden="true" className="h-3.5 w-3.5" />
+                      Verified
+                    </span>
+                  )}
+                </div>
+              )}
 
               {review.prompt && (
-                <p className="relative m-0 mt-4 text-caption italic text-ink-500">
+                <p className="relative m-0 mb-2 text-caption italic text-ink-500">
                   We asked: &ldquo;{review.prompt}&rdquo;
                 </p>
               )}
 
-              <p className={`relative m-0 line-clamp-4 text-body-sm leading-relaxed text-ink-700 ${review.prompt ? 'mt-2' : 'mt-4'}`}>
+              <p className="relative m-0 line-clamp-4 text-body-sm leading-relaxed text-ink-700">
                 {review.comment}
               </p>
 
@@ -212,9 +207,8 @@ export default function ReviewTicker({ reviews }: { reviews: HomeReview[] }) {
                   {firstName(review.customerName)}
                 </span>
                 {review.productTitle && <> · {review.productTitle}</>}
-                {/* A starred review from elsewhere (Trustpilot) still says
-                    where it came from; the unstarred ones say it up top. */}
-                {!review.productTitle && review.rating !== null && review.source && <> · {review.source}</>}
+                {/* Set only for Trustpilot, the one source that is named. */}
+                {!review.productTitle && review.source && <> · {review.source}</>}
               </p>
             </article>
           ))}

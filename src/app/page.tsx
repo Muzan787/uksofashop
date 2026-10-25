@@ -190,7 +190,7 @@ export default async function HomePage() {
 
   // The site's own reviews first, then what customers said on Trustpilot,
   // Facebook, WhatsApp and Messenger - stars only where they gave some, and
-  // always where it was said.
+  // the source named only for Trustpilot (see constants/socialReviews.ts).
   const reviews: HomeReview[] = [
     ...(reviewRows ?? []).map(r => ({
       id: r.id,
@@ -206,7 +206,7 @@ export default async function HomePage() {
       comment: r.truncated ? `${r.quote}…` : r.quote,
       customerName: r.name,
       verified: Boolean(r.verified),
-      source: channelLabel(r),
+      source: r.channel === 'trustpilot' ? channelLabel(r) : undefined,
       prompt: r.prompt,
     })),
   ];

@@ -14,14 +14,19 @@
 //   · Stars only where the customer gave them, which is Trustpilot alone.
 //     Muaz asked on 2026-10-25 for a rating on every review; the Facebook and
 //     WhatsApp ones were left without, because a rating we chose would be
-//     presented as the customer's. Their source shows instead.
+//     presented as the customer's.
 //   · "Verified buyer" only where the reviewer matches a delivered order in
 //     our own records: Jord, Sam P. and Stacey B. He asked for it on every
 //     Trustpilot review; the other seven have no order under their name, so
 //     the label would be a claim nobody checked.
-//   · Where it was said, on every card. Several were left on our Facebook pages
-//     from before the website, under names other than UK Sofa Shop — Muaz
-//     confirmed on 2026-10-25 that all of them are this business.
+//   · Where it was said is recorded here (channel, page) for every review. On
+//     the site only Trustpilot is named: Muaz asked on 2026-10-26 for the
+//     Facebook, WhatsApp and earlier-page lines to come off the cards.
+//     Several were left on our Facebook pages from before the website, under
+//     names other than UK Sofa Shop — he confirmed on 2026-10-25 that all of
+//     them are this business. Without that line on the card, Norma's quote
+//     read as a review of a different company, so the earlier name is cut
+//     from it with an ellipsis; nothing else in it changed.
 //   · First name and initial only. Some of these are from private chats.
 //   · Never staff. The two "Saad Abbasi" reviews were hidden in Admin →
 //     Reviews the same day for that reason.
@@ -178,8 +183,7 @@ export const SOCIAL_REVIEWS: SocialReview[] = [
     id: 'norma-m',
     name: 'Norma M.',
     quote:
-      "Well I would recommend this company UK Cheap Leather Sofas as here is a photo of the 3 seater black leather reclining sofa that I had off them which was delivered to me they r beautiful Sofas a r comfortable to sit on this sofa wot I've got is a Manual one a not electric which is better for me. I'm so thrilled to have contacted UK Cheap Leather Sofas in the first place",
-    truncated: true,
+      "Well I would recommend this company … here is a photo of the 3 seater black leather reclining sofa that I had off them which was delivered to me they r beautiful Sofas a r comfortable to sit on this sofa wot I've got is a Manual one a not electric which is better for me.",
     channel: 'facebook',
     page: 'UK Cheap Leather Sofas',
     photo: { src: '/reviews/norma-black-recliner.jpg', width: 282, height: 372, alt: "Norma's black leather 3 seater recliner at home" },

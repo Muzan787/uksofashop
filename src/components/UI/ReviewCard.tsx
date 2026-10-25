@@ -5,7 +5,7 @@
 // no photo, the quote clamped - on every product page.
 
 import Image from 'next/image'
-import { BadgeCheck, MessageCircle, MessageSquare, Quote, Star, ThumbsUp } from 'lucide-react'
+import { BadgeCheck, Quote, Star } from 'lucide-react'
 import Stars from '@/components/Product/Stars'
 import { TRUSTPILOT_PROFILE_URL } from '@/constants/trustpilot'
 import { channelLabel, type SocialReview } from '@/constants/socialReviews'
@@ -17,8 +17,10 @@ const DATE = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', 
 
 /**
  * Stars where the customer gave some, a quote mark where they didn't - never
- * a rating chosen for them. Where it was said is on every card, and a
- * Trustpilot one links to the profile, where every review can be read.
+ * a rating chosen for them. Only a Trustpilot review says where it came from,
+ * linking to the profile where every review can be read; the Facebook and
+ * WhatsApp ones carry no source line, at Muaz's request (2026-10-26). Where
+ * each was said is still recorded in constants/socialReviews.ts.
  */
 export default function ReviewCard({ review, compact = false, className = '' }: {
   review: SocialReview
@@ -26,12 +28,6 @@ export default function ReviewCard({ review, compact = false, className = '' }: 
   className?: string
 }) {
   const name = review.name ?? 'A customer'
-  const label = channelLabel(review)
-  const Icon = review.channel === 'trustpilot' ? Star
-    : review.recommends ? ThumbsUp
-    : review.channel === 'facebook' ? MessageSquare
-    : MessageCircle
-  const earlierPage = review.page && review.page !== 'UK SOFA SHOP' ? review.page : null
 
   return (
     <figure className={`m-0 overflow-hidden rounded-md border border-calico-300 border-t-[3px] border-t-fern-500 bg-white shadow-e1 ${className}`}>
@@ -84,22 +80,17 @@ export default function ReviewCard({ review, compact = false, className = '' }: 
               </span>
             )}
           </span>
-          <span className="mt-1 flex items-center gap-1.5 text-caption text-fern-700">
-            <Icon aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
-            {review.channel === 'trustpilot' ? (
+          {review.channel === 'trustpilot' && (
+            <span className="mt-1 flex items-center gap-1.5 text-caption text-fern-700">
+              <Star aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
               <a
                 href={TRUSTPILOT_PROFILE_URL}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="hover-link text-fern-700 no-underline"
               >
-                {label}
+                {channelLabel(review)}
               </a>
-            ) : label}
-          </span>
-          {earlierPage && (
-            <span className="mt-0.5 block text-caption text-ink-500">
-              On our earlier page, {earlierPage}
             </span>
           )}
         </figcaption>
