@@ -7,12 +7,6 @@ interface Props {
   price: number;
   added: boolean;
   onAdd: () => void;
-  /**
-   * Decided by ProductPageClient. On a phone the pill waits until the price
-   * has scrolled off the top, and stands aside while the buy box's own button
-   * is on screen; from md up it is always shown.
-   */
-  visible: boolean;
 }
 
 /**
@@ -26,13 +20,12 @@ interface Props {
  * the mirror image of the WhatsApp pill on the right. Buy on one side, ask on
  * the other.
  *
- * NOT FROM THE FIRST SCREEN ON A PHONE. It was, and at 375x812 it sat exactly
- * over the price, which drew at 745px against the pill's 748-796. A visitor
- * from an ad that quoted a price landed on a page that hid it. It now waits
- * until the price has been seen and scrolled past (see `visible`), which is
- * also why the price is back on it at every width: by the time it appears,
- * the WhatsApp pill opposite has contracted to its 48px circle and the full
- * "ADD TO CART — £549" fits beside it on a 375px phone.
+ * ON SCREEN FOR THE WHOLE PAGE, at every width, from the first screen to the
+ * footer (Muaz, 2026-10-26). For a while it waited on phones until the price
+ * had scrolled past, because at 375x812 it once covered a price drawn at
+ * 745px; the price has drawn well above the pill since the 10 Oct pass. The
+ * price stays on its label, so it repeats what the button costs wherever the
+ * visitor is.
  *
  * SAME BUTTON, SMALLER. It is the buy box's button in every respect that
  * matters - the same ember pill, the same sheen, the same uppercase data face,
@@ -52,16 +45,11 @@ interface Props {
  * The buy box's button is relative anyway; this one would have been pinned
  * to nothing.
  */
-export default function AddToCartFab({ price, added, onAdd, visible }: Props) {
+export default function AddToCartFab({ price, added, onAdd }: Props) {
   return (
     <div
-      // inert while hidden, so a keyboard or screen reader does not land on a
-      // button nobody can see.
-      inert={!visible || undefined}
-      data-journey-section={visible ? 'sticky' : undefined}
-      className={`fab-offset fixed left-4 z-sticky-bar transition-[bottom,opacity,transform] duration-base ease-out-expo ${
-        visible ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-3 opacity-0'
-      }`}
+      data-journey-section="sticky"
+      className="fab-offset fixed left-4 z-sticky-bar transition-[bottom] duration-base ease-out-expo"
     >
       <button
         type="button"

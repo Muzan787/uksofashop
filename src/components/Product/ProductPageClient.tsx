@@ -7,8 +7,8 @@
 //
 //   Gallery      the photographs and the colour swatches
 //   BuyBox       title, price, how ordering works, the choices, add to cart
-//   AddToCartFab the floating add-to-cart pill, bottom left (on a phone, only
-//                once the price has scrolled away)
+//   AddToCartFab the floating add-to-cart pill, bottom left, for the whole
+//                page at every width
 //   ShopReviews  three reviews of the shop, under the photograph
 //   Details      description, specifications, delivery, dimensions
 //   Reviews      the reviews and the form, after the shop's 5-star Trustpilot
@@ -461,66 +461,28 @@ export default function ProductPageClient({
     });
   }, [product.id]);
 
-  // ── The floating add-to-cart, on a phone ─────────────────────────────────
+  // ── The floating add-to-cart ─────────────────────────────────────────────
   //
-  // It used to be on screen from the moment the page loaded, and on a phone
-  // that put it squarely over the price: at 375x812 the price drew at 745px
-  // and the pill covered 748-796. The visitor from an ad, who was promised a
-  // price, landed on a page that hid it.
+  // On screen for the whole page, at every width (Muaz, 2026-10-26). On a
+  // phone it used to wait until the price had scrolled off the top, because
+  // at 375x812 it once sat over a price drawn at 745px; since the 10 Oct pass
+  // the price draws well above the pill, so that reason has gone. It no longer
+  // steps aside while the buy box's own button is on screen either - two
+  // buttons that do the same thing is a repeat, not a clash.
   //
-  // So below md it waits. It appears once the price has scrolled off the top
-  // - by then the customer has seen what it costs, and the button brings the
-  // price back with it - and steps aside while the buy box's own button is on
-  // screen, so the two are never shown together. From md up the buy box pins
-  // beside the photograph, the pill cannot cover the price, and it stays on
-  // screen as it always has.
-  //
-  // The same observer records the first time the buy box's own button comes
-  // into view: how many visitors read that far down at all.
-  const [fabVisible, setFabVisible] = useState(false);
+  // What is left of the observer records the first time the buy box's own
+  // button comes into view: how many visitors read that far down at all.
   useEffect(() => {
-    const priceEl = document.querySelector('[data-pdp-price]');
     const addEl = document.querySelector('[data-pdp-add]');
-    const wide = window.matchMedia('(min-width: 48rem)');
-    if (!priceEl || !addEl || typeof IntersectionObserver === 'undefined') {
-      // Nothing to watch: fall back to the pill being always there.
-      const timer = window.setTimeout(() => setFabVisible(true), 0);
-      return () => window.clearTimeout(timer);
-    }
-
-    let priceAbove = false;
-    let addInView = false;
-    let seen = false;
-    const update = () => setFabVisible(wide.matches || (priceAbove && !addInView));
-
+    if (!addEl || typeof IntersectionObserver === 'undefined') return;
     const observer = new IntersectionObserver(entries => {
-      for (const entry of entries) {
-        if (entry.target === priceEl) {
-          priceAbove = !entry.isIntersecting && entry.boundingClientRect.top < 0;
-        } else {
-          addInView = entry.isIntersecting;
-          if (addInView && !seen) {
-            seen = true;
-            trackOperationalAction('pdp_add_button_seen', { productId: product.id });
-          }
-        }
+      if (entries.some(entry => entry.isIntersecting)) {
+        trackOperationalAction('pdp_add_button_seen', { productId: product.id });
+        observer.disconnect();
       }
-      update();
     });
-    observer.observe(priceEl);
     observer.observe(addEl);
-    wide.addEventListener('change', update);
-    // The first state, without waiting for the observer: its first report
-    // comes with the next rendered frame, and a tab opened in the background
-    // renders none - which left the desktop pill hidden until it was looked
-    // at. A timer runs regardless, and on a phone it settles to "hidden"
-    // until the observer says otherwise.
-    const initial = window.setTimeout(update, 0);
-    return () => {
-      window.clearTimeout(initial);
-      observer.disconnect();
-      wide.removeEventListener('change', update);
-    };
+    return () => observer.disconnect();
   }, [product.id]);
 
   const crumbCategory = titleCase(categoryName || categorySlug);
@@ -730,11 +692,10 @@ export default function ProductPageClient({
         />
       </div>
 
-      {/* Bottom left, opposite the WhatsApp pill - on a phone only once the
-          price has scrolled away (see fabVisible above). The same handler as
-          the buy box's button, so a made-to-order frame with no fabric chosen
-          opens the picker from here too. */}
-      <AddToCartFab price={price} added={added} onAdd={() => handleAdd('sticky')} visible={fabVisible} />
+      {/* Bottom left, opposite the WhatsApp pill, for the whole page. The
+          same handler as the buy box's button, so a made-to-order frame with
+          no fabric chosen opens the picker from here too. */}
+      <AddToCartFab price={price} added={added} onAdd={() => handleAdd('sticky')} />
 
       {madeToOrder && fabricOpen && (
         <FabricDialog
