@@ -240,7 +240,7 @@ export default function ProductCard({
           {/* Only where the product genuinely has approved reviews. */}
           {hasReviews && (
             <span className="flex shrink-0 items-center gap-1">
-              <Star aria-hidden="true" className="h-3.5 w-3.5 fill-ember-500 text-ember-500" />
+              <Star aria-hidden="true" className="h-3.5 w-3.5 fill-fern-500 text-fern-500" />
               <span className="font-data text-caption tabular-nums text-ink-500">
                 {(averageRating ?? 0).toFixed(1)}
               </span>

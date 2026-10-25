@@ -61,6 +61,7 @@ export default function Reviews({ productId, reviews, isLoggedIn }: Props) {
         heading="What customers say."
         emphasise="customers"
         level="section"
+        accent="fern"
         className="mb-6 lg:mb-8"
       />
       <h2 id="reviews-heading" className="sr-only">Customer reviews</h2>
@@ -88,7 +89,7 @@ function Summary({ count, average, distribution }: {
   if (!count) return null;
 
   return (
-    <div className="rounded-md border border-calico-300 bg-calico-100 p-5">
+    <div className="rounded-md border border-fern-500/30 bg-fern-50 p-5">
       <div className="flex items-center gap-4">
         <p className="m-0 font-display text-[40px] font-semibold leading-none tabular-nums text-ink-900">
           {average.toFixed(1)}
@@ -112,7 +113,7 @@ function Summary({ count, average, distribution }: {
               <td className="w-full py-1">
                 <span className="block h-2 overflow-hidden rounded-pill bg-calico-300">
                   <span
-                    className="bar-fill block h-full origin-left rounded-pill bg-[var(--pdp-accent)]"
+                    className="bar-fill block h-full origin-left rounded-pill bg-fern-500"
                     style={{ transform: `scaleX(${percent / 100})` }}
                   />
                 </span>
@@ -131,7 +132,7 @@ function Card({ review }: { review: Review }) {
   const verified = Boolean(review.order_id);
 
   return (
-    <article className="mb-4 break-inside-avoid rounded-md border border-calico-300 bg-calico-50 shadow-e1">
+    <article className="mb-4 break-inside-avoid overflow-hidden rounded-md border border-calico-300 border-t-[3px] border-t-fern-500 bg-white shadow-e1">
       {review.image_url && (
         <div className="relative aspect-[4/3] w-full overflow-hidden rounded-t-md bg-calico-200">
           <Image
@@ -149,7 +150,7 @@ function Card({ review }: { review: Review }) {
 
       <div className="p-4">
         <div className="flex items-center gap-3">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-pill bg-[var(--pdp-accent)] text-body-sm font-semibold text-[var(--pdp-accent-on)]">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-pill bg-fern-700 text-body-sm font-semibold text-white">
             {(review.customer_name || 'V').charAt(0).toUpperCase()}
           </span>
           <span className="min-w-0">
@@ -167,7 +168,7 @@ function Card({ review }: { review: Review }) {
         </div>
 
         {verified && (
-          <p className="m-0 mt-3 flex items-center gap-1.5 font-data text-caption text-sage-700">
+          <p className="m-0 mt-3 flex items-center gap-1.5 font-data text-caption text-fern-700">
             <BadgeCheck aria-hidden="true" className="h-3.5 w-3.5" />
             Verified buyer
           </p>
@@ -195,7 +196,7 @@ function ReviewForm({ productId, isLoggedIn }: { productId: string; isLoggedIn: 
   if (success) {
     return (
       <div className="rounded-md border border-calico-300 bg-calico-50 p-5 text-center">
-        <CheckCircle aria-hidden="true" className="mx-auto h-7 w-7 text-sage-700" />
+        <CheckCircle aria-hidden="true" className="mx-auto h-7 w-7 text-fern-700" />
         <p className="m-0 mt-2 text-body-sm font-semibold text-ink-900">Thank you.</p>
         <p className="m-0 mt-1 text-caption text-ink-500">
           Your review has been submitted and is waiting to be approved.
@@ -268,7 +269,7 @@ function ReviewForm({ productId, isLoggedIn }: { productId: string; isLoggedIn: 
                 aria-hidden="true"
                 className={`h-6 w-6 transition-transform duration-press ease-out-expo ${
                   s <= shown
-                    ? 'scale-110 fill-[var(--pdp-accent)] text-[var(--pdp-accent)]'
+                    ? 'scale-110 fill-fern-500 text-fern-500'
                     : 'fill-transparent text-calico-300'
                 }`}
               />
@@ -305,7 +306,7 @@ function ReviewForm({ productId, isLoggedIn }: { productId: string; isLoggedIn: 
       </div>
       ) : (
         <p className="m-0 flex gap-2 border-t border-calico-300 pt-4 text-caption leading-relaxed text-ink-500">
-          <Mail aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-[var(--pdp-accent-text)]" />
+          <Mail aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-fern-700" />
           <span>
             Reviewing from the link in your delivery email adds a{' '}
             <strong className="text-ink-900">Verified buyer</strong> mark and lets you attach a
@@ -317,7 +318,7 @@ function ReviewForm({ productId, isLoggedIn }: { productId: string; isLoggedIn: 
       <button
         type="submit"
         disabled={pending}
-        className="hover-btn flex h-12 items-center justify-center gap-2 rounded-sm bg-[var(--pdp-accent)] font-data text-eyebrow font-bold uppercase tracking-[0.1em] text-[var(--pdp-accent-on)] disabled:opacity-70"
+        className="hover-btn hover-btn-dark flex h-12 items-center justify-center gap-2 rounded-sm bg-fern-700 font-data text-eyebrow font-bold uppercase tracking-[0.1em] text-white disabled:opacity-70"
       >
         {pending && <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />}
         Submit review

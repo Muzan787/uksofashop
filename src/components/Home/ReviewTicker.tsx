@@ -1,7 +1,7 @@
 // src/components/Home/ReviewTicker.tsx
 
 import Link from 'next/link';
-import { Star, BadgeCheck, ArrowRight, Quote } from 'lucide-react';
+import { Star, BadgeCheck, ArrowRight, MessageCircle, Quote } from 'lucide-react';
 import { Marquee, Reveal } from '@/components/Motion';
 import SectionHeading from '@/components/UI/SectionHeading';
 import TrustBox from '@/components/UI/TrustBox';
@@ -9,12 +9,17 @@ import { TRUSTPILOT_REVIEW_URL, TRUSTPILOT_WIDGETS_ENABLED } from '@/constants/t
 
 export interface HomeReview {
   id: string;
-  rating: number;
+  /** Null for what customers said on Facebook or WhatsApp, which gave none. */
+  rating: number | null;
   comment: string | null;
   customerName: string | null;
   /** True where the review is attached to a real order. */
   verified: boolean;
   productTitle?: string | null;
+  /** Where it was said — "WhatsApp message" — in place of the stars. */
+  source?: string;
+  /** What we had asked, where the answer makes no sense without it. */
+  prompt?: string;
 }
 
 /** Reviews are signed with a first name, not a full one. */
@@ -30,7 +35,7 @@ function Stars({ rating }: { rating: number }) {
         <Star
           key={n}
           aria-hidden="true"
-          className={`h-3.5 w-3.5 ${n <= rating ? 'fill-ember-500 text-ember-500' : 'text-calico-300'}`}
+          className={`h-3.5 w-3.5 ${n <= rating ? 'fill-fern-500 text-fern-500' : 'text-calico-300'}`}
         />
       ))}
       <span className="sr-only">{rating} out of 5</span>
@@ -43,7 +48,8 @@ function Stars({ rating }: { rating: number }) {
  *
  * The three testimonials that used to sit here were invented and were removed
  * rather than re-worded, which left the homepage with no social proof at all.
- * These are real approved reviews or nothing.
+ * These are real approved reviews, plus what customers said on Facebook,
+ * WhatsApp and Messenger (constants/socialReviews.ts), or nothing.
  *
  * Below three, the section becomes an invitation instead. A ticker carrying two
  * cards loops visibly every few seconds and advertises how few there are — a
@@ -69,15 +75,15 @@ export default function ReviewTicker({ reviews }: { reviews: HomeReview[] }) {
     return (
       <section
         aria-label="Customer reviews"
-        className="grain-light section-y relative bg-calico-100"
+        className="grain-light section-y relative bg-fern-50"
       >
         {trustpilot}
         <div className="relative mx-auto max-w-read px-4 text-center sm:px-6">
           <Reveal distance={12} amount={0.3}>
-            <p className="eyebrow m-0 flex items-center justify-center gap-3 text-ember-700">
-              <span aria-hidden="true" className="block h-px w-8 bg-ember-500" />
+            <p className="eyebrow m-0 flex items-center justify-center gap-3 text-fern-700">
+              <span aria-hidden="true" className="block h-px w-8 bg-fern-500" />
               Reviews
-              <span aria-hidden="true" className="block h-px w-8 bg-ember-500" />
+              <span aria-hidden="true" className="block h-px w-8 bg-fern-500" />
             </p>
           </Reveal>
 
@@ -134,8 +140,8 @@ export default function ReviewTicker({ reviews }: { reviews: HomeReview[] }) {
   return (
     <section
       aria-label="Customer reviews"
-      className="grain-light section-y relative bg-calico-100"
-      style={{ ['--fade-from' as string]: 'var(--color-calico-100)' }}
+      className="grain-light section-y relative bg-fern-50"
+      style={{ ['--fade-from' as string]: 'var(--color-fern-50)' }}
     >
       <div className="relative mx-auto mb-10 max-w-shell px-4 sm:px-6">
         <SectionHeading
@@ -144,6 +150,7 @@ export default function ReviewTicker({ reviews }: { reviews: HomeReview[] }) {
           emphasise="words"
           href="/reviews"
           linkLabel="All reviews"
+          accent="fern"
           className="mb-0"
         />
       </div>
@@ -157,32 +164,48 @@ export default function ReviewTicker({ reviews }: { reviews: HomeReview[] }) {
           {reviews.map((review) => (
             <article
               key={review.id}
-              className="relative flex w-[300px] shrink-0 flex-col rounded-md border border-calico-300 bg-calico-50 p-6 shadow-e1 sm:w-[360px]"
+              className="relative flex w-[300px] shrink-0 flex-col rounded-md border border-calico-300 border-t-[3px] border-t-fern-500 bg-white p-6 shadow-e1 sm:w-[360px]"
             >
               {/* A quote mark, large and pale, behind the top corner. It is the
                   only decoration on the card and it stops a wall of identical
                   bordered boxes reading as a table. */}
               <Quote
                 aria-hidden="true"
-                className="absolute right-4 top-4 h-10 w-10 text-calico-200"
+                className="absolute right-4 top-4 h-10 w-10 text-fern-500/20"
                 strokeWidth={1.5}
               />
 
+              {/* Stars where the customer gave some; where they didn't, the
+                  place they said it, rather than a rating we would have had
+                  to make up. */}
               <div className="relative flex items-center gap-3">
-                <Stars rating={review.rating} />
+                {review.rating !== null ? (
+                  <Stars rating={review.rating} />
+                ) : review.source && (
+                  <span className="flex items-center gap-1.5 font-data text-caption text-fern-700">
+                    <MessageCircle aria-hidden="true" className="h-3.5 w-3.5" />
+                    {review.source}
+                  </span>
+                )}
                 {review.verified && (
-                  <span className="flex items-center gap-1 font-data text-caption text-sage-700">
+                  <span className="flex items-center gap-1 font-data text-caption text-fern-700">
                     <BadgeCheck aria-hidden="true" className="h-3.5 w-3.5" />
                     Verified
                   </span>
                 )}
               </div>
 
-              <p className="relative m-0 mt-4 line-clamp-4 text-body-sm leading-relaxed text-ink-700">
+              {review.prompt && (
+                <p className="relative m-0 mt-4 text-caption italic text-ink-500">
+                  We asked: &ldquo;{review.prompt}&rdquo;
+                </p>
+              )}
+
+              <p className={`relative m-0 line-clamp-4 text-body-sm leading-relaxed text-ink-700 ${review.prompt ? 'mt-2' : 'mt-4'}`}>
                 {review.comment}
               </p>
 
-              <span aria-hidden="true" className="mt-5 block h-px w-10 bg-ember-500" />
+              <span aria-hidden="true" className="mt-5 block h-px w-10 bg-fern-500" />
 
               <p className="m-0 mt-3 text-caption text-ink-500">
                 <span className="font-semibold text-ink-900">

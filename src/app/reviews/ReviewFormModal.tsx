@@ -72,7 +72,7 @@ export default function ReviewFormModal({ isLoggedIn }: { isLoggedIn: boolean })
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="hover-btn hover-btn-dark flex h-12 items-center justify-center rounded-sm bg-ink-900 px-6 font-data text-eyebrow font-bold uppercase tracking-[0.1em] text-calico-50"
+        className="hover-btn hover-btn-dark flex h-12 items-center justify-center rounded-sm bg-fern-700 px-6 font-data text-eyebrow font-bold uppercase tracking-[0.1em] text-white"
       >
         Write a review
       </button>
@@ -117,7 +117,7 @@ export default function ReviewFormModal({ isLoggedIn }: { isLoggedIn: boolean })
                     <Star
                       aria-hidden="true"
                       className={`h-7 w-7 transition-colors duration-press ${
-                        star <= shown ? 'fill-ember-500 text-ember-700' : 'fill-none text-calico-300'
+                        star <= shown ? 'fill-fern-500 text-fern-700' : 'fill-none text-calico-300'
                       }`}
                     />
                   </button>

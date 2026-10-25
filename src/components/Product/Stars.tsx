@@ -11,9 +11,9 @@ const SIZES = {
 /**
  * A read-only rating.
  *
- * Filled stars take the variant accent, empty ones take Calico 300 — so the
- * row still reads as a rating on a pale fabric, where an accent-on-accent
- * outline would vanish.
+ * Filled stars are Fern, the review green, wherever they appear — not the
+ * variant accent, which made a rating a different colour on every fabric.
+ * Empty ones take Calico 300.
  */
 export default function Stars({ rating, size = 'md', count }: {
   rating: number
@@ -29,7 +29,7 @@ export default function Stars({ rating, size = 'md', count }: {
           aria-hidden="true"
           className={`${SIZES[size]} ${
             i <= rating
-              ? 'fill-[var(--pdp-accent)] text-[var(--pdp-accent)]'
+              ? 'fill-fern-500 text-fern-500'
               : 'fill-transparent text-calico-300'
           }`}
         />

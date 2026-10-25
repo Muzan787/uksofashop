@@ -10,8 +10,9 @@ import { Star, CheckCircle } from 'lucide-react'
 import Field, { SubmitButton } from '@/components/UI/Field'
 import { submitGuestReview } from '@/app/actions/guest-review'
 
-const ACCENT = 'var(--color-ember-500)'      // fills: buttons, rules, icons, badges
-const ACCENT_TEXT = 'var(--color-ember-700)' // letterforms on a light ground
+// Fern, the review green: stars and icons here match every rating on the site.
+const ACCENT = 'var(--color-fern-500)'      // fills: rules, icons, stars
+const ACCENT_TEXT = 'var(--color-fern-700)' // letterforms on a light ground
 
 export default function GuestReviewForm({
   token,

@@ -67,6 +67,19 @@
   --color-sage-300: #A8BC96;     /* sage text on dark grounds — 8.7:1 on ink-900 */
   --color-sage-700: #465241;
 
+  /* Fern — reviews. Stars, review cards, what customers said. Kept apart from
+   * Sage, which means "confirmed" on an order, and brighter than it, because
+   * this green has to read as approval at star size. Not Trustpilot's green:
+   * these are our reviews, and borrowing their colour would suggest theirs.
+   *   500 is a FILL — stars, rules, icons. 3.3:1 on calico-50, enough for a
+   *       graphic, never enough for letterforms.
+   *   700 is TEXT — 6.3:1 on calico-50, 5.9:1 on fern-50, and white on a 700
+   *       button is 6.5:1. */
+  --color-fern-50:  #EAF4EC;     /* review panels on light grounds */
+  --color-fern-300: #8FD3A8;     /* fern text on dark grounds */
+  --color-fern-500: #2E9E5B;
+  --color-fern-700: #1A6B3C;
+
   /* Rust — errors and destructive actions. Never decorative. */
   --color-rust-50:  #F9EEEC;     /* error panel fill */
   --color-rust-200: #E8C4BD;     /* error panel border */

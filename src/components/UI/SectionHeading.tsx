@@ -33,6 +33,12 @@ interface Props {
    * the thing the page is about.
    */
   level?: 'page' | 'section';
+  /**
+   * The colour of the eyebrow, its rule and the link arrow. Ember everywhere
+   * except reviews, which are Fern so they read as approval (see tokens.css).
+   * Light grounds only; a dark section keeps its own tones.
+   */
+  accent?: 'ember' | 'fern';
   className?: string;
 }
 
@@ -64,10 +70,13 @@ export default function SectionHeading({
   linkLabel = 'View all',
   dark = false,
   level = 'page',
+  accent = 'ember',
   className = '',
 }: Props) {
+  const fern = accent === 'fern' && !dark;
   const headingTone = dark ? 'text-calico-50' : 'text-ink-900';
-  const eyebrowTone = dark ? 'text-ember-300' : 'text-ember-700';
+  const eyebrowTone = dark ? 'text-ember-300' : fern ? 'text-fern-700' : 'text-ember-700';
+  const ruleTone = fern ? 'bg-fern-500' : 'bg-ember-500';
   const standfirstTone = dark ? 'text-calico-300' : 'text-ink-500';
   const linkTone = dark ? 'text-calico-300' : 'text-ink-500';
   const headingSize = level === 'section' ? 'text-h2' : 'text-h1';
@@ -85,7 +94,7 @@ export default function SectionHeading({
     <div className={`mb-6 lg:mb-12 ${className}`}>
       <Reveal distance={14} amount={0.2}>
         <p className={`eyebrow m-0 flex items-center gap-3 ${eyebrowTone}`}>
-          <span aria-hidden="true" className="block h-px w-8 bg-ember-500" />
+          <span aria-hidden="true" className={`block h-px w-8 ${ruleTone}`} />
           {eyebrow}
         </p>
       </Reveal>
@@ -108,7 +117,7 @@ export default function SectionHeading({
               className={`hover-link inline-flex min-h-11 items-center gap-2 pb-1 text-body-sm no-underline ${linkTone}`}
             >
               {linkLabel}
-              <ArrowRight aria-hidden="true" className="h-4 w-4 text-ember-500" />
+              <ArrowRight aria-hidden="true" className={`h-4 w-4 ${fern ? 'text-fern-500' : 'text-ember-500'}`} />
             </Link>
           </Reveal>
         )}

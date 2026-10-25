@@ -7,6 +7,8 @@ import { getFabricLibrary } from '@/utils/fabrics';
 import { getBuildTeaser } from '@/utils/buildTeaser';
 import HomeClient from '@/components/Home/HomeClient';
 import { HERO_PRODUCT_SLUG } from '@/constants/homeArt';
+import { SOCIAL_REVIEWS, channelLabel } from '@/constants/socialReviews';
+import type { HomeReview } from '@/components/Home/ReviewTicker';
 import { organizationSchema, webSiteSchema, jsonLd } from '@/utils/schema';
 
 // The title deliberately repeats the layout default rather than using the
@@ -186,14 +188,27 @@ export default async function HomePage() {
 
   const collectionsData = summariseCollections(groupsData);
 
-  const reviews = (reviewRows ?? []).map(r => ({
-    id: r.id,
-    rating: r.rating,
-    comment: r.comment,
-    customerName: r.customer_name,
-    verified: Boolean(r.order_id),
-    productTitle: r.products?.title ?? null,
-  }));
+  // The site's own reviews first, then what customers said on Facebook,
+  // WhatsApp and Messenger, which carries no rating and says where it came from.
+  const reviews: HomeReview[] = [
+    ...(reviewRows ?? []).map(r => ({
+      id: r.id,
+      rating: r.rating,
+      comment: r.comment,
+      customerName: r.customer_name,
+      verified: Boolean(r.order_id),
+      productTitle: r.products?.title ?? null,
+    })),
+    ...SOCIAL_REVIEWS.map(r => ({
+      id: r.id,
+      rating: null,
+      comment: r.truncated ? `${r.quote}…` : r.quote,
+      customerName: r.name,
+      verified: false,
+      source: channelLabel(r),
+      prompt: r.prompt,
+    })),
+  ];
 
   return (
     <>

@@ -162,7 +162,7 @@ export default function AccountTabs({ orders, reviews, wishlist }: {
                         <Star
                           key={i}
                           aria-hidden="true"
-                          className={`h-4 w-4 ${i < review.rating ? 'fill-ember-500 text-ember-700' : 'fill-none text-calico-300'}`}
+                          className={`h-4 w-4 ${i < review.rating ? 'fill-fern-500 text-fern-700' : 'fill-none text-calico-300'}`}
                         />
                       ))}
                     </span>
