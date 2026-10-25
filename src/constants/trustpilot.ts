@@ -33,6 +33,17 @@
 //                               rating to mean something - "5.0 from 2
 //                               reviews" is weaker than no badge. The "Review
 //                               us on Trustpilot" links do not depend on it.
+//                               It also turns on the 5-star carousel on every
+//                               product page (Product/TrustpilotReviews.tsx).
+//
+//                               DO NOT TURN IT ON ON THE FREE PLAN. Checked
+//                               2026-10-25 against Trustpilot's own widget
+//                               data endpoint: the only TrustBox this business
+//                               has access to is the Review Collector. The
+//                               carousel and the micro combo below both answer
+//                               "BusinessUnit does not have access to that
+//                               trustbox" and draw a bare Trustpilot logo in an
+//                               empty box. They need a paid plan first.
 
 /** Trustpilot's id for this business. Public: it is in every TrustBox embed. */
 export const TRUSTPILOT_BUSINESS_UNIT_ID = '6aad5fc120d98657b6af39aa'

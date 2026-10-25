@@ -33,10 +33,18 @@ interface Props {
   kind: TrustBoxKind;
   /** 'light' on the calico page ground, 'dark' on ink panels. */
   theme?: 'light' | 'dark';
+  /**
+   * Which star ratings a review box shows, as Trustpilot takes it: '5', or
+   * '4,5'. Left out, it shows every review. Filtered, Trustpilot itself adds
+   * "Showing our 5 star reviews" and keeps the full TrustScore and count
+   * beside them - that disclosure is what keeps a filtered box on the right
+   * side of the DMCC Act, so nothing here hides or restyles it.
+   */
+  stars?: string;
   className?: string;
 }
 
-export default function TrustBox({ kind, theme = 'light', className }: Props) {
+export default function TrustBox({ kind, theme = 'light', stars, className }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const { templateId, height } = TRUSTBOX[kind];
 
@@ -69,6 +77,7 @@ export default function TrustBox({ kind, theme = 'light', className }: Props) {
         data-style-height={height}
         data-style-width="100%"
         data-theme={theme}
+        data-stars={stars}
         style={{ height, minHeight: height }}
       >
         <a

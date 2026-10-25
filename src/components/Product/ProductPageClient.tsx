@@ -10,7 +10,8 @@
 //   AddToCartFab the floating add-to-cart pill, bottom left (on a phone, only
 //                once the price has scrolled away)
 //   Details      description, specifications, delivery, dimensions
-//   Reviews      the reviews and the form
+//   Reviews      the reviews and the form, after the shop's 5-star Trustpilot
+//                carousel (TrustpilotReviews) once the widgets are on
 //   Similar      more from the same category, and Recently viewed under it
 //
 // On made-to-order frames it also renders the fabric picker (FabricDialog),
@@ -46,6 +47,7 @@ import RecentlyViewed from './RecentlyViewed';
 import Reviews from './Reviews';
 import SecondaryActions from './SecondaryActions';
 import Similar from './Similar';
+import TrustpilotReviews from './TrustpilotReviews';
 import WhatsAppIcon from './WhatsAppIcon';
 import Modal from '@/components/UI/Modal';
 import type { Fabric, FabricCollection, GalleryImage, Product, ProductVideo, Review, SimilarProduct, SizeVariant, Swatch, Variant } from './types';
@@ -698,6 +700,10 @@ export default function ProductPageClient({
             fallbackTitle={`${product.title} in a customer's home`}
             className="mb-12 lg:mb-16"
           />
+          {/* The shop's 5-star Trustpilot reviews, once the widgets are on.
+              Before this product's own reviews, which most products do not
+              have yet, so on most pages this is the reviews section. */}
+          <TrustpilotReviews />
           <Reviews productId={product.id} reviews={approvedReviews} isLoggedIn={isLoggedIn} />
         </div>
 
