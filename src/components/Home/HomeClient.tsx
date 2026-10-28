@@ -13,6 +13,9 @@ import ReviewTicker, { type HomeReview } from './ReviewTicker';
 import ClosingCta from './ClosingCta';
 import { canonicalCategory, canonicalProductPath } from '@/utils/productUrl';
 import { sale } from '@/utils/pricing';
+import HalloweenHero from '@/components/Halloween/HalloweenHero';
+import { MIDNIGHT_HREF } from '@/constants/halloween';
+import type { HalloweenHome } from '@/utils/halloweenHome';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Product {
@@ -41,6 +44,8 @@ interface Props {
   sofaCount: number;
   reviews: HomeReview[];
   buildTeaser: BuildTeaser;
+  /** Halloween 2026's hero and Midnight rail. Null when it is off. */
+  halloween?: HalloweenHome | null;
 }
 
 /**
@@ -135,7 +140,7 @@ function toCard(product: Product) {
 }
 
 // ─── Main export ──────────────────────────────────────────────────────────────
-export default function HomeClient({ categories, products, heroProduct, collections, sofaCount, reviews, buildTeaser }: Props) {
+export default function HomeClient({ categories, products, heroProduct, collections, sofaCount, reviews, buildTeaser, halloween }: Props) {
   // The pinned sofa where there is one, and otherwise the first card in the
   // rail below. It used to be only the latter, which made the hero's link and
   // price follow whatever was uploaded last while the photograph above them
@@ -148,18 +153,38 @@ export default function HomeClient({ categories, products, heroProduct, collecti
 
   return (
     <>
-      <Hero
-        image={lead?.product_variants?.[0]?.image_url ?? null}
-        productTitle={lead?.title ?? null}
-        productHref={leadHref}
-        // The lead product is the first card in the rail below — featured
-        // first, then newest — so the chip prices the sofa in the photograph.
-        fromPrice={leadPrice?.price ?? null}
-        wasPrice={leadPrice?.wasPrice ?? null}
-        sofaCount={sofaCount}
-      />
+      {halloween?.hero ? (
+        <HalloweenHero {...halloween.hero} />
+      ) : (
+        <Hero
+          image={lead?.product_variants?.[0]?.image_url ?? null}
+          productTitle={lead?.title ?? null}
+          productHref={leadHref}
+          // The lead product is the first card in the rail below — featured
+          // first, then newest — so the chip prices the sofa in the photograph.
+          fromPrice={leadPrice?.price ?? null}
+          wasPrice={leadPrice?.wasPrice ?? null}
+          sofaCount={sofaCount}
+        />
+      )}
 
       <TrustMarquee />
+
+      {/* Halloween 2026. On calico-100 so it and "New in" below are two light
+          sections told apart, not one long one. */}
+      {halloween && halloween.rail.length > 0 && (
+        <ProductRail
+          eyebrow="Halloween picks"
+          heading="Midnight sofas for movie night."
+          emphasise="Midnight"
+          standfirst="Black, charcoal and navy. Dark enough for a horror marathon, soft enough to hide behind."
+          items={halloween.rail}
+          viewAllHref={MIDNIGHT_HREF}
+          viewAllLabel="All black sofas"
+          viewAllNote="Every one in black"
+          ground="alt"
+        />
+      )}
 
       <ProductRail
         eyebrow="New in"

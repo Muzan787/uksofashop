@@ -1,0 +1,88 @@
+/* src/components/Halloween/Halloween.module.css
+ *
+ * The hero's Halloween dressing: a moon, three bats and a web. All of it is
+ * lighting and scenery - aria-hidden, pointer-events off - and none of it
+ * moves faster than the hero's own nine-second float. The site-wide
+ * reduced-motion block in globals.css stops the bats like every other loop.
+ */
+
+/* The moon. A lit disc with its own halo, behind everything on the stage.
+   On a phone it hangs to the right of the headline, which wraps short -
+   "Sink into / something / spooky." never reaches past 60% of a 375px screen
+   - so the white type never crosses the pale disc. The badge above it runs
+   almost the full width, which is why it is not up there. */
+.moon {
+  position: absolute;
+  top: 11.5rem;
+  right: 1.5rem;
+  width: 4.25rem;
+  height: 4.25rem;
+  border-radius: 9999px;
+  background: radial-gradient(circle at 38% 36%, #fbf3e0 0%, #f2dcae 48%, #d4a865 100%);
+  box-shadow:
+    0 0 32px 8px rgb(245 199 132 / 0.24),
+    0 0 110px 36px rgb(245 199 132 / 0.1);
+  pointer-events: none;
+}
+
+/* Two faint craters, so it reads as a moon and not as a lamp. */
+.moon::before,
+.moon::after {
+  content: '';
+  position: absolute;
+  border-radius: 9999px;
+  background: rgb(150 108 48 / 0.2);
+}
+.moon::before { width: 24%; height: 24%; top: 24%; left: 54%; }
+.moon::after { width: 15%; height: 15%; top: 60%; left: 28%; }
+
+@media (width >= 64rem) {
+  .moon {
+    top: 7rem;
+    right: 7%;
+    width: 7rem;
+    height: 7rem;
+  }
+}
+
+/* Bats are near-black, so on a dark stage each carries a warm rim of light -
+   otherwise only the one crossing the moon would be visible at all. */
+.bat {
+  position: absolute;
+  color: #0b0d0c;
+  filter: drop-shadow(0 0 5px rgb(245 199 132 / 0.45));
+  pointer-events: none;
+  animation: bat-drift 8s var(--ease-in-out-quart) infinite alternate;
+}
+
+/* Crossing the moon. */
+.bat1 { top: 12.75rem; right: 2.25rem; width: 2.1rem; }
+/* Above and left of it, under the badge. */
+.bat2 { top: 11rem; right: 6.25rem; width: 1.3rem; animation-duration: 11s; animation-delay: -4s; }
+/* Above it, between the badge and "Sink into" - the paragraph below the
+   headline runs the full width, so nothing can go under the moon. */
+.bat3 { top: 9.75rem; right: 3rem; width: 1.1rem; animation-duration: 13s; animation-delay: -7s; }
+
+@media (width >= 64rem) {
+  .bat1 { top: 8.5rem; right: calc(7% + 1.5rem); width: 3.25rem; }
+  .bat2 { top: 6.25rem; right: calc(7% + 9rem); width: 2rem; }
+  .bat3 { top: 12.5rem; right: calc(7% + 11rem); width: 1.5rem; }
+}
+
+/* A few pixels of travel and a slight bank, over eight seconds and more. */
+@keyframes bat-drift {
+  from { transform: translate3d(0, 0, 0) rotate(-5deg); }
+  to   { transform: translate3d(-12px, 6px, 0) rotate(4deg); }
+}
+
+/* The web, strung across the top-right corner of the photograph's frame:
+   over the room's wall, never over the sofa. */
+.web {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 34%;
+  max-width: 11rem;
+  color: rgb(251 250 247 / 0.42);
+  pointer-events: none;
+}

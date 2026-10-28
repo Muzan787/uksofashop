@@ -35,6 +35,7 @@ import { trackJourney } from '@/utils/journey';
 import type { JourneySurface } from '@/utils/journeyContract';
 import { useWhatsAppCTA } from '@/utils/attribution/useWhatsAppCTA';
 import { customEnquiryMessage, photoRequestMessage, productEnquiryMessage } from '@/utils/enquiryMessage';
+import { withHalloweenOpener } from '@/constants/halloween';
 import { usePhoneClick } from '@/utils/attribution/usePhoneClick';
 import type { DeliveryWindow } from '@/utils/delivery';
 import { sale } from '@/utils/pricing';
@@ -419,7 +420,7 @@ export default function ProductPageClient({
     : null;
 
   const agentCta = useWhatsAppCTA({
-    message: productEnquiryMessage(product.title, price, offerHold),
+    message: withHalloweenOpener(productEnquiryMessage(product.title, price, offerHold), product.id),
     pageContext: 'product_agent',
     productId: product.id,
     variantId: selVariant?.id,
@@ -439,7 +440,7 @@ export default function ProductPageClient({
   // The button on the photograph. Its own page context, so the enquiries it
   // starts can be counted apart from the floating button's.
   const photoRequestCta = useWhatsAppCTA({
-    message: photoRequestMessage(product.title, price, offerHold),
+    message: withHalloweenOpener(photoRequestMessage(product.title, price, offerHold), product.id),
     pageContext: 'product_photo_request',
     productId: product.id,
     variantId: selVariant?.id,

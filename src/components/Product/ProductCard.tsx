@@ -9,6 +9,8 @@ import { Star } from 'lucide-react';
 import { productTransitionName } from '@/components/Motion/productTransition';
 import { blurDataURL } from '@/utils/cloudinary';
 import { percentOff } from '@/utils/pricing';
+import { isHalloweenPick } from '@/constants/halloween';
+import { Pumpkin } from '@/components/Halloween/Icons';
 
 interface CardSwatch {
   id: string;
@@ -112,6 +114,8 @@ export default function ProductCard({
   // can never print a different figure from the product page it leads to.
   const cut = wasPrice ? percentOff(price, wasPrice) : 0;
   const onSale = cut >= 1;
+  // Halloween 2026: the sofas that come in black, charcoal or navy.
+  const halloween = isHalloweenPick(id);
 
   return (
     <article
@@ -172,7 +176,7 @@ export default function ProductCard({
           />
         )}
 
-        {(onSale || badge || badges?.length) && (
+        {(onSale || halloween || badge || badges?.length) && (
           <div className="absolute left-2 top-2 z-raised flex flex-col items-start gap-1">
             {/* First in the stack, and ink with ember letterforms rather than
                 either of the two styles below it — the saving has to read as a
@@ -182,6 +186,14 @@ export default function ProductCard({
             {onSale && (
               <span className="rounded-sm bg-ink-900 px-2 py-1 font-data text-caption font-extrabold uppercase tracking-wider text-ember-300">
                 {cut}% off
+              </span>
+            )}
+            {/* Ink and ember like the saving above it, so the pumpkin and the
+                ember ring are what tell the two apart. */}
+            {halloween && (
+              <span className="inline-flex items-center gap-1.5 rounded-sm bg-ink-900 px-2 py-1 font-data text-caption font-semibold uppercase tracking-wider text-ember-300 ring-1 ring-ember-500/60">
+                <Pumpkin className="h-3.5 w-3.5 text-ember-500" />
+                Halloween pick
               </span>
             )}
             {badge && (

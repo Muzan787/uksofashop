@@ -19,6 +19,13 @@ interface Props {
   /** Where the closing panel goes. */
   viewAllHref: string;
   viewAllLabel?: string;
+  /** The small line under the closing panel's label. */
+  viewAllNote?: string;
+  /**
+   * The section's ground. 'alt' is flat calico-100, for when two rails sit one
+   * after the other and have to read as two sections rather than one.
+   */
+  ground?: 'light' | 'alt';
 }
 
 /**
@@ -46,7 +53,9 @@ interface Props {
  */
 export default function ProductRail({
   eyebrow, heading, emphasise, standfirst, items, viewAllHref, viewAllLabel = 'View all',
+  viewAllNote = 'The whole range', ground = 'light',
 }: Props) {
+  const groundColour = ground === 'alt' ? 'var(--color-calico-100)' : 'var(--color-calico-50)';
   const rail = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(0);
   const [touched, setTouched] = useState(false);
@@ -87,8 +96,8 @@ export default function ProductRail({
 
   return (
     <section
-      className="grad-calico grain-light section-y relative bg-calico-50"
-      style={{ ['--fade-from' as string]: 'var(--color-calico-50)' }}
+      className={`grain-light section-y relative ${ground === 'alt' ? 'bg-calico-100' : 'grad-calico bg-calico-50'}`}
+      style={{ ['--fade-from' as string]: groundColour }}
     >
       <div className="relative mx-auto max-w-shell px-4 sm:px-6">
         <SectionHeading
@@ -147,7 +156,7 @@ export default function ProductRail({
                   {viewAllLabel}
                 </span>
                 <span className="font-data text-caption uppercase tracking-widest text-ink-900/60">
-                  The whole range
+                  {viewAllNote}
                 </span>
               </Link>
             </Reveal>
