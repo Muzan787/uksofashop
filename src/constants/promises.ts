@@ -121,22 +121,27 @@ export const TRUST_POINTS = [
  * nowhere else. The test for "personalised" lives in
  * src/utils/cancellationRights.ts; this is only the wording.
  *
- * `warning` is the point-of-sale wording, used both at the checkout and on a
- * made-to-order product page. Both describe an order that genuinely IS
- * personalised: "Add to cart" on a made-to-order sofa opens the fabric
- * picker and will not proceed without a choice — see handleAdd in
- * ProductPageClient.tsx — so there is no way to buy one of these without
- * specifying it, and the exemption really does attach to every one.
+ * `warning` is the checkout's wording, shown only when a basket line really
+ * is personalised (hasPersonalisedLine), so it can be stated flatly.
+ *
+ * `ifPersonalised` is the product page's. Since 2026-10-30 a made-to-order
+ * sofa can be bought in the colour it is photographed in, without choosing
+ * from the fabric library, and that order is a standard product with a longer
+ * lead time - it keeps the 14 days. So on the product page the exemption is
+ * conditional on the choice, and says so.
  *
  * `test` is for the legal pages, which have to say where the line falls
- * across the whole catalogue. The stocked ranges keep the full 14 days.
+ * across the whole catalogue.
  */
 export const CANCELLATION = {
   warning:
     'Because this is built to the fabric you chose, it is made to your specification, and the 14-day right to change your mind does not apply — that is the standard exemption under the Consumer Contracts Regulations. Faulty or damaged items are covered exactly as normal.',
+  /** For a made-to-order product page, before anything is chosen. */
+  ifPersonalised:
+    'If you have it built in a fabric you choose, or to a size or layout we change for you, it is made to your specification, and the 14-day right to change your mind does not apply — that is the standard exemption under the Consumer Contracts Regulations. Ordered in the colour shown, it keeps the full 14 days. Faulty or damaged items are covered exactly as normal.',
   /** For the legal pages, where the test itself has to be stated. */
   test:
-    'The exemption covers sofas personalised to your own choice — the fabric you pick from the library, a size or layout we change for you, or anything else built to your specification. Our stocked ranges, sold in set sizes and finishes, carry the full 14-day right.',
+    'The exemption covers sofas personalised to your own choice — the fabric you pick from the library, a size or layout we change for you, or anything else built to your specification. Sofas ordered as shown on the page, in a set size and in a colour we photograph them in, carry the full 14-day right.',
 } as const
 
 /** Shared meta description, used by the root layout and the manifest. */

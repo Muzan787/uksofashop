@@ -7,14 +7,13 @@ import { PROMISES } from '@/constants/promises';
 import type { DeliveryWindow } from '@/utils/delivery';
 import { percentOff, pounds } from '@/utils/pricing';
 import AddToCart from './AddToCart';
-import FabricChoice from './FabricChoice';
 import HowItWorks from './HowItWorks';
 import PillGroup, { type Pill } from './PillGroup';
 import Stars from './Stars';
 import TrustBox from '@/components/UI/TrustBox';
 import OfferStrip from '@/components/Offer/OfferStrip';
 import type { OfferTier } from '@/types/offers';
-import type { Fabric, FabricCollection, Product, SizeVariant } from './types';
+import type { Product, SizeVariant } from './types';
 
 interface Props {
   product: Product;
@@ -45,12 +44,6 @@ interface Props {
   materials: string[];
   selectedMaterial: string;
   onSelectMaterial: (m: string) => void;
-
-  /** Made-to-order frames only: the fabric library and the picker's opener.
-   *  Empty elsewhere, and nothing is drawn - see FabricChoice. */
-  fabrics?: FabricCollection[];
-  selectedFabric?: Fabric | null;
-  onOpenFabrics?: () => void;
 
   /** This product's paid-offer tier. The strip draws nothing without an entitlement. */
   offerTier?: OfferTier | null;
@@ -140,7 +133,6 @@ export default function BuyBox({
   subgroups, subgroupTitle, currentSubgroup, hrefForSubgroup,
   sizes, onCustomSize, onPickOption,
   materials, selectedMaterial, onSelectMaterial,
-  fabrics = [], selectedFabric = null, onOpenFabrics,
   offerTier = null,
   added, onAdd, inWishlist, wishlistBusy, onWishlist,
 }: Props) {
@@ -305,15 +297,6 @@ export default function BuyBox({
           </p>
         )}
       </div>
-
-      {/* ── Fabric, on made-to-order frames ─────────────────────────────── */}
-      {onOpenFabrics && (
-        <FabricChoice
-          collections={fabrics}
-          selected={selectedFabric}
-          onOpen={onOpenFabrics}
-        />
-      )}
 
       {/* ── Material ────────────────────────────────────────────────────── */}
       {materialPills.length > 1 && (

@@ -74,13 +74,11 @@ export default function SecondaryActions({ customMade, customEnquiryCta, agentCt
  * the same construction as the specifications accordion further down, so the
  * page has one disclosure pattern rather than two.
  *
- * The notice is the same sentence the checkout shows, read from
- * constants/promises.ts rather than written out here. It is stated flatly,
- * and that is correct for this page: you cannot add a made-to-order sofa to
- * the basket without choosing a fabric, so every order for one is genuinely
- * made to the customer's specification. Three surfaces used to word this
- * independently, which is how they would have drifted apart the first time
- * the fabric picker stopped being compulsory.
+ * The notice is read from constants/promises.ts rather than written out
+ * here. It is conditional on this page, not flat like the checkout's: since
+ * 2026-10-30 a made-to-order sofa can be bought in the colour photographed,
+ * which is not personalised and keeps the 14 days. Only a fabric from the
+ * library, or a size or layout changed for them, takes the right away.
  */
 function MadeToOrder({ cta }: { cta: WhatsAppCTA }) {
   return (
@@ -122,7 +120,7 @@ function MadeToOrder({ cta }: { cta: WhatsAppCTA }) {
             <AlertTriangle aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-ember-700" />
             <span>
               <strong className="text-ink-900">Before you order:</strong>{' '}
-              {CANCELLATION.warning}
+              {CANCELLATION.ifPersonalised}
             </span>
           </p>
 

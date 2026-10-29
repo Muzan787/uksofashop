@@ -17,7 +17,7 @@
 //
 // On made-to-order frames it also renders the fabric picker (FabricDialog),
 // because "Build mine in this" puts the sofa in the cart and the cart is held
-// here.
+// here. Every add, from any of the three buttons, ends in AddedToCartDialog.
 //
 // This file was 1,361 lines with all six of them inlined, roughly two hundred
 // inline style objects, and one <h1> rendered twice.
@@ -40,9 +40,11 @@ import { usePhoneClick } from '@/utils/attribution/usePhoneClick';
 import type { DeliveryWindow } from '@/utils/delivery';
 import { sale } from '@/utils/pricing';
 import { accentVars } from './accent';
+import AddedToCartDialog from './AddedToCartDialog';
 import AddToCartFab from './AddToCartFab';
 import BuyBox from './BuyBox';
 import Details from './Details';
+import FabricChoice from './FabricChoice';
 import FabricDialog from './FabricDialog';
 import Gallery from './Gallery';
 import RecentlyViewed from './RecentlyViewed';
@@ -184,25 +186,20 @@ export default function ProductPageClient({
 
   // ── Gallery inputs ───────────────────────────────────────────────────────
   //
-  // Two kinds of product, two readings of the variant rows.
-  //
-  // A stocked recliner's variants are real choices: Black leather or Grey
-  // fabric is what turns up on the van. So the swatches choose, and the
+  // Every product reads its variant rows the same way: they are real choices.
+  // Black leather or Grey fabric on a recliner is what turns up on the van,
+  // and so is Tan Faux Leather on an Oakland. The swatches choose, and the
   // gallery leads with the chosen colour's photograph.
   //
-  // A made-to-order frame is built in whichever of the 70 fabrics the
-  // customer picks in the dialog, and its variant rows are only the colourways
-  // we happen to have photographed - Sims in grey, black, navy and beige. A
-  // colour swatch there was a second, misleading choice that changed nothing
-  // about what got built. Muaz asked (2026-09-18) for those photographs to be
-  // treated as the gallery instead: every colourway in one swipeable strip,
-  // no swatch row, no material pills, and the fabric picker as the only
-  // choice. Each photograph carries its own colour for the alt text, since
-  // the first picture is no longer "the selected variant".
-  const photographsAreGallery = Boolean(product.custom_made);
-
+  // From 2026-09-18 to 2026-10-30 a made-to-order frame treated its variants
+  // as photographs only - every colourway in one strip, no swatches - and the
+  // 70-fabric picker was the only way to buy one. Muaz reversed that: some
+  // frames are shot in colours the library does not carry (the Oakland in Tan
+  // Faux Leather, the Bishop in Truffle Tokyo) and the workshop makes those
+  // too. So the colour in the photograph is selected and buyable, exactly as
+  // on a recliner, and the fabric range is the "or" under it - see
+  // FabricChoice.
   const swatches = useMemo<Swatch[]>(() => {
-    if (photographsAreGallery) return [];
     const seen = new Set<string>();
     const out: Swatch[] = [];
     for (const v of inMaterial) {
@@ -212,26 +209,17 @@ export default function ProductPageClient({
       out.push({ id: v.id, color: key, hex: v.color_hex, image: v.image_url });
     }
     return out;
-  }, [inMaterial, photographsAreGallery]);
+  }, [inMaterial]);
 
   const images = useMemo<GalleryImage[]>(() => {
     const seen = new Set<string>();
     const out: GalleryImage[] = [];
-    const push = (src: string | null | undefined, label?: string) => {
-      if (src && !seen.has(src)) { out.push({ src, label }); seen.add(src); }
+    const push = (src: string | null | undefined) => {
+      if (src && !seen.has(src)) { out.push({ src }); seen.add(src); }
     };
 
-    if (photographsAreGallery) {
-      // The variant a card's swatch linked to (?variant=) still leads, so the
-      // colour that was tapped is the colour that appears; after that, every
-      // colourway in priority order, then the gallery proper.
-      const labelOf = (v: Variant) => [v.color, v.material].filter(Boolean).join(' ') || undefined;
-      if (selVariant) push(selVariant.image_url, labelOf(selVariant));
-      for (const v of variants) push(v.image_url, labelOf(v));
-    } else {
-      // The selected variant's own photograph leads.
-      push(selVariant?.image_url || inMaterial[0]?.image_url);
-    }
+    // The selected variant's own photograph leads.
+    push(selVariant?.image_url || inMaterial[0]?.image_url);
 
     for (const url of product.gallery_images ?? []) push(url);
 
@@ -245,7 +233,7 @@ export default function ProductPageClient({
       }
     }
     return out;
-  }, [photographsAreGallery, selVariant, variants, inMaterial, product.gallery_images, videos]);
+  }, [selVariant, inMaterial, product.gallery_images, videos]);
 
   const customerVideos = useMemo(
     () => videos.filter(v => v.kind === 'customer'),
@@ -288,17 +276,21 @@ export default function ProductPageClient({
 
   // ── Fabric, on made-to-order frames ──────────────────────────────────────
   //
-  // Held here rather than inside the picker because two things need it: the
-  // basket line, and "Add to cart" itself, which opens the dialog rather than
-  // complaining when nothing has been chosen yet.
+  // Optional since 2026-10-30. With none chosen the sofa goes in the cart in
+  // the colour photographed, like a recliner; a fabric from the range, once
+  // chosen, replaces that colour on the basket line. Held here because the
+  // basket line needs it.
+  //
+  // A line with a fabric is personalised and loses the 14-day right; a line
+  // in the photographed colour keeps it. The checkout decides that per line -
+  // see utils/cancellationRights.ts - so nothing here has to.
   const madeToOrder = Boolean(product.custom_made) && fabrics.length > 0;
   const [fabric, setFabric] = useState<Fabric | null>(null);
   const [fabricOpen, setFabricOpen] = useState(false);
 
-  // The picker is compulsory on these sofas - "Add to cart" opens it - which
-  // makes it the step most likely to lose someone between interest and the
-  // cart. Opened from where, whether they looked at a fabric at all, and
-  // whether they left without choosing: that is the whole story of it.
+  // Opened, whether they looked at a fabric at all, and whether they left
+  // without choosing. The trigger is always the fabric card now; the
+  // 'add_to_cart' step in older rows is from when the cart button opened it.
   const fabricLooked = useRef(false);
   const openFabrics = useCallback((trigger: 'add_to_cart' | 'fabric_card') => {
     fabricLooked.current = false;
@@ -330,23 +322,26 @@ export default function ProductPageClient({
 
   // ── Cart ─────────────────────────────────────────────────────────────────
   const [added, setAdded] = useState(false);
+  // The line just added, for the "Buy this now / Continue shopping" dialog.
+  const [justAdded, setJustAdded] = useState<string | null>(null);
 
   // The one place a line goes into the cart. Both add-to-cart buttons and the
   // fabric picker's "Build mine in this" come through here, so the line, the
-  // toast and the AddToCart event are the same whichever was pressed. Takes
+  // dialog and the AddToCart event are the same whichever was pressed. Takes
   // the fabric as an argument rather than reading state because the picker
   // has just chosen it, and the state will not have caught up yet.
   const addLine = useCallback((inFabric: Fabric | null, surface: JourneySurface = 'primary') => {
     if (!selVariant) { trackJourney('cart_update_failed', {surface, outcome:'missing_variant'}, {productId:product.id}); return false; }
 
+    const choice = inFabric
+      ? `${inFabric.collectionName} ${inFabric.name}`
+      : `${selVariant.color ?? ''} ${selVariant.material ?? ''}`.trim();
     addToCart({
       variant_id: selVariant.id,
       quantity: 1,
       price,
       title: product.title,
-      color: inFabric
-        ? `${inFabric.collectionName} ${inFabric.name}`
-        : `${selVariant.color ?? ''} ${selVariant.material ?? ''}`.trim(),
+      color: choice,
       image_url: images[0]?.src || '/placeholder.svg',
       fabric_id: inFabric?.id ?? null,
       fabric_label: inFabric ? `${inFabric.collectionName} ${inFabric.name}` : null,
@@ -357,35 +352,37 @@ export default function ProductPageClient({
     // setState updater, which React may invoke more than once.
     trackAddToCart({ productId: product.id, variantId: selVariant.id, title: product.title, price, quantity: 1 });
     setAdded(true);
-    toast.success(`${product.title} added to cart`, { icon: '🛋️', position: 'top-center' });
+    setJustAdded(choice);
     setTimeout(() => setAdded(false), 2000);
     return true;
   }, [selVariant, price, product.id, product.title, images, addToCart]);
 
-  // The buy box's button and the floating pill.
+  // The buy box's button and the floating pill. On a made-to-order frame with
+  // no fabric chosen, the sofa goes in the colour photographed.
   const handleAdd = useCallback((surface: JourneySurface = 'primary') => {
     trackJourney('cta_click', { surface }, {productId:product.id, variantId:selVariant?.id});
-    // You cannot build a sofa without knowing what to build it in. Rather than
-    // refusing, this puts the choice in front of them - one tap, instead of an
-    // error they then have to go and resolve for themselves.
-    if (madeToOrder && !fabric) {
-      openFabrics('add_to_cart');
-      trackJourney('cart_update_deferred', {surface, outcome:'requires_fabric'}, {productId:product.id});
-      return;
-    }
     addLine(fabric, surface);
-  }, [madeToOrder, fabric, addLine, openFabrics, product.id, selVariant?.id]);
+  }, [fabric, addLine, product.id, selVariant?.id]);
 
   // "Build mine in this", from inside the picker: the sofa goes into the cart
-  // in that fabric and the customer goes with it. Nothing is left to decide on
-  // this page once the fabric is chosen, so there is no reason to close the
-  // dialog and leave them looking for the next button.
+  // in that fabric, the picker closes, and the same dialog as the cart
+  // buttons asks whether to buy now or keep looking.
   const handleBuild = useCallback((chosen: Fabric) => {
     trackJourney('fabric_selected', {option_code:chosen.code, surface:'fabric_picker'}, {productId:product.id,variantId:selVariant?.id});
     setFabric(chosen);
     setFabricOpen(false);
-    if (addLine(chosen, 'fabric_picker')) router.push('/checkout');
-  }, [addLine, router, product.id, selVariant?.id]);
+    addLine(chosen, 'fabric_picker');
+  }, [addLine, product.id, selVariant?.id]);
+
+  // A swatch is the colour in the photograph, so tapping one drops any fabric
+  // from the range: the two are alternatives, never both.
+  const handleColour = useCallback((colour: string) => {
+    setSelColor(colour);
+    setFabric(null);
+    trackJourney('colour_selected', {option_code:colour.replace(/[^a-zA-Z0-9_-]/g,'_').slice(0,40)}, {productId:product.id});
+  }, [product.id]);
+
+  const variantLabel = `${selVariant?.color ?? ''} ${selVariant?.material ?? ''}`.trim();
 
   // ── Wishlist ─────────────────────────────────────────────────────────────
   const [inWishlist, setInWishlist] = useState(initialWishlistState);
@@ -566,12 +563,27 @@ export default function ProductPageClient({
               title={product.title}
               images={images}
               swatches={swatches}
-              // On a made-to-order frame each photograph names its own colour
-              // (see `images` above), so no page-wide colour is claimed.
-              selectedColor={photographsAreGallery ? '' : selColor}
-              onSelectColor={colour => {setSelColor(colour);trackJourney('colour_selected',{option_code:colour.replace(/[^a-zA-Z0-9_-]/g,'_').slice(0,40)},{productId:product.id});}}
-              material={photographsAreGallery || selMat === 'Standard' ? '' : selMat}
+              // With a fabric chosen from the range no swatch is selected:
+              // the sofa is no longer being built in the photographed colour.
+              selectedColor={fabric ? '' : selColor}
+              onSelectColor={handleColour}
+              material={selMat === 'Standard' ? '' : selMat}
               photoRequest={photoRequestCta}
+              // Made-to-order: the one photographed colour still shows as a
+              // selected swatch, named in full ("Tan Faux Leather"), with
+              // the fabric range as the alternative right under it.
+              showSingleSwatch={madeToOrder}
+              swatchCaption={madeToOrder
+                ? (fabric ? `${fabric.collectionName} ${fabric.name}` : variantLabel)
+                : undefined}
+              afterSwatches={madeToOrder ? (
+                <FabricChoice
+                  collections={fabrics}
+                  selected={fabric}
+                  onOpen={() => openFabrics('fabric_card')}
+                  onClear={() => setFabric(null)}
+                />
+              ) : undefined}
             />
           </div>
 
@@ -604,19 +616,9 @@ export default function ProductPageClient({
                 sizes={sizes}
                 onCustomSize={openCustomSize}
                 onPickOption={onPickOption}
-                // No material pills on a made-to-order frame: the fabric
-                // picker is the material choice, and "Marble / Plush Velvet"
-                // was only which colourways had been photographed.
-                materials={photographsAreGallery ? [] : materials}
+                materials={materials}
                 selectedMaterial={selMat}
-                onSelectMaterial={handleMaterial}
-                // The fabric card stands here, after the name, the price and
-                // the size, rather than under the photographs: on a phone it
-                // used to be the first thing after the picture, ahead of what
-                // the sofa was called and what it cost.
-                fabrics={fabrics}
-                selectedFabric={fabric}
-                onOpenFabrics={madeToOrder ? () => openFabrics('fabric_card') : undefined}
+                onSelectMaterial={mat => { handleMaterial(mat); setFabric(null); }}
                 offerTier={offerTier}
                 added={added}
                 onAdd={() => handleAdd('primary')}
@@ -694,9 +696,19 @@ export default function ProductPageClient({
       </div>
 
       {/* Bottom left, opposite the WhatsApp pill, for the whole page. The
-          same handler as the buy box's button, so a made-to-order frame with
-          no fabric chosen opens the picker from here too. */}
+          same handler as the buy box's button. */}
       <AddToCartFab price={price} added={added} onAdd={() => handleAdd('sticky')} />
+
+      {justAdded !== null && (
+        <AddedToCartDialog
+          title={product.title}
+          choice={justAdded}
+          price={price}
+          image={images[0]?.src || '/placeholder.svg'}
+          onBuyNow={() => { setJustAdded(null); router.push('/checkout'); }}
+          onContinue={() => setJustAdded(null)}
+        />
+      )}
 
       {madeToOrder && fabricOpen && (
         <FabricDialog

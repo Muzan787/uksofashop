@@ -30,6 +30,11 @@ interface Props {
   material: string;
   /** "More pictures & videos" on WhatsApp, carrying this sofa and its price. */
   photoRequest?: WhatsAppCTA;
+  /** Made-to-order frames: the colour row shows even with one colour, names
+   *  what is chosen, and the fabric range opens from just under it. */
+  showSingleSwatch?: boolean;
+  swatchCaption?: string;
+  afterSwatches?: React.ReactNode;
 }
 
 /** More photographs than this and the dots become a "2 / 6" count - six
@@ -123,6 +128,7 @@ const MAGNIFY_WIDTH = 1120;
  */
 export default function Gallery({
   productId, title, images, swatches, selectedColor, onSelectColor, material, photoRequest,
+  showSingleSwatch = false, swatchCaption, afterSwatches,
 }: Props) {
   const fine = usePointerFine();
   const reduced = Boolean(useReducedMotionSafe());
@@ -546,7 +552,10 @@ export default function Gallery({
         selected={selectedColor}
         onSelect={onSelectColor}
         onPreview={setPreview}
+        showSingle={showSingleSwatch}
+        caption={swatchCaption}
       />
+      {afterSwatches}
 
       {lightbox && (
         <Lightbox

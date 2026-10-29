@@ -126,7 +126,7 @@ export default function FabricDialog({ collections, selectedId, productSlug, onB
           </Link>
 
           <p className="m-0 text-center text-caption leading-relaxed text-ink-500 sm:order-first sm:flex-1 sm:text-left">
-            Build mine puts the sofa in your cart in this fabric and takes you there.
+            Build mine puts the sofa in your cart in this fabric.
             Samples are {SAMPLE_FEE} for up to {sampleLimit}, refunded when you order.
           </p>
         </div>

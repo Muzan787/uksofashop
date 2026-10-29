@@ -14,6 +14,12 @@ interface Props {
   onSelect: (color: string) => void;
   /** Called with a colour while it is hovered, and null on leave. */
   onPreview?: (color: string | null) => void;
+  /** Draw the row even for one colour. Made-to-order frames do, because the
+   *  one colour shown is a choice there - the fabric range sits under it. */
+  showSingle?: boolean;
+  /** What the "Colour —" line names, where that is more than the swatch's
+   *  own colour: "Tan Faux Leather", or the fabric chosen from the range. */
+  caption?: string;
 }
 
 /**
@@ -35,10 +41,10 @@ interface Props {
  * pointer enters and the tap lands in the same gesture, so a preview would
  * only ever be a slower version of the selection.
  */
-export default function ColourSwatches({ swatches, selected, onSelect, onPreview }: Props) {
+export default function ColourSwatches({ swatches, selected, onSelect, onPreview, showSingle = false, caption }: Props) {
   const fine = usePointerFine();
 
-  if (swatches.length < 2) return null;
+  if (swatches.length < (showSingle ? 1 : 2)) return null;
 
   const preview = (color: string | null) => {
     if (!fine || !onPreview) return;
@@ -101,7 +107,7 @@ export default function ColourSwatches({ swatches, selected, onSelect, onPreview
       </div>
 
       <p aria-live="polite" className="m-0 mt-3 text-body-sm text-ink-500">
-        Colour — <span className="font-semibold text-ink-900">{selected || '—'}</span>
+        Colour — <span className="font-semibold text-ink-900">{caption || selected || '—'}</span>
       </p>
     </div>
   );

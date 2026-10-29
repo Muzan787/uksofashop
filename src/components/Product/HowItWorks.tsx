@@ -54,7 +54,7 @@ export default function HowItWorks({ estimate, madeToOrder }: {
 
         <Step n={2} Icon={MessageCircle} title="We confirm it with you">
           {madeToOrder
-            ? 'A WhatsApp message to confirm your order, and a call to go through your fabric before anything is made.'
+            ? 'A WhatsApp message to confirm your order, and a call to go through your colour or fabric before anything is made.'
             : 'A WhatsApp message to confirm your order, and a call to agree your delivery day.'}
         </Step>
 

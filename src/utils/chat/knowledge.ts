@@ -219,7 +219,7 @@ function renderProduct(p: ProductRow): string {
   if (p.subgroup_label) facts.push(`Style: ${p.subgroup_label}`)
   facts.push(
     p.custom_made
-      ? 'Made to order in the UK: any colour from the fabric library, and the size can be changed on request'
+      ? 'Made to order in the UK: in the colour shown on its page, or any colour from the fabric library at the same price, and the size can be changed on request'
       : 'Stocked in set sizes as listed',
   )
   if (p.origin === 'uk' && !p.custom_made) facts.push('Made in the UK')
