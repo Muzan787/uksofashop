@@ -31,6 +31,8 @@ export interface NavCategory {
   name: string
   slug: string
   image_url?: string | null
+  /** sofas or beds - which part of the menu it is listed under. */
+  department?: string
 }
 
 /**
@@ -52,7 +54,7 @@ const readNavCategories = unstable_cache(
 
     const { data, error } = await supabase
       .from('categories')
-      .select('id, name, slug, image_url')
+      .select('id, name, slug, image_url, department')
       // Shown ones only, in the order set in Admin → Categories (admin
       // upgrade K5). Every category is shown with order 99 until changed, so
       // this is name order, as before.
@@ -67,7 +69,7 @@ const readNavCategories = unstable_cache(
 
     return data ?? []
   },
-  ['uksofashop-nav-categories-v1'],
+  ['uksofashop-nav-categories-v2'],
   {
     // Five minutes removes the repeat database hit from normal page-to-page
     // browsing while keeping admin category changes reasonably quick to appear.

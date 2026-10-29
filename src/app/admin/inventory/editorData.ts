@@ -8,6 +8,7 @@
 import 'server-only'
 import type { createClient } from '@/utils/supabase/server'
 import type { EditorProps } from '@/components/Admin/ProductEditor'
+import { asOptions, optionsLabel } from '@/utils/productOptions'
 
 type Db = Awaited<ReturnType<typeof createClient>>
 
@@ -32,7 +33,7 @@ export async function loadEditorOptions(supabase: Db): Promise<Omit<EditorProps,
 }
 
 export const EDITOR_PRODUCT_SELECT =
-  '*, product_variants(id, sku, color, color_hex, material, price_adjustment, image_url, is_active, priority, created_at), product_categories(category_id)' as const
+  '*, product_variants(id, sku, color, color_hex, material, price_adjustment, image_url, is_active, priority, created_at, options), product_categories(category_id)' as const
 
 export type EditorSource = {
   id: string
@@ -56,6 +57,7 @@ export type EditorSource = {
   product_variants: {
     id: string; sku: string; color: string | null; color_hex: string | null; material: string | null
     price_adjustment: number | null; image_url: string | null; is_active: boolean; priority: number | null; created_at: string | null
+    options?: unknown
   }[]
   product_categories: { category_id: string }[]
 }
@@ -93,6 +95,9 @@ export function toEditorInitial(p: EditorSource, tier: string | null, copy = fal
       priceAdjustment: String(v.price_adjustment ?? 0),
       imageUrl: v.image_url ?? '',
       isActive: copy ? true : v.is_active !== false,
+      // Not carried into a copy: the copy's variants are new rows, and
+      // save_product writes no options, so a copied bed starts as colourways.
+      ...(copy ? {} : { optionsLabel: optionsLabel(asOptions(v.options)) }),
       priority: String(v.priority ?? 99),
     })),
     galleryImages: p.gallery_images ?? [],

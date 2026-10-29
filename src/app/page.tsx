@@ -48,6 +48,7 @@ const getHomeData = unstable_cache(
       { data: reviewRows },
       heroProduct,
       fabricLibrary,
+      { data: bedProducts },
     ] = await Promise.all([
       // Categories
       // Shown ones, in the admin's order (by name until one is set).
@@ -96,7 +97,8 @@ const getHomeData = unstable_cache(
 
       // How many sofas are actually live. head:true means the rows are counted
       // server-side and none of them are transferred.
-      supabase.from('products').select('id', { count: 'exact', head: true }).eq('is_active', true),
+      // Sofas only - the beds and mattresses are counted on their own pages.
+      supabase.from('products').select('id', { count: 'exact', head: true }).eq('is_active', true).eq('product_type', 'sofa'),
 
       // The most recent approved reviews, for the homepage ticker. order_id is
       // what makes a review a verified purchase rather than an open comment.
@@ -126,6 +128,19 @@ const getHomeData = unstable_cache(
 
       // The fabric library, for the "build your own" board's count.
       getFabricLibrary(supabase),
+
+      // The beds, for their own rail - dearest first like every listing.
+      // Their cheapest variant (the single frame) leads, which is the
+      // "from" price the card prints.
+      supabase
+        .from('products')
+        .select('id, title, slug, base_price, was_price, gallery_images, average_rating, review_count, product_variants(id, image_url, color, color_hex, price_adjustment, priority), categories!products_category_id_fkey(slug, name), product_categories(categories(slug, name))')
+        .eq('is_active', true)
+        .eq('product_type', 'bed')
+        .order('is_featured', { ascending: false, nullsFirst: false })
+        .order('base_price', { ascending: false })
+        .order('priority', { referencedTable: 'product_variants', ascending: true })
+        .limit(6),
     ]);
 
     // The "build your own" board - the frame it is photographed with, the
@@ -134,9 +149,9 @@ const getHomeData = unstable_cache(
     // needs the library.
     const buildTeaser = await getBuildTeaser(fabricLibrary, supabase);
 
-    return { categories, categoryStats, featuredProducts, groupsData, sofaCount, reviewRows, heroProduct, buildTeaser };
+    return { categories, categoryStats, featuredProducts, groupsData, sofaCount, reviewRows, heroProduct, buildTeaser, bedProducts };
   },
-  ['uksofashop-home-data-v1'],
+  ['uksofashop-home-data-v2'],
   { revalidate: 300, tags: ['home'] },
 );
 
@@ -144,7 +159,7 @@ export default async function HomePage() {
   // Halloween 2026's hero sofa and Midnight rail, read alongside - see
   // constants/halloween.ts.
   const [{
-    categories, categoryStats, featuredProducts, groupsData, sofaCount, reviewRows, heroProduct, buildTeaser,
+    categories, categoryStats, featuredProducts, groupsData, sofaCount, reviewRows, heroProduct, buildTeaser, bedProducts,
   }, halloween] = await Promise.all([getHomeData(), HALLOWEEN_LIVE ? getHalloweenHome() : null]);
 
   // "from £149" under Fabric Sofas was the Sims footstool. The tile says
@@ -233,6 +248,7 @@ export default async function HomePage() {
         reviews={reviews}
         buildTeaser={buildTeaser}
         halloween={halloween}
+        beds={(bedProducts ?? []).map(toCardShape)}
       />
     </>
   );

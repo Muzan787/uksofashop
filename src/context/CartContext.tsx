@@ -4,6 +4,7 @@
 import { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react'
 import { CartItem } from '@/app/actions/checkout'
 import type { BuildSpec } from '@/types/build'
+import type { OptionsSnapshot } from '@/utils/productOptions'
 import { emitGoogleEvent } from '@/utils/googleMeasurement'
 import { trackJourney } from '@/utils/journey'
 import type { JourneySurface } from '@/utils/journeyContract'
@@ -40,6 +41,14 @@ export interface DisplayCartItem extends CartItem {
    * read. Absent on everything else.
    */
   build?: BuildSpec | null
+
+  /**
+   * Beds and mattresses. What the variant is (size, frame or set) and the
+   * add-ons chosen on top, in the same shape place_order snapshots onto the
+   * order - so the basket names the line exactly as the admin panel will.
+   * Display only: the order sends addon_ids and the database prices them.
+   */
+  selections?: OptionsSnapshot | null
 }
 
 /**
@@ -54,9 +63,11 @@ export interface DisplayCartItem extends CartItem {
  * two builds can differ in everything the key cannot see, so each carries the
  * key /build minted for it.
  */
-export function lineKey(item: Pick<DisplayCartItem, 'variant_id' | 'fabric_id' | 'build'>): string {
+export function lineKey(item: Pick<DisplayCartItem, 'variant_id' | 'fabric_id' | 'build' | 'addon_ids'>): string {
   const base = item.fabric_id ? `${item.variant_id}:${item.fabric_id}` : item.variant_id
-  return item.build ? `${base}:build:${item.build.key}` : base
+  // The same bed with and without a gas lift is two lines.
+  const withAddons = item.addon_ids?.length ? `${base}:addons:${[...item.addon_ids].sort().join(',')}` : base
+  return item.build ? `${withAddons}:build:${item.build.key}` : withAddons
 }
 
 interface CartContextType {

@@ -194,21 +194,27 @@ export default async function CategoryPage(props: { params: Params; searchParams
     countMatchingProducts(supabase, heroFilters),
     categoryPriceRange(supabase, heroFilters),
     // Shown categories, in the admin's order (by name until one is set).
-    supabase.from('categories').select('slug, name, parent_id').eq('is_active', true).order('sort').order('name'),
+    supabase.from('categories').select('slug, name, parent_id, department').eq('is_active', true).order('sort').order('name'),
   ])
 
   // Categories alongside this one — the same level of the tree, so the row
   // offers a sideways move rather than a jump up or down it.
-  const allCategories = (siblingRows.data ?? []) as { slug: string; name: string; parent_id: string | null }[]
+  const allCategories = (siblingRows.data ?? []) as { slug: string; name: string; parent_id: string | null; department: string }[]
   const currentRow = allCategories.find(c => c.slug === decodedCategory)
   const level = currentRow?.parent_id ?? null
+  // Beds and mattresses are their own department: their row offers each
+  // other, and "All sofas" would be a jump out of it, not sideways.
+  const department = currentRow?.department ?? 'sofas'
 
   const siblings: CategoryChip[] = [
-    { slug: 'all', name: 'All sofas' },
+    ...(department === 'sofas' ? [{ slug: 'all', name: 'All sofas' }] : []),
     ...allCategories
-      .filter(c => (c.parent_id ?? null) === level)
+      .filter(c => (c.department ?? 'sofas') === department && (c.parent_id ?? null) === level)
       .map(c => ({ slug: c.slug, name: c.name })),
   ]
+  const noun: [string, string] = decodedCategory === 'mattresses'
+    ? ['mattress', 'mattresses']
+    : department === 'beds' ? ['bed', 'beds'] : ['sofa', 'sofas']
 
   // Re-fetching on a filter change should show the skeleton again rather than
   // freezing the old results, so the boundary is keyed on what it depends on.
@@ -248,7 +254,12 @@ export default async function CategoryPage(props: { params: Params; searchParams
   const breadcrumbLd = breadcrumbSchema(
     decodedCategory === 'all'
       ? [{ name: 'Home', path: '/' }, { name: 'All Sofas', path: '/shop/all' }]
-      : [
+      : department !== 'sofas'
+        ? [
+            { name: 'Home', path: '/' },
+            { name: pageTitle, path: `/shop/${encodeURIComponent(decodedCategory)}` },
+          ]
+        : [
           { name: 'Home', path: '/' },
           { name: 'Shop', path: '/shop/all' },
           { name: pageTitle, path: `/shop/${encodeURIComponent(decodedCategory)}` },
@@ -268,6 +279,8 @@ export default async function CategoryPage(props: { params: Params; searchParams
         priceFrom={heroRange.from}
         priceTo={heroRange.to}
         siblings={siblings}
+        noun={noun}
+        parentCrumb={department === 'sofas' ? undefined : null}
       />
 
       {/* Main content */}

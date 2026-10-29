@@ -35,6 +35,8 @@ interface Props {
   showSingleSwatch?: boolean;
   swatchCaption?: string;
   afterSwatches?: React.ReactNode;
+  /** What is in the photographs: "sofa", "bed". */
+  noun?: string;
 }
 
 /** More photographs than this and the dots become a "2 / 6" count - six
@@ -128,7 +130,7 @@ const MAGNIFY_WIDTH = 1120;
  */
 export default function Gallery({
   productId, title, images, swatches, selectedColor, onSelectColor, material, photoRequest,
-  showSingleSwatch = false, swatchCaption, afterSwatches,
+  showSingleSwatch = false, swatchCaption, afterSwatches, noun = 'sofa',
 }: Props) {
   const fine = usePointerFine();
   const reduced = Boolean(useReducedMotionSafe());
@@ -539,7 +541,7 @@ export default function Gallery({
           className="hover-link mt-3 hidden min-h-11 items-center gap-2 text-body-sm font-semibold text-ink-900 no-underline md:inline-flex"
         >
           <WhatsAppIcon className="h-4 w-4 text-whatsapp-dark" />
-          Want more pictures or videos of this sofa? Ask on WhatsApp
+          Want more pictures or videos of this {noun}? Ask on WhatsApp
         </a>
       )}
 

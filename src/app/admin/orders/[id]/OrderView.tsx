@@ -32,6 +32,7 @@ import { formatUkMobile, whatsAppLink } from '@/utils/phone'
 import { formatPreferredDeliveryDate } from '@/utils/delivery'
 import { itemTitle } from '@/utils/orderItemTitle'
 import { asBuildSnapshot, describeBuild } from '@/types/build'
+import { describeOptions, isOptionsSnapshot } from '@/utils/productOptions'
 import { trustpilotInviteLink } from '@/constants/trustpilot'
 import { SITE_URL } from '@/constants/site'
 
@@ -312,7 +313,10 @@ export default function OrderView({ order, events, sends, reviewLinks, pickers, 
         <h2 id="items-heading" className={sectionTitle}>Items and money</h2>
         <ul className="divide-y divide-stone-100">
           {order.order_items.map(item => {
-            const build = asBuildSnapshot(item.customisation)
+            // A bed or mattress line carries its size, set and extras instead
+            // of a /build specification. Both live in customisation.
+            const options = isOptionsSnapshot(item.customisation) ? describeOptions(item.customisation) : null
+            const build = options ? null : asBuildSnapshot(item.customisation)
             return (
               <li key={item.id} className="flex items-start justify-between gap-3 py-3">
                 <div className="min-w-0 text-sm">
@@ -324,6 +328,13 @@ export default function OrderView({ order, events, sends, reviewLinks, pickers, 
                     <p className="m-0 mt-0.5 text-xs font-semibold text-amber-800">
                       {item.fabric_collection} {item.fabric_name} <span className="font-mono text-stone-500">{item.fabric_code}</span>
                     </p>
+                  )}
+                  {options && options.length > 0 && (
+                    <ul className="mt-1.5 list-none space-y-0.5 rounded-sm border border-stone-200 bg-stone-50 px-2.5 py-2 text-xs text-stone-700">
+                      {options.map(line => (
+                        <li key={line.label}><span className="font-semibold text-stone-900">{line.label}:</span> {line.value}</li>
+                      ))}
+                    </ul>
                   )}
                   {build && (
                     <ul className="mt-1.5 list-none space-y-0.5 rounded-sm border border-amber-200 bg-amber-50 px-2.5 py-2 text-xs text-stone-700">

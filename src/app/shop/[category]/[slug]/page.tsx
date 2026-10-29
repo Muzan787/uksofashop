@@ -13,9 +13,11 @@ import type { OfferTier } from '@/types/offers';
 import { deliveryWindow } from '@/utils/delivery';
 import { getShopSettings } from '@/utils/shopSettingsServer';
 import ProductPageClient from '../../../../components/Product/ProductPageClient';
+import ConfiguredPageClient from '@/components/Configured/ConfiguredPageClient';
+import { asOptions, asProductType } from '@/utils/productOptions';
 import { getFabricLibrary } from '@/utils/fabrics';
 import { parseDimensions } from '@/components/Product/dimensions';
-import type { ProductVideo, SimilarProduct, SizeVariant, Variant, Review } from '@/components/Product/types';
+import type { AddonGroup, ProductVideo, SimilarProduct, SizeVariant, Variant, Review } from '@/components/Product/types';
 import type { Tables } from '@/types/supabase';
 
 type Params = Promise<{ slug: string; category: string }>;
@@ -86,7 +88,7 @@ const getProductPageData = unstable_cache(
     // else below, so it is one round trip. A product with no variant_group_id
     // asks nothing of variant_groups, and a stocked recliner does not load 70
     // fabrics.
-    const [group, related, fabrics, videos, offerTierRow, offerExcludedRow] = await Promise.all([
+    const [group, related, fabrics, videos, offerTierRow, offerExcludedRow, addonRows] = await Promise.all([
       product.variant_group_id
         ? Promise.all([
             db
@@ -152,9 +154,19 @@ const getProductPageData = unstable_cache(
         .eq('product_id', product.id)
         .maybeSingle()
         .then(r => r.data),
+
+      // The priced extras a bed offers - the mattress upgrade and the
+      // storage. Sofas have none, so they ask nothing.
+      product.product_type !== 'sofa'
+        ? db
+            .from('product_addon_groups')
+            .select('sort, addon_groups ( id, slug, name, description, selection, only_when, sort, is_active, addons ( id, slug, name, description, price, sort, is_active ) )')
+            .eq('product_id', product.id)
+            .then(r => r.data ?? [])
+        : [],
     ]);
 
-    return { product, categoryData, group, related, fabrics, videos, offerTierRow, offerExcludedRow };
+    return { product, categoryData, group, related, fabrics, videos, offerTierRow, offerExcludedRow, addonRows };
   },
   ['uksofashop-product-page-v1'],
   { revalidate: 300, tags: ['product'] },
@@ -250,7 +262,8 @@ export default async function ProductPage(props: { params: Params, searchParams:
   ]);
 
   if (!data) notFound();
-  const { product, group, related, fabrics, videos, offerTierRow, offerExcludedRow } = data;
+  const { product, group, related, fabrics, videos, offerTierRow, offerExcludedRow, addonRows } = data;
+  const productType = asProductType(product.product_type);
 
   // The category in the URL has to be one this product genuinely belongs to.
   // Otherwise /shop/anything/<slug> renders the same page and Google sees as
@@ -378,6 +391,7 @@ export default async function ProductPage(props: { params: Params, searchParams:
     origin: product.origin ?? 'unspecified',
     // Drives the "Made to your specification" block and its CCR notice.
     custom_made: product.custom_made ?? false,
+    product_type: productType,
   };
 
   const safeVariants: Variant[] = ((product.product_variants ?? []) as Tables<'product_variants'>[]).map(v => ({
@@ -387,6 +401,7 @@ export default async function ProductPage(props: { params: Params, searchParams:
     material: v.material,
     image_url: v.image_url,
     price_adjustment: v.price_adjustment ?? 0,
+    options: asOptions(v.options),
     // stock_quantity is deliberately not passed through: sofas are made to
     // order, so availability is the product-level is_active flag, not a count.
   }));
@@ -498,6 +513,33 @@ export default async function ProductPage(props: { params: Params, searchParams:
     { name: product.title, path: canonicalPath },
   ])
 
+  // A bed or a mattress: one product whose variants are sizes, with priced
+  // extras on top. Its own page - see components/Configured.
+  if (productType !== 'sofa') {
+    return (
+      <>
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(productLd) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(breadcrumbLd) }} />
+        <ConfiguredPageClient
+          product={safeProduct}
+          productType={productType}
+          variants={safeVariants}
+          addonGroups={toAddonGroups(addonRows)}
+          approvedReviews={approvedReviews}
+          similarProducts={safeSimilarProducts}
+          categorySlug={category}
+          categoryName={categoryName}
+          deliveryEstimate={deliveryWindow(undefined, shopSettings)}
+          initialWishlistState={initialWishlistState}
+          isLoggedIn={!!user}
+          initialVariantId={initialVariantId}
+          fabrics={fabrics}
+          videos={videos as ProductVideo[]}
+        />
+      </>
+    );
+  }
+
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(productLd) }} />
@@ -522,4 +564,37 @@ export default async function ProductPage(props: { params: Params, searchParams:
     />
     </>
   );
+}
+/**
+ * The join from product_addon_groups, narrowed and ordered: the groups as the
+ * product sorts them, the add-ons as their group sorts them, and anything
+ * switched off in the admin panel left out - line_addons would refuse it.
+ */
+type AddonRow = { id: string; slug: string; name: string; description: string | null; price: number; sort: number; is_active: boolean };
+type AddonGroupRow = {
+  id: string; slug: string; name: string; description: string | null; selection: string;
+  only_when: unknown; sort: number; is_active: boolean; addons: AddonRow[] | null;
+};
+type ProductAddonGroupRow = { sort: number; addon_groups: AddonGroupRow | AddonGroupRow[] | null };
+
+function toAddonGroups(rows: unknown): AddonGroup[] {
+  return ((rows ?? []) as ProductAddonGroupRow[])
+    .flatMap(r => {
+      const g = Array.isArray(r.addon_groups) ? r.addon_groups[0] : r.addon_groups;
+      return g && g.is_active ? [{ sort: r.sort, g }] : [];
+    })
+    .sort((a, b) => a.sort - b.sort)
+    .map(({ g }) => ({
+      id: g.id,
+      slug: g.slug,
+      name: g.name,
+      description: g.description,
+      selection: g.selection === 'one' ? 'one' as const : 'many' as const,
+      onlyWhen: asOptions(g.only_when),
+      addons: (g.addons ?? [])
+        .filter(a => a.is_active)
+        .sort((a, b) => a.sort - b.sort)
+        .map(a => ({ id: a.id, slug: a.slug, name: a.name, description: a.description, price: Number(a.price) })),
+    }))
+    .filter(g => g.addons.length > 0);
 }

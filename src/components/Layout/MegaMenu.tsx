@@ -14,6 +14,7 @@ interface MegaCategory {
   name: string;
   slug: string;
   image_url?: string | null;
+  department?: string;
 }
 
 interface Collection {
@@ -190,6 +191,11 @@ export default function MegaMenu({
             <ul className="m-0 list-none p-0">
               {categories.map((cat, i) => (
                 <li key={cat.id}>
+                  {/* Beds and mattresses follow the sofas under their own
+                      heading, so the list reads as two departments. */}
+                  {cat.department === 'beds' && categories[i - 1]?.department !== 'beds' && (
+                    <p className="eyebrow m-0 mb-2 mt-6 text-calico-300/70">Beds &amp; mattresses</p>
+                  )}
                   <Link
                     href={`/shop/${cat.slug}`}
                     onPointerEnter={() => setActive(i)}

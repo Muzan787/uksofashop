@@ -14,7 +14,7 @@ import { formatUkMobile } from '@/utils/phone'
 import { formatPreferredDeliveryDate } from '@/utils/delivery'
 import { itemTitle } from '@/utils/orderItemTitle'
 import { describeFinish } from '@/utils/orderFinish'
-import { asBuildSnapshot, describeBuild } from '@/types/build'
+import { describeCustomisation } from '@/utils/productOptions'
 
 const PRINT_ONLY_THE_NOTE = `
 @media print {
@@ -101,7 +101,7 @@ export default function DeliveryNote({ order }: { order: OrderWithLines }) {
           <ul className="m-0 mt-2 list-none divide-y divide-stone-200 border-y border-stone-200 p-0">
             {order.order_items.map(item => {
               const finish = describeFinish({ ...item, color: item.product_variants?.color })
-              const build = describeBuild(asBuildSnapshot(item.customisation))
+              const build = describeCustomisation(item.customisation)
               return (
                 <li key={item.id} className="py-2.5">
                   <p className="m-0 text-base font-bold">{item.quantity} × {itemTitle(item)}</p>

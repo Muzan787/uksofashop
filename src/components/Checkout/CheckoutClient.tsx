@@ -28,6 +28,7 @@ import {
 import { CANCELLATION, DELIVERY_CHARGE_NOTE, PROMISES } from '@/constants/promises'
 import { hasPersonalisedLine } from '@/utils/cancellationRights'
 import { buildSnapshot, describeBuild } from '@/types/build'
+import { describeOptions } from '@/utils/productOptions'
 import { isValidUkMobile, UK_MOBILE_ERROR } from '@/utils/phone'
 import {
   DELIVERY_AREA_NOTE, NO_EXTRAS, RE_DELIVERY_FEE,
@@ -80,6 +81,9 @@ function toOfferItems(items: DisplayCartItem[]) {
     variant_id: i.variant_id,
     quantity: i.quantity,
     fabric_id: i.fabric_id ?? null,
+    // A bed's extras are part of what the line costs, so the quote needs
+    // them too. Left off lines without any, which is every sofa.
+    ...(i.addon_ids?.length ? { addon_ids: i.addon_ids } : {}),
   }))
 }
 
@@ -98,7 +102,7 @@ function toOrderItems(items: DisplayCartItem[]) {
 /** A quote is valid only for the exact basket identities and quantities it saw. */
 function basketOfferKey(items: DisplayCartItem[]): string {
   return items
-    .map(i => `${i.variant_id}:${i.fabric_id ?? ''}:${i.quantity}`)
+    .map(i => `${i.variant_id}:${i.fabric_id ?? ''}:${[...(i.addon_ids ?? [])].sort().join(',')}:${i.quantity}`)
     .sort()
     .join('|')
 }
@@ -268,9 +272,9 @@ function OrderSummary({
                   <span className="font-data text-ember-300"> · {item.fabric_code}</span>
                 )}
               </div>
-              {item.build && (
+              {(item.build || item.selections) && (
                 <ul className="m-0 mt-1 list-none p-0 text-caption leading-snug text-calico-300/80">
-                  {describeBuild(item.build).map(line => (
+                  {[...describeBuild(item.build), ...describeOptions(item.selections)].map(line => (
                     <li key={line.label} className="break-words">
                       <span className="text-calico-300">{line.label}:</span> {line.value}
                     </li>
@@ -576,6 +580,7 @@ function DetailsStep({
       item.fabric_label || item.color,
       item.fabric_code ? `code ${item.fabric_code}` : '',
       ...describeBuild(item.build).map(line => `${line.label}: ${line.value}`),
+      ...describeOptions(item.selections).map(line => `${line.label}: ${line.value}`),
     ].filter(Boolean).join(', ')
     return `- ${item.title}${configuration ? ` (${configuration})` : ''} x ${item.quantity}`
   }).join('\n')

@@ -11,6 +11,8 @@ interface Props {
   customMade: boolean;
   customEnquiryCta: WhatsAppCTA;
   agentCta: WhatsAppCTA;
+  /** What is being bought: "sofa", "bed". */
+  noun?: string;
 }
 
 /**
@@ -29,10 +31,10 @@ interface Props {
  * majority of visitors buy a sofa, and together they were adding around 500px
  * between the add-to-cart button and the description.
  */
-export default function SecondaryActions({ customMade, customEnquiryCta, agentCta }: Props) {
+export default function SecondaryActions({ customMade, customEnquiryCta, agentCta, noun = 'sofa' }: Props) {
   return (
     <div className="flex flex-col gap-4">
-      {customMade && <MadeToOrder cta={customEnquiryCta} />}
+      {customMade && <MadeToOrder cta={customEnquiryCta} noun={noun} />}
 
       <a
         href={agentCta.href}
@@ -47,7 +49,9 @@ export default function SecondaryActions({ customMade, customEnquiryCta, agentCt
         <span className="flex min-w-0 flex-col">
           <span className="eyebrow text-calico-50">Talk to an agent instead</span>
           <span className="mt-0.5 text-caption leading-snug text-calico-300">
-            Want custom seats or a different size? Message us directly.
+            {noun === 'sofa'
+              ? 'Want custom seats or a different size? Message us directly.'
+              : 'Not sure which size or mattress? Message us directly.'}
           </span>
         </span>
       </a>
@@ -80,7 +84,7 @@ export default function SecondaryActions({ customMade, customEnquiryCta, agentCt
  * which is not personalised and keeps the 14 days. Only a fabric from the
  * library, or a size or layout changed for them, takes the right away.
  */
-function MadeToOrder({ cta }: { cta: WhatsAppCTA }) {
+function MadeToOrder({ cta, noun }: { cta: WhatsAppCTA; noun: string }) {
   return (
     <section aria-label={PROMISES.custom.label}>
       <details className="group rounded-md border border-[var(--pdp-accent-line)] bg-[var(--pdp-accent-tint)]">
@@ -104,7 +108,7 @@ function MadeToOrder({ cta }: { cta: WhatsAppCTA }) {
 
         <div className="border-t border-[var(--pdp-accent-line)] p-4">
           <p className="m-0 text-body-sm leading-relaxed text-ink-500">
-            We make our fabric sofas to order. Tell us what you have in mind and we&apos;ll work it
+            We make our fabric {noun}s to order. Tell us what you have in mind and we&apos;ll work it
             through with you — including the price and how long it will take.
           </p>
 
@@ -135,7 +139,7 @@ function MadeToOrder({ cta }: { cta: WhatsAppCTA }) {
             Design yours on WhatsApp
           </a>
           <p className="m-0 mt-2 text-center text-caption text-ink-500">
-            Opens WhatsApp with this sofa&apos;s details already filled in.
+            Opens WhatsApp with this {noun}&apos;s details already filled in.
           </p>
         </div>
       </details>

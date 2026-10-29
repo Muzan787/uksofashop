@@ -38,6 +38,8 @@ export async function getBuildTeaser(library: FabricCollection[], client?: Publi
     .from('products')
     .select('slug, title, base_price, size_label, product_variants(image_url, priority)')
     .eq('custom_made', true)
+    // Beds are made to order too, but /build builds sofas.
+    .eq('product_type', 'sofa')
     .eq('is_active', true)
 
   const frames = ((data ?? []) as FrameRow[]).map(f => ({

@@ -373,7 +373,7 @@ export default function ProductEditor({ mode, initial, categories, groups: initi
           {colourways.map((c, i) => (
             <div key={c.id ?? `new-${i}`} className={`space-y-3 rounded-md border p-3 ${badSku && badSku === c.sku.trim() ? 'border-red-400 bg-red-50' : c.isActive ? 'border-stone-200 bg-stone-50' : 'border-amber-300 bg-amber-50/50'}`}>
               <div className="flex items-start justify-between gap-2">
-                <p className="m-0 text-xs font-bold uppercase tracking-wider text-stone-500">{c.id ? `Colourway ${i + 1}` : `New colourway ${i + 1}`}{!c.isActive && ' · hidden'}</p>
+                <p className="m-0 text-xs font-bold uppercase tracking-wider text-stone-500">{c.optionsLabel || (c.id ? `Colourway ${i + 1}` : `New colourway ${i + 1}`)}{!c.isActive && ' · hidden'}</p>
                 <button type="button" onClick={() => touch(setColourways)(colourways.filter((_, j) => j !== i))} className="inline-flex min-h-11 items-center gap-1 rounded-sm px-2 text-xs font-bold text-red-600" aria-label={`Remove colourway ${c.color || i + 1}`}>
                   <Trash2 className="h-4 w-4" aria-hidden="true" /> Remove
                 </button>

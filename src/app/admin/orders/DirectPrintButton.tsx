@@ -2,7 +2,7 @@
 // src/app/admin/orders/DirectPrintButton.tsx
 import { Printer } from 'lucide-react'
 import type { AdminOrderDisplay, AdminOrderItemDisplay } from '@/types/adminOrders'
-import { asBuildSnapshot, describeBuild } from '@/types/build'
+import { describeCustomisation } from '@/utils/productOptions'
 import { describeFinish } from '@/utils/orderFinish'
 import { itemTitle } from '@/utils/orderItemTitle'
 
@@ -301,7 +301,7 @@ export default function DirectPrintButton({ order }: { order: AdminOrderDisplay 
                         <span>&bull;</span>
                         <span>SKU: ${esc(item.product_variants?.sku)}</span>
                       </div>
-                      ${describeBuild(asBuildSnapshot(item.customisation)).map(line => `<div class="item-meta"><span>${esc(line.label)}: <strong>${esc(line.value)}</strong></span></div>`).join('')}
+                      ${describeCustomisation(item.customisation).map(line => `<div class="item-meta"><span>${esc(line.label)}: <strong>${esc(line.value)}</strong></span></div>`).join('')}
                     </td>
                     <td class="center" style="font-weight: 600; color: #1c1917; vertical-align: middle;">${item.quantity}</td>
                     <td class="right" style="font-weight: 700; color: #1c1917; vertical-align: middle;">£${(item.price_at_time_of_purchase * item.quantity).toFixed(2)}</td>

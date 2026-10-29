@@ -91,6 +91,7 @@ export default function ProductGridClient({
               reviewCount={card.reviewCount}
               averageRating={card.averageRating}
               swatches={card.swatches}
+              priceFrom={card.priceFrom}
             />
           </div>
         ))}

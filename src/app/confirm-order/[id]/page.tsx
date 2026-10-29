@@ -20,7 +20,7 @@ import ConfirmOrderForm from './ConfirmOrderForm'
 import Timeline from '@/components/UI/Timeline'
 import { STATUS } from '@/utils/orderStatus'
 import { describeFinish, finishText } from '@/utils/orderFinish'
-import { asBuildSnapshot, describeBuild } from '@/types/build'
+import { describeCustomisation } from '@/utils/productOptions'
 import { formatPreferredDeliveryDate } from '@/utils/delivery'
 import { PHONE_DISPLAY, PHONE_HREF, whatsAppHref } from '@/constants/contact'
 import type { ConfirmationOrder, ConfirmationOrderItem } from '@/types/orders'
@@ -236,7 +236,7 @@ export default async function ConfirmOrderPage({
               // expecting grey chenille. See utils/orderFinish.ts.
               const chose = describeFinish({ ...item, color: item.color }).code !== null
               const finish = finishText({ ...item, color: item.color })
-              const build = describeBuild(asBuildSnapshot(item.customisation))
+              const build = describeCustomisation(item.customisation)
 
               return (
                 <li key={i} className="rounded-sm bg-calico-100 px-4 py-3.5">

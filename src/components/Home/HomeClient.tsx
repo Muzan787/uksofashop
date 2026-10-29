@@ -46,6 +46,8 @@ interface Props {
   buildTeaser: BuildTeaser;
   /** Halloween 2026's hero and Midnight rail. Null when it is off. */
   halloween?: HalloweenHome | null;
+  /** The beds, for their own rail under the builder. Empty hides it. */
+  beds?: Product[];
 }
 
 /**
@@ -133,14 +135,15 @@ function toCard(product: Product) {
     badge: cat?.name ?? null,
     reviewCount: product.review_count,
     averageRating: product.average_rating,
+    // One dot per colour - a bed's ten variants are sizes of the same one.
     swatches: variants
-      .filter((v) => v.color_hex)
+      .filter((v, i) => v.color_hex && variants.findIndex(o => o.color === v.color && o.color_hex === v.color_hex) === i)
       .map((v) => ({ id: v.id, color: v.color ?? null, hex: v.color_hex ?? null, image: v.image_url ?? null })),
   };
 }
 
 // ─── Main export ──────────────────────────────────────────────────────────────
-export default function HomeClient({ categories, products, heroProduct, collections, sofaCount, reviews, buildTeaser, halloween }: Props) {
+export default function HomeClient({ categories, products, heroProduct, collections, sofaCount, reviews, buildTeaser, halloween, beds = [] }: Props) {
   // The pinned sofa where there is one, and otherwise the first card in the
   // rail below. It used to be only the latter, which made the hero's link and
   // price follow whatever was uploaded last while the photograph above them
@@ -196,6 +199,23 @@ export default function HomeClient({ categories, products, heroProduct, collecti
       />
 
       <BuildYourOwn teaser={buildTeaser} />
+
+      {/* Beds (2026-10-30). On calico-100, so it and the categories below are
+          two light sections told apart. The price is each bed's single
+          frame, so the card says "from". */}
+      {beds.length > 0 && (
+        <ProductRail
+          eyebrow="Now in: beds"
+          heading="Beds made the way our sofas are."
+          emphasise="Beds"
+          standfirst="Five sizes, frame or bed set with a mattress, storage if you want it, and any of our 70 fabrics."
+          items={beds.map(b => ({ ...toCard(b), priceFrom: true }))}
+          viewAllHref="/shop/beds"
+          viewAllLabel="View all beds"
+          viewAllNote="And mattresses in every size"
+          ground="alt"
+        />
+      )}
 
       <CategoryBento categories={categories} />
 

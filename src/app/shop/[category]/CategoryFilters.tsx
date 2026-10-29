@@ -36,6 +36,7 @@ export default async function CategoryFilters({
     .eq('is_active', true)
 
   if (categoryId) query = query.eq('product_categories.category_id', categoryId)
+  else query = query.eq('product_type', 'sofa')
 
   const { data } = await query
 

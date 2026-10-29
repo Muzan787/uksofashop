@@ -11,6 +11,33 @@ export interface Variant {
   material: string | null
   image_url: string | null
   price_adjustment: number
+  /**
+   * What the variant is when it is not a colourway - {size: "4ft6", build:
+   * "set"} on a bed. Empty on a sofa. Words for the codes are in
+   * utils/productOptions.ts.
+   */
+  options?: Record<string, string>
+}
+
+/** One priced choice on top of a variant - "Gas lift storage", +£110. */
+export interface Addon {
+  id: string
+  slug: string
+  name: string
+  description: string | null
+  price: number
+}
+
+/** A set of them. "one" is a radio row with a no-choice option; "many" is ticks. */
+export interface AddonGroup {
+  id: string
+  slug: string
+  name: string
+  description: string | null
+  selection: 'one' | 'many'
+  /** Offered only on a variant whose options contain all of these. */
+  onlyWhen: Record<string, string>
+  addons: Addon[]
 }
 
 export interface Review {
@@ -46,6 +73,8 @@ export interface Product {
   origin?: string | null
   /** Drives the made-to-order panel and its Consumer Contracts notice. */
   custom_made?: boolean | null
+  /** sofa, bed or mattress. Picks the product page. */
+  product_type?: string | null
 }
 
 export interface SimilarProduct {

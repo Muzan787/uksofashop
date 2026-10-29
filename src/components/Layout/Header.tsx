@@ -28,6 +28,7 @@ const ANNOUNCEMENT = ANNOUNCEMENTS[0];
 const navLinks = [
   { href: '/',            label: 'Home' },
   { href: '/shop/all',    label: 'Shop', hasMenu: true },
+  { href: '/shop/beds',   label: 'Beds' },
   { href: '/collection',  label: 'Collections' },
   { href: '/build',       label: 'Build' },
   { href: '/swatches',    label: 'Samples' },

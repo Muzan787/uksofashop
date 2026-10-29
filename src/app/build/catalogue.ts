@@ -188,6 +188,8 @@ export async function getBuildCatalogue(): Promise<{ designs: BuildDesign[]; siz
       'product_variants(id, image_url, color, priority, price_adjustment)',
     )
     .eq('custom_made', true)
+    // Beds are made to order too, but /build builds sofas.
+    .eq('product_type', 'sofa')
     .eq('is_active', true)
 
   if (error || !data) return { designs: [], sizes: [] }

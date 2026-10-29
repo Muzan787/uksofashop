@@ -11,6 +11,7 @@ import { createUntypedAdminClient } from '@/utils/supabase/admin'
 import { isValidUkMobile } from '@/utils/phone'
 import { callerKey, rateLimit } from '@/utils/rateLimit'
 import { isProductionRequestHost } from '@/utils/trackingEnv'
+import { asOptions, optionsLabel } from '@/utils/productOptions'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,6 +19,7 @@ const itemSchema = z.object({
   variant_id: z.string().uuid(),
   quantity: z.number().int().min(1).max(20),
   fabric_id: z.string().uuid().nullable().optional(),
+  addon_ids: z.array(z.string().uuid()).max(20).optional(),
 }).strict()
 
 const schema = z.object({
@@ -37,6 +39,7 @@ type VariantSnapshotRow = {
   color: string | null
   material: string | null
   price_adjustment: number | null
+  options: unknown
   products: {
     id: string
     title: string
@@ -124,7 +127,7 @@ export async function POST(request: Request) {
 
   const { data: rawVariants, error: variantError } = await admin
     .from('product_variants')
-    .select('id, sku, color, material, price_adjustment, products!inner(id, title, base_price)')
+    .select('id, sku, color, material, price_adjustment, options, products!inner(id, title, base_price)')
     .in('id', variantIds)
 
   if (variantError) {
@@ -146,6 +149,19 @@ export async function POST(request: Request) {
     rawFabrics = data ?? []
   }
 
+  // A bed's extras, named and priced from the table, as the order would be.
+  const addonIds = [...new Set(v.basket.flatMap(item => item.addon_ids ?? []))]
+  let addonRows: { id: string; name: string; price: number }[] = []
+  if (addonIds.length > 0) {
+    const { data, error } = await admin.from('addons').select('id, name, price').in('id', addonIds)
+    if (error) {
+      console.error(`checkout recovery add-on lookup failed: ${error.message}`)
+      return NextResponse.json({ error: 'Could not save that reminder preference. Please try again.' }, { status: 500 })
+    }
+    addonRows = (data ?? []) as { id: string; name: string; price: number }[]
+  }
+  const addonById = new Map(addonRows.map(row => [row.id, row]))
+
   const variants = (rawVariants ?? []) as unknown as VariantSnapshotRow[]
   const fabrics = rawFabrics as FabricSnapshotRow[]
   const variantById = new Map(variants.map(row => [row.id, row]))
@@ -155,8 +171,10 @@ export async function POST(request: Request) {
     const variant = variantById.get(item.variant_id)
     const product = variant?.products ?? null
     const fabric = item.fabric_id ? fabricById.get(item.fabric_id) ?? null : null
+    const addons = (item.addon_ids ?? []).flatMap(id => addonById.get(id) ?? [])
     const unitPrice = product
       ? Number(product.base_price) + Number(variant?.price_adjustment ?? 0)
+        + addons.reduce((t, a) => t + Number(a.price), 0)
       : null
 
     return {
@@ -166,6 +184,8 @@ export async function POST(request: Request) {
       sku: variant?.sku ?? null,
       color: variant?.color ?? null,
       material: variant?.material ?? null,
+      options: variant ? optionsLabel(asOptions(variant.options)) || null : null,
+      addons: addons.map(a => a.name),
       fabric_id: item.fabric_id ?? null,
       fabric_name: fabric?.name ?? null,
       fabric_code: fabric?.code ?? null,

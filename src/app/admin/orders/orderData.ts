@@ -6,6 +6,7 @@
 import 'server-only'
 import type { createClient } from '@/utils/supabase/server'
 import type { PickerFabric, PickerVariant } from './NewWhatsAppOrder'
+import { asOptions, optionsLabel } from '@/utils/productOptions'
 
 type Db = Awaited<ReturnType<typeof createClient>>
 
@@ -35,7 +36,7 @@ export async function loadPickers(supabase: Db): Promise<{ variants: PickerVaria
   const [{ data: variantRows }, { data: fabricRows }] = await Promise.all([
     supabase
       .from('product_variants')
-      .select('id, sku, color, material, price_adjustment, products!inner ( title, base_price, is_active )')
+      .select('id, sku, color, material, price_adjustment, options, products!inner ( title, base_price, is_active )')
       .eq('products.is_active', true),
     supabase
       .from('fabrics')
@@ -50,6 +51,7 @@ export async function loadPickers(supabase: Db): Promise<{ variants: PickerVaria
     color: string | null
     material: string | null
     price_adjustment: number | null
+    options: unknown
     products: { title: string; base_price: number } | null
   }
   type FabricRow = { id: string; code: string; name: string; fabric_collections: { name: string } | null }
@@ -58,7 +60,9 @@ export async function loadPickers(supabase: Db): Promise<{ variants: PickerVaria
     .filter(v => v.products)
     .map(v => ({
       id: v.id,
-      label: [v.products!.title, [v.color, v.material].filter(Boolean).join(' '), v.sku]
+      // A bed's ten variants share a colour; the size and frame-or-set are
+      // what tell them apart.
+      label: [v.products!.title, optionsLabel(asOptions(v.options)), [v.color, v.material].filter(Boolean).join(' '), v.sku]
         .filter(Boolean)
         .join(' · '),
       price: Number(v.products!.base_price) + Number(v.price_adjustment ?? 0),

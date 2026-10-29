@@ -24,6 +24,10 @@ interface Props {
   siblings: CategoryChip[];
   /** A line or two from Admin → Categories, under the summary. None, nothing shows. */
   intro?: string | null;
+  /** What the products are, singular and plural: ["bed", "beds"]. Sofas by default. */
+  noun?: [string, string];
+  /** The middle step of the breadcrumb. Null for a department with no "Shop" above it. */
+  parentCrumb?: { href: string; label: string } | null;
 }
 
 const MONEY = new Intl.NumberFormat('en-GB', {
@@ -51,7 +55,8 @@ const MONEY = new Intl.NumberFormat('en-GB', {
  * 2.4:1 and was effectively unreadable. Ember 300 is the dark-ground ember.
  */
 export default function CategoryHero({
-  title, slug, image, count, priceFrom, priceTo, siblings, intro,
+  title, slug, image, count, priceFrom, priceTo, siblings, intro, noun = ['sofa', 'sofas'],
+  parentCrumb = { href: '/shop/all', label: 'Shop' },
 }: Props) {
   return (
     <section
@@ -101,7 +106,7 @@ export default function CategoryHero({
             <ol className="m-0 flex list-none flex-nowrap items-center gap-2 whitespace-nowrap p-0">
               {[
                 { href: '/', label: 'Home' },
-                { href: '/shop/all', label: 'Shop' },
+                ...(parentCrumb ? [parentCrumb] : []),
               ].map(({ href, label }, i) => (
                 <li key={href} className="flex items-center gap-2">
                   {i > 0 && <ChevronRight aria-hidden="true" className="h-3 w-3 shrink-0 text-calico-50/40" />}
@@ -136,7 +141,7 @@ export default function CategoryHero({
           </span>
 
           <p className="m-0 mt-3 font-data text-data tabular-nums text-calico-300">
-            {summarise(count, priceFrom, priceTo)}
+            {summarise(count, priceFrom, priceTo, noun)}
           </p>
           {intro?.trim() && (
             <p className="m-0 mt-3 max-w-2xl whitespace-pre-line text-body text-calico-100">{intro.trim()}</p>
@@ -176,10 +181,10 @@ export default function CategoryHero({
 }
 
 /** "9 sofas · £369 – £1,299", and the honest shorter versions of it. */
-function summarise(count: number, from: number | null, to: number | null): string {
+function summarise(count: number, from: number | null, to: number | null, noun: [string, string]): string {
   if (count === 0) return 'Nothing in this category yet';
 
-  const items = `${count} ${count === 1 ? 'sofa' : 'sofas'}`;
+  const items = `${count} ${count === 1 ? noun[0] : noun[1]}`;
   if (from === null || to === null) return items;
   if (from === to) return `${items} · ${MONEY.format(from)}`;
   return `${items} · ${MONEY.format(from)} – ${MONEY.format(to)}`;

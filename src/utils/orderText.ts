@@ -14,7 +14,7 @@
 import { formatUkMobileIntl } from '@/utils/phone'
 import { isValidUkPostcode, normalisePostcode } from '@/utils/postcode'
 import type { AdminOrderDisplay, AdminOrderItemDisplay } from '@/types/adminOrders'
-import { asBuildSnapshot, describeBuild } from '@/types/build'
+import { describeCustomisation } from '@/utils/productOptions'
 import { formatPreferredDeliveryDate } from '@/utils/delivery'
 import { DELIVERY_DAYS } from '@/constants/promises'
 import { finishText } from '@/utils/orderFinish'
@@ -75,7 +75,7 @@ function itemBlock(item: AdminOrderItemDisplay): string {
     item.fabric_code && `Fabric: ${finishText(item)}`,
     // Everything the customer chose on /build, one line each. Same words the
     // customer read on the summary screen and the basket.
-    ...describeBuild(asBuildSnapshot(item.customisation)).map(line => `${line.label}: ${line.value}`),
+    ...describeCustomisation(item.customisation).map(line => `${line.label}: ${line.value}`),
     `Price: ${money(Number(item.price_at_time_of_purchase) * Number(item.quantity))}`,
   ]
   return lines.filter(Boolean).join('\n')

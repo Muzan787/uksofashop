@@ -14,6 +14,119 @@ export type Database = {
   }
   public: {
     Tables: {
+      addon_groups: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          only_when: Json
+          selection: string
+          slug: string
+          sort: number
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          only_when?: Json
+          selection?: string
+          slug: string
+          sort?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          only_when?: Json
+          selection?: string
+          slug?: string
+          sort?: number
+        }
+        Relationships: []
+      }
+      addons: {
+        Row: {
+          created_at: string
+          description: string | null
+          group_id: string
+          id: string
+          is_active: boolean
+          name: string
+          price: number
+          slug: string
+          sort: number
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          group_id: string
+          id?: string
+          is_active?: boolean
+          name: string
+          price: number
+          slug: string
+          sort?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          group_id?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          price?: number
+          slug?: string
+          sort?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "addons_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "addon_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_addon_groups: {
+        Row: {
+          group_id: string
+          product_id: string
+          sort: number
+        }
+        Insert: {
+          group_id: string
+          product_id: string
+          sort?: number
+        }
+        Update: {
+          group_id?: string
+          product_id?: string
+          sort?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_addon_groups_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "addon_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_addon_groups_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       admins: {
         Row: {
           claimed_at: string | null
@@ -519,6 +632,7 @@ export type Database = {
       }
       categories: {
         Row: {
+          department: string
           intro: string | null
           is_active: boolean
           search_words: string | null
@@ -531,6 +645,7 @@ export type Database = {
           slug: string
         }
         Insert: {
+          department?: string
           intro?: string | null
           is_active?: boolean
           search_words?: string | null
@@ -543,6 +658,7 @@ export type Database = {
           slug: string
         }
         Update: {
+          department?: string
           intro?: string | null
           is_active?: boolean
           search_words?: string | null
@@ -1432,6 +1548,7 @@ export type Database = {
       }
       product_variants: {
         Row: {
+          options: Json
           is_active: boolean
           color: string | null
           color_hex: string | null
@@ -1446,6 +1563,7 @@ export type Database = {
           stock_quantity: number | null
         }
         Insert: {
+          options?: Json
           is_active?: boolean
           color?: string | null
           color_hex?: string | null
@@ -1460,6 +1578,7 @@ export type Database = {
           stock_quantity?: number | null
         }
         Update: {
+          options?: Json
           is_active?: boolean
           color?: string | null
           color_hex?: string | null
@@ -1485,6 +1604,7 @@ export type Database = {
       }
       products: {
         Row: {
+          product_type: string
           seo_description: string | null
           seo_title: string | null
           average_rating: number | null
@@ -1509,6 +1629,7 @@ export type Database = {
           was_price: number | null
         }
         Insert: {
+          product_type?: string
           seo_description?: string | null
           seo_title?: string | null
           average_rating?: number | null
@@ -1533,6 +1654,7 @@ export type Database = {
           was_price?: number | null
         }
         Update: {
+          product_type?: string
           seo_description?: string | null
           seo_title?: string | null
           average_rating?: number | null

@@ -12,6 +12,7 @@ const itemsSchema = z.array(z.object({
   variant_id: z.string().uuid(),
   quantity: z.number().int().min(1).max(99),
   fabric_id: z.string().uuid().nullish(),
+  addon_ids: z.array(z.string().uuid()).max(20).nullish(),
 })).min(1, 'Your cart is empty.')
 
 const tokenSchema = z.string().uuid()
@@ -49,6 +50,7 @@ export async function quoteOffer(
       variant_id: item.variant_id,
       quantity: item.quantity,
       fabric_id: item.fabric_id ?? null,
+      addon_ids: item.addon_ids ?? [],
     })),
     p_promotion_code: promotionCode,
     p_offer_entitlement_token: parsedToken.success ? parsedToken.data : null,
@@ -57,6 +59,9 @@ export async function quoteOffer(
   if (error || !data || typeof data !== 'object' || Array.isArray(data)) {
     console.error('Offer quote failed:', error)
     const message = error?.message ?? ''
+    if (message.includes('UNAVAILABLE_ADDON')) {
+      return { error: 'One of the extras on an item in your basket has changed. Please add that item again.' }
+    }
     if (message.includes('UNAVAILABLE_ITEMS')) {
       return { error: 'One of the items in your basket is no longer available.' }
     }

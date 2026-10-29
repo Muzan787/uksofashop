@@ -48,6 +48,12 @@ export interface ProductCardData {
   averageRating?: number | null;
   swatches?: CardSwatch[];
   /**
+   * The price is the cheapest of several - a bed's single frame, a
+   * mattress's 3ft. Drawn as "from £250", because a bed set in a king size is
+   * not £250 and the card must not say it is.
+   */
+  priceFrom?: boolean;
+  /**
    * Off wherever the same product can appear twice on one page. A
    * view-transition-name must be unique or the browser drops the transition.
    */
@@ -78,7 +84,7 @@ const MAX_SWATCHES = 5;
  */
 export default function ProductCard({
   id, variantId, listId='catalogue', title, price, wasPrice = null, href, image, secondaryImage, badge, badges,
-  reviewCount, averageRating, swatches = [], transition = true, delayMs = 0,
+  reviewCount, averageRating, swatches = [], transition = true, delayMs = 0, priceFrom = false,
 }: ProductCardData) {
   const [swatchImage, setSwatchImage] = useState<string | null>(null);
   const article=useRef<HTMLElement>(null);
@@ -236,6 +242,7 @@ export default function ProductCard({
               room left. The old price drops to its own line there. */}
           <span className="flex min-w-0 flex-wrap items-baseline gap-x-2">
             <span className="font-data text-[17px] font-semibold tabular-nums text-ink-900">
+              {priceFrom && <span className="mr-1 font-body text-caption font-normal text-ink-500">from</span>}
               £{Math.round(price).toLocaleString('en-GB')}
             </span>
             {onSale && wasPrice && (

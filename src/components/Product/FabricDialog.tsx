@@ -27,6 +27,8 @@ interface Props {
   onClose: () => void;
   /** A tile was opened to see the weave. For the page's telemetry. */
   onViewFabric?: (fabric: Fabric) => void;
+  /** What is being built: "sofa", "bed". */
+  noun?: string;
 }
 
 /**
@@ -75,7 +77,7 @@ interface Props {
  * shortened. A 400px-per-second flight across the dialog is exactly the kind of
  * movement that setting exists to refuse.
  */
-export default function FabricDialog({ collections, selectedId, productSlug, onBuild, onClose, onViewFabric }: Props) {
+export default function FabricDialog({ collections, selectedId, productSlug, onBuild, onClose, onViewFabric, noun = 'sofa' }: Props) {
   const reduced = useReducedMotionSafe();
   const { sampleLimit } = useShopSettings();
 
@@ -126,7 +128,7 @@ export default function FabricDialog({ collections, selectedId, productSlug, onB
           </Link>
 
           <p className="m-0 text-center text-caption leading-relaxed text-ink-500 sm:order-first sm:flex-1 sm:text-left">
-            Build mine puts the sofa in your cart in this fabric.
+            Build mine puts the {noun} in your cart in this fabric.
             Samples are {SAMPLE_FEE} for up to {sampleLimit}, refunded when you order.
           </p>
         </div>
@@ -175,7 +177,7 @@ export default function FabricDialog({ collections, selectedId, productSlug, onB
             </p>
 
             <p className="m-0 mt-5 max-w-[46ch] text-body-sm leading-relaxed text-ink-500">
-              Every sofa in this range is built to order, so this fabric costs exactly the same
+              Every {noun} in this range is built to order, so this fabric costs exactly the same
               as any other. What a screen shows you is never quite the colour — order it as a
               sample and hold it against your own room before you decide.
             </p>

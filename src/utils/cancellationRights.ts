@@ -44,7 +44,14 @@ export interface PersonalisableLine {
 export function isPersonalisedLine(line: PersonalisableLine): boolean {
   if (line.fabric_id) return true
   if (line.build && typeof line.build === 'object') return true
-  if (line.customisation && typeof line.customisation === 'object') return true
+  // A bed or mattress line's customisation is {kind: 'options'}: the size,
+  // frame or set and extras it was bought in. Those are standard versions of
+  // the product, chosen from a list, not the consumer's specification - like
+  // choosing a sofa's size - so on their own they keep the 14 days. A fabric
+  // from the library on the same line still takes it away, above.
+  if (line.customisation && typeof line.customisation === 'object') {
+    return (line.customisation as { kind?: unknown }).kind !== 'options'
+  }
   return false
 }
 

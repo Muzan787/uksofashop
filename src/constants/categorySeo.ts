@@ -165,6 +165,31 @@ export const CATEGORY_COPY: Record<string, CategoryCopy> = {
     ],
   },
 
+  beds: {
+    title: 'Upholstered Beds, Bed Frames & Bed Sets',
+    description:
+      `Upholstered bed frames and bed sets from single to super king, with drawers, gas lift or ottoman storage, in any of ${FABRIC_COLOUR_COUNT} fabrics. Pay on delivery.`,
+    heading: 'Choosing a bed',
+    body: [
+      'Every bed here comes in five sizes - a 3ft single, a 4ft small double, a 4ft 6in double, a 5ft king and a 6ft super king - and each one can be bought as the frame on its own, or as a bed set with a mattress. If you already have a mattress you are happy with, the frame is all you need; measure it first, because UK mattress sizes are fixed and the frame is made to fit one exactly.',
+      'A bed set comes with our Standard mattress, an 8-9 inch hybrid spring mattress with a layer of foam, and the product page lets you upgrade it to memory foam, orthopaedic or pocket sprung for a little more. The [mattresses](/shop/mattresses) can also be bought on their own, in every size.',
+      `Storage is the other decision. Drawers slide out from the base; a gas lift raises the whole base on struts so the space underneath is one big compartment; an ottoman box is an upholstered storage box at the foot of the bed. A solid base can replace the slats. Each is priced on the page, and they can be combined. The frames are made to order, in the colour photographed or in any of the ${FABRIC_COLOUR_COUNT} colours in the [fabric library](/fabrics).`,
+      `Delivery is free to most of the UK, and you pay in cash or by bank transfer when it arrives rather than upfront. ${DELIVERY_TIMING}`,
+    ],
+  },
+
+  mattresses: {
+    title: 'Mattresses in Every UK Size',
+    description:
+      'Spring, memory foam, orthopaedic and pocket sprung mattresses from single to super king, from an 8-inch eco spring to a 5000 pocket. Pay on delivery.',
+    heading: 'Choosing a mattress',
+    body: [
+      'The quickest way to choose is by how you like a bed to feel. Memory foam moulds around you and takes pressure off the hips and shoulders. Orthopaedic foam is firm and even, for anyone who wants to be held up rather than sink in. Pocket sprung mattresses use individually wrapped springs that move on their own - the more springs, the closer the support and the less you feel a partner turning over.',
+      'Every mattress comes in five UK sizes, from a 3ft single to a 6ft super king, and the price is on each size. If you are buying one of our [beds](/shop/beds), choose the bed set there instead: it comes with a mattress, and upgrading it on the bed costs less than buying a second one on its own.',
+      `Delivery is free to most of the UK, and you pay in cash or by bank transfer when it arrives. ${DELIVERY_TIMING}`,
+    ],
+  },
+
   all: {
     title: 'All Sofas',
     description:

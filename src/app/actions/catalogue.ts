@@ -41,6 +41,12 @@ export interface ColourwayInput {
   imageUrl: string
   isActive: boolean
   priority: string
+  /**
+   * A bed or mattress variant's size and frame-or-set, in words - shown on
+   * the row so ten "Cream" rows can be told apart. Read only: save_product
+   * does not touch variant options.
+   */
+  optionsLabel?: string
 }
 
 export interface ProductInput {

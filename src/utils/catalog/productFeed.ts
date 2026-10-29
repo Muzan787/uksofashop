@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { canonicalProductPath } from '@/utils/productUrl'
 import { sale } from '@/utils/pricing'
 import { signOfferEntry } from '@/utils/offers/entryToken'
+import { asOptions, axisValue, optionsLabel } from '@/utils/productOptions'
 
 type FeedKind = 'google' | 'meta'
 
@@ -12,6 +13,8 @@ interface ProductVariant {
   material: string | null
   price_adjustment: number
   image_url: string | null
+  /** A bed or mattress variant's size and frame-or-set. Empty on sofas. */
+  options: unknown
 }
 
 interface Product {
@@ -23,6 +26,8 @@ interface Product {
   /** products.was_price. Becomes g:price, with g:sale_price beneath it. */
   was_price: number | null
   size_label: string | null
+  /** sofa, bed, mattress. */
+  product_type: string | null
   gallery_images: string[] | null
   categories: { slug: string; name: string } | null
   product_categories: { categories: { slug: string } | null }[] | null
@@ -158,8 +163,16 @@ function itemXml(kind: FeedKind, product: Product, variant: ProductVariant): str
   const productPath = canonicalProductPath(product)
   const priced = sale(product.base_price, product.was_price, variant.price_adjustment)
   const finalPrice = priced.price
-  const attributes = [product.size_label, variant.color, variant.material].filter(Boolean).join(' - ')
+  // A bed's variants are its sizes and frame-or-set, so those name it -
+  // "Arizona Bed - Double (4ft 6in) - Bed set (frame + mattress) - Cream".
+  const options = asOptions(variant.options)
+  const optionText = optionsLabel(options, ' - ')
+  const attributes = [product.size_label, optionText, variant.color, variant.material].filter(Boolean).join(' - ')
   const variantTitle = attributes ? `${product.title} - ${attributes}` : product.title
+  const size = product.size_label ?? axisValue('size', options.size)?.long ?? null
+  // 460 is the sofa category; a bed or a mattress is left for Google to
+  // classify rather than guessed at - an invalid id is an item-level error.
+  const isSofa = (product.product_type ?? 'sofa') === 'sofa'
   const imageUrl = (variant.image_url || product.gallery_images?.[0] || '').trim()
   if (!imageUrl) {
     console.warn(`[feed] skipped variant ${variant.id} of "${product.title}": no image`)
@@ -179,13 +192,13 @@ function itemXml(kind: FeedKind, product: Product, variant: ProductVariant): str
             <g:availability>in_stock</g:availability>
             ${priceTags(finalPrice, priced.wasPrice)}
             <g:brand>UK Sofa Shop</g:brand>
-            <g:google_product_category>${GOOGLE_PRODUCT_CATEGORY}</g:google_product_category>
+            ${isSofa ? `<g:google_product_category>${GOOGLE_PRODUCT_CATEGORY}</g:google_product_category>` : ''}
             ${product.categories?.name ? `<g:product_type><![CDATA[${product.categories.name}]]></g:product_type>` : ''}
             ${SHIPPING}
             ${identifierTags(variant.sku)}
             ${variant.color ? `<g:color><![CDATA[${variant.color}]]></g:color>` : ''}
             ${variant.material ? `<g:material><![CDATA[${variant.material}]]></g:material>` : ''}
-            ${product.size_label ? `<g:size><![CDATA[${product.size_label}]]></g:size>` : ''}
+            ${size ? `<g:size><![CDATA[${size}]]></g:size>` : ''}
           </item>`
 }
 
@@ -227,10 +240,10 @@ export async function buildProductFeed(kind: FeedKind): Promise<Response> {
   const { data, error } = await supabase
     .from('products')
     .select(`
-      id, title, slug, description, base_price, was_price, size_label, gallery_images,
+      id, title, slug, description, base_price, was_price, size_label, product_type, gallery_images,
       categories!products_category_id_fkey ( slug, name ),
       product_categories ( categories ( slug ) ),
-      product_variants ( id, sku, color, material, price_adjustment, image_url )
+      product_variants ( id, sku, color, material, price_adjustment, image_url, options )
     `)
     .eq('is_active', true)
     // A colourway hidden in the admin is off the shop, so it is off the feed.

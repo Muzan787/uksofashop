@@ -5,7 +5,7 @@ import { useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  House, Sofa, LayoutGrid, Palette, Star, PackageSearch, Mail,
+  House, Sofa, BedDouble, BedSingle, LayoutGrid, Palette, Star, PackageSearch, Mail,
   Phone, ShoppingBag, X, ArrowRight, Hammer, User, type LucideIcon,
 } from 'lucide-react';
 import { PHONE_HREF, PHONE_DISPLAY } from '@/constants/contact';
@@ -28,6 +28,8 @@ interface Props {
 const LINKS: { href: string; label: string; icon: LucideIcon }[] = [
   { href: '/',            label: 'Home',         icon: House },
   { href: '/shop/all',    label: 'All Sofas',    icon: Sofa },
+  { href: '/shop/beds',   label: 'Beds',         icon: BedDouble },
+  { href: '/shop/mattresses', label: 'Mattresses', icon: BedSingle },
   { href: '/collection',  label: 'Collections',  icon: LayoutGrid },
   { href: '/build',       label: 'Build Your Own', icon: Hammer },
   // Palette, not Package: PackageSearch is two rows below on Track Order, and

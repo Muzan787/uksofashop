@@ -9,6 +9,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/supabase'
 import { canonicalProductPath } from '@/utils/productUrl'
 import { sale } from '@/utils/pricing'
+import { asOptions } from '@/utils/productOptions'
 
 type Client = SupabaseClient<Database>
 
@@ -134,6 +135,8 @@ function applyProductFilters<T>(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- see above
   let q = query as any
   if (categoryId) q = q.eq('product_categories.category_id', categoryId)
+  // /shop/all is "All sofas". Beds and mattresses have their own listings.
+  else q = q.eq('product_type', 'sofa')
   if (style) q = q.or(styleFilter(style))
   if (material) q = q.filter('product_variants.material', 'ilike', material)
   if (color) q = q.filter('product_variants.color', 'ilike', color)
@@ -197,6 +200,8 @@ export interface GridCard {
   reviewCount: number | null
   averageRating: number | null
   swatches: { id: string; color: string | null; hex: string | null; image: string | null }[]
+  /** A bed or mattress, whose price is its cheapest size. */
+  priceFrom: boolean
 }
 
 /**
@@ -253,7 +258,7 @@ export async function fetchProductCards(
         // The two category relations are here for the href, not for the card:
         // see the note where it is built below. Both are joins on a query that
         // already runs, so they cost no extra round trip.
-        'id, title, slug, base_price, was_price, gallery_images, average_rating, review_count, product_variants!inner(id, image_url, material, color, color_hex, price_adjustment, priority), product_categories!inner(category_id, categories(slug)), categories!products_category_id_fkey(slug)',
+        'id, title, slug, base_price, was_price, gallery_images, average_rating, review_count, product_variants!inner(id, image_url, material, color, color_hex, price_adjustment, priority, options), product_categories!inner(category_id, categories(slug)), categories!products_category_id_fkey(slug)',
         { count: 'exact' },
       )
       .eq('is_active', true),
@@ -322,9 +327,11 @@ export async function fetchProductCards(
         ?? null,
       reviewCount: product.review_count,
       averageRating: product.average_rating,
+      // One dot per colour: a bed's ten variants are ten sizes in the same one.
       swatches: (product.product_variants ?? [])
-        .filter(v => v.color_hex)
+        .filter((v, i, all) => v.color_hex && all.findIndex(o => o.color === v.color && o.color_hex === v.color_hex) === i)
         .map(v => ({ id: v.id, color: v.color ?? null, hex: v.color_hex ?? null, image: v.image_url ?? null })),
+      priceFrom: (product.product_variants ?? []).some(v => Object.keys(asOptions(v.options)).length > 0),
     }
   })
 

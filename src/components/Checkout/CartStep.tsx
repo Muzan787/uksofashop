@@ -13,6 +13,7 @@ import { isRomaProduct, ROMA_CART_NOTICE } from '@/constants/romaAvailability';
 import { useCart, lineKey, type DisplayCartItem } from '@/context/CartContext';
 import { blurDataURL } from '@/utils/cloudinary';
 import { describeBuild } from '@/types/build';
+import { describeOptions } from '@/utils/productOptions';
 import { useReducedMotionSafe } from '@/components/Motion/useReducedMotionSafe';
 import OfferEndsIn from '@/components/Offer/OfferEndsIn';
 import OrderOnWhatsApp from './OrderOnWhatsApp';
@@ -201,6 +202,17 @@ function Row({ item, onRemove, onQuantity }: {
               </li>
             ))}
             <li className="text-ink-500">Guide price — we ring you to confirm the final quotation.</li>
+          </ul>
+        )}
+        {/* A bed or mattress: its size, frame or set, mattress and extras,
+            each with what it adds - the price on the right is all of them. */}
+        {item.selections && (
+          <ul className="m-0 mt-1.5 flex list-none flex-col gap-0.5 p-0 text-caption leading-snug text-ink-700">
+            {describeOptions(item.selections).map(line => (
+              <li key={line.label} className="break-words">
+                <span className="font-semibold text-ink-900">{line.label}:</span> {line.value}
+              </li>
+            ))}
           </ul>
         )}
       </div>

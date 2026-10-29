@@ -23,6 +23,7 @@ import { useWhatsAppCTA } from '@/utils/attribution/useWhatsAppCTA'
 import type { DisplayCartItem } from '@/context/CartContext'
 import { deliveryBreakdown, NO_EXTRAS, type DeliveryOptions } from '@/constants/delivery'
 import { describeBuild } from '@/types/build'
+import { describeOptions } from '@/utils/productOptions'
 import { isValidUkPostcode, normalisePostcode } from '@/utils/postcode'
 import { formatPreferredDeliveryDate, isValidPreferredDeliveryDate } from '@/utils/delivery'
 import { formatOfferDeadline } from '@/utils/offers/deadline'
@@ -44,6 +45,8 @@ function describe(item: DisplayCartItem): string {
     item.fabric_code?.trim() || '',
     // Everything /build recorded, so the chat opens with the whole sofa.
     ...describeBuild(item.build).map(line => `${line.label}: ${line.value}`),
+    // A bed's size, frame or set, mattress and extras.
+    ...describeOptions(item.selections).map(line => `${line.label}: ${line.value}`),
   ].filter(Boolean).join(' · ')
   return specification ? `${item.title} (${specification})` : item.title
 }

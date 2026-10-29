@@ -38,6 +38,7 @@ import { createClient } from '@/utils/supabase/server'
 import { getFabricLibrary } from '@/utils/fabrics'
 import { canonicalProductPath } from '@/utils/productUrl'
 import { percentOff } from '@/utils/pricing'
+import { asOptions, optionsLabel } from '@/utils/productOptions'
 import { SAMPLE_FEE } from '@/constants/swatches'
 
 /** How long a catalogue snapshot is reused before it is fetched again. */
@@ -103,6 +104,8 @@ interface VariantRow {
   color: string | null
   material: string | null
   price_adjustment: number | null
+  /** A bed or mattress variant's size and frame-or-set. */
+  options?: unknown
 }
 
 interface ProductRow {
@@ -121,6 +124,16 @@ interface ProductRow {
   categories: CategoryRef | CategoryRef[] | null
   product_categories: { categories: CategoryRef | CategoryRef[] | null }[] | null
   product_variants: VariantRow[] | null
+  product_type?: string | null
+  product_addon_groups?: { addon_groups: AddonGroupRow | AddonGroupRow[] | null }[] | null
+}
+
+interface AddonGroupRow {
+  name: string
+  selection: string
+  only_when: unknown
+  is_active: boolean
+  addons: { name: string; price: number | string; is_active: boolean; sort: number }[] | null
 }
 
 async function fetchProducts(): Promise<ProductRow[]> {
@@ -128,10 +141,11 @@ async function fetchProducts(): Promise<ProductRow[]> {
   const { data, error } = await supabase
     .from('products')
     .select(
-      'id, title, slug, base_price, was_price, description, size_label, subgroup_label, specifications, custom_made, origin, ' +
+      'id, title, slug, base_price, was_price, description, size_label, subgroup_label, specifications, custom_made, origin, product_type, ' +
+        'product_addon_groups(addon_groups(name, selection, only_when, is_active, addons(name, price, is_active, sort))), ' +
         'categories!products_category_id_fkey(slug, name), ' +
         'product_categories(categories(slug, name)), ' +
-        'product_variants(color, material, price_adjustment)',
+        'product_variants(color, material, price_adjustment, options)',
     )
     .eq('is_active', true)
     // Deterministic order, so an unchanged catalogue renders to the same
@@ -217,10 +231,15 @@ function renderProduct(p: ProductRow): string {
   if (cats.length) facts.push(`Category: ${cats.join(', ')}`)
   if (p.size_label) facts.push(`Size: ${p.size_label}`)
   if (p.subgroup_label) facts.push(`Style: ${p.subgroup_label}`)
+  const configured = variants.some(v => Object.keys(asOptions(v.options)).length > 0)
   facts.push(
-    p.custom_made
-      ? 'Made to order in the UK: in the colour shown on its page, or any colour from the fabric library at the same price, and the size can be changed on request'
-      : 'Stocked in set sizes as listed',
+    configured && p.custom_made
+      ? 'Made to order in the UK: in the colour shown on its page, or any colour from the fabric library at the same price'
+      : configured
+        ? 'Sold in the sizes listed below'
+        : p.custom_made
+          ? 'Made to order in the UK: in the colour shown on its page, or any colour from the fabric library at the same price, and the size can be changed on request'
+          : 'Stocked in set sizes as listed',
   )
   if (p.origin === 'uk' && !p.custom_made) facts.push('Made in the UK')
   lines.push(facts.join('. ') + '.')
@@ -228,10 +247,29 @@ function renderProduct(p: ProductRow): string {
   const specs = renderSpecs(p.specifications)
   if (specs) lines.push(`Specifications: ${specs}`)
 
-  const colours = variants
-    .filter(v => isColourName(v.color))
+  // A bed or mattress: every size (and frame or set) at its own price, then
+  // the extras with what each adds. The page and checkout charge these.
+  if (configured) {
+    const prices = variants
+      .map(v => ({ label: optionsLabel(asOptions(v.options), ', '), price: base + Number(v.price_adjustment ?? 0) }))
+      .filter(v => v.label)
+      .map(v => `${v.label} ${pounds(v.price)}`)
+    if (prices.length) lines.push(`Prices: ${[...new Set(prices)].join('; ')}`)
+    for (const link of p.product_addon_groups ?? []) {
+      const g = Array.isArray(link.addon_groups) ? link.addon_groups[0] : link.addon_groups
+      if (!g?.is_active) continue
+      const addons = (g.addons ?? []).filter(a => a.is_active).sort((a, b) => a.sort - b.sort)
+      if (!addons.length) continue
+      const when = asOptions(g.only_when).build === 'set' ? ' (bed set only; replaces the Standard mattress)' : ''
+      const how = g.selection === 'one' ? 'choose one' : 'any combination'
+      lines.push(`${g.name}${when}, ${how}: ${addons.map(a => `${a.name} +${pounds(a.price)}`).join(', ')}`)
+    }
+  }
+
+  const colours = (configured ? variants.filter((v, i, all) => all.findIndex(o => o.color === v.color) === i) : variants)
+    .filter(v => isColourName(v.color) && !(configured && p.product_type === 'mattress'))
     .map(v => {
-      const adj = Number(v.price_adjustment ?? 0)
+      const adj = configured ? 0 : Number(v.price_adjustment ?? 0)
       const label = v.material ? `${v.color} (${v.material})` : String(v.color)
       return adj ? `${label} ${pounds(base + adj)}` : label
     })
@@ -282,7 +320,7 @@ function renderHours(): string {
 }
 
 function renderPrompt(catalogue: string | null, fabrics: string | null, s: ShopSettings): string {
-  return `You are the website assistant for UK Sofa Shop (uksofashop.co.uk), a sofa retailer in Blackburn, Lancashire, delivering across UK Mainland. You answer visitors' questions about the sofas, delivery, payment, guarantees and returns, using only the facts in this document.
+  return `You are the website assistant for UK Sofa Shop (uksofashop.co.uk), a sofa retailer in Blackburn, Lancashire, that also sells beds and mattresses, delivering across UK Mainland. You answer visitors' questions about the sofas, beds, mattresses, delivery, payment, guarantees and returns, using only the facts in this document.
 
 # How to answer
 

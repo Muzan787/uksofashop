@@ -45,6 +45,11 @@ export interface CartItem {
    * shape and length here and stored on order_items as the customer wrote it.
    */
   customisation?: BuildSnapshot | null
+  /**
+   * Beds: the extras and the mattress upgrade, as ids. place_order prices
+   * them from the addons table and refuses any the product does not offer.
+   */
+  addon_ids?: string[] | null
 }
 
 const text = (max: number) => z.string().trim().max(max)
@@ -105,6 +110,7 @@ const itemsSchema = z.array(z.object({
   quantity: z.number().int().min(1).max(99),
   fabric_id: z.string().uuid().nullish(),
   customisation: customisationSchema.nullish(),
+  addon_ids: z.array(z.string().uuid()).max(20).nullish(),
 })).min(1, 'Your cart is empty.')
 
 /**
@@ -345,6 +351,8 @@ export async function placeOrder(
       // carries no prices, so there is nothing in it for the browser to lie
       // about that the database would believe.
       customisation: item.customisation ?? null,
+      // Ids only. line_addons prices them and snapshots their names.
+      addon_ids: item.addon_ids ?? [],
     })),
     p_expected_total: expectedTotal,
     p_delivery_floor: opts.floor,
@@ -375,6 +383,9 @@ export async function placeOrder(
     }
     if (message.includes('EMPTY_CART')) {
       return { error: 'Your cart is empty.' }
+    }
+    if (message.includes('UNAVAILABLE_ADDON')) {
+      return { error: 'One of the extras or mattress upgrades on an item in your basket has changed. Please remove that item, add it again and try again.' }
     }
     if (message.includes('UNAVAILABLE_FABRIC')) {
       return { error: 'One of the fabrics in your basket is no longer available. Please choose another and try again.' }
