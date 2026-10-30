@@ -234,7 +234,9 @@ function renderProduct(p: ProductRow): string {
   const configured = variants.some(v => Object.keys(asOptions(v.options)).length > 0)
   facts.push(
     configured && p.custom_made
-      ? 'Made to order in the UK: in the colour shown on its page, or any colour from the fabric library at the same price'
+      ? (p.product_type === 'bed'
+          ? 'Made to order in the UK: in the colour shown on its page, or any colour from the Chenille, Plush Soft Velvet or Crushed Velvet ranges at the same price (beds are not made in Naple, Marble or PVC Leather)'
+          : 'Made to order in the UK: in the colour shown on its page, or any colour from the fabric library at the same price')
       : configured
         ? 'Sold in the sizes listed below'
         : p.custom_made

@@ -29,10 +29,13 @@ interface Props {
  *
  * SAME BUTTON, SMALLER. It is the buy box's button in every respect that
  * matters - the same ember pill, the same sheen, the same uppercase data face,
- * the same handler and therefore the same AddToCart event - at the WhatsApp
- * pill's 48px rather than the buy box's 56px, so the two corners match. And it
- * confirms the same way: the fill runs to sage and the label becomes a tick for
- * two seconds.
+ * the same handler and therefore the same AddToCart event - and it confirms
+ * the same way: the fill runs to sage and the label becomes a tick for two
+ * seconds.
+ *
+ * COMPACT (Muaz, 2026-10-30). "ADD TO CART — £270" at 48px was the widest
+ * thing on the bottom edge of a phone. It is "Add · £270" at 44px now - the
+ * bag icon says cart, and 44px is still a full tap target.
  *
  * POSITION AND STACKING are the WhatsApp button's: `.fab-offset` clears the
  * safe-area inset and any bar pinned to the bottom edge, and z-sticky-bar
@@ -56,7 +59,7 @@ export default function AddToCartFab({ price, added, onAdd }: Props) {
         onClick={onAdd}
         disabled={added}
         aria-live="polite"
-        className={`flex h-12 items-center gap-2 rounded-pill px-4 font-data text-eyebrow font-bold uppercase tracking-[0.08em] transition-[background-color,box-shadow] duration-base ease-out-expo focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-900 ${
+        className={`flex h-11 items-center gap-1.5 rounded-pill px-3.5 font-data text-eyebrow font-bold uppercase tracking-[0.06em] transition-[background-color,box-shadow] duration-base ease-out-expo focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-900 ${
           added
             ? 'bg-sage-700 text-calico-50'
             : 'hover-btn btn-ember sheen bg-ember-500 text-ink-900 shadow-ember'
@@ -71,7 +74,8 @@ export default function AddToCartFab({ price, added, onAdd }: Props) {
           <>
             <ShoppingBag aria-hidden="true" className="h-4 w-4 shrink-0" />
             <span className="whitespace-nowrap">
-              Add to cart — £{price.toFixed(0)}
+              <span className="sr-only">Add to cart, </span>
+              <span aria-hidden="true">Add · </span>£{price.toFixed(0)}
             </span>
           </>
         )}

@@ -31,6 +31,7 @@ import { GOOGLE_GTM_ENABLED, type GoogleOrderReceipt } from '@/utils/googleMeasu
 import { createUntypedAdminClient } from '@/utils/supabase/admin'
 import type { AdminOrderDisplay } from '@/types/adminOrders'
 import type { BuildSnapshot } from '@/types/build'
+import { asProductType, fabricAllowed } from '@/utils/productOptions'
 
 /** What the browser is allowed to tell us: what was ordered, never what it costs. */
 export interface CartItem {
@@ -265,6 +266,24 @@ export async function placeOrder(
   const validatedItems = itemsSchema.safeParse(cartItems)
   if (!validatedItems.success) {
     return { error: validatedItems.error.issues[0].message }
+  }
+
+  // A bed is made in Chenille, Plush Soft Velvet or Crushed Velvet only. The
+  // page offers nothing else; this stops a hand-made request getting one.
+  const fabricLines = validatedItems.data.filter(item => item.fabric_id)
+  if (fabricLines.length > 0) {
+    const db = createAdminClient()
+    const [{ data: variantRows }, { data: fabricRows }] = await Promise.all([
+      db.from('product_variants').select('id, products ( product_type )').in('id', fabricLines.map(i => i.variant_id)),
+      db.from('fabrics').select('id, fabric_collections ( slug )').in('id', fabricLines.map(i => i.fabric_id!)),
+    ])
+    const typeOf = new Map(((variantRows ?? []) as unknown as { id: string; products: { product_type: string } | null }[])
+      .map(v => [v.id, asProductType(v.products?.product_type)]))
+    const rangeOf = new Map(((fabricRows ?? []) as unknown as { id: string; fabric_collections: { slug: string } | null }[])
+      .map(f => [f.id, f.fabric_collections?.slug ?? null]))
+    if (fabricLines.some(i => !fabricAllowed(typeOf.get(i.variant_id) ?? 'sofa', rangeOf.get(i.fabric_id!)))) {
+      return { error: 'One of the fabrics in your basket is not made on that item. Please choose another and try again.' }
+    }
   }
 
   const validatedExtras = extrasSchema.safeParse(extras)

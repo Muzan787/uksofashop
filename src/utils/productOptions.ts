@@ -43,6 +43,22 @@ export const PRODUCT_NOUN: Record<ProductType, string> = {
   mattress: 'mattress',
 }
 
+/**
+ * The fabric ranges a product type can be made in, by collection slug. A type
+ * not listed takes the whole library, as sofas do. Beds come in three
+ * (Muaz, 2026-10-30): Chenille, Plush Soft Velvet and Crushed Velvet.
+ * The product page shows only these and the checkout refuses any other.
+ */
+export const FABRIC_COLLECTIONS: Partial<Record<ProductType, string[]>> = {
+  bed: ['chenille', 'plush-soft-velvet', 'crushed-velvet'],
+}
+
+/** True when a fabric in this collection may be ordered on this product type. */
+export function fabricAllowed(type: ProductType, collectionSlug: string | null | undefined): boolean {
+  const allowed = FABRIC_COLLECTIONS[type]
+  return !allowed || (Boolean(collectionSlug) && allowed.includes(collectionSlug!))
+}
+
 // ─── The axes ────────────────────────────────────────────────────────────────
 
 export interface AxisValue {

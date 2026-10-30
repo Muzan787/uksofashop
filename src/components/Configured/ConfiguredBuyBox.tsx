@@ -43,6 +43,8 @@ interface Props {
   picks: Record<string, string[]>;
   onPick: (group: AddonGroup, addon: Addon | null) => void;
 
+  /** How many fabric colours it can be made in, for the trust row. */
+  fabricCount: number;
   /** "Size: Double (4ft 6in)" and so on, for the summary above the button. */
   summary: { label: string; value: string }[];
   chosen: { name: string; price: number }[];
@@ -67,7 +69,7 @@ const money = (n: number) => `£${Number.isInteger(n) ? n : n.toFixed(2)}`;
 
 export default function ConfiguredBuyBox({
   product, productType, price, basePrice, reviewCount, averageRating, estimate,
-  axes, selection, onChoose, priceIf, groups, picks, onPick, summary, chosen,
+  axes, selection, onChoose, priceIf, groups, picks, onPick, summary, chosen, fabricCount,
   added, onAdd, inWishlist, wishlistBusy, onWishlist,
 }: Props) {
   // A pick-one group says what is chosen even when it is the included one -
@@ -273,8 +275,8 @@ export default function ConfiguredBuyBox({
             { Icon: Gem, label: PROMISES.payment.label },
             // Not the sofas' 1-year frame guarantee: nobody has said it covers
             // beds or mattresses, so it is not claimed here.
-            productType === 'bed'
-              ? { Icon: Palette, label: 'Any of 70 fabrics' }
+            productType === 'bed' && fabricCount > 0
+              ? { Icon: Palette, label: `${fabricCount} fabric colours` }
               : { Icon: Ruler, label: '5 UK sizes' },
           ].map(({ Icon, label }) => (
             <li key={label}>

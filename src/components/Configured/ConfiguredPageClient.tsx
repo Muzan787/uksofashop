@@ -473,6 +473,7 @@ export default function ConfiguredPageClient({
                 ].filter(l => l.value)}
                 basePrice={basePrice}
                 chosen={chosen.map(c => ({ name: c.addon.name, price: Number(c.addon.price) }))}
+                fabricCount={fabrics.reduce((n, c) => n + c.fabrics.length, 0)}
                 added={added}
                 onAdd={() => handleAdd('primary')}
                 inWishlist={inWishlist}

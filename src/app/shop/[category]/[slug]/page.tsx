@@ -14,7 +14,7 @@ import { deliveryWindow } from '@/utils/delivery';
 import { getShopSettings } from '@/utils/shopSettingsServer';
 import ProductPageClient from '../../../../components/Product/ProductPageClient';
 import ConfiguredPageClient from '@/components/Configured/ConfiguredPageClient';
-import { asOptions, asProductType } from '@/utils/productOptions';
+import { asOptions, asProductType, fabricAllowed } from '@/utils/productOptions';
 import { getFabricLibrary } from '@/utils/fabrics';
 import { parseDimensions } from '@/components/Product/dimensions';
 import type { AddonGroup, ProductVideo, SimilarProduct, SizeVariant, Variant, Review } from '@/components/Product/types';
@@ -533,7 +533,8 @@ export default async function ProductPage(props: { params: Params, searchParams:
           initialWishlistState={initialWishlistState}
           isLoggedIn={!!user}
           initialVariantId={initialVariantId}
-          fabrics={fabrics}
+          // A bed is made in three of the six ranges only.
+          fabrics={fabrics.filter(c => fabricAllowed(productType, c.slug))}
           videos={videos as ProductVideo[]}
         />
       </>

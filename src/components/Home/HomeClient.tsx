@@ -208,7 +208,7 @@ export default function HomeClient({ categories, products, heroProduct, collecti
           eyebrow="Now in: beds"
           heading="Beds made the way our sofas are."
           emphasise="Beds"
-          standfirst="Five sizes, frame or bed set with a mattress, storage if you want it, and any of our 70 fabrics."
+          standfirst="Five sizes, frame or bed set with a mattress, storage if you want it, in chenille, plush velvet or crushed velvet."
           items={beds.map(b => ({ ...toCard(b), priceFrom: true }))}
           viewAllHref="/shop/beds"
           viewAllLabel="View all beds"
