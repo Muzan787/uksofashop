@@ -19,7 +19,6 @@ import { STANDARD_MATTRESS, type Axis, type ProductType } from '@/utils/productO
 import AddToCart from '@/components/Product/AddToCart';
 import HowItWorks from '@/components/Product/HowItWorks';
 import Stars from '@/components/Product/Stars';
-import TrustBox from '@/components/UI/TrustBox';
 import type { Addon, AddonGroup, Product } from '@/components/Product/types';
 
 interface Props {
@@ -299,8 +298,6 @@ export default function ConfiguredBuyBox({
             Visit our <strong className="font-semibold text-ink-900">Blackburn showroom</strong> · visits by appointment
           </span>
         </Link>
-
-        <TrustBox kind="microCombo" className="mt-4" />
       </div>
     </div>
   );

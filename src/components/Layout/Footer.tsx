@@ -14,7 +14,6 @@ import {
   SOCIAL_PROFILES, PHONE_DISPLAY, PHONE_HREF, SUPPORT_EMAIL, ADDRESS, OPENING_HOURS,
 } from '@/constants/contact';
 import TikTokIcon from '@/components/UI/TikTokIcon';
-import { TRUSTPILOT_PROFILE_URL } from '@/constants/trustpilot';
 import type { NavCategory } from '@/utils/navigation';
 import { usePhoneClick } from '@/utils/attribution/usePhoneClick';
 
@@ -53,9 +52,7 @@ const supportLinks = [
 const companyLinks = [
   { href: '/about',    label: 'Our Story' },
   { href: '/showroom', label: 'Showroom' },
-  // Off-site on purpose: reviews a visitor can check somewhere we do not
-  // control are worth more than our own page saying the same thing.
-  { href: TRUSTPILOT_PROFILE_URL, label: 'Reviews on Trustpilot', external: true },
+  { href: '/reviews',  label: 'Customer Reviews' },
   { href: '/journal',  label: 'Journal' },
   { href: '/careers',  label: 'Careers' },
   { href: '/sitemap',  label: 'Sitemap' },

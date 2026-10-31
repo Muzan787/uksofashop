@@ -3,14 +3,18 @@
 // Trustpilot, in one place. The profile was claimed on 2026-09-18 with
 // enquiries@uksofashop.co.uk on the Free plan.
 //
-// Two kinds of value here. The public ones - the business unit id, the profile
-// and review URLs, the TrustBox template ids - are visible in the page source
-// of every site that shows a Trustpilot widget, so they are constants. The
-// private ones - the invitation BCC address, the tokenised invitation link -
-// are environment variables, because anyone holding the BCC address could
-// send invitations in the shop's name.
+// NOTHING ON THE STOREFRONT. On 2026-10-31 Muaz asked for every trace of
+// Trustpilot to come off the website: the TrustBox widgets and their switch
+// (NEXT_PUBLIC_TRUSTPILOT_WIDGETS, which on the Free plan could only ever draw
+// an empty box), the footer link, the profile in the Organization sameAs, and
+// the "Review on Trustpilot" line on the review cards. What is left here is
+// for asking customers for a review - the admin order page and the delivered
+// email - none of which a visitor sees.
 //
-// THREE SWITCHES, EACH OFF BY DEFAULT.
+// The invitation values are environment variables, because anyone holding the
+// BCC address could send invitations in the shop's name.
+//
+// TWO SWITCHES, EACH OFF BY DEFAULT.
 //
 //   TRUSTPILOT_INVITE_BCC       Set it and the "delivered" email is copied to
 //                               Trustpilot's Automatic Feedback Service, which
@@ -26,30 +30,6 @@
 //                               are organic. Used in the admin WhatsApp
 //                               button for customers with no email, which is
 //                               most of them. Falls back to the review URL.
-//
-//   NEXT_PUBLIC_TRUSTPILOT_WIDGETS
-//                               Set to "1" to show the TrustBoxes on the site.
-//                               Off until there are enough reviews for a
-//                               rating to mean something - "5.0 from 2
-//                               reviews" is weaker than no badge. The "Review
-//                               us on Trustpilot" links do not depend on it.
-//                               It also turns on the 5-star carousel on every
-//                               product page (Product/TrustpilotReviews.tsx).
-//
-//                               DO NOT TURN IT ON ON THE FREE PLAN. Checked
-//                               2026-10-25 against Trustpilot's own widget
-//                               data endpoint: the only TrustBox this business
-//                               has access to is the Review Collector. The
-//                               carousel and the micro combo below both answer
-//                               "BusinessUnit does not have access to that
-//                               trustbox" and draw a bare Trustpilot logo in an
-//                               empty box. They need a paid plan first.
-
-/** Trustpilot's id for this business. Public: it is in every TrustBox embed. */
-export const TRUSTPILOT_BUSINESS_UNIT_ID = '6aad5fc120d98657b6af39aa'
-
-/** The public profile. Goes in the footer and in the business's sameAs. */
-export const TRUSTPILOT_PROFILE_URL = 'https://uk.trustpilot.com/review/uksofashop.co.uk'
 
 /**
  * Where anyone can write a review. Reviews left here are "organic" rather
@@ -67,23 +47,3 @@ export function trustpilotInviteBcc(): string | null {
   const value = process.env.TRUSTPILOT_INVITE_BCC?.trim()
   return value && value.includes('@') ? value : null
 }
-
-/**
- * Whether the TrustBoxes render. NEXT_PUBLIC_ so the client bundle can read
- * it; inlined at build time, so flipping it needs a deploy.
- */
-export const TRUSTPILOT_WIDGETS_ENABLED = process.env.NEXT_PUBLIC_TRUSTPILOT_WIDGETS === '1'
-
-/**
- * TrustBox templates, by Trustpilot's own ids. The height is what Trustpilot
- * documents for each; the iframe is sized to it before it loads so the page
- * does not shift when it arrives.
- */
-export const TRUSTBOX = {
-  /** Stars, TrustScore and review count on one 20px line. */
-  microCombo: { templateId: '5419b6ffb0d04a076446a9af', height: '20px' },
-  /** A row of recent reviews with the score beside them. */
-  carousel: { templateId: '53aa8912dec7e10d38f59f36', height: '140px' },
-} as const
-
-export type TrustBoxKind = keyof typeof TRUSTBOX

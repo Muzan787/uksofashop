@@ -10,7 +10,6 @@ import AddToCart from './AddToCart';
 import HowItWorks from './HowItWorks';
 import PillGroup, { type Pill } from './PillGroup';
 import Stars from './Stars';
-import TrustBox from '@/components/UI/TrustBox';
 import OfferStrip from '@/components/Offer/OfferStrip';
 import type { OfferTier } from '@/types/offers';
 import type { Product, SizeVariant } from './types';
@@ -382,11 +381,6 @@ export default function BuyBox({
             See sofas in person at our <strong className="font-semibold text-ink-900">Blackburn showroom</strong> · visits by appointment
           </span>
         </Link>
-
-        {/* Independent proof, one line: stars, TrustScore and count from
-            Trustpilot. Renders nothing until the widgets are switched on -
-            see constants/trustpilot.ts. */}
-        <TrustBox kind="microCombo" className="mt-4" />
       </div>
     </div>
   );

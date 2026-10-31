@@ -7,7 +7,7 @@ import { getFabricLibrary } from '@/utils/fabrics';
 import { getBuildTeaser } from '@/utils/buildTeaser';
 import HomeClient from '@/components/Home/HomeClient';
 import { HERO_PRODUCT_SLUG } from '@/constants/homeArt';
-import { CUSTOMER_REVIEWS, channelLabel } from '@/constants/socialReviews';
+import { CUSTOMER_REVIEWS } from '@/constants/socialReviews';
 import type { HomeReview } from '@/components/Home/ReviewTicker';
 import { organizationSchema, webSiteSchema, jsonLd } from '@/utils/schema';
 import { HALLOWEEN_LIVE } from '@/constants/halloween';
@@ -207,9 +207,8 @@ export default async function HomePage() {
 
   const collectionsData = summariseCollections(groupsData);
 
-  // The site's own reviews first, then what customers said on Trustpilot,
-  // Facebook, WhatsApp and Messenger - stars only where they gave some, and
-  // the source named only for Trustpilot (see constants/socialReviews.ts).
+  // The site's own reviews first, then the ones gathered elsewhere (see
+  // constants/socialReviews.ts) - stars only where the customer gave some.
   const reviews: HomeReview[] = [
     ...(reviewRows ?? []).map(r => ({
       id: r.id,
@@ -225,7 +224,6 @@ export default async function HomePage() {
       comment: r.truncated ? `${r.quote}…` : r.quote,
       customerName: r.name,
       verified: Boolean(r.verified),
-      source: r.channel === 'trustpilot' ? channelLabel(r) : undefined,
       prompt: r.prompt,
     })),
   ];

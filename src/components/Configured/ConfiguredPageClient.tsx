@@ -49,7 +49,6 @@ import Reviews from '@/components/Product/Reviews';
 import SecondaryActions from '@/components/Product/SecondaryActions';
 import ShopReviews from '@/components/Product/ShopReviews';
 import Similar from '@/components/Product/Similar';
-import TrustpilotReviews from '@/components/Product/TrustpilotReviews';
 import VideoStrip from '@/components/UI/VideoStrip';
 import type {
   Addon, AddonGroup, Fabric, FabricCollection, GalleryImage, Product, ProductVideo, Review,
@@ -510,7 +509,6 @@ export default function ConfiguredPageClient({
             fallbackTitle={`${product.title} in a customer's home`}
             className="mb-12 lg:mb-16"
           />
-          <TrustpilotReviews />
           <Reviews productId={product.id} reviews={approvedReviews} isLoggedIn={isLoggedIn} />
         </div>
 

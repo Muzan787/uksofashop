@@ -24,7 +24,6 @@ import {
   OPENING_HOURS,
   SOCIAL_SAME_AS,
 } from '@/constants/contact'
-import { TRUSTPILOT_PROFILE_URL } from '@/constants/trustpilot'
 
 export const ORGANISATION_NAME = 'UK Sofa Shop'
 
@@ -105,9 +104,10 @@ export function organizationSchema() {
     },
     // Only real, verified profiles. SOCIAL_SAME_AS already filters out the
     // TikTok placeholder - attaching an unverified handle to the business
-    // entity is worse than attaching none. The Trustpilot profile is claimed
-    // and verified against the domain, so it always belongs here.
-    sameAs: [...SOCIAL_SAME_AS, TRUSTPILOT_PROFILE_URL],
+    // entity is worse than attaching none. The Trustpilot profile was here
+    // until 2026-10-31, when Muaz asked for Trustpilot to be gone from the
+    // site entirely.
+    sameAs: [...SOCIAL_SAME_AS],
   }
 }
 
@@ -547,9 +547,7 @@ export function localBusinessSchema() {
     // Only real profiles - see SOCIAL_PROFILES in constants/contact.ts for
     // why a link that doesn't identify this business is worse than an absent
     // one; placeholder entries are already filtered out of SOCIAL_SAME_AS.
-    // The Trustpilot profile is claimed against the domain, so it is always
-    // one of them.
-    sameAs: [...SOCIAL_SAME_AS, TRUSTPILOT_PROFILE_URL],
+    sameAs: [...SOCIAL_SAME_AS],
     makesOffer: {
       '@type': 'Offer',
       itemOffered: {

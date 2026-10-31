@@ -19,10 +19,10 @@
 //     our own records: Jord, Sam P. and Stacey B. He asked for it on every
 //     Trustpilot review; the other seven have no order under their name, so
 //     the label would be a claim nobody checked.
-//   · Where it was said is recorded here (channel, page) for every review. On
-//     the site only Trustpilot is named: Muaz asked on 2026-10-26 for the
-//     Facebook, WhatsApp and earlier-page lines to come off the cards.
-//     Several were left on our Facebook pages from before the website, under
+//   · Where it was said is recorded here, never shown. Muaz asked on
+//     2026-10-26 for the Facebook, WhatsApp and earlier-page lines to come
+//     off the cards, and on 2026-10-31 for the Trustpilot ones too, with no
+//     trace of Trustpilot left anywhere on the site. Several were left on our Facebook pages from before the website, under
 //     names other than UK Sofa Shop — he confirmed on 2026-10-25 that all of
 //     them are this business. Without that line on the card, Norma's quote
 //     read as a review of a different company, so the earlier name is cut
@@ -31,18 +31,19 @@
 //   · Never staff. The two "Saad Abbasi" reviews were hidden in Admin →
 //     Reviews the same day for that reason.
 //
-// Two of his decisions to know about before changing the Trustpilot list:
+// Three of his decisions to know about before changing the Trustpilot list:
 // Trustpilot's brand guidelines reserve showing its reviews off Trustpilot for
 // paid plans, and the shop is on Free — he chose to show them anyway, knowing
-// Trustpilot can act on the profile. And the profile's single 1-star review
-// (Courtney B., 5 Oct 2026) is left out at his instruction; every Trustpilot
-// card links to the profile, where it can be read.
+// Trustpilot can act on the profile. The guidelines also require each one to
+// be credited to Trustpilot, and since 2026-10-31 none is, at his instruction.
+// And the profile's single 1-star review (Courtney B., 5 Oct 2026) is left
+// out, also at his instruction.
 //
 // These are not rows in the reviews table on purpose: that table's rating is
 // required, and it feeds product star averages and the review count Google
 // sees. None of these is about a known product.
 
-export type ReviewChannel = 'facebook' | 'whatsapp' | 'messenger' | 'trustpilot'
+export type ReviewChannel = 'facebook' | 'whatsapp' | 'messenger'
 
 export interface SocialReview {
   id: string
@@ -53,7 +54,13 @@ export interface SocialReview {
   truncated?: boolean
   /** What we had asked, where the answer makes no sense without it. */
   prompt?: string
-  channel: ReviewChannel
+  /**
+   * Where it was said, for our records - never rendered. Left off the
+   * Trustpilot reviews below, whose source is in the comment above their
+   * list instead: this data ships to the browser, and Muaz asked on
+   * 2026-10-31 for no trace of Trustpilot anywhere on the site.
+   */
+  channel?: ReviewChannel
   /** The Facebook page it was left on, where we know it. */
   page?: string
   /** A Facebook "recommends", rather than a comment. */
@@ -67,112 +74,94 @@ export interface SocialReview {
   photo?: { src: string; width: number; height: number; alt: string }
 }
 
-/** "Facebook comment", "Recommended us on Facebook", "WhatsApp message"… */
-export function channelLabel(review: SocialReview): string {
-  if (review.channel === 'trustpilot') return 'Review on Trustpilot'
-  if (review.channel === 'whatsapp') return 'WhatsApp message'
-  if (review.channel === 'messenger') return 'Facebook Messenger'
-  return review.recommends ? 'Recommended us on Facebook' : 'Facebook comment'
-}
-
 /**
  * The Trustpilot profile on 2026-10-25, newest first: ten 5-star reviews of
  * the eleven (see above for the one left out). Dates are when each was posted.
  * These do not update themselves — new Trustpilot reviews have to be added
  * here by hand.
  */
-export const TRUSTPILOT_REVIEWS: SocialReview[] = [
+export const RATED_REVIEWS: SocialReview[] = [
   {
-    id: 'tp-jord',
+    id: 'jord',
     name: 'Jord',
     quote:
       'I would highly recommend anyone using this company, queried about a sofa on a Sunday, and had it in my living room by Wednesday evening. Fast and friendly service, kept me up to date at all times. Will use again in future.',
-    channel: 'trustpilot',
     rating: 5,
     date: '2026-10-15',
     verified: true,
   },
   {
-    id: 'tp-laura',
+    id: 'laura',
     name: 'Laura',
     quote:
       'Sofa is beautiful and so comfortable, the colour is also really nice. Delivered on time. Driver was a nice guy helped assemble my sofa for me. Communication was also brilliant. Thank you would definitely recommend',
-    channel: 'trustpilot',
     rating: 5,
     date: '2026-10-03',
   },
   {
-    id: 'tp-stacey-b',
+    id: 'stacey-b',
     name: 'Stacey B.',
     quote: 'Excellent service, great communication, delivered and set up, perfect sofa’s',
-    channel: 'trustpilot',
     rating: 5,
     date: '2026-10-11',
     verified: true,
   },
   {
-    id: 'tp-sam-p',
+    id: 'sam-p',
     name: 'Sam P.',
     quote:
       'Would highly recommend this company from ordering to delivery really helpful nothing was any trouble the delivery driver was brilliant very polite',
-    channel: 'trustpilot',
     rating: 5,
     date: '2026-10-09',
     verified: true,
   },
   {
-    id: 'tp-sonia-a',
+    id: 'sonia-a',
     name: 'Sonia A.',
     quote:
       'I had a very good experience from start to finish. And very quick delivery and assembled the sofas for me too. Good communication with the staff and the delivery people. Will recommend the company to everyone thank you',
-    channel: 'trustpilot',
     rating: 5,
     date: '2026-09-24',
   },
   {
-    id: 'tp-millicent-a',
+    id: 'millicent-a',
     name: 'Millicent A.',
     quote: 'I am so happy about the sofas I ordered. They are beautiful and I highly recommend. They did everything when came.',
-    channel: 'trustpilot',
     rating: 5,
     date: '2026-10-09',
   },
   {
-    id: 'tp-ameera-i',
+    id: 'ameera-i',
     name: 'Ameera I.',
     quote: 'It was really good as I expected even the price was perfect',
-    channel: 'trustpilot',
     rating: 5,
     date: '2026-10-17',
   },
   {
-    id: 'tp-zam-j',
+    id: 'zam-j',
     name: 'Zam J.',
     quote: 'Very good service and quality is best im very happy with my sofa Thank you so much',
-    channel: 'trustpilot',
     rating: 5,
     date: '2026-10-13',
   },
   {
-    id: 'tp-ian-m',
+    id: 'ian-m',
     name: 'Ian M.',
     quote: 'Great service and quick delivery',
-    channel: 'trustpilot',
     rating: 5,
     date: '2026-10-19',
   },
   {
-    id: 'tp-sillah-h',
+    id: 'sillah-h',
     name: 'Sillah H.',
     quote: 'Fast and reliable',
-    channel: 'trustpilot',
     rating: 5,
     date: '2026-10-11',
   },
 ]
 
 /** The three every product page shows, with a link to the rest. */
-export const PRODUCT_PAGE_REVIEW_IDS = ['tp-jord', 'tp-laura', 'mark-c'] as const
+export const PRODUCT_PAGE_REVIEW_IDS = ['jord', 'laura', 'mark-c'] as const
 
 /**
  * Strongest first, with the photos spread through the list rather than
@@ -308,8 +297,8 @@ export const SOCIAL_REVIEWS: SocialReview[] = [
  * ticker rather than arriving in two blocks.
  */
 export const CUSTOMER_REVIEWS: SocialReview[] = Array.from(
-  { length: Math.max(TRUSTPILOT_REVIEWS.length, SOCIAL_REVIEWS.length) },
-  (_, i) => [TRUSTPILOT_REVIEWS[i], SOCIAL_REVIEWS[i]],
+  { length: Math.max(RATED_REVIEWS.length, SOCIAL_REVIEWS.length) },
+  (_, i) => [RATED_REVIEWS[i], SOCIAL_REVIEWS[i]],
 ).flat().filter((r): r is SocialReview => Boolean(r))
 
 export const PRODUCT_PAGE_REVIEWS: SocialReview[] = PRODUCT_PAGE_REVIEW_IDS
