@@ -11,6 +11,7 @@ import type { Fabric } from '@/components/Product/types'
 import type { BuildDesign } from '../catalogue'
 import type { Resolved, StepId } from '../state'
 import { StepHeading, pounds } from './ui'
+import { fabricNeedsDeposit } from '@/constants/deposit'
 
 interface Props {
   design: BuildDesign
@@ -197,7 +198,9 @@ export default function SummaryStep({ design, fabric, resolved, spec, onEdit, on
           <ul className="m-0 mt-5 flex list-none flex-col gap-2.5 p-0">
             {[
               { icon: PhoneCall, text: 'One of us rings you to go through every detail — feet, piping and anything custom are priced on that call.' },
-              { icon: Check, text: 'You get a final quotation before a single cut is made. Nothing to pay until it arrives.' },
+              { icon: Check, text: fabricNeedsDeposit(fabric.code)
+                ? 'You get a final quotation before a single cut is made. This fabric needs a small deposit on that call, taken off the price; the rest is paid when it arrives.'
+                : 'You get a final quotation before a single cut is made. Nothing to pay until it arrives.' },
             ].map(({ icon: Icon, text }) => (
               <li key={text} className="flex items-start gap-3 text-body-sm leading-relaxed text-calico-300">
                 <span aria-hidden="true" className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-pill bg-ember-500/20">

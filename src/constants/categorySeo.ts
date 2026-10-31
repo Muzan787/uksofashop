@@ -75,7 +75,7 @@ export const CATEGORY_COPY: Record<string, CategoryCopy> = {
       'A corner sofa earns its place by seating more people in the same floor area than two separate sofas would, and by giving a room a defined edge instead of a gap behind the furniture. It is the shape most people end up with in a rectangular living room, and the shape most likely to be measured wrong.',
       'The measurement that matters is not the room. It is the doorway, the hallway and the turn at the bottom of the stairs, because a corner unit arrives in pieces but each piece is still the length of one arm. Our [size guide](/size-guide) has a calculator that takes your doorway width and tells you what goes through it, and it is worth two minutes before you order rather than after.',
       `Fabric corner sofas here are made to order, so the size can follow your room rather than the other way round, and the colour is yours to pick from the [${FABRIC_COLOUR_COUNT}-fabric library](/fabrics) - chenille, plush velvet, crushed velvet, naple, marble and PVC leather. Leather corners are stocked in set sizes and go out sooner.`,
-      `Every corner sofa is delivered free to most of the UK, brought to the ground floor or a ground-floor room of your choice, and paid for in cash or by bank transfer on the doorstep. ${DELIVERY_TIMING} Nothing upfront. It carries a 1-year guarantee on the frame and springs.`,
+      `Every corner sofa is delivered free to most of the UK, brought to the ground floor or a ground-floor room of your choice, and paid for in cash or by bank transfer on the doorstep. ${DELIVERY_TIMING} It carries a 1-year guarantee on the frame and springs.`,
     ],
   },
 

@@ -28,6 +28,7 @@ import { ChevronRight, Phone, Sparkles } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { toggleWishlist } from '@/app/actions/wishlist';
 import { PHONE_HREF } from '@/constants/contact';
+import { DEPOSIT, fabricNeedsDeposit } from '@/constants/deposit';
 import { useCart } from '@/context/CartContext';
 import { trackAddToCart, trackOperationalAction, trackViewContent } from '@/utils/tracking';
 import { trackJourney } from '@/utils/journey';
@@ -321,7 +322,7 @@ export default function ProductPageClient({
   // ── Cart ─────────────────────────────────────────────────────────────────
   const [added, setAdded] = useState(false);
   // The line just added, for the "Buy this now / Continue shopping" dialog.
-  const [justAdded, setJustAdded] = useState<string | null>(null);
+  const [justAdded, setJustAdded] = useState<{ choice: string; deposit: boolean } | null>(null);
 
   // The one place a line goes into the cart. Both add-to-cart buttons and the
   // fabric picker's "Build mine in this" come through here, so the line, the
@@ -350,7 +351,7 @@ export default function ProductPageClient({
     // setState updater, which React may invoke more than once.
     trackAddToCart({ productId: product.id, variantId: selVariant.id, title: product.title, price, quantity: 1 });
     setAdded(true);
-    setJustAdded(choice);
+    setJustAdded({ choice, deposit: fabricNeedsDeposit(inFabric?.code) });
     setTimeout(() => setAdded(false), 2000);
     return true;
   }, [selVariant, price, product.id, product.title, images, addToCart]);
@@ -696,7 +697,8 @@ export default function ProductPageClient({
       {justAdded !== null && (
         <AddedToCartDialog
           title={product.title}
-          choice={justAdded}
+          choice={justAdded.choice}
+          deposit={justAdded.deposit}
           price={price}
           image={images[0]?.src || '/placeholder.svg'}
           onBuyNow={() => { setJustAdded(null); router.push('/checkout'); }}
@@ -755,6 +757,9 @@ function CustomSizeModal({ title, accent, onClose }: {
         <p className="m-0 mt-2 text-body-sm leading-relaxed text-ink-500">
           Want a different number of seats, or a layout that isn&apos;t listed? Talk to us and
           we&apos;ll build it around your room. It is usually cheaper than adding pieces one by one.
+        </p>
+        <p className="m-0 mt-3 text-caption leading-relaxed text-ink-500">
+          {DEPOSIT.custom}
         </p>
 
         <div className="mt-5 flex flex-col gap-3">

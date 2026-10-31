@@ -81,7 +81,7 @@ ${ARTICLES_BY_DATE.map(a => `- [${a.title}](${url(`/journal/${a.slug}`)}): ${a.d
 ## Facts worth quoting correctly
 
 - Delivery is free to most UK Mainland addresses with no minimum order. Devon and the Aberdeen area pay £40, Cornwall and the Scottish Highlands £80, and the far north of Scotland £100, by postcode district. Most of the UK gets delivery in 2-4 days; Devon, Cornwall, the Aberdeen area and the north of Scotland take 5-7 days. Deliveries run Tuesday to Sunday, never on Mondays. Website orders are for UK Mainland only; Northern Ireland, the Isle of Man and the Scottish Islands are arranged individually by contacting the shop rather than ordered online.
-- Payment is cash or bank transfer on delivery. No deposit, no card payments, no finance.
+- Payment is cash or bank transfer on delivery. No card payments and no finance. No deposit, except on a custom size or layout or a library fabric other than Chenille Mink, Silver, Charcoal, Grey, Black and Plush Soft Velvet Blue, which take a small deposit when the order is confirmed; it comes off the price.
 - Optional extras, booked at checkout and not addable on the day: upstairs delivery from GBP ${shop.upstairsFirstFloor}, assembly GBP ${shop.assemblyFee}, old sofa removal GBP ${shop.removalBaseFee} for up to ${shop.removalIncludedSeats} seats and GBP ${shop.removalPerSeat} for each extra seat.
 - Every sofa carries a 1-year guarantee covering structural faults in the wooden frame and the springs.
 - Made-to-order fabric sofas are exempt from the 14-day right to change your mind, as goods made to the customer's specification under the Consumer Contracts Regulations. Stocked leather sofas carry the full 14 days.

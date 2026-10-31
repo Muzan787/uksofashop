@@ -9,6 +9,7 @@ import { ArrowLeft, ArrowRight, Check, Minus, Plus, ShoppingBag, Trash2, Truck }
 import EmptyState from '@/components/UI/EmptyState';
 import toast from 'react-hot-toast';
 import { PROMISES } from '@/constants/promises';
+import { DEPOSIT, hasDepositLine } from '@/constants/deposit';
 import { isRomaProduct, ROMA_CART_NOTICE } from '@/constants/romaAvailability';
 import { useCart, lineKey, type DisplayCartItem } from '@/context/CartContext';
 import { blurDataURL } from '@/utils/cloudinary';
@@ -134,7 +135,9 @@ export default function CartStep({ onNext, discount = 0 }: {
         <ArrowRight aria-hidden="true" className="h-4 w-4" />
       </button>
       <p className="m-0 mt-2 text-center text-caption leading-relaxed text-ink-600">
-        Next: just your delivery details. No deposit or payment today; pay on arrival.
+        {hasDepositLine(cartItems)
+          ? <>Next: just your delivery details. {DEPOSIT.checkout}</>
+          : 'Next: just your delivery details. No deposit or payment today; pay on arrival.'}
       </p>
 
       {/* The same door at the same weight. Most of this shop's orders are
@@ -157,7 +160,7 @@ export default function CartStep({ onNext, discount = 0 }: {
         pageContext="checkout_cart_whatsapp_order"
       />
       <p className="m-0 mt-3 text-center text-caption leading-relaxed text-ink-500">
-        Your basket goes in the first message. We confirm everything in the chat — nothing to pay until it arrives.
+        Your basket goes in the first message. We confirm everything in the chat — {hasDepositLine(cartItems) ? 'a small deposit on the specially ordered fabric, and the rest when it arrives.' : 'nothing to pay until it arrives.'}
       </p>
 
       <div className="mt-4 text-center">

@@ -2,8 +2,9 @@
 // src/components/Product/FabricChoice.tsx
 
 import { SAMPLE_FEE } from '@/constants/swatches';
+import { DEPOSIT, fabricNeedsDeposit } from '@/constants/deposit';
 import Image from 'next/image';
-import { ChevronRight, Palette, Undo2 } from 'lucide-react';
+import { ChevronRight, Info, Palette, Undo2 } from 'lucide-react';
 import { blurDataURL } from '@/utils/cloudinary';
 import type { Fabric, FabricCollection } from './types';
 
@@ -95,6 +96,13 @@ export default function FabricChoice({ collections, selected, onOpen, onClear }:
 
         <ChevronRight aria-hidden="true" className="h-4 w-4 shrink-0 text-ink-500" />
       </button>
+
+      {selected && fabricNeedsDeposit(selected.code) && (
+        <p className="m-0 mt-2 flex gap-2 text-caption leading-relaxed text-ink-600">
+          <Info aria-hidden="true" className="mt-0.5 h-3.5 w-3.5 shrink-0 text-ember-700" />
+          <span>{DEPOSIT.fabric}</span>
+        </p>
+      )}
 
       {selected && (
         <button

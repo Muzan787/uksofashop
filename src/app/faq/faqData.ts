@@ -8,6 +8,7 @@
 
 import { gbpFigure, type ShopSettings } from '@/utils/shopSettings'
 import { CANCELLATION, PROMISES } from '@/constants/promises'
+import { DEPOSIT } from '@/constants/deposit'
 import { SUPPORT_EMAIL } from '@/constants/contact'
 
 export interface Faq { q: string; a: string }
@@ -63,7 +64,7 @@ export function faqGroupsFor(
       },
       {
         q: 'Do I pay anything upfront?',
-        a: 'No. Nothing is taken when you place your order. Everything — the sofa, assembly, upstairs delivery, old sofa removal — is paid on the day it arrives, once you’ve seen it and you’re happy with it.',
+        a: `Nothing is taken when you place your order. Everything — the sofa, assembly, upstairs delivery, old sofa removal — is paid on the day it arrives, once you’ve seen it and you’re happy with it. ${DEPOSIT.exception} The deposit comes off the price, not on top of it.`,
       },
     ],
   },

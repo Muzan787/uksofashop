@@ -27,6 +27,7 @@ import {
 } from '@/utils/tracking'
 import { CANCELLATION, DELIVERY_CHARGE_NOTE, PROMISES } from '@/constants/promises'
 import { hasPersonalisedLine } from '@/utils/cancellationRights'
+import { hasDepositLine } from '@/constants/deposit'
 import { buildSnapshot, describeBuild } from '@/types/build'
 import { describeOptions } from '@/utils/productOptions'
 import { isValidUkMobile, UK_MOBILE_ERROR } from '@/utils/phone'
@@ -1101,8 +1102,10 @@ function DetailsStep({
           </p>
           <p className="m-0 mt-2 text-caption leading-relaxed text-ink-500">
             Your sofa is built to order in the fabric you chose, so one of our team will ring
-            you to go through the details before anything is made. Nothing is charged in the
-            meantime — you still pay on delivery.
+            you to go through the details before anything is made.{' '}
+            {hasDepositLine(cartItems)
+              ? 'Your fabric is one we order in for you, so we take a small deposit on that call; it comes off the price, and the rest is paid on delivery.'
+              : 'Nothing is charged in the meantime — you still pay on delivery.'}
           </p>
           <p className="m-0 mt-3 flex gap-2 border-t border-indigo-300 pt-3 text-caption leading-relaxed text-ink-500">
             <AlertTriangle aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-ember-700" />

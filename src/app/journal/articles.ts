@@ -102,7 +102,7 @@ export const ARTICLES: Article[] = [
     heading: 'Paying on the doorstep',
     eyebrow: 'How we work',
     description:
-      'No deposit, no card, no finance - you pay when the sofa reaches your house, in cash or by bank transfer. What to have ready, and what the extras cost.',
+      'No card, no finance, and no deposit on most orders - you pay when the sofa reaches your house, in cash or by bank transfer. What to have ready, and what the extras cost.',
     lede: 'You pay nothing until the sofa is at your door and you have looked at it. Here is exactly how that works on the day, including the parts that catch people out.',
     published: '2026-09-03',
     updated: '2026-09-16',

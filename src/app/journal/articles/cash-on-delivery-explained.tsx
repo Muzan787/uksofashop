@@ -15,8 +15,10 @@ export default function CashOnDeliveryExplained() {
 
       <h2 id="how">Nothing upfront</h2>
       <p>
-        There is <strong>no deposit</strong>. You place the order, we confirm it, we deliver it,
-        and you pay the driver on the doorstep. If you never open the door, you have lost nothing
+        There is <strong>no deposit</strong> on anything we stock, or on a made-to-order sofa in
+        the colour shown on its page. You place the order, we confirm it, we deliver it, and you
+        pay the driver on the doorstep. (A custom size, or a fabric we order in specially for you,
+        takes a small deposit when we confirm it, which comes off the price.) If you never open the door, you have lost nothing
         but our time.
       </p>
       <p>
@@ -154,7 +156,7 @@ export default function CashOnDeliveryExplained() {
       <p>
         It also disciplines us. A shop that only gets paid if the customer is happy with what came
         off the van has a very direct incentive to make sure what comes off the van is right. There
-        is no deposit to keep and no card payment to argue about afterwards.
+        is no card payment to argue about afterwards.
       </p>
       <p>
         If you would rather see one in person before any of this, the{' '}

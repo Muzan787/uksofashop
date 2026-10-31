@@ -12,6 +12,7 @@ import { DUR, EASE } from '@/components/Motion';
 import { useReducedMotionSafe } from '@/components/Motion/useReducedMotionSafe';
 import { blurDataURL } from '@/utils/cloudinary';
 import { SAMPLE_FEE } from '@/constants/swatches';
+import { DEPOSIT, fabricNeedsDeposit } from '@/constants/deposit';
 import { useShopSettings } from '@/components/ShopSettingsProvider';
 import type { Fabric, FabricCollection } from './types';
 import { trackJourney } from '@/utils/journey';
@@ -128,6 +129,9 @@ export default function FabricDialog({ collections, selectedId, productSlug, onB
           </Link>
 
           <p className="m-0 text-center text-caption leading-relaxed text-ink-500 sm:order-first sm:flex-1 sm:text-left">
+            {fabricNeedsDeposit(zoomed.code) && (
+              <strong className="block font-semibold text-ink-900">{DEPOSIT.fabricShort}</strong>
+            )}
             Build mine puts the {noun} in your cart in this fabric.
             Samples are {SAMPLE_FEE} for up to {sampleLimit}, refunded when you order.
           </p>

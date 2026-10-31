@@ -6,6 +6,7 @@ import EditorialHero from '@/components/Editorial/EditorialHero'
 import EditorialLayout, { LastUpdated } from '@/components/Editorial/EditorialLayout'
 import EditorialSchema from '@/components/Editorial/EditorialSchema'
 import { CANCELLATION } from '@/constants/promises'
+import { DEPOSIT } from '@/constants/deposit'
 import { RE_DELIVERY_FEE, sofaRemovalPriceSentence } from '@/constants/delivery'
 import { getShopSettings } from '@/utils/shopSettingsServer'
 import { gbpFigure } from '@/utils/shopSettings'
@@ -94,11 +95,12 @@ export default async function TermsPage() {
 
         <h2 id="pricing">3. Pricing and payment</h2>
         <p>
-          The price shown is the price you pay — there is nothing added at the end. Payment is due
-          in full on delivery, either in cash to the driver or by bank transfer completed at the
-          door. We do not accept card payments of any kind, and no payment is taken at the time of
-          ordering.
+          The price shown is the price you pay — there is nothing added at the end. Apart from the
+          deposit described below, payment is due in full on delivery, either in cash to the driver
+          or by bank transfer completed at the door. We do not accept card payments of any kind,
+          and no payment is taken at the time of ordering.
         </p>
+        <p>{DEPOSIT.terms}</p>
         <p>
           Optional services — upstairs delivery, assembly, removal of your old sofa — are added at
           checkout and paid on the same day, in the same way. Taking your old sofa away is{' '}

@@ -11,6 +11,7 @@ import { RE_DELIVERY_FEE } from '@/constants/delivery'
 import { getShopSettings } from '@/utils/shopSettingsServer'
 import { gbpFigure, type ShopSettings } from '@/utils/shopSettings'
 import { CANCELLATION, DELIVERY_DAYS, PROMISES } from '@/constants/promises'
+import { DEPOSIT } from '@/constants/deposit'
 import { ADDRESS_LINE, PHONE_DISPLAY, PHONE_HREF, SUPPORT_EMAIL } from '@/constants/contact'
 
 /**
@@ -148,7 +149,8 @@ export default async function DeliveryReturnsPage() {
         <h2 id="costs">What things cost</h2>
         <p>
           Everything below is paid on delivery along with the sofa itself. Nothing is taken when
-          you place the order — not a deposit, not a card pre-authorisation, nothing.
+          you place the order — not a deposit, not a card pre-authorisation, nothing.{' '}
+          {DEPOSIT.exception} It comes off the price, and the terms of sale give the detail.
         </p>
 
         {/* Focusable, so the table can be scrolled sideways on a narrow

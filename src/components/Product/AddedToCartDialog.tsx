@@ -4,6 +4,7 @@
 import Image from 'next/image';
 import { ArrowRight, Check } from 'lucide-react';
 import Modal from '@/components/UI/Modal';
+import { DEPOSIT } from '@/constants/deposit';
 import { blurDataURL } from '@/utils/cloudinary';
 import { pounds } from '@/utils/pricing';
 
@@ -11,6 +12,8 @@ interface Props {
   title: string;
   /** The colour or fabric the line went in under, as the cart names it. */
   choice: string;
+  /** The fabric chosen is one that carries a deposit - see constants/deposit. */
+  deposit?: boolean;
   price: number;
   image: string;
   onBuyNow: () => void;
@@ -30,7 +33,7 @@ interface Props {
  * The sofa is shown with the colour or fabric it was added in, because on a
  * made-to-order frame that is the choice most worth a second look.
  */
-export default function AddedToCartDialog({ title, choice, price, image, onBuyNow, onContinue }: Props) {
+export default function AddedToCartDialog({ title, choice, deposit = false, price, image, onBuyNow, onContinue }: Props) {
   return (
     <Modal
       title="Added to your cart"
@@ -59,7 +62,9 @@ export default function AddedToCartDialog({ title, choice, price, image, onBuyNo
       </div>
 
       <p className="m-0 mt-4 text-caption leading-relaxed text-ink-500">
-        Nothing to pay now. We confirm your order with you on WhatsApp, and you pay when it arrives.
+        {deposit
+          ? `Nothing to pay now. ${DEPOSIT.fabric}`
+          : 'Nothing to pay now. We confirm your order with you on WhatsApp, and you pay when it arrives.'}
       </p>
 
       <div className="mt-5 flex flex-col gap-3">

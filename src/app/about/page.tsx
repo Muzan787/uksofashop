@@ -82,9 +82,10 @@ export default async function AboutPage() {
         <h2>Why you pay on delivery</h2>
         <p>
           This is the part people ask about most, and it is the thing that most defines how we
-          work. You do not pay us anything when you order. No deposit, no card on file, no finance
-          agreement. The driver takes payment at your door, in cash or by bank transfer, after you
-          have looked at the sofa.
+          work. You do not pay us anything when you order. No card on file, no finance agreement,
+          and no deposit unless you ask for a custom size or a fabric we order in specially. The
+          driver takes payment at your door, in cash or by bank transfer, after you have looked at
+          the sofa.
         </p>
         <p>
           It exists because buying a sofa online is an act of faith. You are spending several

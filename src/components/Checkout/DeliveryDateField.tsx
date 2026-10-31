@@ -33,6 +33,7 @@ import { PROMISES } from '@/constants/promises'
 import { useShopSettings } from '@/components/ShopSettingsProvider'
 import { useCart } from '@/context/CartContext'
 import { isRomaProduct } from '@/constants/romaAvailability'
+import { hasDepositLine } from '@/constants/deposit'
 
 interface Props {
   /** YYYY-MM-DD, or '' for as soon as possible. */
@@ -49,6 +50,7 @@ interface Props {
 export default function DeliveryDateField({ value, onChange, choosing, onChoosing, error, far = false }: Props) {
   const { cartItems } = useCart()
   const hasRoma = cartItems.some(item => isRomaProduct(item.title))
+  const deposit = hasDepositLine(cartItems)
   // The days Admin -> Settings allows, the same ones place_order accepts.
   const shop = useShopSettings()
   const min = earliestPreferredDeliveryDate(undefined, shop, far)
@@ -128,7 +130,7 @@ export default function DeliveryDateField({ value, onChange, choosing, onChoosin
               {hasRoma
                 ? <>Roma models take approximately 10–14 days. {chosen && <>Your requested date is <strong className="font-semibold text-ink-900">{chosen}</strong>. </>}We’ll confirm availability and delivery timing before dispatch.</>
                 : chosen
-                ? <>Requested for <strong className="font-semibold text-ink-900">{chosen}</strong>. This is a preferred day, not a booked delivery slot. We confirm timing before dispatch. Pay on arrival; no deposit required.</>
+                ? <>Requested for <strong className="font-semibold text-ink-900">{chosen}</strong>. This is a preferred day, not a booked delivery slot. We confirm timing before dispatch. {deposit ? 'Pay the balance on arrival.' : 'Pay on arrival; no deposit required.'}</>
                 : <>Earliest is {formatPreferredDeliveryDate(min)}. We deliver Tuesday to Sunday, weekends included. We ring beforehand to agree the time slot.</>}
             </p>
           )}
