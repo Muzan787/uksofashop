@@ -8,8 +8,9 @@ import { PHONE_DISPLAY, SUPPORT_EMAIL, ORDERS_EMAIL, whatsAppHref } from '@/cons
 
 /**
  * The shop's original Gmail address, still read alongside the Hostinger
- * mailbox. It only ever receives blind copies of mail this file sends, so
- * the owner sees them wherever he happens to be looking.
+ * mailbox. It receives blind copies of the shop's own notifications (not of
+ * customer mail, since 31 Oct 2026), so the owner sees them wherever he
+ * happens to be looking.
  *
  * It lives HERE rather than in constants/contact.ts, which is where it used
  * to be. Everything in that file is imported by client components, so it was
@@ -334,14 +335,17 @@ async function send(mail: Mail) {
 }
 
 /**
- * The Bcc list with the owner's Gmail added, so a copy of everything the site
- * sends - customer confirmations, status updates, review invitations and the
- * notifications addressed to enquiries@ - also lands in the inbox he actually
- * carries around. Templates that set their own Bcc (the Trustpilot invitation
- * service) keep it; the copy is added alongside.
+ * The Bcc list, with the owner's Gmail added to the shop's own notifications
+ * (new order, contact form, status prompts - anything addressed to the shop's
+ * mailboxes) so they land in the inbox he actually carries around.
  *
- * Skipped when he is already a recipient, so nothing arrives twice, and Bcc
- * rather than Cc so a customer never sees the address.
+ * Mail to customers no longer gets the copy. It used to - every confirmation,
+ * status update and review email came back to him - and on 31 Oct 2026 Muaz
+ * asked for that to stop. The email log (Admin -> Status) still records every
+ * send. Templates that set their own Bcc (the Trustpilot invitation service)
+ * keep it.
+ *
+ * Skipped when he is already a recipient, so nothing arrives twice.
  */
 function withOwnerCopy(
   to: nodemailer.SendMailOptions['to'],
@@ -349,8 +353,11 @@ function withOwnerCopy(
   bcc: nodemailer.SendMailOptions['bcc'],
 ): string[] {
   const kept = envelopeRecipients(bcc)
+  const shop = new Set([SUPPORT_EMAIL, ORDERS_EMAIL, MAIL_TO_ADMIN, process.env.ADMIN_EMAIL ?? ''].map(a => a.toLowerCase()))
+  const recipients = envelopeRecipients(to, cc)
+  const toShop = recipients.length > 0 && recipients.every(a => shop.has(a.toLowerCase()))
   const already = envelopeRecipients(to, cc, bcc).some(a => a.toLowerCase() === OWNER_GMAIL.toLowerCase())
-  return already ? kept : [...kept, OWNER_GMAIL]
+  return toShop && !already ? [...kept, OWNER_GMAIL] : kept
 }
 
 /**
@@ -1258,9 +1265,8 @@ export async function sendAdminSwatchNotification(
  * The plain-text part is the WhatsApp message with a sign-off, so a client
  * that strips HTML still shows something that reads as written by a person.
  *
- * The shop mailbox and the owner's Gmail are BCC'd, because SMTP delivers
- * and nothing files a copy in Sent - so this is the only record of what went
- * out, and it lands in the inbox exactly as the customer saw it.
+ * No copy comes back to the shop any more (31 Oct 2026); the email log
+ * records that it went.
  */
 /**
  * `leadId` is the checkout_recovery_leads row, used to build the one-click
@@ -1373,7 +1379,6 @@ export async function sendCheckoutReminder(
   await deliver({
     from: sender(),
     to: email,
-    bcc: [SUPPORT_EMAIL, OWNER_GMAIL],
     subject: recoveryReminderEmail(basket, reference, hold).subject,
     text: recoveryReminderEmail(basket, reference, hold).body,
     html: generateEmailHTML(content),

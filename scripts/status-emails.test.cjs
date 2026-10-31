@@ -29,12 +29,12 @@ function load(file, mocks, globals) {
   return module.exports
 }
 
-function mailer() {
+function mailer(env = {}) {
   const sent = []
   const email = load('src/utils/email.ts', {
     nodemailer: { default: { createTransport: () => ({ sendMail: async m => { sent.push(m); return { messageId: 'fixture' } } }) } },
     '@/utils/supabase/admin': { createAdminClient: () => ({ from: () => ({ insert: async () => ({ error: null }) }) }) },
-  }, { env: { SMTP_PASSWORD: 'fixture', NEXT_PUBLIC_SITE_URL: 'https://www.uksofashop.co.uk' } })
+  }, { env: { SMTP_PASSWORD: 'fixture', NEXT_PUBLIC_SITE_URL: 'https://www.uksofashop.co.uk', ...env } })
   return { email, sent }
 }
 
@@ -56,6 +56,19 @@ test('the cancelled email gives the reason, escaped; without one it reads as bef
   assert.match(text(sent[0]), /Your order has been cancelled: Out of stock &lt;b&gt;until&lt;\/b&gt; March\. If this isn't what you expected/)
   await email.sendOrderStatusUpdate('ann@example.test', 'Ann', ORDER, 'cancelled', '', {})
   assert.match(text(sent[1]), /Your order has been cancelled\. If you have any questions, please contact our support team\./)
+})
+
+test('customer emails no longer come back to the owner; the shop\'s own notifications still do (31 Oct 2026)', async () => {
+  const GMAIL = 'uksofashop.co.uk@gmail.com'
+  const { email, sent } = mailer({ ADMIN_EMAIL: 'enquiries@uksofashop.co.uk' })
+  await email.sendOrderStatusUpdate('ann@example.test', 'Ann', ORDER, 'confirmed', 'BB2 1AA')
+  await email.sendAdminOrderStatusNotification('Ann', '07700900123', '0B5C3A1E', 'on_hold')
+  assert.equal(sent.length, 2)
+  assert.ok(!JSON.stringify(sent[0].bcc ?? []).includes(GMAIL), 'customer email copied to the owner')
+  assert.ok(!JSON.stringify(sent[0].envelope ?? {}).includes(GMAIL), 'customer email copied to the owner via the envelope')
+  assert.deepEqual([...sent[1].bcc], [GMAIL])
+  // And the checkout reminder sets no copies of its own.
+  assert.doesNotMatch(read('src/utils/email.ts'), /bcc: \[SUPPORT_EMAIL, OWNER_GMAIL\]/)
 })
 
 test('the on-hold email says nothing is cancelled and how to rebook', async () => {
