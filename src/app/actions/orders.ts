@@ -107,7 +107,7 @@ async function runStatusChange(
         const { data: details } = newStatus === 'cancelled' || newStatus === 'shipped'
           ? await supabase.from('orders').select('cancellation_reason, total_amount').eq('id', orderId).maybeSingle()
           : { data: null }
-        const { trustpilotInvited } = await sendOrderStatusUpdate(
+        await sendOrderStatusUpdate(
           change.customer_email,
           change.customer_name,
           orderId,
@@ -116,17 +116,11 @@ async function runStatusChange(
           { cancellationReason: details?.cancellation_reason, totalAmount: details?.total_amount },
         )
 
-        // The delivered email went to Trustpilot's invitation service as well,
-        // so this customer is being asked for a review. Stamp the order so the
-        // review-request job does not ask a second time three days later. One
-        // customer, one ask.
-        if (trustpilotInvited) {
-          await supabase
-            .from('orders')
-            .update({ review_request_sent_at: new Date().toISOString() })
-            .eq('id', orderId)
-            .is('review_request_sent_at', null)
-        }
+        // No review_request_sent_at stamp here any more. It used to be set
+        // when the delivered email carried a Trustpilot invitation, to stop
+        // the three-day job asking the same customer twice. Marking an order
+        // delivered no longer invites anybody - that is a button on the order
+        // page now - so the job is free to make the first ask as designed.
       } catch (err) {
         console.error('Failed to send the customer status email', err)
       }
@@ -609,14 +603,31 @@ export async function sendToOrderFlowFromPage(formData: FormData) {
   redirect(orderPage(orderId, { done: 'orderflow' }))
 }
 
-/** "Send the review email now" (E8). The page asks first when one has gone. */
+/**
+ * Both review buttons on a delivered order's page: "Send the review email now"
+ * (E8) and "Send Trustpilot review request". The hidden `trustpilot` field is
+ * what separates them: present, and the email is also blind-copied to
+ * Trustpilot's invitation service, which is what makes the review that comes
+ * back "Verified" on Trustpilot. Marking an order delivered no longer invites
+ * anybody (since 2026-10-31), so this is the only route to an invitation. The
+ * page asks first when a review email has already gone.
+ */
 export async function sendReviewEmailFromPage(formData: FormData) {
   await requireAdmin()
   const parsed = uuid.safeParse(formData.get('orderId'))
   if (!parsed.success) redirect('/admin/orders?error=bad-request')
   const orderId = parsed.data
 
-  const result = await sendReviewEmailNow(orderId)
+  const invite = formData.get('trustpilot') === '1'
+  const result = await sendReviewEmailNow(orderId, { invite })
   revalidatePath(`/admin/orders/${orderId}`)
-  redirect(orderPage(orderId, result === 'sent' ? { done: 'review' } : { error: `review-${result}` }))
+
+  if (result === 'sent') {
+    redirect(orderPage(orderId, { done: invite ? 'review-invite' : 'review' }))
+  }
+  // The email went; the invitation did not, because the address is missing.
+  if (result === 'sent-no-invite') {
+    redirect(orderPage(orderId, { error: 'review-no-invite' }))
+  }
+  redirect(orderPage(orderId, { error: `review-${result}` }))
 }

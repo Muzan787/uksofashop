@@ -87,6 +87,7 @@ function banner(sp: Record<string, string | undefined>, order: { customer_name: 
     case 'source': return { tone: 'ok', text: 'Saved where it came from.' }
     case 'orderflow': return { tone: 'ok', text: "Sent to OrderFlow. Its answer shows below within five minutes." }
     case 'review': return { tone: 'ok', text: 'Review email sent.' }
+    case 'review-invite': return { tone: 'ok', text: 'Review email sent, and Trustpilot will invite them on its own schedule.' }
   }
   const errors: Record<string, string> = {
     'cancel-reason': "Give a reason to cancel. It is kept on the order and goes in its WhatsApp message.",
@@ -101,6 +102,7 @@ function banner(sp: Record<string, string | undefined>, order: { customer_name: 
     'review-no-products': "This order has no catalogue sofa to review, so there's no review link to send.",
     'review-not-delivered': 'The review email goes once the order is delivered.',
     'review-failed': "The review email didn't send. Try again in a moment.",
+    'review-no-invite': "The review email went, but no Trustpilot invitation was attached because TRUSTPILOT_INVITE_BCC isn't set on the server. Add it and press the Trustpilot button again.",
     failed: "That didn't save. Try again.",
   }
   return sp.error ? { tone: 'error', text: errors[sp.error] ?? errors.failed } : null
@@ -405,17 +407,47 @@ export default function OrderView({ order, events, sends, reviewLinks, pickers, 
               ? <>Review email sent <Time value={order.review_request_sent_at} />.</>
               : order.customer_email ? 'The review email has not gone yet. It goes by itself three days after delivery.' : 'No email on this order, so ask on WhatsApp.'}
           </p>
+          <p className="m-0 mt-1 text-xs text-stone-500">
+            Trustpilot is never invited automatically. Marking an order delivered sends a
+            notification, not a request &mdash; an invitation only goes when you press
+            &ldquo;Send Trustpilot review request&rdquo; below, and the review that comes back
+            is marked Verified on Trustpilot. Press it for every delivered customer, not only
+            the happy ones: inviting only people you expect to be positive is against
+            Trustpilot&apos;s rules and counts as hiding bad reviews under the DMCC Act.
+          </p>
           <div className="mt-3 flex flex-wrap gap-2">
             {order.customer_email && (
-              <form action={sendReviewEmailFromPage}>
-                <input type="hidden" name="orderId" value={order.id} />
-                <ConfirmSubmit
-                  className={lightButton}
-                  question={order.review_request_sent_at ? `A review email already went to ${order.customer_email}. Send another?` : undefined}
-                >
-                  <Mail className="h-4 w-4" aria-hidden="true" /> Send the review email now
-                </ConfirmSubmit>
-              </form>
+              <>
+                {/* Our own ask: review links to our pages, nothing sent to
+                    Trustpilot. */}
+                <form action={sendReviewEmailFromPage}>
+                  <input type="hidden" name="orderId" value={order.id} />
+                  <ConfirmSubmit
+                    className={lightButton}
+                    question={order.review_request_sent_at ? `A review email already went to ${order.customer_email}. Send another?` : undefined}
+                  >
+                    <Mail className="h-4 w-4" aria-hidden="true" /> Send the review email now
+                  </ConfirmSubmit>
+                </form>
+
+                {/* The same email, blind-copied to Trustpilot's invitation
+                    service. Trustpilot then chases them on its own delay, so
+                    this is the one that ends up as a Trustpilot review. */}
+                <form action={sendReviewEmailFromPage}>
+                  <input type="hidden" name="orderId" value={order.id} />
+                  <input type="hidden" name="trustpilot" value="1" />
+                  <ConfirmSubmit
+                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-sm border border-[#00b67a]/40 bg-[#00b67a]/10 px-4 py-2.5 text-sm font-bold text-[#007a52] transition hover:bg-[#00b67a]/20"
+                    question={
+                      order.review_request_sent_at
+                        ? `A review email already went to ${order.customer_email}. Send another, this time inviting them on Trustpilot?`
+                        : `Email ${order.customer_email} and invite them to review on Trustpilot?`
+                    }
+                  >
+                    <Mail className="h-4 w-4" aria-hidden="true" /> Send Trustpilot review request
+                  </ConfirmSubmit>
+                </form>
+              </>
             )}
             {reviewLinks.map(r => (
               <CopyTextButton key={r.reviewLink} text={r.reviewLink} label={reviewLinks.length > 1 ? `Copy review link: ${r.productTitle}` : 'Copy their review link'} />

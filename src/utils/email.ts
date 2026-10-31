@@ -799,16 +799,21 @@ export async function sendOrderStatusUpdate(
   // What the cancelled and on-its-way emails say (admin upgrade E14): the
   // reason given on the order page, and the amount to pay at the door.
   details: { cancellationReason?: string | null; totalAmount?: number | null } = {},
-): Promise<{ trustpilotInvited: boolean }> {
+): Promise<void> {
   const siteUrl = SITE_URL;
   const shortCode = orderId.substring(0, 8).toUpperCase();
 
-  // Trustpilot's Automatic Feedback Service: a transactional email BCC'd to
-  // this address becomes a review invitation to its To recipient, sent after
-  // whatever delay is set in the Trustpilot dashboard. Only the delivered
-  // email - the review should be about the sofa in the room, not the order
-  // form - and only while the address is configured.
-  const inviteBcc = status === 'delivered' ? trustpilotInviteBcc() : null;
+  // NO TRUSTPILOT INVITATION HERE, deliberately, since 2026-10-31.
+  //
+  // This email used to carry a blind copy to Trustpilot's Automatic Feedback
+  // Service whenever an order was marked delivered, which turned every single
+  // delivery into a review invitation on Trustpilot's own schedule. Muaz wanted
+  // that to be his decision per customer rather than a consequence of pressing
+  // "delivered", so the invitation moved to a button on the order page - see
+  // sendReviewRequest's `invite` option and sendReviewEmailNow.
+  //
+  // Do not reinstate it here. A status email is a notification; an invitation
+  // is a request, and the two should not be the same send.
   // Tracking needs both the reference and the delivery postcode. When the
   // postcode couldn't be read off the address the link still opens the page
   // with the reference filled in, and the customer types the postcode.
@@ -828,11 +833,10 @@ export async function sendOrderStatusUpdate(
       color: '#16a34a',
       bg: '#dcfce7',
       title: 'Order Delivered',
-      // Told here so the invitation that follows is expected rather than
-      // mistaken for spam.
-      message: inviteBcc
-        ? 'Your new furniture has been delivered. We hope it looks perfect in your home! In a few days Trustpilot will email you on our behalf to ask how it went - a line or two would help the next person decide.'
-        : 'Your new furniture has been delivered. We hope it looks perfect in your home!',
+      // No longer warns about a Trustpilot email to follow: this message no
+      // longer causes one. The warning moved to the review request itself,
+      // which is the email that actually carries the invitation.
+      message: 'Your new furniture has been delivered. We hope it looks perfect in your home!',
     },
     cancelled: {
       color: '#dc2626',
@@ -875,15 +879,10 @@ export async function sendOrderStatusUpdate(
 
   await deliver({
     from: sender(),
-    // Name and address together on the invited email: Trustpilot takes the
-    // customer's name from the To header, and greets them by it.
-    to: inviteBcc && name.trim() ? `"${name.trim().replace(/["<>]/g, '')}" <${email}>` : email,
-    ...(inviteBcc ? { bcc: inviteBcc } : {}),
+    to: email,
     subject: `Update: ${esc(currentConfig.title)} (#${shortCode})`,
     html: generateEmailHTML(content),
-  }, { kind: `order-status-${status}`, orderId, meta: inviteBcc ? { trustpilot: true } : {} });
-
-  return { trustpilotInvited: Boolean(inviteBcc) };
+  }, { kind: `order-status-${status}`, orderId });
 }
 
 // 8. Admin: Order Status Update Notification (With WhatsApp Integration)
@@ -1034,13 +1033,26 @@ function newsletterUnsubscribeFooter(unsubscribeToken: string) {
  * guest can leave a review without making an account and the review is tied to
  * the order it came from - which is what makes the "Verified Buyer" badge
  * true rather than decorative.
+ *
+ * `invite` is what makes it a Trustpilot invitation as well as our own ask.
+ * Blind-copying Trustpilot's Automatic Feedback Service address turns this
+ * message into an invitation, which Trustpilot then sends to the To recipient
+ * on whatever delay the dashboard is set to, and the review that comes back is
+ * marked "Verified" on Trustpilot. It is off unless the caller asks: since
+ * 2026-10-31 (built 18 Oct, live that day) it happens only when Muaz presses
+ * "Send Trustpilot review request" on a delivered order, never on delivery.
+ *
+ * Returns whether the invitation actually went, which is not the same as
+ * whether it was asked for - it also needs TRUSTPILOT_INVITE_BCC configured.
  */
 export async function sendReviewRequest(
   email: string,
   customerName: string,
   shortCode: string,
   items: { productTitle: string; imageUrl: string | null; reviewLink: string }[],
-) {
+  opts: { invite?: boolean; orderId?: string } = {},
+): Promise<{ invited: boolean }> {
+  const inviteBcc = opts.invite ? trustpilotInviteBcc() : null;
   const firstName = (customerName || '').trim().split(/\s+/)[0] || 'there'
 
   const productRows = items
@@ -1087,6 +1099,11 @@ export async function sendReviewRequest(
       <table role="presentation" style="width: 100%; border-collapse: collapse;">
         ${productRows}
       </table>
+${inviteBcc ? `
+      <p style="color: #57534e; line-height: 1.7; font-size: 14px; margin-top: 24px;">
+        Trustpilot will also email you in the next few days on our behalf, asking
+        how it went. It is a genuine message from them, not spam.
+      </p>` : ''}
 
       <p style="color: #a8a29e; line-height: 1.6; font-size: 12px; margin-top: 28px;">
         If something is not right with your order, please reply to this email or call
@@ -1097,10 +1114,23 @@ export async function sendReviewRequest(
 
   await deliver({
     from: sender(),
-    to: email,
+    // Name and address together on an invited email: Trustpilot reads the
+    // customer's name out of the To header and greets them by it.
+    to: inviteBcc && customerName.trim()
+      ? `"${customerName.trim().replace(/["<>]/g, '')}" <${email}>`
+      : email,
+    ...(inviteBcc ? { bcc: inviteBcc } : {}),
     subject: `How is your new sofa, ${firstName}?`,
     html: generateEmailHTML(content),
-  }, { kind: 'review-request', orderRef: shortCode })
+  }, {
+    kind: 'review-request',
+    orderRef: shortCode,
+    ...(opts.orderId ? { orderId: opts.orderId } : {}),
+    // The Status page counts invitations from this flag.
+    meta: inviteBcc ? { trustpilot: true } : {},
+  })
+
+  return { invited: Boolean(inviteBcc) }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

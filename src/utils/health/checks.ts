@@ -357,13 +357,16 @@ function googleAdsCheck({ snapshot, now }: HealthInput): HealthCheck {
 function trustpilotCheck({ env, snapshot }: HealthInput): HealthCheck {
   const t = snapshot?.trustpilot ?? {}
   if (!env.trustpilotInvites) {
-    return check('trustpilot', 'Trustpilot', 'amber', "Invitations aren't set up (TRUSTPILOT_INVITE_BCC). Ask for reviews from the WhatsApp button on delivered orders.")
+    return check('trustpilot', 'Trustpilot', 'amber', "TRUSTPILOT_INVITE_BCC isn't set, so the Trustpilot button on a delivered order sends our own review email without the invitation. The WhatsApp button still works.")
   }
   if (n(t.invites_failed_7d) > 0) {
     return check('trustpilot', 'Trustpilot', 'red', `${plural(n(t.invites_failed_7d), 'invitation email', 'invitation emails')} failed in the last 7 days.`)
   }
+  // Invitations are sent by hand now, so none in 30 days is a choice rather
+  // than a fault - it stays ok and simply reports the number.
   return check('trustpilot', 'Trustpilot', 'ok', `${plural(n(t.asked_30d), 'customer', 'customers')} asked for a review in the last 30 days.`, [
     `${n(t.delivered_30d)} delivered in the same 30 days`,
+    `${plural(n(t.invites_sent_30d), 'Trustpilot invitation', 'Trustpilot invitations')} sent by hand`,
   ])
 }
 

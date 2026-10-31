@@ -117,11 +117,25 @@ export async function orderReviewLinks(orderId: string): Promise<{ productTitle:
 }
 
 /**
- * "Send the review email now" on the order page (admin upgrade E8): the same
+ * The review ask, sent now, from the order page (admin upgrade E8): the same
  * email the daily job sends three days after delivery, for one order, now.
- * Stamps review_request_sent_at so the daily job does not ask again.
+ * Stamps review_request_sent_at so the daily job does not ask again. The daily
+ * job never invites Trustpilot; only this, from the button, does.
+ *
+ * `invite` additionally blind-copies Trustpilot's Automatic Feedback Service,
+ * which is what turns this into a Trustpilot invitation. That is a separate
+ * button because it is a separate decision: the plain ask collects reviews on
+ * our own pages, the invited one also asks Trustpilot to chase them.
+ *
+ * 'sent-no-invite' means the email went but TRUSTPILOT_INVITE_BCC is not
+ * configured, so no invitation was attached - worth telling the admin rather
+ * than reporting plain success, because they pressed the Trustpilot button and
+ * would otherwise be waiting for an invitation that is never coming.
  */
-export async function sendReviewEmailNow(orderId: string): Promise<'sent' | 'no-email' | 'no-products' | 'not-delivered' | 'failed'> {
+export async function sendReviewEmailNow(
+  orderId: string,
+  opts: { invite?: boolean } = {},
+): Promise<'sent' | 'sent-no-invite' | 'no-email' | 'no-products' | 'not-delivered' | 'failed'> {
   const db = createAdminClient()
   const { data: order } = await db
     .from('orders')
@@ -135,12 +149,22 @@ export async function sendReviewEmailNow(orderId: string): Promise<'sent' | 'no-
   const items = await orderReviewLinks(orderId)
   if (items.length === 0) return 'no-products'
 
+  let invited = false
   try {
-    await sendReviewRequest(order.customer_email, order.customer_name ?? '', orderId.substring(0, 8).toUpperCase(), items)
+    const result = await sendReviewRequest(
+      order.customer_email,
+      order.customer_name ?? '',
+      orderId.substring(0, 8).toUpperCase(),
+      items,
+      { invite: opts.invite, orderId },
+    )
+    invited = result.invited
   } catch (err) {
     console.error(`Review email failed for order ${orderId}`, err)
     return 'failed'
   }
   await db.from('orders').update({ review_request_sent_at: new Date().toISOString() }).eq('id', orderId)
+  // Asked for an invitation and did not get one: the address is not set.
+  if (opts.invite && !invited) return 'sent-no-invite'
   return 'sent'
 }

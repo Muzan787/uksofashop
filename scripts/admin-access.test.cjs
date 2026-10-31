@@ -317,7 +317,10 @@ test('the admin names every status in its own words', () => {
 test('every email the site sends is labelled for the email log', () => {
   const src = read('src/utils/email.ts')
   const sends = src.match(/^ {2}await deliver\(\{$/gm) ?? []
-  const labelled = src.match(/^ {2}\}, \{ kind: /gm) ?? []
+  // \s* so a label spread over several lines counts too. The rule being
+  // asserted is that every deliver() carries a kind, not that it fits on one
+  // line - sendReviewRequest's now also sets orderId and meta.
+  const labelled = src.match(/^ {2}\}, \{\s*kind: /gm) ?? []
   assert.ok(sends.length >= 13, `found ${sends.length} sends`)
   assert.equal(labelled.length, sends.length, 'a deliver() call has no kind')
   // The transport is reached only through deliver(), which logs.
