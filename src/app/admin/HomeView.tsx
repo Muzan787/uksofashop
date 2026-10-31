@@ -51,7 +51,7 @@ export default function HomeView({
           <Link href="/admin/orders?status=attention" className={`${tile} border-zinc-900 bg-zinc-900 shadow-lg hover:bg-zinc-800`}>
             <p className={`${tileLabel} text-orange-400`}>Needs attention</p>
             <p className="m-0 mt-2 text-3xl font-bold text-white lg:text-4xl">{needsAttention}</p>
-            <p className="m-0 mt-1 text-xs text-zinc-400">Waiting, confirmed or processing</p>
+            <p className="m-0 mt-1 text-xs text-zinc-400">Waiting, confirmed or on hold</p>
           </Link>
           <Link href="/admin/orders?status=pending_cod" className={`${tile} border-zinc-200 bg-white shadow-sm hover:border-zinc-300`}>
             <p className={`${tileLabel} text-zinc-500`}>Waiting to confirm</p>
@@ -71,7 +71,7 @@ export default function HomeView({
         </div>
         {/* What the old Total Revenue tile showed, kept in a line. */}
         <p className="m-0 mt-3 text-xs text-zinc-500">
-          <span className="font-semibold tabular-nums text-zinc-700">{money(confirmedRevenue)}</span> in confirmed orders to date (confirmed, processing, on its way and delivered).
+          <span className="font-semibold tabular-nums text-zinc-700">{money(confirmedRevenue)}</span> in confirmed orders to date (confirmed, on hold and delivered).
         </p>
       </div>
 

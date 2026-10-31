@@ -13,16 +13,16 @@ import HomeView from './HomeView'
 export const metadata: Metadata = { title: 'Overview' }
 export const dynamic = 'force-dynamic'
 
-/** Taken but not yet on its way: the same rule as the orders list's default view. */
-const NEEDS_ATTENTION = ['pending_cod', 'confirmed', 'processing']
+/** Taken but not yet delivered: the same rule as the orders list's default view. */
+const NEEDS_ATTENTION = ['pending_cod', 'confirmed', 'on_hold']
 /** Not yet delivered or cancelled, so the money is still to be collected. */
-const OPEN = ['pending_cod', 'confirmed', 'processing', 'shipped']
+const OPEN = ['pending_cod', 'confirmed', 'on_hold']
 /**
  * Money from orders the customer has said yes to. Unconfirmed cash-on-delivery
  * orders are left out (about a quarter are never completed) and so are
- * cancelled ones.
+ * cancelled ones. An order on hold is still a sale, only paused.
  */
-const COUNTS_AS_REVENUE = ['confirmed', 'processing', 'shipped', 'delivered']
+const COUNTS_AS_REVENUE = ['confirmed', 'on_hold', 'delivered']
 
 export default async function AdminDashboardPage() {
   const supabase = await createClient()

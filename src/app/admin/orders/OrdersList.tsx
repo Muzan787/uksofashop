@@ -18,8 +18,7 @@ export const FILTERS = [
   { key: 'all', label: 'All' },
   { key: 'pending_cod', label: 'Waiting' },
   { key: 'confirmed', label: 'Confirmed' },
-  { key: 'processing', label: 'Processing' },
-  { key: 'shipped', label: 'On its way' },
+  { key: 'on_hold', label: 'On hold' },
   { key: 'delivered', label: 'Delivered' },
   { key: 'cancelled', label: 'Cancelled' },
   { key: 'test', label: 'Test' },
@@ -60,7 +59,7 @@ export interface OrdersListProps {
   page: number
   lastPage: number
   counts: Record<string, number>
-  tiles: { attention: number; toCollect: number; processing: number; shipped: number; withPreferredDay: number }
+  tiles: { attention: number; toCollect: number; confirmed: number; onHold: number; withPreferredDay: number }
   pickers: { variants: PickerVariant[]; fabrics: PickerFabric[] }
   /** A WhatsApp reference to open the new-order form with (?ref=). */
   reference: string
@@ -110,24 +109,24 @@ export default function OrdersList({
         <Link href={href('attention')} className="min-w-0 rounded-md border border-amber-200 bg-amber-50 p-3.5 transition hover:border-amber-300 lg:p-4">
           <p className="m-0 text-[10px] font-bold uppercase tracking-[0.18em] text-amber-700">Needs attention</p>
           <p className="m-0 mt-2 text-2xl font-bold text-stone-900">{tiles.attention}</p>
-          <p className="m-0 mt-1 text-xs text-stone-600">Waiting, confirmed or processing</p>
+          <p className="m-0 mt-1 text-xs text-stone-600">Waiting, confirmed or on hold</p>
         </Link>
         <Link href={href('attention')} className="min-w-0 rounded-md border border-stone-200 bg-white p-3.5 transition hover:border-stone-300 lg:p-4">
           <p className="m-0 text-[10px] font-bold uppercase tracking-[0.18em] text-stone-500">To collect</p>
           <p className="m-0 mt-2 break-words text-xl font-bold tabular-nums text-stone-900 lg:text-2xl">{money(tiles.toCollect)}</p>
           <p className="m-0 mt-1 text-xs text-stone-500">On orders not yet delivered</p>
         </Link>
-        <Link href={href('processing')} className="min-w-0 rounded-md border border-blue-200 bg-blue-50 p-3.5 transition hover:border-blue-300 lg:p-4">
-          <p className="m-0 text-[10px] font-bold uppercase tracking-[0.18em] text-blue-700">Processing</p>
-          <p className="m-0 mt-2 text-2xl font-bold text-stone-900">{tiles.processing}</p>
-          <p className="m-0 mt-1 text-xs text-stone-600">Preparing for dispatch</p>
-        </Link>
-        <Link href={href('shipped')} className="min-w-0 rounded-md border border-indigo-200 bg-indigo-50 p-3.5 transition hover:border-indigo-300 lg:p-4">
-          <p className="m-0 text-[10px] font-bold uppercase tracking-[0.18em] text-indigo-700">On its way</p>
-          <p className="m-0 mt-2 text-2xl font-bold text-stone-900">{tiles.shipped}</p>
+        <Link href={href('confirmed')} className="min-w-0 rounded-md border border-amber-200 bg-amber-50 p-3.5 transition hover:border-amber-300 lg:p-4">
+          <p className="m-0 text-[10px] font-bold uppercase tracking-[0.18em] text-amber-700">Confirmed</p>
+          <p className="m-0 mt-2 text-2xl font-bold text-stone-900">{tiles.confirmed}</p>
           <p className="m-0 mt-1 text-xs text-stone-600">
             {tiles.withPreferredDay} open {tiles.withPreferredDay === 1 ? 'order has' : 'orders have'} a preferred day
           </p>
+        </Link>
+        <Link href={href('on_hold')} className="min-w-0 rounded-md border border-orange-200 bg-orange-50 p-3.5 transition hover:border-orange-300 lg:p-4">
+          <p className="m-0 text-[10px] font-bold uppercase tracking-[0.18em] text-orange-700">On hold</p>
+          <p className="m-0 mt-2 text-2xl font-bold text-stone-900">{tiles.onHold}</p>
+          <p className="m-0 mt-1 text-xs text-stone-600">Paused; to rebook</p>
         </Link>
       </div>
 

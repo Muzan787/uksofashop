@@ -796,8 +796,8 @@ export async function sendOrderStatusUpdate(
   orderId: string,
   status: string,
   postcode: string = '',
-  // What the cancelled and on-its-way emails say (admin upgrade E14): the
-  // reason given on the order page, and the amount to pay at the door.
+  // What the cancelled email says (admin upgrade E14): the reason given on
+  // the order page. totalAmount was for the retired on-its-way email.
   details: { cancellationReason?: string | null; totalAmount?: number | null } = {},
 ): Promise<void> {
   const siteUrl = SITE_URL;
@@ -827,8 +827,8 @@ export async function sendOrderStatusUpdate(
   const config: Record<string, { color: string, bg: string, title: string, message: string }> = {
     // Staff have confirmed it; the next step is the phone call (E14, 16 Oct 2026).
     confirmed: { color: '#0f766e', bg: '#ccfbf1', title: 'Order Confirmed', message: 'Thank you - your order is confirmed. We\'ll ring you to agree a delivery day.' },
-    processing: { color: '#2563eb', bg: '#dbeafe', title: 'Order Processing', message: 'Your furniture is currently being processed and prepared for dispatch. We ensure every piece meets our strict quality standards before it leaves.' },
-    shipped: { color: '#7e22ce', bg: '#f3e8ff', title: 'Order Shipped!', message: 'Your order has left our warehouse and is on its way! Our delivery team will be in touch shortly to arrange a precise delivery time slot.' },
+    // The customer asked to pause delivery (31 Oct 2026). Nothing is cancelled.
+    on_hold: { color: '#c2410c', bg: '#ffedd5', title: 'Order On Hold', message: 'As agreed, we\'ve put your order on hold for now. Nothing is cancelled - when you\'re ready, just message us on WhatsApp or give us a ring and we\'ll book a new delivery day.' },
     delivered: {
       color: '#16a34a',
       bg: '#dcfce7',
@@ -850,12 +850,6 @@ export async function sendOrderStatusUpdate(
 
   const currentConfig = config[status] || { color: '#57534e', bg: '#f5f5f4', title: 'Order Status Updated', message: 'There has been an update to your order.' };
 
-  // On its way: what to have ready at the door, as the WhatsApp message says it.
-  const total = Number(details.totalAmount);
-  const toPay = status === 'shipped' && Number.isFinite(total) && total > 0
-    ? `<p style="color: #1c1917; line-height: 1.6; font-size: 15px; font-weight: bold;">To pay on delivery: £${total.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}, in cash or by bank transfer.</p>`
-    : '';
-
   const content = `
     <div style="text-align: left;">
       <div style="display: inline-block; background-color: ${currentConfig.bg}; color: ${currentConfig.color}; padding: 6px 14px; border-radius: 6px; font-weight: bold; font-size: 11px; margin-bottom: 24px; letter-spacing: 0.1em; text-transform: uppercase;">
@@ -864,7 +858,6 @@ export async function sendOrderStatusUpdate(
       
       <h2 style="margin: 0 0 16px 0; font-size: 22px; color: #1c1917;">Hi ${esc(name)},</h2>
       <p style="color: #57534e; line-height: 1.6; font-size: 15px;">${currentConfig.message}</p>
-      ${toPay}
       
       <div style="background-color: #fafaf9; border-left: 3px solid ${currentConfig.color}; padding: 20px; margin: 24px 0;">
         <p style="margin: 0 0 4px 0; color: #78716c; font-size: 11px; text-transform: uppercase; font-weight: bold;">Order Reference</p>
@@ -904,13 +897,9 @@ export async function sendAdminOrderStatusNotification(
   let title = '';
 
   switch (status) {
-    case 'processing':
-      title = 'Order Processing';
-      waMessageText = `Dear ${esc(customerName)}, your order (#${shortCode}) is now being processed! We are preparing your items for dispatch.`;
-      break;
-    case 'shipped':
-      title = 'Order Shipped';
-      waMessageText = `Dear ${esc(customerName)}, great news! Your order (#${shortCode}) has been shipped and is on its way to you.`;
+    case 'on_hold':
+      title = 'Order On Hold';
+      waMessageText = `Dear ${esc(customerName)}, as agreed we've put your order (#${shortCode}) on hold for now. Nothing is cancelled - just message us when you're ready and we'll book a new delivery day.`;
       break;
     case 'delivered':
       title = 'Order Delivered';
@@ -938,7 +927,7 @@ export async function sendAdminOrderStatusNotification(
       
       <h2 style="margin: 0 0 16px 0; font-size: 22px; color: #1c1917;">Update Customer via WhatsApp</h2>
       <p style="color: #57534e; line-height: 1.6; font-size: 15px;">
-        The status for order <strong>#${shortCode}</strong> has been changed to <strong>${status.toUpperCase()}</strong>. 
+        The status for order <strong>#${shortCode}</strong> has been changed to <strong>${status.replace(/_/g, ' ').toUpperCase()}</strong>. 
         Please use the button below to instantly notify <strong>${esc(customerName)}</strong> via WhatsApp.
       </p>
       

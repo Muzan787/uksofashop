@@ -1,19 +1,22 @@
 // src/utils/orderMoves.ts
 //
 // Which status moves an order allows (plan decision 5). The database enforces
-// this itself (private.order_move_allowed, migration 20261014215150_order_rules);
+// this itself (private.order_move_allowed, migration 20261031131331_order_on_hold);
 // this copy is for screens, so they only offer moves the database will take.
 // scripts/order-rules.test.cjs checks the two agree on every pair.
 //
 //   Waiting to confirm -> Confirmed or Cancelled
-//   Confirmed / Processing / On its way / Delivered -> any of those four, or
-//     Cancelled (so mistakes can be corrected)
+//   Confirmed / On hold / Delivered -> any of those three, or Cancelled (so
+//     mistakes can be corrected)
 //   Cancelled -> Confirmed, by an admin, with a reason
+//
+// Processing and On its way were retired on 31 Oct 2026; older orders' history
+// still names them.
 
-export const ORDER_STATUSES = ['pending_cod', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'] as const
+export const ORDER_STATUSES = ['pending_cod', 'confirmed', 'on_hold', 'delivered', 'cancelled'] as const
 export type OrderStatus = (typeof ORDER_STATUSES)[number]
 
-const MIDDLE: readonly string[] = ['confirmed', 'processing', 'shipped', 'delivered']
+const MIDDLE: readonly string[] = ['confirmed', 'on_hold', 'delivered']
 
 export function orderMoveAllowed(from: string, to: string, staff: boolean): boolean {
   if (from === to) return true

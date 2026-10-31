@@ -8,8 +8,7 @@ import { adminStatusLabel } from '@/utils/adminStatus'
 const STATUS_STYLES: Record<string, string> = {
   pending_cod: 'bg-stone-100 text-stone-700 border-stone-300',
   confirmed: 'bg-amber-100 text-amber-800 border-amber-200',
-  processing: 'bg-blue-100 text-blue-800 border-blue-200',
-  shipped: 'bg-indigo-100 text-indigo-800 border-indigo-200',
+  on_hold: 'bg-orange-100 text-orange-800 border-orange-200',
   delivered: 'bg-green-100 text-green-800 border-green-200',
   cancelled: 'bg-red-100 text-red-800 border-red-200',
 }

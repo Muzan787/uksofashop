@@ -25,11 +25,11 @@ const WINDOW_HOURS = 48
  * Statuses that mean the sale happened.
  *
  * Everything at or beyond 'confirmed', because an order edited by hand may
- * have been moved straight to 'shipped' and the purchase is no less real for
- * having skipped a step. 'pending_cod' is not a sale yet and 'cancelled' never
- * became one.
+ * have been moved straight to 'delivered' and the purchase is no less real for
+ * having skipped a step; an order on hold is a sale that is only paused.
+ * 'pending_cod' is not a sale yet and 'cancelled' never became one.
  */
-const SOLD = ['confirmed', 'processing', 'shipped', 'delivered']
+const SOLD = ['confirmed', 'on_hold', 'delivered']
 
 /** Cap per run, so a bad window cannot fire a hundred conversions at once. */
 const BATCH = 25

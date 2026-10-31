@@ -40,7 +40,7 @@ function load(file) {
 const moves = load('src/utils/orderMoves.ts')
 
 const ADMIN = '11111111-1111-4111-8111-111111111111'
-const STATUSES = ['pending_cod', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled']
+const STATUSES = ['pending_cod', 'confirmed', 'on_hold', 'delivered', 'cancelled']
 
 let db
 let payloadBefore
@@ -132,6 +132,7 @@ before(async () => {
   payloadBefore = (await db.query(`select orderflow.order_payload('cccccccc-0000-4000-8000-000000000001') p`)).rows[0].p
   await db.exec(read('supabase/migrations/20261014215150_order_rules.sql'))
   await db.exec(read('supabase/migrations/20261014230352_order_page.sql'))
+  await db.exec(read('supabase/migrations/20261031131331_order_on_hold.sql'))
 })
 
 /** Runs `fn` in a transaction that is always rolled back. */
@@ -151,7 +152,7 @@ async function as(who) {
 
 async function newOrder(status) {
   const stamps = {
-    confirmed: 'confirmed_at', processing: 'processing_at', shipped: 'shipped_at', delivered: 'delivered_at', cancelled: 'cancelled_at',
+    confirmed: 'confirmed_at', on_hold: 'confirmed_at', delivered: 'delivered_at', cancelled: 'cancelled_at',
   }
   const col = stamps[status]
   const sql = col
@@ -215,14 +216,14 @@ test('stage times are stamped once and never move', async () => {
     assert.equal(first.confirmed_by, 'staff')
 
     await db.query(`select public.change_order_status($1, 'delivered')`, [id])
-    await db.query(`select public.change_order_status($1, 'processing')`, [id]) // a correction backwards
+    await db.query(`select public.change_order_status($1, 'on_hold')`, [id]) // a correction backwards
     await db.query(`select public.change_order_status($1, 'confirmed')`, [id])
-    const after = (await db.query(`select confirmed_at, delivered_at, processing_at, status from public.orders where id = $1`, [id])).rows[0]
+    const after = (await db.query(`select confirmed_at, delivered_at, status from public.orders where id = $1`, [id])).rows[0]
     assert.equal(after.confirmed_at.getTime(), first.confirmed_at.getTime(), 'confirmed_at kept')
     assert.ok(after.delivered_at, 'delivered_at kept after moving back')
     assert.equal(after.status, 'confirmed')
 
-    for (const col of ['confirmed_at', 'processing_at', 'delivered_at']) {
+    for (const col of ['confirmed_at', 'delivered_at']) {
       assert.match(await refusal(`update public.orders set ${col} = now() + interval '1 hour' where id = $1`, [id]), /STAGE_TIME_LOCKED/, col)
       assert.match(await refusal(`update public.orders set ${col} = null where id = $1`, [id]), /STAGE_TIME_LOCKED/, `${col} cleared`)
     }
@@ -268,7 +269,7 @@ test('a non-admin is refused by every staff function, and signed-out callers can
     const id = await newOrder('confirmed')
     await as('customer')
     for (const sql of [
-      `select public.change_order_status($1, 'processing')`,
+      `select public.change_order_status($1, 'on_hold')`,
       `select public.set_order_test_flag($1, true)`,
       `select public.add_order_note($1, 'x')`,
       `select public.set_order_source($1, 'google')`,
@@ -277,7 +278,7 @@ test('a non-admin is refused by every staff function, and signed-out callers can
       assert.match(await refusal(sql, [id]) ?? 'ALLOWED', /NOT_AUTHORISED/, sql)
     }
     await db.exec('set local role anon')
-    assert.match(await refusal(`select public.change_order_status($1, 'processing')`, [id]) ?? 'ALLOWED', /permission denied/)
+    assert.match(await refusal(`select public.change_order_status($1, 'on_hold')`, [id]) ?? 'ALLOWED', /permission denied/)
     assert.match(await refusal(`select private.apply_status_change($1, 'cancelled', 'customer', null)`, [id]) ?? 'ALLOWED', /permission denied/)
     assert.match(await refusal(`select * from public.order_events`) ?? 'ALLOWED', /permission denied/)
     await db.exec('reset role')
@@ -315,6 +316,23 @@ test('OrderFlow receives exactly what it did before', async () => {
   assert.deepEqual(after, payloadBefore)
   assert.deepEqual(Object.keys(after).sort(), ['delivery_date', 'external_id', 'items', 'placed_at', 'postcode', 'status', 'total'])
   assert.equal(after.postcode, 'BB1 1AA')
+})
+
+test('an order on hold goes to OrderFlow without its delivery day, and gets it back when rebooked', async () => {
+  await isolated(async () => {
+    await as('admin')
+    const id = 'cccccccc-0000-4000-8000-000000000001'
+    await db.query(`select public.change_order_status($1, 'on_hold', 'Moving house, will ring')`, [id])
+    const held = (await db.query(`select orderflow.order_payload($1) p`, [id])).rows[0].p
+    assert.equal(held.status, 'on_hold')
+    assert.equal('delivery_date' in held, false)
+    assert.equal((await db.query(`select preferred_delivery_date::text d from public.orders where id = $1`, [id])).rows[0].d, '2026-10-20', 'kept on the order')
+    const ev = (await db.query(`select note from public.order_events where order_id = $1 and to_status = 'on_hold'`, [id])).rows[0]
+    assert.equal(ev.note, 'Moving house, will ring')
+    await db.query(`select public.change_order_status($1, 'confirmed')`, [id])
+    assert.equal((await db.query(`select orderflow.order_payload($1) p`, [id])).rows[0].p.delivery_date, '2026-10-20')
+    assert.match(await refusal(`select public.change_order_status($1, 'processing')`, [id]), /BAD_STATUS/)
+  })
 })
 
 // ── Phase 6: the order page and the list ──────────────────────────────────
@@ -378,14 +396,13 @@ test('the order page has a WhatsApp message for every status, in the shop voice'
   assert.ok(waiting.includes(`${site}/confirm-order/${order.id}`), 'waiting carries the /confirm-order link')
   assert.match(waiting, /#ABCDEF12/)
   assert.match(orderWhatsAppMessage(order, site, { status: 'confirmed' }), /When is a good time to ring you about a delivery day\?/)
-  assert.match(orderWhatsAppMessage(order, site, { status: 'processing' }), /being prepared/)
-  const shipped = orderWhatsAppMessage(order, site, { status: 'shipped' })
-  assert.match(shipped, /£1,299\.50, in cash or by bank transfer/)
-  assert.ok(shipped.includes(`${site}/track-order?ref=ABCDEF12&postcode=BB2%204QR`))
+  const onHold = orderWhatsAppMessage(order, site, { status: 'on_hold' })
+  assert.match(onHold, /on hold for now\. Nothing is cancelled\./)
+  assert.ok(onHold.includes(`${site}/track-order?ref=ABCDEF12&postcode=BB2%204QR`))
   assert.ok(orderWhatsAppMessage(order, site, { status: 'delivered', reviewLink: 'https://example.com/r' }).includes('https://example.com/r'))
   assert.doesNotMatch(orderWhatsAppMessage(order, site, { status: 'delivered' }), /review/)
   assert.match(orderWhatsAppMessage(order, site, { status: 'cancelled' }), /cancelled: Out of stock\.\n/)
-  for (const status of ['pending_cod', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled']) {
+  for (const status of ['pending_cod', 'confirmed', 'on_hold', 'delivered', 'cancelled']) {
     assert.doesNotMatch(orderWhatsAppMessage(order, site, { status }), /undefined|null|NaN/, status)
   }
   assert.deepEqual(plain([postcodeOf(null), firstName(null)]), ['', 'there'])

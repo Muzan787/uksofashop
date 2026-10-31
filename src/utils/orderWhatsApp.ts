@@ -30,9 +30,6 @@ export function firstName(name: string | null | undefined): string {
   return (name ?? '').trim().split(/\s+/)[0] || 'there'
 }
 
-const money = (n: number | null | undefined) =>
-  `£${Number(n ?? 0).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-
 /**
  * The message for an order at its current status, or for `status` if given.
  * `reviewLink` is the Trustpilot (or own) review link for the delivered one.
@@ -57,14 +54,10 @@ export function orderWhatsAppMessage(
 Once it is confirmed we will ring you to arrange delivery.`
     case 'confirmed':
       return `Hi ${name}, thanks for confirming your order (#${code}) with UK Sofa Shop. When is a good time to ring you about a delivery day?`
-    case 'processing':
-      return `Hi ${name}, your order (#${code}) is being prepared now. We'll be in touch to agree the delivery day.`
-    case 'shipped':
-      return `Hi ${name}, your order (#${code}) is on its way. The driver will ring you before arriving.
+    case 'on_hold':
+      return `Hi ${name}, no problem - we've put your order (#${code}) on hold for now. Nothing is cancelled.
 
-To pay on delivery: ${money(order.total_amount)}, in cash or by bank transfer.
-
-You can follow it here: ${trackLink}`
+Just message us here when you're ready and we'll book a new delivery day. You can see your order here: ${trackLink}`
     case 'delivered':
       return `Hi ${name}, thank you for choosing UK Sofa Shop - we hope your new sofa has settled in well.${options.reviewLink ? `
 

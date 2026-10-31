@@ -182,7 +182,7 @@ function Result({ order }: { order: TrackedOrder }) {
           </p>
           <p className="m-0 mt-1 text-caption text-ink-500">
             Placed {new Date(order.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
-            {order.preferred_delivery_date && order.status !== 'delivered' && order.status !== 'cancelled' && (
+            {order.preferred_delivery_date && !['delivered', 'cancelled', 'on_hold'].includes(order.status) && (
               <> · Requested for {formatPreferredDeliveryDate(order.preferred_delivery_date)}</>
             )}
           </p>
@@ -211,7 +211,7 @@ function Result({ order }: { order: TrackedOrder }) {
             {/* The current dot pulses. Progress here is real and ongoing —
                 unlike the confirmation page, where the order is seconds old
                 and nothing has started moving yet. */}
-            <Timeline current={cfg.stage} pulse={cfg.stage < 3} />
+            <Timeline current={cfg.stage} pulse={cfg.moving} />
           </div>
         )}
 

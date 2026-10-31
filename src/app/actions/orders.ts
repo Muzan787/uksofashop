@@ -102,9 +102,8 @@ async function runStatusChange(
     if (change.customer_email) {
       try {
         const postcode = extractPostcode(change.shipping_address)
-        // The cancelled email gives the reason and the on-its-way email the
-        // amount to pay, both as the order now holds them (E14).
-        const { data: details } = newStatus === 'cancelled' || newStatus === 'shipped'
+        // The cancelled email gives the reason as the order now holds it (E14).
+        const { data: details } = newStatus === 'cancelled'
           ? await supabase.from('orders').select('cancellation_reason, total_amount').eq('id', orderId).maybeSingle()
           : { data: null }
         await sendOrderStatusUpdate(
@@ -380,7 +379,7 @@ type ConfirmOrderState = { error: string } | null
  * as newsletter double opt-in; see actions/newsletter-confirm.ts.
  *
  * confirm_order is guarded on pending_cod, so this is safe to press twice and
- * cannot move an order backwards out of processing, shipped or cancelled.
+ * cannot move an order backwards out of on hold, delivered or cancelled.
  *
  * A confirmation that actually moves the order emails the shop, because
  * nothing else announces it - the admin panel just changes colour, which is no
@@ -513,7 +512,7 @@ function orderPage(orderId: string, params: Record<string, string>): string {
 
 const statusForm = z.object({
   orderId: uuid,
-  status: z.enum(['pending_cod', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled']),
+  status: z.enum(['pending_cod', 'confirmed', 'on_hold', 'delivered', 'cancelled']),
   reason: z.string().trim().max(500).optional(),
 })
 

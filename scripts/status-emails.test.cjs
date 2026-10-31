@@ -58,17 +58,11 @@ test('the cancelled email gives the reason, escaped; without one it reads as bef
   assert.match(text(sent[1]), /Your order has been cancelled\. If you have any questions, please contact our support team\./)
 })
 
-test('the on-its-way email says what to pay at the door, as the WhatsApp message does', async () => {
+test('the on-hold email says nothing is cancelled and how to rebook', async () => {
   const { email, sent } = mailer()
-  await email.sendOrderStatusUpdate('ann@example.test', 'Ann', ORDER, 'shipped', 'BB2 1AA', { totalAmount: 1299 })
-  assert.match(text(sent[0]), /To pay on delivery: £1,299\.00, in cash or by bank transfer\./)
-  // The WhatsApp wording it matches.
-  assert.match(read('src/utils/orderWhatsApp.ts'), /To pay on delivery: \$\{money\(order\.total_amount\)\}, in cash or by bank transfer\./)
-  // Only on that email, and never without an amount.
-  await email.sendOrderStatusUpdate('ann@example.test', 'Ann', ORDER, 'processing', 'BB2 1AA', { totalAmount: 1299 })
-  await email.sendOrderStatusUpdate('ann@example.test', 'Ann', ORDER, 'shipped', 'BB2 1AA', {})
-  assert.doesNotMatch(text(sent[1]), /To pay on delivery/)
-  assert.doesNotMatch(text(sent[2]), /To pay on delivery/)
+  await email.sendOrderStatusUpdate('ann@example.test', 'Ann', ORDER, 'on_hold', 'BB2 1AA', {})
+  assert.match(text(sent[0]), /Order On Hold/)
+  assert.match(text(sent[0]), /Nothing is cancelled - when you're ready, just message us on WhatsApp or give us a ring and we'll book a new delivery day\./)
 })
 
 test('pressing the status an order already has sends nothing', () => {

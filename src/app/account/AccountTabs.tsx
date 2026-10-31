@@ -326,7 +326,7 @@ function OrderCard({ order }: { order: AccountOrder }) {
           <div className="border-t border-calico-300 px-4 py-5">
             {order.status !== 'cancelled' && (
               <div className="pb-5">
-                <Timeline current={stage} pulse={stage >= 0 && stage < 3} />
+                <Timeline current={stage} pulse={stage >= 0 && cfg.moving} />
               </div>
             )}
 

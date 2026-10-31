@@ -16,13 +16,13 @@ export const dynamic = 'force-dynamic'
 const PER_PAGE = 20
 
 /**
- * Orders still waiting on you: taken but not acknowledged, or acknowledged but
- * not yet dispatched. This is the default view, because a flat reverse-
+ * Orders still waiting on you: taken but not acknowledged, acknowledged but
+ * not yet delivered, or on hold to be rebooked. This is the default view, because a flat reverse-
  * chronological list buries the two or three that need doing today under
  * everything already delivered.
  */
-const NEEDS_ATTENTION = ['pending_cod', 'confirmed', 'processing']
-const OPEN = new Set(['pending_cod', 'confirmed', 'processing', 'shipped'])
+const NEEDS_ATTENTION = ['pending_cod', 'confirmed', 'on_hold']
+const OPEN = new Set(['pending_cod', 'confirmed', 'on_hold'])
 
 /** The newest matches a search shows; more than this and the search is too broad. */
 const SEARCH_LIMIT = 200
@@ -63,8 +63,8 @@ export default async function AdminOrdersPage(props: { searchParams: SearchParam
   const tiles = {
     attention: counts.attention,
     toCollect: real.filter(row => OPEN.has(statusOf(row))).reduce((sum, row) => sum + Number(row.total_amount ?? 0), 0),
-    processing: real.filter(row => statusOf(row) === 'processing').length,
-    shipped: real.filter(row => statusOf(row) === 'shipped').length,
+    confirmed: real.filter(row => statusOf(row) === 'confirmed').length,
+    onHold: real.filter(row => statusOf(row) === 'on_hold').length,
     withPreferredDay: real.filter(row => OPEN.has(statusOf(row)) && row.preferred_delivery_date).length,
   }
 

@@ -302,8 +302,10 @@ test('no admin page formats a time by itself', () => {
 test('the admin names every status in its own words', () => {
   const { adminStatusLabel, ADMIN_STATUS_LABEL } = load('src/utils/adminStatus.ts')
   assert.deepEqual(plain(ADMIN_STATUS_LABEL), {
-    pending_cod: 'Waiting to confirm', confirmed: 'Confirmed', processing: 'Processing',
-    shipped: 'On its way', delivered: 'Delivered', cancelled: 'Cancelled',
+    pending_cod: 'Waiting to confirm', confirmed: 'Confirmed', on_hold: 'On hold',
+    delivered: 'Delivered', cancelled: 'Cancelled',
+    // Retired 31 Oct 2026, kept for older orders' history.
+    processing: 'Processing', shipped: 'On its way',
   })
   assert.equal(adminStatusLabel(null), 'Waiting to confirm')
   assert.equal(adminStatusLabel('something_new'), 'something new')

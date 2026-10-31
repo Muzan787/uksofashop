@@ -175,11 +175,10 @@ export default async function ConfirmOrderPage({
         </p>
 
         {/* Where it has got to. Not drawn while the order is still waiting to
-            be confirmed: the timeline starts AT confirmed, and showing it with
-            nothing lit would suggest the order is already moving. */}
+            be confirmed: the page's one job then is the confirm button. */}
         {!awaiting && !cancelled && (
           <div className="mt-8 rounded-md border border-calico-300 bg-calico-100 px-4 py-5">
-            <Timeline current={cfg.stage} pulse={cfg.stage > 0 && cfg.stage < 3} />
+            <Timeline current={cfg.stage} pulse={cfg.moving} />
             <p className="m-0 mt-5 text-center text-body-sm leading-relaxed text-ink-500">
               {cfg.note}
             </p>

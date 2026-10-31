@@ -3,13 +3,14 @@
 import { Check } from 'lucide-react';
 
 /**
- * The four stages an order passes through, in the words a customer would use.
+ * The three stages an order passes through, in the words a customer would use.
  *
- * Not the database's words. `pending_cod`, `processing` and `shipped` are what
- * the admin panel needs; "Being prepared" and "Out for delivery" are what the
- * person waiting at home needs.
+ * Not the database's words: `pending_cod` is what the admin panel needs;
+ * "Order placed" is what the person waiting at home needs. "Being prepared"
+ * and "Out for delivery" were dropped on 31 Oct 2026 with the statuses behind
+ * them - the shop never used them, so the line never moved past Confirmed.
  */
-const STAGES = ['Confirmed', 'Being prepared', 'Out for delivery', 'Delivered'] as const;
+const STAGES = ['Order placed', 'Confirmed', 'Delivered'] as const;
 
 interface Props {
   /** Index of the stage reached. -1 shows the whole line as ahead. */

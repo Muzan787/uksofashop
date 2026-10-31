@@ -12,10 +12,12 @@
 export const ADMIN_STATUS_LABEL: Record<string, string> = {
   pending_cod: 'Waiting to confirm',
   confirmed: 'Confirmed',
-  processing: 'Processing',
-  shipped: 'On its way',
+  on_hold: 'On hold',
   delivered: 'Delivered',
   cancelled: 'Cancelled',
+  // Retired on 31 Oct 2026; kept so older orders' history still reads.
+  processing: 'Processing',
+  shipped: 'On its way',
 }
 
 /** The admin's word for a status; an unknown value is shown as it is. */

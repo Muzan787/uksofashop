@@ -41,12 +41,13 @@ export type ReviewLink = { productTitle: string; imageUrl: string | null; review
 /** The one button that moves an order on (E2). */
 const NEXT_STEP: Record<string, { to: string; label: string }> = {
   pending_cod: { to: 'confirmed', label: 'Mark confirmed' },
-  confirmed: { to: 'processing', label: 'Start processing' },
-  processing: { to: 'shipped', label: 'Mark on its way' },
-  shipped: { to: 'delivered', label: 'Mark delivered' },
+  confirmed: { to: 'delivered', label: 'Mark delivered' },
+  on_hold: { to: 'confirmed', label: 'Rebooked: mark confirmed' },
 }
 
-const STAGE_RANK: Record<string, number> = { pending_cod: 0, confirmed: 1, processing: 2, shipped: 3, delivered: 4 }
+// On hold sits beside Confirmed, not before it. Processing and On its way are
+// retired but still ranked, for older orders that reached them.
+const STAGE_RANK: Record<string, number> = { pending_cod: 0, confirmed: 1, on_hold: 1, processing: 2, shipped: 3, delivered: 4 }
 
 const SOURCE_LABELS: Record<string, string> = {
   meta: 'Facebook or Instagram',
@@ -267,6 +268,23 @@ export default function OrderView({ order, events, sends, reviewLinks, pickers, 
             Usually the customer confirms from the link in their WhatsApp or email. Mark it confirmed yourself only if they confirmed by phone or in the chat.
           </p>
         )}
+        {/* The customer asked to pause: keep the order, drop the day. */}
+        {status === 'confirmed' && (
+          <form action={changeOrderStatusFromPage} className="mt-2 space-y-2">
+            <input type="hidden" name="orderId" value={order.id} />
+            <input type="hidden" name="status" value="on_hold" />
+            <label htmlFor="hold-reason" className="sr-only">Why it is on hold (optional)</label>
+            <input id="hold-reason" name="reason" maxLength={500} className={field} placeholder="Why it is on hold (optional, kept in its history)" />
+            <ConfirmSubmit className={`${lightButton} w-full`} question="Put this order on hold? It stays open and comes off the delivery list until it is rebooked.">
+              Put on hold
+            </ConfirmSubmit>
+          </form>
+        )}
+        {status === 'on_hold' && (
+          <p className="m-0 mt-2 text-sm text-stone-600">
+            When they are ready, agree the new day, change it under Edit, then mark it confirmed.
+          </p>
+        )}
         {messageLink ? (
           <div className="mt-4 border-t border-stone-100 pt-4">
             <p className="m-0 mb-2 text-xs font-bold uppercase tracking-wider text-stone-500">WhatsApp message for {adminStatusLabel(status).toLowerCase()}</p>
@@ -297,7 +315,9 @@ export default function OrderView({ order, events, sends, reviewLinks, pickers, 
           {order.preferred_delivery_date && (
             <p className="m-0 flex items-start gap-2 text-stone-900">
               <CalendarDays className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" aria-hidden="true" />
-              <span><strong>Wants delivery on {formatPreferredDeliveryDate(order.preferred_delivery_date)}</strong> - confirm the slot on the call</span>
+              {status === 'on_hold'
+                ? <span><strong>Was down for {formatPreferredDeliveryDate(order.preferred_delivery_date)}</strong> - on hold, so that day is off</span>
+                : <span><strong>Wants delivery on {formatPreferredDeliveryDate(order.preferred_delivery_date)}</strong> - confirm the slot on the call</span>}
             </p>
           )}
           {order.special_instructions?.trim() && (
@@ -645,7 +665,7 @@ export default function OrderView({ order, events, sends, reviewLinks, pickers, 
                 {corrections.map(s => <option key={s} value={s}>{ADMIN_STATUS_LABEL[s]}</option>)}
               </select>
               <label htmlFor="correct-reason" className="block text-xs font-bold uppercase tracking-wider text-stone-500">
-                Reason {status === 'cancelled' ? '(needed to reopen)' : '(needed to cancel; kept on the order and used in its WhatsApp message)'}
+                Reason {status === 'cancelled' ? '(needed to reopen)' : '(needed to cancel, and kept on the order and used in its WhatsApp message; otherwise optional, kept in its history)'}
               </label>
               <input id="correct-reason" name="reason" maxLength={500} className={field} placeholder={status === 'cancelled' ? 'Why it is being reopened' : 'Why it is being cancelled'} />
               <ConfirmSubmit className={darkButton} question="Change this order's status?">Change status</ConfirmSubmit>

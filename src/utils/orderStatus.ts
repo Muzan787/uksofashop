@@ -5,8 +5,12 @@
 // steps and a colour per status, and the account table's `bg-gray-100` pill
 // that printed the raw database word — so the same order was "Being Prepared"
 // in one place and "processing" in the other.
+//
+// Since 31 Oct 2026 the steps are the shop's real ones: placed, confirmed,
+// delivered. "Being prepared" and "Out for delivery" were retired with the
+// statuses behind them; On hold sits at Confirmed with the line stopped.
 
-import { Clock, Package, Truck, CheckCircle, XCircle, type LucideIcon } from 'lucide-react'
+import { Clock, CheckCircle, PauseCircle, XCircle, type LucideIcon } from 'lucide-react'
 
 interface StatusConfig {
   /** What a customer is told. Not the database's word. */
@@ -16,8 +20,10 @@ interface StatusConfig {
   icon: LucideIcon
   /** Tailwind classes for the pill: a tint and its text colour. */
   pill: string
-  /** Where this sits on the four-stage timeline. -1 means it is not on it. */
+  /** Where this sits on the three-stage timeline. -1 means it is not on it. */
   stage: number
+  /** Whether something is happening next, so the current dot pulses. */
+  moving: boolean
 }
 
 export const STATUS: Record<string, StatusConfig> = {
@@ -26,35 +32,32 @@ export const STATUS: Record<string, StatusConfig> = {
     note: 'Open the confirm link in your email or on WhatsApp, check the details and confirm it; then we ring you to arrange delivery.',
     icon: Clock,
     pill: 'bg-ember-500/12 text-ember-700',
-    stage: -1,
+    stage: 0,
+    moving: true,
   },
   confirmed: {
     label: 'Confirmed',
-    note: 'We have your order and it is queued for preparation.',
+    note: 'We have your order and will ring you to agree the delivery day.',
     icon: CheckCircle,
     pill: 'bg-sage-50 text-sage-700',
-    stage: 0,
-  },
-  processing: {
-    label: 'Being prepared',
-    note: 'Your sofa is being checked over and wrapped for the journey.',
-    icon: Package,
-    pill: 'bg-indigo-50 text-indigo-700',
     stage: 1,
+    moving: true,
   },
-  shipped: {
-    label: 'Out for delivery',
-    note: 'It is on its way. The driver will call before arriving.',
-    icon: Truck,
-    pill: 'bg-indigo-50 text-indigo-700',
-    stage: 2,
+  on_hold: {
+    label: 'On hold',
+    note: 'Delivery is paused, as agreed. Nothing is cancelled: message us when you are ready and we will book a new day.',
+    icon: PauseCircle,
+    pill: 'bg-ember-500/12 text-ember-700',
+    stage: 1,
+    moving: false,
   },
   delivered: {
     label: 'Delivered',
     note: 'It is with you. We hope it has settled in.',
     icon: CheckCircle,
     pill: 'bg-sage-50 text-sage-700',
-    stage: 3,
+    stage: 2,
+    moving: false,
   },
   cancelled: {
     label: 'Cancelled',
@@ -62,6 +65,7 @@ export const STATUS: Record<string, StatusConfig> = {
     icon: XCircle,
     pill: 'bg-rust-50 text-rust-700',
     stage: -1,
+    moving: false,
   },
 }
 
