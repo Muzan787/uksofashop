@@ -36,7 +36,7 @@ export async function loadPickers(supabase: Db): Promise<{ variants: PickerVaria
   const [{ data: variantRows }, { data: fabricRows }] = await Promise.all([
     supabase
       .from('product_variants')
-      .select('id, sku, color, material, price_adjustment, options, products!inner ( title, base_price, is_active )')
+      .select('id, sku, color, material, price_adjustment, options, products!inner ( id, title, base_price, is_active )')
       .eq('products.is_active', true),
     supabase
       .from('fabrics')
@@ -52,7 +52,7 @@ export async function loadPickers(supabase: Db): Promise<{ variants: PickerVaria
     material: string | null
     price_adjustment: number | null
     options: unknown
-    products: { title: string; base_price: number } | null
+    products: { id: string; title: string; base_price: number } | null
   }
   type FabricRow = { id: string; code: string; name: string; fabric_collections: { name: string } | null }
 
@@ -66,6 +66,8 @@ export async function loadPickers(supabase: Db): Promise<{ variants: PickerVaria
         .filter(Boolean)
         .join(' · '),
       price: Number(v.products!.base_price) + Number(v.price_adjustment ?? 0),
+      productId: v.products!.id,
+      productTitle: v.products!.title,
     }))
     .sort((a, b) => a.label.localeCompare(b.label))
 

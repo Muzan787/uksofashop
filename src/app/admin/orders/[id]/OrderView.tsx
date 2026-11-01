@@ -22,6 +22,7 @@ import DirectPrintButton from '../DirectPrintButton'
 import DeleteOrderButton from '../DeleteOrderButton'
 import EditOrderForm from '../EditOrderForm'
 import MetaConversionButton from '../MetaConversionButton'
+import FindVisit, { RemoveVisitMatch } from '../FindVisit'
 import ConfirmSubmit from '@/components/Admin/ConfirmSubmit'
 import CopyTextButton from '@/components/Admin/CopyTextButton'
 import { dualTime, dualTimeText } from '@/utils/adminTime'
@@ -69,6 +70,7 @@ const EVENT_LABEL: Record<string, string> = {
   details_changed: 'Details changed',
   test_flag_changed: 'Test flag',
   source_changed: 'Where it came from',
+  visit_matched: 'Website visit',
   note: 'Note',
 }
 
@@ -76,7 +78,9 @@ const EVENT_LABEL: Record<string, string> = {
 function banner(sp: Record<string, string | undefined>, order: { customer_name: string }): { tone: 'ok' | 'error'; text: string } | null {
   const name = firstName(order.customer_name)
   switch (sp.done) {
-    case 'created': return { tone: 'ok', text: 'Order saved.' }
+    case 'created': return sp.visit === 'failed'
+      ? { tone: 'error', text: "Order saved, but the website visit you picked didn't go on it. Try again under Where it came from." }
+      : { tone: 'ok', text: 'Order saved.' }
     case 'status': return {
       tone: 'ok',
       text: `Marked ${adminStatusLabel(sp.status)}. ${sp.emailed === '1' ? `${name} has been emailed too.` : 'No email on this order, so let them know on WhatsApp.'}`,
@@ -194,6 +198,13 @@ export default function OrderView({ order, events, sends, reviewLinks, pickers, 
   const agreedDelivery = Number(order.delivery_total ?? 0) > 0 && extrasFromCheckout === 0
   const googleAttributed = order.manual_acquisition_source === 'google' || (!order.manual_acquisition_source && order.utm_source === 'google' && Boolean(order.gclid || order.gbraid || order.wbraid) && !order.fbclid)
   const corrections = movesFrom(status)
+  // "Find the website visit": a hand-taken order with no visit of its own, or
+  // one matched by hand, until its Purchase has gone to Meta.
+  const canFindVisit = order.source === 'whatsapp' && !order.purchase_event_sent_at && (!order.session_id || Boolean(order.visit_matched_at))
+  const visitProducts = [...new Map(pickers.variants.map(v => [v.productId, v.productTitle]))]
+    .map(([id, title]) => ({ id, title }))
+    .sort((a, b) => a.title.localeCompare(b.title))
+  const visitDefaultProduct = pickers.variants.find(v => v.id === order.order_items?.[0]?.variant_id)?.productId ?? ''
 
   return (
     <div className="mx-auto max-w-3xl space-y-4 animate-in fade-in duration-500 print:space-y-2">
@@ -490,6 +501,15 @@ export default function OrderView({ order, events, sends, reviewLinks, pickers, 
       <section className={section} aria-labelledby="meta-heading">
         <h2 id="meta-heading" className={`${sectionTitle} flex items-center gap-2`}><Radio className="h-4 w-4 text-blue-600" aria-hidden="true" /> Meta conversion</h2>
         <p className="m-0 mb-3 text-xs text-stone-500">Changing order status does not send an ad conversion. Send it here only after the business event is real.</p>
+        {canFindVisit && !order.session_id && !order.is_test && (
+          <p className="m-0 mb-3 flex items-start gap-2 rounded-sm border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            <span>
+              This order isn&apos;t linked to a website visit, so Meta can&apos;t tell which ad it came from.{' '}
+              <Link href={`/admin/orders/${order.id}?find=visit#find-visit`} className="font-bold underline">Find the website visit</Link> first.
+            </span>
+          </p>
+        )}
         {order.is_test ? (
           <p className="m-0 flex items-start gap-2 rounded-sm border border-violet-200 bg-violet-50 px-3 py-2 text-sm text-violet-900">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" /><span><strong>Test order.</strong> Meta conversion sending is blocked.</span>
@@ -635,7 +655,44 @@ export default function OrderView({ order, events, sends, reviewLinks, pickers, 
           {order.manual_acquisition_source && (
             <><dt className="text-stone-500">Staff say</dt><dd className="m-0 text-stone-900">{SOURCE_LABELS[order.manual_acquisition_source] ?? order.manual_acquisition_source}{order.manual_acquisition_note ? ` - ${order.manual_acquisition_note}` : ''}</dd></>
           )}
+          {order.visit_matched_at && (
+            <><dt className="text-stone-500">Visit</dt><dd className="m-0 text-stone-900">
+              Matched by hand by {order.visit_matched_by === userId ? 'you' : 'staff'}, <Time value={order.visit_matched_at} />
+              {order.visit_match_note ? <span className="text-stone-600"> - {order.visit_match_note}</span> : null}
+            </dd></>
+          )}
         </dl>
+
+        {/* "Find the website visit" (FindVisit.tsx): for a WhatsApp or phone
+            order that came with no reference, or to correct a hand-made
+            match, until its ad conversion has gone. */}
+        {canFindVisit && (
+          <details className="mt-4 border-t border-stone-100 pt-4 print:hidden" open={sp.find === 'visit' || undefined} id="find-visit">
+            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 text-sm font-bold text-blue-800">
+              {order.visit_matched_at ? 'Choose a different website visit' : 'No reference? Find the website visit'}
+              <span className="text-xs font-normal text-stone-500">so the ad gets the credit</span>
+            </summary>
+            <div className="mt-3 space-y-4">
+              {!order.visit_matched_at && (
+                <p className="m-0 text-xs leading-relaxed text-stone-600">
+                  Lists people who were on the website around a time, with the pages they opened.
+                  Pick the one that matches what the customer said. Their ad click goes on this order,
+                  and the Meta Purchase can then be sent as usual.
+                </p>
+              )}
+              <FindVisit
+                products={visitProducts}
+                phone={order.customer_phone ?? ''}
+                defaultProductId={visitDefaultProduct}
+                defaultAt={order.created_at ?? undefined}
+                defaultChannel={order.channel === 'phone' ? 'call' : 'whatsapp'}
+                mode={{ kind: 'attach', orderId: order.id }}
+              />
+              {order.visit_matched_at && <RemoveVisitMatch orderId={order.id} />}
+            </div>
+          </details>
+        )}
+
         <form action={setOrderSourceFromPage} className="mt-4 grid gap-2 border-t border-stone-100 pt-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
           <input type="hidden" name="orderId" value={order.id} />
           <div>

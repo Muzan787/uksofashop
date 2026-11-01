@@ -14,17 +14,22 @@
 // and the orders that need doing today should not be pushed below the fold by a
 // form.
 
-import { useMemo, useState, useTransition } from 'react'
+import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { MessageCircle, Plus, X, Loader2, Check, Clock3, Phone } from 'lucide-react'
-import { createWhatsAppOrder, previewWhatsAppTimeMatch, type WhatsAppAttributionMatch } from '@/app/actions/manual-order'
+import { MessageCircle, Plus, X, Loader2, Check, Phone, Search } from 'lucide-react'
+import { createWhatsAppOrder } from '@/app/actions/manual-order'
+import { matchOrderToVisit, type VisitCandidate } from '@/app/actions/visit-match'
 import SearchSelect from '@/components/Admin/SearchSelect'
+import FindVisit from './FindVisit'
 
 export interface PickerVariant {
   id: string
   label: string
   /** Catalogue price, used for the placeholder and the running total. */
   price: number
+  /** The sofa itself, for "Find the website visit": which visits opened it. */
+  productId: string
+  productTitle: string
 }
 
 export interface PickerFabric {
@@ -73,16 +78,8 @@ export default function NewWhatsAppOrder({
   const [channel, setChannel] = useState<'whatsapp' | 'phone'>('whatsapp')
   const [isTest, setIsTest] = useState(false)
   const [pending, setPending] = useState(false)
-  const [matchingTime, startTimeMatch] = useTransition()
-  const [timePreview, setTimePreview] = useState<WhatsAppAttributionMatch | null | undefined>(undefined)
   const [error, setError] = useState('')
-  const [done, setDone] = useState<{
-    reference: string
-    total: number
-    matchedReference: string | null
-    matchGapMinutes: number | null
-    searchedTime: boolean
-  } | null>(null)
+  const [done, setDone] = useState<{ reference: string; total: number } | null>(null)
 
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
@@ -93,14 +90,19 @@ export default function NewWhatsAppOrder({
   const [delivery, setDelivery] = useState('')
   const [deliveryDate, setDeliveryDate] = useState('')
   const [whatsappReference, setWhatsappReference] = useState(initialReference.toUpperCase())
-  const [matchByTime, setMatchByTime] = useState(false)
   const [leadReference, setLeadReference] = useState('')
-  const [contactDate, setContactDate] = useState('')
-  const [contactHour, setContactHour] = useState('10')
-  const [contactMinute, setContactMinute] = useState('00')
-  const [contactMeridiem, setContactMeridiem] = useState<'AM' | 'PM'>('PM')
-  const [contactTimezone, setContactTimezone] = useState<'Asia/Karachi' | 'Europe/London'>('Asia/Karachi')
+  /** No reference? The website visit staff picked instead, put on the order once it saves. */
+  const [findingVisit, setFindingVisit] = useState(false)
+  const [visit, setVisit] = useState<VisitCandidate | null>(null)
   const [lines, setLines] = useState<Line[]>([{ ...BLANK }])
+
+  // The sofas, once each, for the visit finder's "sofa they asked about".
+  const products = useMemo(() => {
+    const seen = new Map<string, string>()
+    for (const v of variants) if (!seen.has(v.productId)) seen.set(v.productId, v.productTitle)
+    return [...seen].map(([id, title]) => ({ id, title })).sort((a, b) => a.title.localeCompare(b.title))
+  }, [variants])
+  const firstProductId = variants.find(v => v.id === lines.find(l => l.variantId)?.variantId)?.productId ?? ''
 
   const priceOf = useMemo(() => {
     const m = new Map(variants.map(v => [v.id, v.price]))
@@ -132,30 +134,11 @@ export default function NewWhatsAppOrder({
 
   const reset = () => {
     setName(''); setPhone(''); setEmail(''); setAddress(''); setPostcode('')
-    setNotes(''); setDelivery(''); setWhatsappReference(''); setMatchByTime(false)
-    setContactDate(''); setContactHour('10'); setContactMinute('00'); setContactMeridiem('PM')
-    setContactTimezone('Asia/Karachi'); setTimePreview(undefined); setLines([{ ...BLANK }]); setError('')
+    setNotes(''); setDelivery(''); setWhatsappReference(''); setLeadReference('')
+    setFindingVisit(false); setVisit(null); setLines([{ ...BLANK }]); setError('')
     setChannel('whatsapp'); setIsTest(false)
   }
 
-  const previewTimeMatch = () => {
-    setError('')
-    startTimeMatch(async () => {
-      const result = await previewWhatsAppTimeMatch({
-        date: contactDate,
-        hour: Number(contactHour),
-        minute: Number(contactMinute),
-        meridiem: contactMeridiem,
-        timezone: contactTimezone,
-      })
-      if (result.error) {
-        setTimePreview(undefined)
-        setError(result.error)
-        return
-      }
-      setTimePreview(result.match)
-    })
-  }
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
@@ -196,32 +179,25 @@ export default function NewWhatsAppOrder({
       leadReference: leadReference.trim() || undefined,
       channel,
       isTest,
-      contactTime:
-        !whatsappReference.trim() && matchByTime
-          ? {
-              date: contactDate,
-              hour: Number(contactHour),
-              minute: Number(contactMinute),
-              meridiem: contactMeridiem,
-              timezone: contactTimezone,
-            }
-          : undefined,
     })
-    setPending(false)
 
     // Discriminating on `success` rather than on `error`: it is the literal
     // that narrows the union, and it is the field the action promises.
-    if (!res.success) { setError(res.error); return }
-    setDone({
-      reference: res.orderId,
-      total: res.total,
-      matchedReference: res.attributionMatch?.reference ?? null,
-      matchGapMinutes: res.attributionMatch?.gapMinutes ?? null,
-      searchedTime: res.contactTimeSearched,
-    })
+    if (!res.success) { setPending(false); setError(res.error); return }
+
+    // The visit picked in "Find the website visit" goes on now the order
+    // exists. A failure leaves a perfectly good order; its page says so and
+    // has the same finder to try again.
+    let visitFailed = false
+    if (visit && !whatsappReference.trim() && !leadReference.trim()) {
+      const matched = await matchOrderToVisit({ orderId: res.fullOrderId, sessionId: visit.session_id })
+      visitFailed = 'error' in matched
+    }
+    setPending(false)
+    setDone({ reference: res.orderId, total: res.total })
     reset()
     // Straight to the new order, where the next step and its WhatsApp message are.
-    router.push(`/admin/orders/${res.fullOrderId}?done=created`)
+    router.push(`/admin/orders/${res.fullOrderId}?done=created${visitFailed ? '&visit=failed' : ''}`)
   }
 
   if (!open) {
@@ -269,18 +245,6 @@ export default function NewWhatsAppOrder({
           <Check className="h-4 w-4 shrink-0" />
           <span className="leading-relaxed">
             Saved as <strong className="font-mono">#{done.reference}</strong> — £{done.total.toFixed(2)}
-            {done.matchedReference ? (
-              <>
-                <br />
-                <strong>Attribution linked:</strong> {done.matchedReference}
-                {done.matchGapMinutes !== null ? ` · ${done.matchGapMinutes} min before the WhatsApp message` : ''}
-              </>
-            ) : done.searchedTime ? (
-              <>
-                <br />
-                <strong>No tracked WhatsApp click found in the previous 10 minutes.</strong> Order saved without a guessed attribution.
-              </>
-            ) : null}
           </span>
         </div>
       )}
@@ -441,96 +405,11 @@ export default function NewWhatsAppOrder({
             value={whatsappReference}
             onChange={e => {
               setWhatsappReference(e.target.value.toUpperCase())
-              if (e.target.value.trim()) setMatchByTime(false)
+              if (e.target.value.trim()) { setVisit(null); setFindingVisit(false) }
             }}
             placeholder="UKSS-WA-260906-A7F31C"
             autoComplete="off"
           />
-
-          <div className="my-3 flex items-center gap-3 text-[10px] font-bold uppercase tracking-[0.2em] text-stone-400">
-            <span className="h-px flex-1 bg-stone-200" />
-            Or
-            <span className="h-px flex-1 bg-stone-200" />
-          </div>
-
-          <button
-            type="button"
-            onClick={() => {
-              setMatchByTime(v => !v)
-              if (!matchByTime) setWhatsappReference('')
-            }}
-            className="inline-flex items-center gap-2 rounded-sm border border-stone-300 bg-white px-3 py-2 text-xs font-bold text-stone-700 transition hover:border-stone-400"
-          >
-            <Clock3 className="h-4 w-4" />
-            {matchByTime ? 'Hide contact-time matcher' : 'No reference? Match by WhatsApp message time'}
-          </button>
-
-          {matchByTime && (
-            <div className="mt-4 rounded-sm border border-blue-100 bg-blue-50/60 p-3">
-              <p className="m-0 text-xs leading-relaxed text-stone-600">
-                Enter the time shown beside the customer&apos;s first WhatsApp message. We only look
-                <strong> backwards</strong> for the closest unconverted website WhatsApp click within
-                <strong> 10 minutes</strong>. If there is no tracked click, the order still saves and nothing is guessed.
-              </p>
-              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
-                <div className="col-span-2 sm:col-span-1">
-                  <label className={label} htmlFor="wa-contact-date">Date</label>
-                  <input id="wa-contact-date" type="date" className={field} value={contactDate} onChange={e => { setContactDate(e.target.value); setTimePreview(undefined) }} />
-                </div>
-                <div>
-                  <label className={label} htmlFor="wa-contact-hour">Hour</label>
-                  <select id="wa-contact-hour" className={field} value={contactHour} onChange={e => { setContactHour(e.target.value); setTimePreview(undefined) }}>
-                    {Array.from({ length: 12 }, (_, i) => String(i + 1)).map(h => <option key={h} value={h}>{h}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className={label} htmlFor="wa-contact-minute">Minute</label>
-                  <select id="wa-contact-minute" className={field} value={contactMinute} onChange={e => { setContactMinute(e.target.value); setTimePreview(undefined) }}>
-                    {Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0')).map(m => <option key={m} value={m}>{m}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className={label} htmlFor="wa-contact-meridiem">AM / PM</label>
-                  <select id="wa-contact-meridiem" className={field} value={contactMeridiem} onChange={e => { setContactMeridiem(e.target.value as 'AM' | 'PM'); setTimePreview(undefined) }}>
-                    <option value="AM">AM</option>
-                    <option value="PM">PM</option>
-                  </select>
-                </div>
-                <div className="col-span-2 sm:col-span-1">
-                  <label className={label} htmlFor="wa-contact-zone">Clock shown in</label>
-                  <select id="wa-contact-zone" className={field} value={contactTimezone} onChange={e => { setContactTimezone(e.target.value as 'Asia/Karachi' | 'Europe/London'); setTimePreview(undefined) }}>
-                    <option value="Asia/Karachi">Pakistan</option>
-                    <option value="Europe/London">UK</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
-                <button
-                  type="button"
-                  onClick={previewTimeMatch}
-                  disabled={matchingTime || !contactDate}
-                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-sm bg-blue-700 px-4 text-xs font-bold text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {matchingTime ? <Loader2 className="h-4 w-4 animate-spin" /> : <Clock3 className="h-4 w-4" />}
-                  {matchingTime ? 'Checking…' : 'Find tracked click'}
-                </button>
-                {timePreview === null && (
-                  <p className="m-0 text-xs font-semibold text-amber-700">
-                    No unconverted website WhatsApp click in the previous 10 minutes.
-                  </p>
-                )}
-                {timePreview && (
-                  <div className="rounded-sm border border-green-200 bg-green-50 px-3 py-2 text-xs leading-relaxed text-green-800">
-                    <strong>{timePreview.reference}</strong>
-                    {timePreview.gapMinutes !== null ? ' · ' + timePreview.gapMinutes + ' min earlier' : ''}
-                    {timePreview.utmSource ? ' · ' + timePreview.utmSource : ''}
-                    {timePreview.utmContent ? ' · ' + timePreview.utmContent : ''}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
 
           <div className="my-3 flex items-center gap-3 text-[10px] font-bold uppercase tracking-[0.2em] text-stone-400">
             <span className="h-px flex-1 bg-stone-200" />
@@ -550,7 +429,10 @@ export default function NewWhatsAppOrder({
             id="lead-reference"
             className={`${field} uppercase`}
             value={leadReference}
-            onChange={e => setLeadReference(e.target.value.toUpperCase())}
+            onChange={e => {
+              setLeadReference(e.target.value.toUpperCase())
+              if (e.target.value.trim()) { setVisit(null); setFindingVisit(false) }
+            }}
             placeholder="UKSS-LD-261006-7E1E91"
             autoComplete="off"
           />
@@ -561,6 +443,41 @@ export default function NewWhatsAppOrder({
             reports against the campaign that produced it. An unknown or
             already-used reference is ignored and the order still saves.
           </p>
+
+          <div className="my-3 flex items-center gap-3 text-[10px] font-bold uppercase tracking-[0.2em] text-stone-400">
+            <span className="h-px flex-1 bg-stone-200" />
+            Or
+            <span className="h-px flex-1 bg-stone-200" />
+          </div>
+
+          {/* Everyone else - swatches, a call, a chat from a saved number:
+              find their visit by when they were on the site and what they
+              looked at. See FindVisit.tsx. */}
+          {findingVisit || visit ? (
+            <div className="rounded-sm border border-blue-100 bg-blue-50/60 p-3">
+              <p className="m-0 mb-3 text-xs leading-relaxed text-stone-600">
+                No reference? Find their visit by time. Lists people who were on the
+                website then, with the pages they opened. Pick the one that matches what
+                the customer said. Their ad click goes on the order when you save it.
+              </p>
+              <FindVisit
+                products={products}
+                phone={phone}
+                defaultProductId={firstProductId}
+                defaultChannel={channel === 'phone' ? 'call' : 'whatsapp'}
+                mode={{ kind: 'pick', selected: visit, onPick: v => { setVisit(v); if (v) { setWhatsappReference(''); setLeadReference('') } } }}
+              />
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setFindingVisit(true)}
+              className="inline-flex min-h-11 items-center gap-2 rounded-sm border border-stone-300 bg-white px-3 py-2 text-xs font-bold text-stone-700 transition hover:border-stone-400"
+            >
+              <Search className="h-4 w-4" />
+              No reference? Find the website visit
+            </button>
+          )}
         </div>
 
         <div className="grid gap-4 sm:grid-cols-3">
