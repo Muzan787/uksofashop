@@ -52,7 +52,7 @@ interface SwatchResult {
 export async function requestSwatches(input: unknown): Promise<SwatchResult> {
   const limit = rateLimit(callerKey(await headers(), 'swatch'), 5, 60 * 60 * 1000)
   if (!limit.ok) {
-    return { error: 'That is a lot of sample requests. Give us a ring on 07476 616022 and we will sort it out.' }
+    return { error: 'That is a lot of sample requests. Give us a ring on 07462 258934 and we will sort it out.' }
   }
 
   const parsed = schema.safeParse(input)
@@ -85,7 +85,7 @@ export async function requestSwatches(input: unknown): Promise<SwatchResult> {
       return { error: 'One of those fabrics is no longer available. Please pick another.' }
     }
     console.error('Swatch request failed:', error)
-    return { error: 'We could not send that request. Please try again, or call us on 07476 616022.' }
+    return { error: 'We could not send that request. Please try again, or call us on 07462 258934.' }
   }
 
   // The names as the customer chose them. Read back rather than trusted from

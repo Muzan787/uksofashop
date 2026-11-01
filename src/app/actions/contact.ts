@@ -41,7 +41,7 @@ export async function submitContactForm(formData: FormData) {
   if (!limit.ok) {
     const minutes = Math.max(1, Math.ceil(limit.retryAfter / 60))
     return {
-      error: `You have sent several messages already. Please wait about ${minutes} minute${minutes === 1 ? '' : 's'} and try again, or call us on 07476 616022.`,
+      error: `You have sent several messages already. Please wait about ${minutes} minute${minutes === 1 ? '' : 's'} and try again, or call us on 07462 258934.`,
     }
   }
 

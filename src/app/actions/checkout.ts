@@ -244,7 +244,7 @@ export async function placeOrder(
   // well beyond normal customer behaviour and protects both order/email load.
   const limit = rateLimit(callerKey(await headers(), 'order'), 10, 60 * 60 * 1000)
   if (!limit.ok) {
-    return { error: 'Too many orders from this connection. Please call us on 07476 616022 and we will take it over the phone.' }
+    return { error: 'Too many orders from this connection. Please call us on 07462 258934 and we will take it over the phone.' }
   }
 
   const jar = await cookies()
@@ -420,7 +420,7 @@ export async function placeOrder(
       // lookup here did not: name that area's first day.
       return { error: `Please choose a delivery date from ${formatPreferredDeliveryDate(earliestPreferredDeliveryDate(undefined, shop, true))} onwards.` }
     }
-    return { error: 'We could not place your order. Please try again, or call us on 07476 616022.' }
+    return { error: 'We could not place your order. Please try again, or call us on 07462 258934.' }
   }
 
   // Totals as the database computed them, not as the browser reported them, so

@@ -97,7 +97,7 @@ export default async function ReviewPage(props: { searchParams: SearchParams }) 
         </div>
 
         <p className="text-center text-caption text-ink-500 mt-6 leading-relaxed">
-          Something not right with your order? Please call us on 07476 616022
+          Something not right with your order? Please call us on 07462 258934
           rather than leaving it here — we would much rather fix it.
         </p>
       </div>
