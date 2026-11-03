@@ -5,7 +5,6 @@ import { useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { useWhatsAppCTA } from '@/utils/attribution/useWhatsAppCTA';
 import { productEnquiryMessage } from '@/utils/enquiryMessage';
-import { HALLOWEEN_HOME_MESSAGE, HALLOWEEN_LIVE, withHalloweenOpener } from '@/constants/halloween';
 import { useOffer } from '@/components/Offer/OfferProvider';
 import { useCompactFab } from './useCompactFab';
 
@@ -139,10 +138,8 @@ export default function WhatsAppFab() {
     message: supportOnly
       ? 'Hi, I need some help with an existing order or account.'
       : productContext
-        ? withHalloweenOpener(productEnquiryMessage(productContext.productName, productContext.price, offerHold), productContext.productId)
-        : HALLOWEEN_LIVE && pathname === '/'
-          ? HALLOWEEN_HOME_MESSAGE
-          : 'Hi, I’d like some help with a sofa enquiry.',
+        ? productEnquiryMessage(productContext.productName, productContext.price, offerHold)
+        : 'Hi, I’d like some help with a sofa enquiry.',
     pageContext: supportOnly
       ? 'whatsapp_fab_support'
       : productContext

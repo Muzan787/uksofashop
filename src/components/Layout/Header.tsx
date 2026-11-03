@@ -12,9 +12,6 @@ import MobileMenu from './MobileMenu';
 import SearchOverlay from './SearchOverlay';
 import { useOffer } from '@/components/Offer/OfferProvider';
 import OfferAnnouncement from '@/components/Offer/OfferAnnouncement';
-import { HALLOWEEN_LIVE } from '@/constants/halloween';
-import HalloweenAnnouncement from '@/components/Halloween/HalloweenAnnouncement';
-import { Bat } from '@/components/Halloween/Icons';
 
 /** One message. This bar used to cycle four of them every four seconds. */
 const ANNOUNCEMENT = ANNOUNCEMENTS[0];
@@ -82,13 +79,9 @@ export default function Header({ categories }: { categories: NavCategory[] }) {
   // took 72px off the top of every ad landing page. While the visitor's
   // window is open it is the countdown - its own component, so the tick
   // re-renders a line of text rather than this whole header.
-  // Halloween 2026 keeps the countdown and adds a pumpkin and the
-  // midnight-sofas link - see constants/halloween.ts.
-  const announcement = HALLOWEEN_LIVE
-    ? <HalloweenAnnouncement offerActive={offerActive} />
-    : offerActive
-      ? <OfferAnnouncement />
-      : ANNOUNCEMENT;
+  const announcement = offerActive
+    ? <OfferAnnouncement />
+    : ANNOUNCEMENT;
 
   const [scrolled, setScrolled] = useState(false);
   const [scrollDir, setScrollDir] = useState<'up' | 'down'>('up');
@@ -205,28 +198,16 @@ export default function Header({ categories }: { categories: NavCategory[] }) {
           data-ground="dark"
           className="grad-ink relative flex min-h-9 items-center justify-center bg-ink-900 px-12 py-2"
         >
-          {/* Halloween: a bat at each end where there is room. The ground
-              stays ink - the homepage hero's top edge has to match it. */}
-          {HALLOWEEN_LIVE && (
-            <>
-              <Bat className="pointer-events-none absolute left-4 top-1/2 hidden h-3.5 w-9 -translate-y-1/2 -rotate-6 text-ember-500/70 sm:block" />
-              <Bat className="pointer-events-none absolute right-14 top-1/2 hidden h-3 w-7 -translate-y-1/2 rotate-6 text-ember-500/50 sm:block" />
-            </>
-          )}
-
           <p aria-live="polite" className="eyebrow m-0 text-center text-calico-300">
             {announcement}
           </p>
 
           {/* The fading ember hairline along the bottom edge, so the bar hands
-              over to whatever is beneath it rather than simply stopping.
-              Pumpkin orange from the middle out for Halloween. */}
+              over to whatever is beneath it rather than simply stopping. */}
           <span
             aria-hidden="true"
             className="absolute inset-x-0 bottom-0 h-px"
-            style={HALLOWEEN_LIVE
-              ? { backgroundImage: 'linear-gradient(90deg, transparent, var(--color-ember-500), transparent)' }
-              : { backgroundImage: 'var(--grad-rule)', opacity: 0.5 }}
+            style={{ backgroundImage: 'var(--grad-rule)', opacity: 0.5 }}
           />
           <button
             type="button"

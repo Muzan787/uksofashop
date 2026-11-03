@@ -10,8 +10,6 @@ import { HERO_PRODUCT_SLUG } from '@/constants/homeArt';
 import { CUSTOMER_REVIEWS } from '@/constants/socialReviews';
 import type { HomeReview } from '@/components/Home/ReviewTicker';
 import { organizationSchema, webSiteSchema, jsonLd } from '@/utils/schema';
-import { HALLOWEEN_LIVE } from '@/constants/halloween';
-import { getHalloweenHome } from '@/utils/halloweenHome';
 
 // The title deliberately repeats the layout default rather than using the
 // "%s | UK Sofa Shop" template - the homepage should not read "Home | ...".
@@ -156,11 +154,9 @@ const getHomeData = unstable_cache(
 );
 
 export default async function HomePage() {
-  // Halloween 2026's hero sofa and Midnight rail, read alongside - see
-  // constants/halloween.ts.
-  const [{
+  const {
     categories, categoryStats, featuredProducts, groupsData, sofaCount, reviewRows, heroProduct, buildTeaser, bedProducts,
-  }, halloween] = await Promise.all([getHomeData(), HALLOWEEN_LIVE ? getHalloweenHome() : null]);
+  } = await getHomeData();
 
   // "from £149" under Fabric Sofas was the Sims footstool. The tile says
   // "sofas", so the price anchor is the cheapest thing that is one: footstools
@@ -245,7 +241,6 @@ export default async function HomePage() {
         sofaCount={sofaCount ?? 0}
         reviews={reviews}
         buildTeaser={buildTeaser}
-        halloween={halloween}
         beds={(bedProducts ?? []).map(toCardShape)}
       />
     </>
