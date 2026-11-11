@@ -40,7 +40,8 @@ import { SITE_URL } from '@/constants/site';
 import { createRecoveryOptOutToken } from '@/utils/recoveryToken';
 import { createAdminClient } from '@/utils/supabase/admin';
 import type { ConfirmedSummary } from '@/utils/digestSources';
-import { formatMoney, rowAmountText, rowLabelText, type Receipt } from '@/utils/orderReceipt';
+import { formatMoney, rowAmountText, rowLabelText, type Receipt } from '@/utils/orderReceipt'
+import { depositFigures } from '@/utils/orderDeposit';
 
 /**
  * Escapes a value before it goes into an email's HTML.
@@ -77,7 +78,10 @@ const totalsTable = (
   discountAmount = 0,
   promotionCode: string | null = null,
   accent = '#d4871a',
+  /** Pounds already paid as a deposit. Part of the total: the balance is what is left. */
+  depositPaid = 0,
 ) => {
+  const { deposit, balance, has: hasDeposit } = depositFigures(grandTotal, depositPaid);
   const row = (label: string, value: string, muted = false) => `
     <tr>
       <td style="padding: 5px 0; color: ${muted ? '#a8a29e' : '#57534e'}; font-size: 13px;">${label}</td>
@@ -103,10 +107,23 @@ const totalsTable = (
       ${offer}
       ${agreed ? '' : row('Delivery (ground floor)', 'FREE')}
       ${extras}
+      ${hasDeposit ? `
+      <tr>
+        <td style="padding: 12px 0 0 0; border-top: 1px solid #e7e5e4; color: #1c1917; font-size: 14px; font-weight: bold;">Order total</td>
+        <td style="padding: 12px 0 0 0; border-top: 1px solid #e7e5e4; color: #1c1917; font-size: 14px; font-weight: bold; text-align: right; white-space: nowrap;">£${grandTotal.toFixed(2)}</td>
+      </tr>
+      <tr>
+        <td style="padding: 5px 0; color: #166534; font-size: 13px;">Deposit paid</td>
+        <td style="padding: 5px 0; color: #166534; font-size: 13px; text-align: right; white-space: nowrap;">−£${deposit.toFixed(2)}</td>
+      </tr>
+      <tr>
+        <td style="padding: 10px 0 0 0; color: #1c1917; font-size: 14px; font-weight: bold;">Balance due on delivery</td>
+        <td style="padding: 10px 0 0 0; color: ${accent}; font-size: 18px; font-weight: bold; text-align: right; white-space: nowrap;">£${balance.toFixed(2)}</td>
+      </tr>` : `
       <tr>
         <td style="padding: 12px 0 0 0; border-top: 1px solid #e7e5e4; color: #1c1917; font-size: 14px; font-weight: bold;">Total due on delivery</td>
         <td style="padding: 12px 0 0 0; border-top: 1px solid #e7e5e4; color: ${accent}; font-size: 18px; font-weight: bold; text-align: right; white-space: nowrap;">£${grandTotal.toFixed(2)}</td>
-      </tr>
+      </tr>`}
     </table>`;
 };
 
@@ -470,6 +487,8 @@ export async function sendOrderConfirmation(
   promotionCode: string | null = null,
   /** The day they asked for at checkout, YYYY-MM-DD, or null for as soon as possible. */
   preferredDeliveryDate: string | null = null,
+  /** A deposit already recorded on the order (one taken by hand), in pounds. */
+  depositPaid = 0,
 ) {
   // A receipt that carries the confirm link. The shop also sends the same
   // link on WhatsApp (see sendAdminOrderNotification) so the yes is on record
@@ -504,7 +523,7 @@ export async function sendOrderConfirmation(
         <p style="margin: 0 0 24px 0; color: #78716c; font-size: 12px;">We will ring to agree the time slot on the day.</p>` : ''}
         
         <div style="text-align: left; padding-top: 4px;">
-          ${totalsTable(itemsSubtotal, breakdown, total, discountAmount, promotionCode)}
+          ${totalsTable(itemsSubtotal, breakdown, total, discountAmount, promotionCode, undefined, depositPaid)}
         </div>
       </div>
 
@@ -546,6 +565,8 @@ export async function sendAdminOrderNotification(
    * rather than the whole notification.
    */
   copyText: string | null = null,
+  /** A deposit already recorded on the order, in pounds. */
+  depositPaid = 0,
 ) {
   const adminEmail = process.env.ADMIN_EMAIL;
   if (!adminEmail) {
@@ -596,7 +617,7 @@ Once it is confirmed we will ring you to arrange delivery.`,
         <p style="margin: 0 0 16px 0; font-size: 16px; font-weight: bold;">${preferredDeliveryDate ? esc(formatPreferredDeliveryDate(preferredDeliveryDate)) : 'As soon as possible'}</p>
         
         <p style="margin: 0 0 6px 0; color: #78716c; font-size: 11px; text-transform: uppercase; font-weight: bold;">Amount to Collect</p>
-        ${totalsTable(itemsSubtotal, breakdown, totalAmount, discountAmount, promotionCode)}
+        ${totalsTable(itemsSubtotal, breakdown, totalAmount, discountAmount, promotionCode, undefined, depositPaid)}
         ${(breakdown?.lines.some(l => l.key === 'sofaRemoval'))
           ? `<p style="margin: 14px 0 0 0; padding: 10px 12px; background: #fef9f0; border-left: 3px solid #d4871a; color: #57534e; font-size: 12px;">
                <strong>Action:</strong> this customer wants their old sofa removed (${esc(breakdown?.lines.find(l => l.key === 'sofaRemoval')?.detail ?? '')}). Confirm the charge with them before delivery if the item is unusually large.
@@ -647,6 +668,8 @@ export async function sendAdminOrderConfirmedNotification(
   shippingAddress: string,
   /** The day they asked for, YYYY-MM-DD, or null for as soon as possible. */
   preferredDeliveryDate: string | null = null,
+  /** A deposit already recorded on the order, in pounds. */
+  depositPaid = 0,
 ) {
   const adminEmail = process.env.ADMIN_EMAIL;
   if (!adminEmail) {
@@ -688,7 +711,8 @@ export async function sendAdminOrderConfirmedNotification(
         <p style="margin: 0 0 16px 0; font-size: 14px; line-height: 1.5;">${esc(shippingAddress)}</p>
 
         <p style="margin: 0 0 4px 0; color: #78716c; font-size: 11px; text-transform: uppercase; font-weight: bold;">Amount to Collect</p>
-        <p style="margin: 0; font-size: 20px; font-weight: bold; color: #d4871a;">£${totalAmount.toFixed(2)}</p>
+        <p style="margin: 0; font-size: 20px; font-weight: bold; color: #d4871a;">£${depositFigures(totalAmount, depositPaid).balance.toFixed(2)}</p>
+        ${depositFigures(totalAmount, depositPaid).has ? `<p style="margin: 4px 0 0 0; color: #57534e; font-size: 12px;">Order total £${totalAmount.toFixed(2)}, less a £${depositFigures(totalAmount, depositPaid).deposit.toFixed(2)} deposit already paid.</p>` : ''}
       </div>
 
       <a href="tel:${esc(customerPhone.replace(/[^0-9+]/g, ''))}" style="background-color: #0c0c0b; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px; display: inline-block; margin-top: 4px;">Call ${esc(firstName)} now</a>
@@ -1179,7 +1203,21 @@ export async function sendOrderReceipt(
   ].join('')
 
   const paid = receipt.payment.kind === 'paid'
-  const totalLabel = receipt.payment.kind === 'due' ? 'Total due on delivery' : 'Total'
+  // With a deposit recorded, the total is just the total; what is left to pay
+  // is the balance row beneath it.
+  const depositDue = receipt.deposit !== null && receipt.payment.kind === 'due'
+  const totalLabel = receipt.payment.kind === 'due' && !depositDue ? 'Total due on delivery' : 'Total'
+  const depositRows = depositDue && receipt.deposit
+    ? `
+        <tr>
+          <td style="padding: 5px 0; color: #166534; font-size: 13px;">Deposit paid${receipt.deposit.paidOn ? ` (${esc(receipt.deposit.paidOn)})` : ''}</td>
+          <td style="padding: 5px 0; color: #166534; font-size: 13px; text-align: right; white-space: nowrap;">−${formatMoney(receipt.deposit.amount)}</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 0 0 0; color: #1c1917; font-size: 14px; font-weight: bold;">Balance due on delivery</td>
+          <td style="padding: 10px 0 0 0; color: #d4871a; font-size: 18px; font-weight: bold; text-align: right; white-space: nowrap;">${formatMoney(receipt.balance)}</td>
+        </tr>`
+    : ''
 
   const intro = receipt.status === 'delivered'
     ? 'Thank you for ordering from us. We hope you are enjoying your new furniture. Your receipt is below, with your guarantee dates.'
@@ -1211,8 +1249,8 @@ export async function sendOrderReceipt(
         ${summaryRows}
         <tr>
           <td style="padding: 12px 0 0 0; border-top: 1px solid #e7e5e4; color: #1c1917; font-size: 14px; font-weight: bold;">${totalLabel}</td>
-          <td style="padding: 12px 0 0 0; border-top: 1px solid #e7e5e4; color: #d4871a; font-size: 18px; font-weight: bold; text-align: right; white-space: nowrap;">${formatMoney(receipt.total)}</td>
-        </tr>
+          <td style="padding: 12px 0 0 0; border-top: 1px solid #e7e5e4; color: ${depositDue ? '#1c1917' : '#d4871a'}; font-size: ${depositDue ? '14px' : '18px'}; font-weight: bold; text-align: right; white-space: nowrap;">${formatMoney(receipt.total)}</td>
+        </tr>${depositRows}
       </table>
 
       ${paid ? `

@@ -63,6 +63,10 @@ export interface AdminOrderDisplay {
   status?: string | null
   /** When it was marked delivered: the day the guarantee starts. */
   delivered_at?: string | null
+  /** Pounds received as a deposit, part of total_amount. 0 or absent = none. */
+  deposit_paid?: number | null
+  /** When the deposit was first recorded. */
+  deposit_paid_at?: string | null
   wants_assembly?: boolean | null
   wants_sofa_removal?: boolean | null
   order_items: AdminOrderItemDisplay[]

@@ -9,6 +9,7 @@ import { createClient } from '@/utils/supabase/server'
 import { loadPickers } from './orderData'
 import OrdersList, { FILTERS, type ListOrder } from './OrdersList'
 import { cleanSearch, isOrderCode } from '@/utils/orderSearch'
+import { depositFigures } from '@/utils/orderDeposit'
 
 export const metadata: Metadata = { title: 'Orders' }
 export const dynamic = 'force-dynamic'
@@ -68,6 +69,23 @@ export default async function AdminOrdersPage(props: { searchParams: SearchParam
     withPreferredDay: real.filter(row => OPEN.has(statusOf(row)) && row.preferred_delivery_date).length,
   }
 
+  // Deposits already taken. A query of its own, and one that may come back
+  // empty: the figure only exists once the deposit migration has run, and the
+  // list must still open without it.
+  const { data: depositRows } = await supabase
+    .from('orders')
+    .select('id, status, is_test, total_amount, deposit_paid')
+    .gt('deposit_paid', 0)
+    .limit(2000)
+  const deposits: Record<string, number> = {}
+  for (const row of (depositRows ?? []) as { id: string; status: string | null; is_test: boolean | null; total_amount: number | null; deposit_paid: number | null }[]) {
+    const { deposit } = depositFigures(row.total_amount, row.deposit_paid)
+    deposits[row.id] = deposit
+    // Money already in the bank is not money still to collect.
+    if (!row.is_test && OPEN.has(row.status ?? 'pending_cod')) tiles.toCollect -= deposit
+  }
+  tiles.toCollect = Math.max(0, Math.round(tiles.toCollect * 100) / 100)
+
   // Search first, then the filter and the page on what it found.
   let matched: string[] | null = null
   let searchTooBroad: number | null = null
@@ -112,6 +130,7 @@ export default async function AdminOrdersPage(props: { searchParams: SearchParam
       lastPage={Math.max(1, Math.ceil(total / PER_PAGE))}
       counts={counts}
       tiles={tiles}
+      deposits={deposits}
       pickers={pickers}
       openForm={sp.new === '1'}
       reference={(sp.ref ?? '').replace(/[^A-Za-z0-9-]/g, '').slice(0, 40)}

@@ -1009,6 +1009,8 @@ export type Database = {
           delivery_floor: number
           delivery_has_lift: boolean
           delivery_total: number
+          deposit_paid: number
+          deposit_paid_at: string | null
           discount_amount: number
           discount_tier: string | null
           promotion_code: string | null
@@ -1079,6 +1081,8 @@ export type Database = {
           delivery_floor?: number
           delivery_has_lift?: boolean
           delivery_total?: number
+          deposit_paid?: number
+          deposit_paid_at?: string | null
           discount_amount?: number
           discount_tier?: string | null
           promotion_code?: string | null
@@ -1147,6 +1151,8 @@ export type Database = {
           delivery_floor?: number
           delivery_has_lift?: boolean
           delivery_total?: number
+          deposit_paid?: number
+          deposit_paid_at?: string | null
           discount_amount?: number
           discount_tier?: string | null
           promotion_code?: string | null
@@ -1988,6 +1994,8 @@ export type Database = {
       add_order_note: { Args: { p_order_id: string; p_note: string }; Returns: number }
       set_order_source: { Args: { p_order_id: string; p_source: string | null; p_note?: string | null }; Returns: undefined }
       delete_order: { Args: { p_order_id: string }; Returns: boolean }
+      set_order_deposit: { Args: { p_order_id: string; p_amount: number }; Returns: undefined }
+      order_deposit: { Args: { p_order_id: string }; Returns: Json }
       set_order_channel: { Args: { p_order_id: string; p_channel: string | null }; Returns: undefined }
       find_order_visits: { Args: { p_from: string; p_to: string; p_at: string; p_product_id?: string | null; p_phone?: string | null; p_channel?: string | null }; Returns: Json }
       match_order_visit: { Args: { p_order_id: string; p_session_id: string | null; p_note?: string | null }; Returns: Json }

@@ -159,3 +159,84 @@ test('before delivery the email says what is due and does not claim it is paid',
   assert.match(html, /starts on the day it is delivered/)
   assert.doesNotMatch(html, /Amount paid/)
 })
+
+// ── A deposit taken on the call ──────────────────────────────────────────────
+const { depositFigures, parseDepositInput } = load('src/utils/orderDeposit.ts', {}, { env: {} })
+
+test('the deposit is part of the price: the balance is the total less the deposit, never negative', () => {
+  assert.deepEqual(plain(depositFigures(1330, 200)), { deposit: 200, balance: 1130, has: true })
+  assert.deepEqual(plain(depositFigures(1330, 0)), { deposit: 0, balance: 1330, has: false })
+  assert.deepEqual(plain(depositFigures(1330, undefined)), { deposit: 0, balance: 1330, has: false })
+  // A total edited down below an old deposit clamps rather than going negative.
+  assert.deepEqual(plain(depositFigures(100, 150)), { deposit: 100, balance: 0, has: true })
+  assert.equal(depositFigures(0.3, 0.1).balance, 0.2)
+})
+
+test('the deposit field reads pounds, empty as none, and refuses anything else', () => {
+  assert.deepEqual(plain(parseDepositInput('')), { ok: true, value: 0 })
+  assert.deepEqual(plain(parseDepositInput(' £150.50 ')), { ok: true, value: 150.5 })
+  assert.equal(parseDepositInput('-5').ok, false)
+  assert.equal(parseDepositInput('1e3').ok, false)
+  assert.equal(parseDepositInput('12.345').ok, false)
+})
+
+test('an open order with a deposit shows the balance due, not the whole total', () => {
+  const r = buildReceipt({ ...ORDER, deposit_paid: 200, deposit_paid_at: '2026-11-04T09:00:00Z' })
+  assert.equal(r.total, 1330)
+  assert.deepEqual(plain(r.deposit), { amount: 200, paidOn: '4 November 2026' })
+  assert.equal(r.balance, 1130)
+  assert.equal(r.payment.kind, 'due')
+  assert.equal(r.payment.heading, 'Balance due on delivery')
+  assert.equal(r.payment.amount, 1130)
+  assert.match(r.payment.note, /£200\.00 deposit \(received 4 November 2026\) is already taken off/)
+})
+
+test('a delivered order with a deposit says what was paid when', () => {
+  const r = buildReceipt({ ...ORDER, status: 'delivered', delivered_at: '2026-11-12T14:30:00Z', deposit_paid: 200, deposit_paid_at: '2026-11-04T09:00:00Z' })
+  assert.equal(r.payment.heading, 'Amount paid')
+  assert.equal(r.payment.amount, 1330)
+  assert.match(r.payment.note, /a £200\.00 deposit on 4 November 2026 and the £1130\.00 balance on delivery, 12 November 2026/)
+  // Nothing recorded: the receipt reads exactly as it did.
+  const none = buildReceipt({ ...ORDER, status: 'delivered', delivered_at: '2026-11-12T14:30:00Z' })
+  assert.equal(none.deposit, null)
+  assert.match(none.payment.note, /^Paid in full on delivery, 12 November 2026/)
+})
+
+test('the receipt email carries the deposit and the balance, and the paid one the split', async () => {
+  const { email, sent } = mailer()
+  await email.sendOrderReceipt('ann@example.test', buildReceipt({ ...ORDER, deposit_paid: 200, deposit_paid_at: '2026-11-04T09:00:00Z' }))
+  const html = String(sent[0].html)
+  assert.match(html, /Deposit paid \(4 November 2026\)/)
+  assert.match(html, /−£200\.00/)
+  assert.match(html, /Balance due on delivery/)
+  assert.match(html, /£1130\.00/)
+  assert.doesNotMatch(html, /Total due on delivery/)
+
+  const m2 = mailer()
+  await m2.email.sendOrderReceipt('ann@example.test', buildReceipt({ ...ORDER, status: 'delivered', delivered_at: '2026-11-12T14:30:00Z', deposit_paid: 200 }))
+  assert.match(String(m2.sent[0].html), /Amount paid: £1330\.00/)
+  assert.match(String(m2.sent[0].html), /£200\.00 deposit/)
+})
+
+test('the order confirmation email shows the deposit and the balance', async () => {
+  const { email, sent } = mailer()
+  const breakdown = { lines: [{ key: 'agreed', label: 'Delivery (as agreed)', amount: 80 }], total: 80 }
+  await email.sendOrderConfirmation('ann@example.test', 'Ann Smith', '0B5C3A1E', ORDER.id, 1380, 1300, breakdown, 0, null, null, 300)
+  const html = String(sent[0].html)
+  assert.match(html, /Order total/)
+  assert.match(html, /Deposit paid/)
+  assert.match(html, /−£300\.00/)
+  assert.match(html, /Balance due on delivery[\s\S]*£1080\.00/)
+  // Without one, it reads as it always did.
+  const plainMail = mailer()
+  await plainMail.email.sendOrderConfirmation('ann@example.test', 'Ann Smith', '0B5C3A1E', ORDER.id, 1380, 1300, breakdown)
+  assert.match(String(plainMail.sent[0].html), /Total due on delivery/)
+  assert.doesNotMatch(String(plainMail.sent[0].html), /Deposit paid/)
+})
+
+test('the text copied to WhatsApp states the balance to collect', () => {
+  const { formatOrderForCopy } = load('src/utils/orderText.ts', {}, { env: {} })
+  const withDeposit = formatOrderForCopy({ ...ORDER, deposit_paid: 200 })
+  assert.match(withDeposit, /Total: £1330\.00\nDeposit paid: −£200\.00\nBalance to collect on delivery: £1130\.00/)
+  assert.doesNotMatch(formatOrderForCopy(ORDER), /Deposit/)
+})

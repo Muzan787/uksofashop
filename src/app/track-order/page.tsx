@@ -13,6 +13,7 @@ import { PHONE_DISPLAY, PHONE_HREF } from '@/constants/contact'
 import { usePhoneClick } from '@/utils/attribution/usePhoneClick'
 import { formatPreferredDeliveryDate } from '@/utils/delivery'
 import { finishText } from '@/utils/orderFinish'
+import { depositFigures } from '@/utils/orderDeposit'
 
 /**
  * Where is it.
@@ -172,6 +173,7 @@ function Result({ order }: { order: TrackedOrder }) {
   const reference = order.id.split('-')[0].toUpperCase()
   const deliveryTotal = Number(order.delivery_total ?? 0)
   const discountAmount = Number(order.discount_amount ?? 0)
+  const owed = depositFigures(order.total_amount, order.deposit_paid)
 
   return (
     <div className="mt-8 overflow-hidden rounded-md border border-calico-300 bg-calico-50 shadow-e1 motion-safe:animate-[fadeUp_var(--dur-settle)_var(--ease-out-expo)]">
@@ -271,15 +273,34 @@ function Result({ order }: { order: TrackedOrder }) {
               <span aria-hidden="true" className="my-1 h-px bg-calico-50/10" />
             </>
           )}
-          <div className="flex items-baseline justify-between gap-4">
-            <span className="text-body-sm font-semibold text-calico-300">
-              {order.status === 'delivered' ? 'Paid on delivery' : 'Due on delivery'}
-            </span>
-            {/* Ember 300, not Ember 700. On Ink 900 the dark ember is 2.4:1. */}
-            <span className="font-data text-body font-bold tabular-nums text-ember-300">
-              £{Number(order.total_amount).toFixed(2)}
-            </span>
-          </div>
+          {owed.has && order.status !== 'cancelled' ? (
+            <>
+              <Line label="Order total" value={Number(order.total_amount)} />
+              <div className="flex items-baseline justify-between gap-4 text-caption text-calico-300">
+                <span>Deposit paid</span>
+                <span className="font-data tabular-nums text-sage-300">−£{owed.deposit.toFixed(2)}</span>
+              </div>
+              <span aria-hidden="true" className="my-1 h-px bg-calico-50/10" />
+              <div className="flex items-baseline justify-between gap-4">
+                <span className="text-body-sm font-semibold text-calico-300">
+                  {order.status === 'delivered' ? 'Balance paid on delivery' : 'Balance due on delivery'}
+                </span>
+                <span className="font-data text-body font-bold tabular-nums text-ember-300">
+                  £{owed.balance.toFixed(2)}
+                </span>
+              </div>
+            </>
+          ) : (
+            <div className="flex items-baseline justify-between gap-4">
+              <span className="text-body-sm font-semibold text-calico-300">
+                {order.status === 'delivered' ? 'Paid on delivery' : 'Due on delivery'}
+              </span>
+              {/* Ember 300, not Ember 700. On Ink 900 the dark ember is 2.4:1. */}
+              <span className="font-data text-body font-bold tabular-nums text-ember-300">
+                £{Number(order.total_amount).toFixed(2)}
+              </span>
+            </div>
+          )}
         </div>
       </div>
     </div>

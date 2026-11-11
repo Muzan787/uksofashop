@@ -12,14 +12,17 @@
 // What "paid" means here. The shop takes the money on delivery, and the
 // database holds no payment record - no amount received, no method. So the
 // receipt says the order was paid in full once it is marked Delivered, and
-// says what is due until then. A deposit, where one was agreed on the call,
-// is part of the price and is not recorded either; the "due" note says so.
+// says what is due until then. A deposit, where one was agreed on the call and
+// recorded on the order (orders.deposit_paid), is part of the price: the receipt
+// shows it as paid, and what is due on delivery is the balance. With none
+// recorded, the "due" note says a deposit would come off.
 
 import type { AdminOrderDisplay } from '@/types/adminOrders'
 import { describeCustomisation } from '@/utils/productOptions'
 import { describeFinish } from '@/utils/orderFinish'
 import { itemTitle } from '@/utils/orderItemTitle'
 import { PROMISES } from '@/constants/promises'
+import { depositFigures } from '@/utils/orderDeposit'
 
 const money = (n: unknown) => `£${Number(n ?? 0).toFixed(2)}`
 const num = (n: unknown) => Number(n ?? 0) || 0
@@ -65,9 +68,13 @@ export interface Receipt {
   total: number
   status: 'delivered' | 'cancelled' | 'open'
   deliveredOn: string | null
+  /** The deposit recorded on the order, or null when there is none. */
+  deposit: { amount: number; paidOn: string | null } | null
+  /** What is left to pay on delivery: the total less any deposit. */
+  balance: number
   payment: {
     kind: 'paid' | 'due' | 'cancelled'
-    /** "Amount paid", "Total due on delivery", "Cancelled". */
+    /** "Amount paid", "Balance due on delivery", "Total due on delivery", "Cancelled". */
     heading: string
     /** The figure beside the heading, null for a cancelled order. */
     amount: number | null
@@ -203,22 +210,38 @@ export function buildReceipt(order: AdminOrderDisplay): Receipt {
   const status: Receipt['status'] = order.status === 'delivered' ? 'delivered' : order.status === 'cancelled' ? 'cancelled' : 'open'
   const deliveredOn = status === 'delivered' ? formatReceiptDate(order.delivered_at) : null
 
+  const figures = depositFigures(total, order.deposit_paid)
+  const depositOn = formatReceiptDate(order.deposit_paid_at)
+  const deposit: Receipt['deposit'] = figures.has ? { amount: figures.deposit, paidOn: depositOn } : null
+  const depositWhen = depositOn ? ` on ${depositOn}` : ''
+
   const payment: Receipt['payment'] =
     status === 'delivered'
       ? {
           kind: 'paid',
           heading: 'Amount paid',
           amount: total,
-          note: `Paid in full${deliveredOn ? ` on delivery, ${deliveredOn}` : ' on delivery'}. Nothing more to pay.`,
+          note: deposit
+            ? figures.balance > 0
+              ? `Paid in full: a ${money(deposit.amount)} deposit${depositWhen} and the ${money(figures.balance)} balance on delivery${deliveredOn ? `, ${deliveredOn}` : ''}. Nothing more to pay.`
+              : `Paid in full by the ${money(deposit.amount)} deposit${depositWhen}. Nothing more to pay.`
+            : `Paid in full${deliveredOn ? ` on delivery, ${deliveredOn}` : ' on delivery'}. Nothing more to pay.`,
         }
       : status === 'cancelled'
         ? { kind: 'cancelled', heading: 'Order cancelled', amount: null, note: 'This order was cancelled, so nothing is due.' }
-        : {
-            kind: 'due',
-            heading: 'Total due on delivery',
-            amount: total,
-            note: 'Paid in cash or by bank transfer once it is in the room. If you paid a deposit when we confirmed the order, it comes off this amount.',
-          }
+        : deposit
+          ? {
+              kind: 'due',
+              heading: 'Balance due on delivery',
+              amount: figures.balance,
+              note: `Your ${money(deposit.amount)} deposit${depositOn ? ` (received ${depositOn})` : ''} is already taken off the total. ${figures.balance > 0 ? 'The balance is paid in cash or by bank transfer once it is in the room.' : 'There is nothing more to pay.'}`,
+            }
+          : {
+              kind: 'due',
+              heading: 'Total due on delivery',
+              amount: total,
+              note: 'Paid in cash or by bank transfer once it is in the room. If you paid a deposit when we confirmed the order, it comes off this amount.',
+            }
 
   const period = status === 'delivered' ? guaranteePeriod(order.delivered_at) : null
   const guarantee: Receipt['guarantee'] = {
@@ -244,6 +267,8 @@ export function buildReceipt(order: AdminOrderDisplay): Receipt {
     total,
     status,
     deliveredOn,
+    deposit,
+    balance: figures.balance,
     payment,
     guarantee,
   }

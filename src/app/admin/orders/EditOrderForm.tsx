@@ -26,6 +26,7 @@ import type { PickerFabric, PickerVariant } from './NewWhatsAppOrder'
 import SearchSelect from '@/components/Admin/SearchSelect'
 import { describeFinish } from '@/utils/orderFinish'
 import { itemTitle } from '@/utils/orderItemTitle'
+import { parseDepositInput } from '@/utils/orderDeposit'
 
 interface Line {
   itemId: string | null
@@ -83,6 +84,8 @@ export default function EditOrderForm({
   const [notes, setNotes] = useState(order.special_instructions ?? '')
   const [deliveryDate, setDeliveryDate] = useState(order.preferred_delivery_date ?? '')
   const [delivery, setDelivery] = useState(Number(order.delivery_total ?? 0).toFixed(2))
+  const savedDeposit = Number(order.deposit_paid ?? 0)
+  const [deposit, setDeposit] = useState(savedDeposit > 0 ? savedDeposit.toFixed(2) : '')
   const [lines, setLines] = useState<Line[]>(() => linesFrom(order))
 
   const known = useMemo(() => new Set(variants.map(v => v.id)), [variants])
@@ -114,6 +117,7 @@ export default function EditOrderForm({
     setName(order.customer_name); setPhone(order.customer_phone); setEmail(order.customer_email ?? '')
     setAddress(split.address); setPostcode(split.postcode ?? ''); setNotes(order.special_instructions ?? '')
     setDeliveryDate(order.preferred_delivery_date ?? ''); setDelivery(Number(order.delivery_total ?? 0).toFixed(2))
+    setDeposit(savedDeposit > 0 ? savedDeposit.toFixed(2) : '')
     setLines(linesFrom(order)); setError('')
   }
 
@@ -125,6 +129,11 @@ export default function EditOrderForm({
     if (items.length === 0) { setError('An order needs at least one sofa.'); return }
     if (items.some(l => !Number.isFinite(Number(l.price)))) { setError('One of those prices is not a number.'); return }
     if (!Number.isFinite(Number(delivery))) { setError('The delivery charge is not a number.'); return }
+    const depositEntry = parseDepositInput(deposit)
+    if (!depositEntry.ok) { setError('The deposit is not a valid amount. Leave it empty if none was paid.'); return }
+    // Sent only when it changed, so an ordinary edit never touches the deposit.
+    const depositChanged = Math.round(depositEntry.value * 100) !== Math.round(savedDeposit * 100)
+    if (depositChanged && depositEntry.value > total + 0.004) { setError("The deposit can't be more than the order total."); return }
 
     startTransition(async () => {
       const res = await updateOrderDetails({
@@ -137,6 +146,7 @@ export default function EditOrderForm({
         specialInstructions: notes,
         preferredDeliveryDate: deliveryDate,
         deliveryTotal: Number(delivery),
+        ...(depositChanged ? { depositPaid: depositEntry.value } : {}),
         items: items.map(l => ({
           item_id: l.itemId,
           variant_id: l.variantId,
@@ -316,6 +326,24 @@ export default function EditOrderForm({
         </div>
       </div>
 
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div>
+          <label className={label} htmlFor={`edit-deposit-${order.id}`}>Deposit paid <span className="font-normal normal-case tracking-normal text-stone-400">(optional)</span></label>
+          <input
+            id={`edit-deposit-${order.id}`}
+            className={field}
+            inputMode="decimal"
+            value={deposit}
+            onChange={e => setDeposit(e.target.value)}
+            placeholder="0.00"
+            autoComplete="off"
+          />
+          <p className="m-0 mt-1 text-[11px] leading-snug text-stone-500">
+            Money already received. Part of the price: the balance is collected on delivery. Empty removes it.
+          </p>
+        </div>
+      </div>
+
       {error && (
         <p className="rounded-sm border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700">{error}</p>
       )}
@@ -323,6 +351,7 @@ export default function EditOrderForm({
       <div className="flex flex-col gap-2 border-t border-stone-200 pt-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="m-0 text-sm text-stone-700">
           New total <span className="font-mono font-bold text-stone-900">£{total.toFixed(2)}</span>
+          {(() => { const d = parseDepositInput(deposit); return d.ok && d.value > 0 && d.value <= total + 0.004 ? <span className="text-stone-500"> · deposit £{d.value.toFixed(2)} · balance £{Math.max(0, total - d.value).toFixed(2)}</span> : null })()}
           {Number(order.discount_amount ?? 0) > 0 && (
             <span className="text-stone-500"> (after the £{Number(order.discount_amount).toFixed(2)} offer already on the order)</span>
           )}

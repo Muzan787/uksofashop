@@ -11,6 +11,7 @@ import { getTrackingMode } from '@/utils/trackingMode'
 import { isGoogleOnlyAcquisition } from '@/utils/metaSignals'
 import { sendOrderStatusUpdate, sendAdminOrderStatusNotification, sendAdminOrderConfirmedNotification, sendOrderReceipt } from '@/utils/email'
 import { buildReceipt } from '@/utils/orderReceipt'
+import { readOrderDeposit, saveOrderDeposit } from '@/utils/orderDepositServer'
 import { loadOrder } from '@/app/admin/orders/orderData'
 import { requireAdmin } from '@/utils/auth'
 import { sendReviewEmailNow } from '@/utils/jobs/reviewRequests'
@@ -275,6 +276,11 @@ const editSchema = z.object({
   /** YYYY-MM-DD or empty. Any date: an old order may legitimately carry a day that has passed. */
   preferredDeliveryDate: z.union([z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Choose a valid date.'), z.literal('')]),
   deliveryTotal: z.number().nonnegative().max(10_000),
+  /**
+   * The deposit received, in pounds, when the form changed it. Left out when it
+   * did not, so an ordinary edit never touches it. 0 clears one.
+   */
+  depositPaid: z.number().nonnegative().max(1_000_000).optional(),
   items: z.array(editLineSchema).min(1, 'An order needs at least one line.'),
 })
 
@@ -328,9 +334,18 @@ export async function updateOrderDetails(input: EditOrderInput): Promise<{ succe
     return { error: 'Could not save the changes. Please try again.' }
   }
 
+  // The deposit goes after the lines, because it is checked against the new
+  // total. The rest has already saved, so a failure here says so.
+  let depositError: string | null = null
+  if (v.depositPaid !== undefined) {
+    const saved = await saveOrderDeposit(supabase, v.orderId, v.depositPaid)
+    if ('error' in saved) depositError = saved.error
+  }
+
   revalidatePath('/admin/orders')
   revalidatePath('/admin/meta')
   revalidatePath('/admin')
+  if (depositError) return { error: `The other changes saved, but the deposit did not: ${depositError}` }
   const result = data as unknown as { total_amount: number }
   return { success: true, total: Number(result.total_amount) }
 }
@@ -413,6 +428,8 @@ export async function confirmCustomerOrder(
   const { data: before } = await supabase.rpc('order_for_confirmation', { p_order_id: orderId })
   const order = before as unknown as ConfirmationOrder | null
   const wasAwaiting = order?.status === 'pending_cod'
+  // A deposit taken on the call, so the shop's alert says what is left to collect.
+  const depositPaid = wasAwaiting ? (await readOrderDeposit(supabase, orderId)).deposit_paid : 0
 
   const { error } = await supabase.rpc('confirm_order', { p_order_id: orderId })
 
@@ -435,6 +452,7 @@ export async function confirmCustomerOrder(
           Number(order.total_amount),
           order.shipping_address,
           order.preferred_delivery_date,
+          depositPaid,
         )
       } catch (err) {
         // The confirmation itself is safe; this only loses the nudge.
@@ -496,7 +514,11 @@ export async function trackOrder(reference: string, postcode: string) {
     return { error: "We couldn't find an order with that reference and postcode. Please check both and try again." }
   }
 
-  return { success: true, order: data as unknown as TrackedOrder }
+  // A deposit already taken, read with the order's own id (the same token the
+  // confirmation page uses). Absent or failed reads as none.
+  const tracked = data as unknown as TrackedOrder
+  const taken = await readOrderDeposit(supabase, tracked.id)
+  return { success: true, order: { ...tracked, ...taken } as TrackedOrder }
 }
 
 // ─── The order page (admin upgrade Phase 6) ──────────────────────────────────

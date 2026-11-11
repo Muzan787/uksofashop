@@ -133,6 +133,7 @@ before(async () => {
   await db.exec(read('supabase/migrations/20261014215150_order_rules.sql'))
   await db.exec(read('supabase/migrations/20261014230352_order_page.sql'))
   await db.exec(read('supabase/migrations/20261031131331_order_on_hold.sql'))
+  await db.exec(read('supabase/migrations/20261112100000_order_deposit.sql'))
 })
 
 /** Runs `fn` in a transaction that is always rolled back. */
@@ -419,4 +420,54 @@ test('the search box sends only plain characters, and knows an order code', () =
   assert.equal(isOrderCode('ABCDEF12'), true)
   assert.equal(isOrderCode('abcdef12-0000-4000-8000-000000000001'), true)
   assert.equal(isOrderCode('Khan'), false)
+})
+
+// ── A deposit on an order (20261112100000_order_deposit.sql) ────────────────
+
+test('staff record a deposit, it is capped at the total, and the change is on the order history', async () => {
+  await isolated(async () => {
+    await as('admin')
+    const id = await newOrder('confirmed') // total 100
+    await db.query('select public.set_order_deposit($1, 40)', [id])
+    let row = (await db.query('select deposit_paid, deposit_paid_at from public.orders where id = $1', [id])).rows[0]
+    assert.equal(Number(row.deposit_paid), 40)
+    assert.ok(row.deposit_paid_at, 'the day it was recorded is kept')
+
+    // Correcting it keeps the first day; a figure above the total is refused.
+    const firstDay = row.deposit_paid_at.getTime()
+    await db.query('select public.set_order_deposit($1, 60.5)', [id])
+    row = (await db.query('select deposit_paid, deposit_paid_at from public.orders where id = $1', [id])).rows[0]
+    assert.equal(Number(row.deposit_paid), 60.5)
+    assert.equal(row.deposit_paid_at.getTime(), firstDay)
+    assert.match(await refusal('select public.set_order_deposit($1, 100.01)', [id]), /DEPOSIT_TOO_HIGH/)
+    assert.match(await refusal('select public.set_order_deposit($1, -1)', [id]), /BAD_DEPOSIT/)
+
+    // 0 removes it and clears the day.
+    await db.query('select public.set_order_deposit($1, 0)', [id])
+    row = (await db.query('select deposit_paid, deposit_paid_at from public.orders where id = $1', [id])).rows[0]
+    assert.equal(Number(row.deposit_paid), 0)
+    assert.equal(row.deposit_paid_at, null)
+
+    const notes = (await db.query("select note from public.order_events where order_id = $1 and kind = 'note' order by id", [id])).rows.map(r => r.note)
+    assert.deepEqual(notes, [
+      'Deposit of £40.00 recorded as paid',
+      'Deposit changed from £40.00 to £60.50',
+      'Deposit removed (was £60.50)',
+    ])
+  })
+})
+
+test('only staff can record a deposit, and the customer pages can read it by the order id alone', async () => {
+  await isolated(async () => {
+    await as('admin')
+    const id = await newOrder('confirmed')
+    await db.query('select public.set_order_deposit($1, 25)', [id])
+
+    await as('customer')
+    assert.match(await refusal('select public.set_order_deposit($1, 10)', [id]), /NOT_AUTHORISED/)
+    const read = (await db.query('select public.order_deposit($1) as d', [id])).rows[0].d
+    assert.equal(Number(read.deposit_paid), 25)
+    assert.deepEqual(Object.keys(read).sort(), ['deposit_paid', 'deposit_paid_at'])
+    assert.equal((await db.query('select public.order_deposit($1) as d', ['00000000-0000-4000-8000-000000000000'])).rows[0].d, null)
+  })
 })

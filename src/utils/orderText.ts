@@ -19,6 +19,7 @@ import { formatPreferredDeliveryDate } from '@/utils/delivery'
 import { DELIVERY_DAYS } from '@/constants/promises'
 import { finishText } from '@/utils/orderFinish'
 import { itemTitle } from '@/utils/orderItemTitle'
+import { depositFigures } from '@/utils/orderDeposit'
 
 /**
  * How long the order takes: 2-4 days, or 5-7 where it paid a distance
@@ -114,6 +115,7 @@ export function formatOrderForCopy(order: AdminOrderDisplay): string {
   // page and in the edit form, but not in the block that gets forwarded on -
   // the one place whoever is doing the delivery would actually read it.
   const instructions = (order.special_instructions ?? '').trim()
+  const owed = depositFigures(order.total_amount, order.deposit_paid)
 
   const blocks = [
     [
@@ -141,7 +143,11 @@ export function formatOrderForCopy(order: AdminOrderDisplay): string {
 
     extras.length ? ['Additional:', ...extras].join('\n') : null,
 
-    `Total: ${money(order.total_amount)}`,
+    [
+      `Total: ${money(order.total_amount)}`,
+      // A deposit already taken is part of the price: say what is left to collect.
+      ...(owed.has ? [`Deposit paid: −${money(owed.deposit)}`, `Balance to collect on delivery: ${money(owed.balance)}`] : []),
+    ].join('\n'),
   ].filter(Boolean)
 
   return blocks.join('\n\n')

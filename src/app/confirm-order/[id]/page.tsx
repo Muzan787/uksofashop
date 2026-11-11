@@ -16,6 +16,8 @@ import {
   XCircle,
 } from 'lucide-react'
 import { createClient } from '@/utils/supabase/server'
+import { readOrderDeposit } from '@/utils/orderDepositServer'
+import { depositFigures } from '@/utils/orderDeposit'
 import ConfirmOrderForm from './ConfirmOrderForm'
 import Timeline from '@/components/UI/Timeline'
 import { STATUS } from '@/utils/orderStatus'
@@ -90,7 +92,10 @@ export default async function ConfirmOrderPage({
   }
   if (!data) return notFound()
 
-  const order = data as unknown as ConfirmationOrder
+  // A deposit already taken on the call, read with the same id. Reads as none
+  // if it cannot be read, so the page always opens.
+  const order = { ...(data as unknown as ConfirmationOrder), ...(await readOrderDeposit(supabase, id)) }
+  const owed = depositFigures(order.total_amount, order.deposit_paid)
   const status = order.status ?? 'pending_cod'
   const reference = order.id.substring(0, 8).toUpperCase()
   const firstName = (order.customer_name || '').trim().split(/\s+/)[0] || 'there'
@@ -327,25 +332,37 @@ export default async function ConfirmOrderPage({
 
             <span aria-hidden="true" className="my-1.5 h-px bg-calico-50/12" />
 
+            {owed.has && !cancelled && (
+              <>
+                <Money label="Order total" value={Number(order.total_amount)} />
+                <div className="flex items-baseline justify-between gap-4 text-body-sm text-calico-300">
+                  <span>Deposit paid</span>
+                  <span className="font-data tabular-nums text-sage-300">−{money(owed.deposit)}</span>
+                </div>
+                <span aria-hidden="true" className="my-1.5 h-px bg-calico-50/12" />
+              </>
+            )}
+
             <div className="flex items-baseline justify-between gap-4">
               <span className="text-body font-semibold text-calico-50">
                 {status === 'delivered'
-                  ? 'Paid on delivery'
+                  ? owed.has ? 'Balance paid on delivery' : 'Paid on delivery'
                   : cancelled
                     ? 'Order total'
-                    : 'Due on delivery'}
+                    : owed.has ? 'Balance due on delivery' : 'Due on delivery'}
               </span>
               {/* Ember 300 rather than Ember 700: the dark ember is 2.4:1 on ink. */}
               <span className="font-data text-h2 font-bold leading-none tabular-nums text-ember-300">
-                {money(order.total_amount)}
+                {money(owed.has && !cancelled ? owed.balance : order.total_amount)}
               </span>
             </div>
           </div>
 
           {!cancelled && (
             <p className="m-0 mt-4 text-caption leading-relaxed text-calico-300">
-              Cash or bank transfer, paid to the delivery team at the door once the sofa is inside
-              and you have looked at it. We do not take cards.
+              {owed.has
+                ? 'Your deposit is already taken off. The balance is cash or bank transfer, paid to the delivery team at the door once the sofa is inside and you have looked at it. We do not take cards.'
+                : 'Cash or bank transfer, paid to the delivery team at the door once the sofa is inside and you have looked at it. We do not take cards.'}
             </p>
           )}
         </section>

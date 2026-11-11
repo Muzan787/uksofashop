@@ -41,6 +41,9 @@ export interface TrackedOrder {
   sofa_removal_seats?: number | null
   /** YYYY-MM-DD the customer asked for at checkout, or null for as soon as possible. */
   preferred_delivery_date?: string | null
+  /** Deposit received, from public.order_deposit. Absent until that is read. */
+  deposit_paid?: number
+  deposit_paid_at?: string | null
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -96,5 +99,8 @@ export interface ConfirmationOrder {
   fee_sofa_removal: number
   fee_distance: number
   delivery_region: string | null
+  /** Deposit received, from public.order_deposit. Absent until that is read. */
+  deposit_paid?: number
+  deposit_paid_at?: string | null
   order_items: ConfirmationOrderItem[]
 }

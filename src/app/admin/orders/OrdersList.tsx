@@ -60,6 +60,8 @@ export interface OrdersListProps {
   lastPage: number
   counts: Record<string, number>
   tiles: { attention: number; toCollect: number; confirmed: number; onHold: number; withPreferredDay: number }
+  /** Deposit already taken, in pounds, by order id. Only orders that have one. */
+  deposits: Record<string, number>
   pickers: { variants: PickerVariant[]; fabrics: PickerFabric[] }
   /** A WhatsApp reference to open the new-order form with (?ref=). */
   reference: string
@@ -71,7 +73,7 @@ export interface OrdersListProps {
 }
 
 export default function OrdersList({
-  orders, total, overall, status, q, searchTooBroad, page, lastPage, counts, tiles, pickers, reference, openForm, deleted, error,
+  orders, total, overall, status, q, searchTooBroad, page, lastPage, counts, tiles, deposits, pickers, reference, openForm, deleted, error,
 }: OrdersListProps) {
   const href = (s: string, p = 1) => {
     const params = new URLSearchParams()
@@ -202,7 +204,14 @@ export default function OrdersList({
                         {[postcode, `${items} ${items === 1 ? 'item' : 'items'}`].filter(Boolean).join(' · ')}
                       </p>
                     </div>
-                    <p className="m-0 shrink-0 text-lg font-bold tabular-nums text-stone-900">{money(order.total_amount)}</p>
+                    <div className="shrink-0 text-right">
+                      <p className="m-0 text-lg font-bold tabular-nums text-stone-900">{money(order.total_amount)}</p>
+                      {deposits[order.id] > 0 && (
+                        <p className="m-0 text-xs font-semibold tabular-nums text-green-700">
+                          {money(deposits[order.id])} deposit paid
+                        </p>
+                      )}
+                    </div>
                   </div>
                   <div className="mt-2 space-y-1 text-xs text-stone-500">
                     {placed && (

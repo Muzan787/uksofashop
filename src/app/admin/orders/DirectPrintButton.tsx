@@ -343,10 +343,23 @@ export default function DirectPrintButton({ order }: { order: AdminOrderDisplay 
                   <span>${esc(rowLabelText(row))}</span>
                   <span style="font-weight: 600; color: ${row.kind === 'discount' ? '#166534' : '#1c1917'};">${esc(rowAmountText(row))}</span>
                 </div>`).join('')}
+                ${receipt.deposit && receipt.payment.kind === 'due' ? `
+                <div class="summary-row" style="margin-top: 16px; padding-top: 16px; border-top: 2px solid #e7e5e4;">
+                  <span style="font-weight: 600; color: #1c1917;">Order total</span>
+                  <span style="font-weight: 600; color: #1c1917;">${formatMoney(receipt.total)}</span>
+                </div>
+                <div class="summary-row" style="margin-bottom: 0;">
+                  <span>Deposit paid${receipt.deposit.paidOn ? ` (${esc(receipt.deposit.paidOn)})` : ''}</span>
+                  <span style="font-weight: 600; color: #166534;">−${formatMoney(receipt.deposit.amount)}</span>
+                </div>
+                <div class="summary-total">
+                  <span class="summary-total-label">Balance Due</span>
+                  <span class="summary-total-value">${formatMoney(receipt.balance)}</span>
+                </div>` : `
                 <div class="summary-total">
                   <span class="summary-total-label">${receipt.payment.kind === 'due' ? 'Total Due' : 'Total'}</span>
                   <span class="summary-total-value">${formatMoney(receipt.total)}</span>
-                </div>
+                </div>`}
                 ${receipt.payment.kind === 'paid' ? `
                 <div class="paid-box">
                   <div class="paid-row"><span>${esc(receipt.payment.heading)}</span><span>${formatMoney(receipt.payment.amount)}</span></div>

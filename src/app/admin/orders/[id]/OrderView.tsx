@@ -36,6 +36,7 @@ import { asBuildSnapshot, describeBuild } from '@/types/build'
 import { describeOptions, isOptionsSnapshot } from '@/utils/productOptions'
 import { trustpilotInviteLink } from '@/constants/trustpilot'
 import { SITE_URL } from '@/constants/site'
+import { depositFigures } from '@/utils/orderDeposit'
 
 export type ReviewLink = { productTitle: string; imageUrl: string | null; reviewLink: string }
 
@@ -80,7 +81,9 @@ function banner(sp: Record<string, string | undefined>, order: { customer_name: 
   switch (sp.done) {
     case 'created': return sp.visit === 'failed'
       ? { tone: 'error', text: "Order saved, but the website visit you picked didn't go on it. Try again under Where it came from." }
-      : { tone: 'ok', text: 'Order saved.' }
+      : sp.deposit === 'failed'
+        ? { tone: 'error', text: "Order saved, but the deposit didn't go on it. Press Edit and enter the deposit again." }
+        : { tone: 'ok', text: 'Order saved.' }
     case 'status': return {
       tone: 'ok',
       text: `Marked ${adminStatusLabel(sp.status)}. ${sp.emailed === '1' ? `${name} has been emailed too.` : 'No email on this order, so let them know on WhatsApp.'}`,
@@ -202,6 +205,9 @@ export default function OrderView({ order, events, sends, reviewLinks, receiptSe
     : order.shipping_address
   const extrasFromCheckout = Number(order.fee_distance ?? 0) + Number(order.fee_upstairs ?? 0) + Number(order.fee_assembly ?? 0) + Number(order.fee_sofa_removal ?? 0)
   const agreedDelivery = Number(order.delivery_total ?? 0) > 0 && extrasFromCheckout === 0
+  // A deposit already taken is part of the price: what the driver collects is the balance.
+  const { deposit, balance, has: hasDeposit } = depositFigures(order.total_amount, order.deposit_paid)
+  const depositOn = dualTimeText(order.deposit_paid_at)
   const googleAttributed = order.manual_acquisition_source === 'google' || (!order.manual_acquisition_source && order.utm_source === 'google' && Boolean(order.gclid || order.gbraid || order.wbraid) && !order.fbclid)
   const corrections = movesFrom(status)
   // "Find the website visit": a hand-taken order with no visit of its own, or
@@ -249,6 +255,11 @@ export default function OrderView({ order, events, sends, reviewLinks, receiptSe
           )}
         </div>
         <p className="m-0 mt-3 text-3xl font-bold tabular-nums text-stone-900">{money(order.total_amount)}</p>
+        {hasDeposit && (
+          <p className="m-0 mt-1 text-sm font-semibold text-green-700">
+            Deposit {money(deposit)} paid · {status === 'delivered' ? 'balance was' : 'balance to collect'} {money(balance)}
+          </p>
+        )}
         <p className="m-0 mt-1 flex items-center gap-1.5 text-xs text-stone-500">
           <Clock3 className="h-3.5 w-3.5" aria-hidden="true" /> Placed <Time value={order.created_at} />
         </p>
@@ -415,7 +426,18 @@ export default function OrderView({ order, events, sends, reviewLinks, receiptSe
           {agreedDelivery && (
             <div className="flex justify-between gap-3"><dt className="text-stone-600">Delivery agreed with the customer</dt><dd className="m-0">{money(order.delivery_total)}</dd></div>
           )}
-          <div className="flex justify-between gap-3 border-t border-stone-200 pt-2 text-base"><dt className="font-bold text-stone-900">To collect on delivery</dt><dd className="m-0 font-bold text-stone-900">{money(order.total_amount)}</dd></div>
+          {hasDeposit ? (
+            <>
+              <div className="flex justify-between gap-3 border-t border-stone-200 pt-2"><dt className="font-semibold text-stone-900">Order total</dt><dd className="m-0 font-semibold text-stone-900">{money(order.total_amount)}</dd></div>
+              <div className="flex justify-between gap-3 text-green-700">
+                <dt>Deposit paid{depositOn ? <span className="text-xs font-normal text-stone-500"> · recorded {depositOn}</span> : null}</dt>
+                <dd className="m-0">−{money(deposit)}</dd>
+              </div>
+              <div className="flex justify-between gap-3 border-t border-stone-200 pt-2 text-base"><dt className="font-bold text-stone-900">{status === 'delivered' ? 'Balance paid on delivery' : 'To collect on delivery'}</dt><dd className="m-0 font-bold text-stone-900">{money(balance)}</dd></div>
+            </>
+          ) : (
+            <div className="flex justify-between gap-3 border-t border-stone-200 pt-2 text-base"><dt className="font-bold text-stone-900">To collect on delivery</dt><dd className="m-0 font-bold text-stone-900">{money(order.total_amount)}</dd></div>
+          )}
         </dl>
       </section>
 

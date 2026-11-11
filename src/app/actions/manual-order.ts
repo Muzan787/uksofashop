@@ -44,6 +44,7 @@ import { isValidUkMobile, UK_MOBILE_ERROR } from '@/utils/phone'
 import { isValidWhatsAppReference } from '@/utils/attribution/whatsapp'
 import { normaliseLeadReference } from '@/utils/attribution/lead'
 import { createAdminClient } from '@/utils/supabase/admin'
+import { saveOrderDeposit } from '@/utils/orderDepositServer'
 
 const itemSchema = z.object({
   variant_id: z.string().uuid(),
@@ -84,6 +85,14 @@ const schema = z.object({
   specialInstructions: z.string().trim().max(1000).optional(),
   /** One negotiated figure. There is no extras matrix on a phone call. */
   deliveryCharge: z.number().nonnegative().max(10_000),
+  /**
+   * A deposit already taken on the call, in pounds. Optional and 0 by default:
+   * most orders have none. It is part of the price - the balance due on
+   * delivery is the total less this - and is never more than the total (the
+   * database refuses it). Saved by its own call once the order exists, so
+   * place_manual_order keeps its signature.
+   */
+  depositPaid: z.number().nonnegative().max(1_000_000).default(0),
   /**
    * The delivery day agreed in the chat, YYYY-MM-DD, or empty. Any day from
    * today to a year ahead - the website's four-day lead is for customers
@@ -155,6 +164,8 @@ type ManualOrderResult =
       total: number
       attributionMatch: WhatsAppAttributionMatch | null
       contactTimeSearched: boolean
+      /** Set when the order saved but its deposit did not: what went wrong. */
+      depositError?: string
     }
 
 const WHATSAPP_TIME_MATCH_MINUTES = 10
@@ -370,6 +381,16 @@ export async function createWhatsAppOrder(input: ManualOrderInput): Promise<Manu
     const { error: testError } = await supabase.rpc('set_order_test_flag', { p_order_id: order.id, p_is_test: true, p_reason: 'Taken as a test from the order form' })
     if (testError) console.error('set_order_test_flag failed:', testError.message)
   }
+  // The deposit taken on the call. Checked against the total by the database.
+  // A failure leaves a good order that the Edit button can put the deposit on,
+  // and the customer's emails go out without it rather than claiming one.
+  let depositPaid = 0
+  let depositError: string | undefined
+  if (v.depositPaid > 0) {
+    const saved = await saveOrderDeposit(supabase, order.id, v.depositPaid)
+    if ('error' in saved) depositError = saved.error
+    else depositPaid = v.depositPaid
+  }
   if (GOOGLE_GTM_ENABLED && attribution.reference) {
     try { await createUntypedAdminClient().rpc('google_phase2b_attach_whatsapp',{p_order_id:order.id}) }
     catch { /* Google evidence cannot interrupt the committed manual order. */ }
@@ -395,13 +416,13 @@ export async function createWhatsAppOrder(input: ManualOrderInput): Promise<Manu
           ? sendOrderConfirmation(
               v.customerEmail, v.customerName, shortCode, order.id,
               Number(order.total_amount), Number(order.items_subtotal), breakdown,
-              0, null, preferredDeliveryDate,
+              0, null, preferredDeliveryDate, depositPaid,
             )
           : Promise.resolve(),
         sendAdminOrderNotification(
           v.customerName, v.customerEmail || 'no email given', v.customerPhone, shortCode, order.id,
           Number(order.total_amount), Number(order.items_subtotal), breakdown,
-          0, null, preferredDeliveryDate,
+          0, null, preferredDeliveryDate, null, depositPaid,
         ),
       ])
     } catch (err) {
@@ -426,5 +447,6 @@ export async function createWhatsAppOrder(input: ManualOrderInput): Promise<Manu
     total: Number(order.total_amount),
     attributionMatch: attribution.match,
     contactTimeSearched: attribution.searchedTime,
+    ...(depositError ? { depositError } : {}),
   }
 }

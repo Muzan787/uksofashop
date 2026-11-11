@@ -15,6 +15,7 @@ import { formatPreferredDeliveryDate } from '@/utils/delivery'
 import { itemTitle } from '@/utils/orderItemTitle'
 import { describeFinish } from '@/utils/orderFinish'
 import { describeCustomisation } from '@/utils/productOptions'
+import { depositFigures } from '@/utils/orderDeposit'
 
 const PRINT_ONLY_THE_NOTE = `
 @media print {
@@ -33,6 +34,8 @@ export default function DeliveryNote({ order }: { order: OrderWithLines }) {
   const placed = order.created_at
     ? new Date(order.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/London' })
     : ''
+  // A deposit already taken is part of the price: the driver collects the balance.
+  const owed = depositFigures(order.total_amount, order.deposit_paid)
   const label = 'm-0 text-[11px] font-bold uppercase tracking-[0.14em] text-stone-500'
 
   return (
@@ -122,8 +125,15 @@ export default function DeliveryNote({ order }: { order: OrderWithLines }) {
 
         <section className="rounded-sm border-2 border-stone-900 p-4">
           <p className={label}>What to collect</p>
-          <p className="m-0 mt-1 text-3xl font-bold tabular-nums">{money(order.total_amount)}</p>
-          <p className="m-0 mt-1 text-base">Cash or bank transfer, on delivery.</p>
+          <p className="m-0 mt-1 text-3xl font-bold tabular-nums">{money(owed.balance)}</p>
+          {owed.has ? (
+            <p className="m-0 mt-1 text-base">
+              {owed.balance > 0 ? 'Cash or bank transfer, on delivery. ' : 'Nothing to collect. '}
+              Order total {money(order.total_amount)}, less {money(owed.deposit)} deposit already paid.
+            </p>
+          ) : (
+            <p className="m-0 mt-1 text-base">Cash or bank transfer, on delivery.</p>
+          )}
         </section>
 
         <section>

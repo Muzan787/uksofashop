@@ -21,6 +21,7 @@ import { createWhatsAppOrder } from '@/app/actions/manual-order'
 import { matchOrderToVisit, type VisitCandidate } from '@/app/actions/visit-match'
 import SearchSelect from '@/components/Admin/SearchSelect'
 import FindVisit from './FindVisit'
+import { parseDepositInput } from '@/utils/orderDeposit'
 
 export interface PickerVariant {
   id: string
@@ -88,6 +89,8 @@ export default function NewWhatsAppOrder({
   const [postcode, setPostcode] = useState('')
   const [notes, setNotes] = useState('')
   const [delivery, setDelivery] = useState('')
+  /** A deposit already taken on the call. Empty means none. */
+  const [deposit, setDeposit] = useState('')
   const [deliveryDate, setDeliveryDate] = useState('')
   const [whatsappReference, setWhatsappReference] = useState(initialReference.toUpperCase())
   const [leadReference, setLeadReference] = useState('')
@@ -129,12 +132,16 @@ export default function NewWhatsAppOrder({
     return items + (Number.isFinite(d) ? Math.max(d, 0) : 0)
   }, [lines, delivery, priceOf])
 
+  const depositEntry = parseDepositInput(deposit)
+  const depositAmount = depositEntry.ok ? depositEntry.value : 0
+  const depositTooHigh = depositEntry.ok && depositAmount > total + 0.004
+
   const setLine = (i: number, patch: Partial<Line>) =>
     setLines(ls => ls.map((l, n) => (n === i ? { ...l, ...patch } : l)))
 
   const reset = () => {
     setName(''); setPhone(''); setEmail(''); setAddress(''); setPostcode('')
-    setNotes(''); setDelivery(''); setWhatsappReference(''); setLeadReference('')
+    setNotes(''); setDelivery(''); setDeposit(''); setWhatsappReference(''); setLeadReference('')
     setFindingVisit(false); setVisit(null); setLines([{ ...BLANK }]); setError('')
     setChannel('whatsapp'); setIsTest(false)
   }
@@ -164,6 +171,15 @@ export default function NewWhatsAppOrder({
       return
     }
 
+    if (!depositEntry.ok) {
+      setError('The deposit is not a valid amount. Leave it empty if none was paid.')
+      return
+    }
+    if (depositTooHigh) {
+      setError("The deposit can't be more than the order total.")
+      return
+    }
+
     setPending(true)
     const res = await createWhatsAppOrder({
       customerName: name,
@@ -173,6 +189,7 @@ export default function NewWhatsAppOrder({
       postcode,
       specialInstructions: notes,
       deliveryCharge: delivery.trim() === '' ? 0 : Number(delivery),
+      depositPaid: depositAmount,
       preferredDeliveryDate: deliveryDate || undefined,
       items,
       whatsappReference: whatsappReference.trim() || undefined,
@@ -197,7 +214,7 @@ export default function NewWhatsAppOrder({
     setDone({ reference: res.orderId, total: res.total })
     reset()
     // Straight to the new order, where the next step and its WhatsApp message are.
-    router.push(`/admin/orders/${res.fullOrderId}?done=created${visitFailed ? '&visit=failed' : ''}`)
+    router.push(`/admin/orders/${res.fullOrderId}?done=created${visitFailed ? '&visit=failed' : ''}${res.depositError ? '&deposit=failed' : ''}`)
   }
 
   if (!open) {
@@ -513,6 +530,34 @@ export default function NewWhatsAppOrder({
           </div>
         </div>
 
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div>
+            {/* Money already received on the call. Part of the price, not on
+                top: the balance due on delivery is the total less this. It
+                shows on the order, the delivery note, the receipt and the
+                customer's confirmation page. */}
+            <label className={label} htmlFor="wa-deposit">Deposit paid <span className="font-normal normal-case tracking-normal text-stone-400">(optional)</span></label>
+            <input
+              id="wa-deposit"
+              className={field}
+              inputMode="decimal"
+              value={deposit}
+              onChange={e => setDeposit(e.target.value)}
+              placeholder="0.00"
+              autoComplete="off"
+            />
+          </div>
+          {deposit.trim() !== '' && (
+            <p className="m-0 self-end pb-2 text-xs leading-snug text-stone-500 sm:col-span-2">
+              {!depositEntry.ok
+                ? 'Not a valid amount.'
+                : depositTooHigh
+                  ? "More than the order total."
+                  : `Taken off the total: £${Math.max(0, total - depositAmount).toFixed(2)} left to collect on delivery.`}
+            </p>
+          )}
+        </div>
+
         {error && (
           <p className="rounded-sm border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700">{error}</p>
         )}
@@ -520,6 +565,9 @@ export default function NewWhatsAppOrder({
         <div className="flex items-center justify-between gap-4 border-t border-stone-200 pt-4">
           <p className="text-sm text-stone-600">
             Total <strong className="text-lg font-bold text-stone-900">£{total.toFixed(2)}</strong>
+            {depositEntry.ok && depositAmount > 0 && !depositTooHigh && (
+              <span className="block text-xs text-stone-500">Deposit £{depositAmount.toFixed(2)} · balance £{(total - depositAmount).toFixed(2)}</span>
+            )}
           </p>
           <button
             type="submit"

@@ -52,7 +52,7 @@ const client={from:t=>new Query(t),async rpc(name,args){
 const action=()=>load('src/app/actions/manual-order.ts',{
  'zod':{z},'next/server':{after(){}},'next/cache':{revalidatePath(){}},
  '@/utils/googleMeasurement':{GOOGLE_GTM_ENABLED:true},'@/utils/supabase/admin':{createAdminClient:()=>client,createUntypedAdminClient:()=>client},
- '@/utils/supabase/server':{createClient:async()=>client},'@/utils/email':{},'@/utils/delivery':{isValidAgreedDeliveryDate:()=>true},
+ '@/utils/supabase/server':{createClient:async()=>client},'@/utils/email':{},'@/utils/orderDepositServer':{saveOrderDeposit:async()=>({ok:true})},'@/utils/delivery':{isValidAgreedDeliveryDate:()=>true},
  '@/utils/auth':{isAdmin:async()=>true},'@/utils/phone':{isValidUkMobile:()=>true,UK_MOBILE_ERROR:'Invalid'},
  '@/utils/attribution/whatsapp':{isValidWhatsAppReference:r=>/^UKSS-WA-\d{6}-[A-Z0-9]{6}$/i.test(r)},
  '@/utils/attribution/lead':{normaliseLeadReference:r=>{const c=(r||'').trim().toUpperCase();return /^UKSS-LD-\d{6}-[A-Z0-9]{6}$/.test(c)?c:null}},
