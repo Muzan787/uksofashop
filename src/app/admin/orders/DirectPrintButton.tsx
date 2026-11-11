@@ -1,10 +1,9 @@
 'use client'
 // src/app/admin/orders/DirectPrintButton.tsx
 import { Printer } from 'lucide-react'
-import type { AdminOrderDisplay, AdminOrderItemDisplay } from '@/types/adminOrders'
-import { describeCustomisation } from '@/utils/productOptions'
-import { describeFinish } from '@/utils/orderFinish'
-import { itemTitle } from '@/utils/orderItemTitle'
+import type { AdminOrderDisplay } from '@/types/adminOrders'
+import { buildReceipt, formatMoney, rowAmountText, rowLabelText } from '@/utils/orderReceipt'
+import { ADDRESS_LINE, PHONE_DISPLAY, traderIdentityLine } from '@/constants/contact'
 
 /** The note is built by string interpolation, so anything a customer typed is escaped. */
 const esc = (v: unknown) =>
@@ -13,8 +12,8 @@ const esc = (v: unknown) =>
 export default function DirectPrintButton({ order }: { order: AdminOrderDisplay }) {
   
   const handlePrint = () => {
-    // TOGGLE THIS: Change `order` to `DUMMY_CUSTOM_ORDER` when you want to use the custom data
-    const activeOrder = order;
+    const receipt = buildReceipt(order)
+    const trader = traderIdentityLine()
 
     const iframe = document.createElement('iframe')
     iframe.style.position = 'fixed'
@@ -31,7 +30,7 @@ export default function DirectPrintButton({ order }: { order: AdminOrderDisplay 
     const htmlContent = `
       <html>
         <head>
-          <title>Invoice #${activeOrder.id.split('-')[0].toUpperCase()}</title>
+          <title>Receipt #${esc(receipt.ref)}</title>
           <link rel="preconnect" href="https://fonts.googleapis.com">
           <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
           <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;0,800;1,600&display=swap" rel="stylesheet">
@@ -236,48 +235,75 @@ export default function DirectPrintButton({ order }: { order: AdminOrderDisplay 
               text-transform: uppercase;
               letter-spacing: 0.1em;
             }
-            .guarantee-badge {
-              display: inline-block;
+            .paid-box {
               margin-top: 16px;
-              padding: 6px 12px;
+              padding: 14px 16px;
+              border-radius: 10px;
+              background: #f0fdf4;
+              border: 1px solid #bbf7d0;
+              color: #166534;
+            }
+            .paid-row {
+              display: flex;
+              justify-content: space-between;
+              font-size: 15px;
+              font-weight: 700;
+              margin-bottom: 4px;
+            }
+            .paid-note { font-size: 12px; margin-top: 6px; line-height: 1.5; }
+            .due-note { font-size: 12px; color: #78716c; margin-top: 12px; line-height: 1.5; }
+            .guarantee-box {
+              display: inline-block;
+              max-width: 520px;
+              margin-top: 8px;
+              margin-bottom: 20px;
+              padding: 14px 20px;
               border: 1px solid #d4871a;
-              border-radius: 20px;
+              border-radius: 12px;
+              font-size: 13px;
+              color: #1c1917;
+              line-height: 1.5;
+            }
+            .guarantee-title {
               font-size: 10px;
               font-weight: 700;
               color: #d4871a;
               text-transform: uppercase;
               letter-spacing: 0.1em;
+              margin-bottom: 4px;
             }
+            .guarantee-fine { font-size: 11px; color: #78716c; margin-top: 6px; }
           </style>
         </head>
         <body>
           <div class="receipt-container">
             <div class="top-accent"></div>
-            
+
             <div class="header">
               <div>
                 <div class="brand">UK Sofa<span style="color: #d4871a;">Shop</span></div>
-                <div class="brand-subtitle">Official Order Invoice</div>
+                <div class="brand-subtitle">Order Receipt</div>
               </div>
               <div class="invoice-details">
-                <div class="invoice-label">Invoice No.</div>
-                <div class="invoice-number">#${activeOrder.id.split('-')[0].toUpperCase()}</div>
-                <div class="invoice-date">${activeOrder.created_at ? new Date(activeOrder.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : 'Date unavailable'}</div>
+                <div class="invoice-label">Receipt No.</div>
+                <div class="invoice-number">#${esc(receipt.ref)}</div>
+                <div class="invoice-date">${receipt.orderedOn ? `Ordered ${esc(receipt.orderedOn)}` : 'Date unavailable'}</div>
+                ${receipt.deliveredOn ? `<div class="invoice-date">Delivered ${esc(receipt.deliveredOn)}</div>` : ''}
               </div>
             </div>
 
             <div class="grid">
               <div class="col">
                 <div class="section-title">Billed To</div>
-                <div class="customer-name">${activeOrder.customer_name}</div>
+                <div class="customer-name">${esc(receipt.customerName)}</div>
                 <div class="customer-info">
-                  ${activeOrder.customer_email}<br/>
-                  ${activeOrder.customer_phone}
+                  ${receipt.customerEmail ? `${esc(receipt.customerEmail)}<br/>` : ''}
+                  ${esc(receipt.customerPhone)}
                 </div>
               </div>
               <div class="col">
-                <div class="section-title">Shipping Address</div>
-                <div class="customer-info" style="white-space: pre-wrap;">${activeOrder.shipping_address}</div>
+                <div class="section-title">Delivery Address</div>
+                <div class="customer-info" style="white-space: pre-wrap;">${esc(receipt.address)}</div>
               </div>
             </div>
 
@@ -285,26 +311,22 @@ export default function DirectPrintButton({ order }: { order: AdminOrderDisplay 
               <thead>
                 <tr>
                   <th>Item Description</th>
-                  <th class="center" style="width: 15%;">Qty</th>
-                  <th class="right" style="width: 25%;">Total</th>
+                  <th class="center" style="width: 9%;">Qty</th>
+                  <th class="right" style="width: 17%;">Each</th>
+                  <th class="right" style="width: 18%;">Total</th>
                 </tr>
               </thead>
               <tbody>
-                ${activeOrder.order_items.map((item: AdminOrderItemDisplay) => `
+                ${receipt.lines.map(line => `
                   <tr>
                     <td>
-                      <div class="item-title">${esc(itemTitle(item))}</div>
-                      <div class="item-meta">
-                        ${item.fabric_code
-                          ? `<span>Fabric: <strong>${esc(describeFinish(item).label ?? '')}</strong> (${esc(item.fabric_code)})</span>`
-                          : `<span>Color: <strong>${esc(item.product_variants?.color)}</strong></span>`}
-                        <span>&bull;</span>
-                        <span>SKU: ${esc(item.product_variants?.sku)}</span>
-                      </div>
-                      ${describeCustomisation(item.customisation).map(line => `<div class="item-meta"><span>${esc(line.label)}: <strong>${esc(line.value)}</strong></span></div>`).join('')}
+                      <div class="item-title">${esc(line.title)}</div>
+                      ${line.summary.length ? `<div class="item-meta">${line.summary.map(s => `<span>${esc(s)}</span>`).join('<span>&bull;</span>')}</div>` : ''}
+                      ${line.details.map(d => `<div class="item-meta"><span>${esc(d.label)}: <strong>${esc(d.value)}</strong></span></div>`).join('')}
                     </td>
-                    <td class="center" style="font-weight: 600; color: #1c1917; vertical-align: middle;">${item.quantity}</td>
-                    <td class="right" style="font-weight: 700; color: #1c1917; vertical-align: middle;">£${(item.price_at_time_of_purchase * item.quantity).toFixed(2)}</td>
+                    <td class="center" style="font-weight: 600; color: #1c1917; vertical-align: middle;">${line.quantity}</td>
+                    <td class="right" style="color: #57534e; vertical-align: middle;">${formatMoney(line.unit)}</td>
+                    <td class="right" style="font-weight: 700; color: #1c1917; vertical-align: middle;">${formatMoney(line.total)}</td>
                   </tr>
                 `).join('')}
               </tbody>
@@ -313,46 +335,39 @@ export default function DirectPrintButton({ order }: { order: AdminOrderDisplay 
             <div class="summary-container">
               <div class="summary-box">
                 <div class="summary-row">
-                  <span>Subtotal</span>
-                  <span style="font-weight: 600; color: #1c1917;">£${Number(activeOrder.items_subtotal ?? activeOrder.total_amount).toFixed(2)}</span>
+                  <span>Items</span>
+                  <span style="font-weight: 600; color: #1c1917;">${formatMoney(receipt.itemsSubtotal)}</span>
                 </div>
-                ${Number(activeOrder.discount_amount ?? 0) > 0 ? `
+                ${receipt.rows.map(row => `
                 <div class="summary-row">
-                  <span>Offer${activeOrder.promotion_code ? ` · ${activeOrder.promotion_code}` : ''}</span>
-                  <span style="font-weight: 600; color: #166534;">−£${Number(activeOrder.discount_amount).toFixed(2)}</span>
-                </div>` : ''}
-                <div class="summary-row">
-                  <span>Delivery (ground floor)${Number(activeOrder.fee_distance ?? 0) > 0 && activeOrder.delivery_region ? ` · ${activeOrder.delivery_region}` : ''}</span>
-                  <span style="font-weight: 600; color: #1c1917;">${Number(activeOrder.fee_distance ?? 0) > 0 ? `£${Number(activeOrder.fee_distance).toFixed(2)}` : 'FREE'}</span>
-                </div>
-                ${Number(activeOrder.fee_upstairs ?? 0) > 0 ? `
-                <div class="summary-row">
-                  <span>Upstairs delivery${activeOrder.delivery_has_lift ? ' (lift)' : activeOrder.delivery_floor ? ` (floor ${activeOrder.delivery_floor})` : ''}</span>
-                  <span style="font-weight: 600; color: #1c1917;">£${Number(activeOrder.fee_upstairs).toFixed(2)}</span>
-                </div>` : ''}
-                ${Number(activeOrder.fee_assembly ?? 0) > 0 ? `
-                <div class="summary-row">
-                  <span>Assembly</span>
-                  <span style="font-weight: 600; color: #1c1917;">£${Number(activeOrder.fee_assembly).toFixed(2)}</span>
-                </div>` : ''}
-                ${Number(activeOrder.fee_sofa_removal ?? 0) > 0 ? `
-                <div class="summary-row">
-                  <span>Old sofa removal${activeOrder.sofa_removal_seats ? ` (${activeOrder.sofa_removal_seats} seats)` : ''}</span>
-                  <span style="font-weight: 600; color: #1c1917;">£${Number(activeOrder.fee_sofa_removal).toFixed(2)}</span>
-                </div>` : ''}
+                  <span>${esc(rowLabelText(row))}</span>
+                  <span style="font-weight: 600; color: ${row.kind === 'discount' ? '#166534' : '#1c1917'};">${esc(rowAmountText(row))}</span>
+                </div>`).join('')}
                 <div class="summary-total">
-                  <span class="summary-total-label">Total Due</span>
-                  <span class="summary-total-value">£${activeOrder.total_amount.toFixed(2)}</span>
+                  <span class="summary-total-label">${receipt.payment.kind === 'due' ? 'Total Due' : 'Total'}</span>
+                  <span class="summary-total-value">${formatMoney(receipt.total)}</span>
                 </div>
+                ${receipt.payment.kind === 'paid' ? `
+                <div class="paid-box">
+                  <div class="paid-row"><span>${esc(receipt.payment.heading)}</span><span>${formatMoney(receipt.payment.amount)}</span></div>
+                  <div class="paid-row" style="font-weight: 500;"><span>Balance</span><span>${formatMoney(0)}</span></div>
+                  <div class="paid-note">${esc(receipt.payment.note)}</div>
+                </div>` : `
+                <div class="due-note">${esc(receipt.payment.note)}</div>`}
               </div>
             </div>
-            
+
             <div class="footer">
                <div class="thank-you">Thank you for your business.</div>
-               <div class="company-details">
-                 {ORGANISATION_NAME} &nbsp;&bull;&nbsp; {ADDRESS_LINE} &nbsp;&bull;&nbsp; {PHONE_DISPLAY}
+               <div class="guarantee-box">
+                 <div class="guarantee-title">${esc(receipt.guarantee.summary)}</div>
+                 <div>${esc(receipt.guarantee.text)}</div>
+                 <div class="guarantee-fine">${esc(receipt.guarantee.exclusions)}</div>
                </div>
-               <div class="guarantee-badge">1-year Frame Guarantee</div>
+               <div class="company-details">
+                 UK Sofa Shop &nbsp;&bull;&nbsp; ${esc(ADDRESS_LINE)} &nbsp;&bull;&nbsp; ${esc(PHONE_DISPLAY)}
+               </div>
+               ${trader ? `<div class="company-details" style="margin-top: 6px; text-transform: none; letter-spacing: 0;">${esc(trader)}</div>` : ''}
             </div>
           </div>
         </body>
@@ -375,7 +390,7 @@ export default function DirectPrintButton({ order }: { order: AdminOrderDisplay 
       onClick={handlePrint}
       type="button"
       className="flex items-center justify-center gap-2 bg-stone-100 text-stone-700 px-4 py-2.5 rounded-sm text-sm font-bold hover:bg-stone-200 active:scale-95 transition"
-      title="Print Elegant PDF Receipt"
+      title="Print the receipt"
     >
       <Printer className="w-5 h-5" />
     </button>

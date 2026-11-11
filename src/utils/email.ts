@@ -40,6 +40,7 @@ import { SITE_URL } from '@/constants/site';
 import { createRecoveryOptOutToken } from '@/utils/recoveryToken';
 import { createAdminClient } from '@/utils/supabase/admin';
 import type { ConfirmedSummary } from '@/utils/digestSources';
+import { formatMoney, rowAmountText, rowLabelText, type Receipt } from '@/utils/orderReceipt';
 
 /**
  * Escapes a value before it goes into an email's HTML.
@@ -1127,6 +1128,123 @@ ${inviteBcc ? `
   })
 
   return { invited: Boolean(inviteBcc) }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  RECEIPT
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * The order's receipt, sent to the customer from the order page ("Email the
+ * receipt"). The receipt is worked out by buildReceipt (utils/orderReceipt.ts),
+ * which the printed receipt also reads, so the two always show the same lines,
+ * fees and amount paid.
+ *
+ * Sent when staff press the button, never automatically: marking an order
+ * delivered already sends its own status email. Once the order is delivered the
+ * receipt says "Amount paid" and gives the guarantee's first and last day; before
+ * that it says what is due and that the guarantee starts on delivery.
+ */
+export async function sendOrderReceipt(
+  email: string,
+  receipt: Receipt,
+  opts: { orderId?: string } = {},
+): Promise<void> {
+  const firstName = (receipt.customerName || '').trim().split(/\s+/)[0] || 'there'
+  const cell = 'padding: 10px 0; border-bottom: 1px solid #f0ede8; vertical-align: top;'
+  const small = 'margin: 3px 0 0 0; color: #78716c; font-size: 12px; line-height: 1.5;'
+
+  const lineRows = receipt.lines.map(line => `
+      <tr>
+        <td style="${cell}">
+          <p style="margin: 0; font-size: 14px; font-weight: 600; color: #1c1917;">${line.quantity > 1 ? `${line.quantity} × ` : ''}${esc(line.title)}</p>
+          ${line.summary.length ? `<p style="${small}">${line.summary.map(s => esc(s)).join(' · ')}</p>` : ''}
+          ${line.details.map(d => `<p style="${small}">${esc(d.label)}: <strong style="color: #44403c;">${esc(d.value)}</strong></p>`).join('')}
+        </td>
+        <td style="${cell} text-align: right; white-space: nowrap; font-size: 14px; font-weight: 600; color: #1c1917;">
+          ${formatMoney(line.total)}
+          ${line.quantity > 1 ? `<p style="${small} font-weight: 400;">${formatMoney(line.unit)} each</p>` : ''}
+        </td>
+      </tr>`).join('')
+
+  const sumRow = (label: string, value: string, colour = '#57534e') => `
+      <tr>
+        <td style="padding: 5px 0; color: ${colour}; font-size: 13px;">${esc(label)}</td>
+        <td style="padding: 5px 0; color: ${colour}; font-size: 13px; text-align: right; white-space: nowrap;">${esc(value)}</td>
+      </tr>`
+
+  const summaryRows = [
+    sumRow('Items', formatMoney(receipt.itemsSubtotal)),
+    ...receipt.rows.map(row => sumRow(rowLabelText(row), rowAmountText(row), row.kind === 'discount' ? '#166534' : '#57534e')),
+  ].join('')
+
+  const paid = receipt.payment.kind === 'paid'
+  const totalLabel = receipt.payment.kind === 'due' ? 'Total due on delivery' : 'Total'
+
+  const intro = receipt.status === 'delivered'
+    ? 'Thank you for ordering from us. We hope you are enjoying your new furniture. Your receipt is below, with your guarantee dates.'
+    : receipt.status === 'cancelled'
+      ? 'Here is the receipt for your order.'
+      : 'Thank you for ordering from us. Your receipt is below, with what you will pay on delivery and how your guarantee works.'
+
+  const content = `
+    <div style="text-align: left;">
+      <div style="display: inline-block; background-color: #fef9f0; color: #d4871a; padding: 6px 14px; border-radius: 6px; font-weight: bold; font-size: 11px; margin-bottom: 24px; letter-spacing: 0.1em; text-transform: uppercase;">
+        Receipt · Order ${esc(receipt.ref)}
+      </div>
+
+      <h2 style="margin: 0 0 16px 0; font-size: 24px; color: #1c1917;">Thanks for ordering from us, ${esc(firstName)}!</h2>
+      <p style="color: #57534e; line-height: 1.7; font-size: 15px; margin: 0 0 24px 0;">${intro}</p>
+
+      ${receipt.status === 'cancelled' ? '' : `
+      <div style="background-color: #fefaf3; border: 1px solid #f3e2c7; border-radius: 10px; padding: 16px 18px; margin-bottom: 28px;">
+        <p style="margin: 0 0 6px 0; color: #d4871a; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.1em;">Your guarantee</p>
+        <p style="margin: 0 0 6px 0; color: #1c1917; font-size: 15px; font-weight: 600; line-height: 1.5;">${esc(receipt.guarantee.text)}</p>
+        <p style="margin: 0; color: #78716c; font-size: 12px; line-height: 1.6;">It covers structural faults in the frame and springs. ${esc(receipt.guarantee.exclusions)}</p>
+      </div>`}
+
+      <table role="presentation" style="width: 100%; border-collapse: collapse; margin: 0 0 8px 0;">
+        ${lineRows}
+      </table>
+
+      <table role="presentation" style="width: 100%; border-collapse: collapse; margin: 0;">
+        ${summaryRows}
+        <tr>
+          <td style="padding: 12px 0 0 0; border-top: 1px solid #e7e5e4; color: #1c1917; font-size: 14px; font-weight: bold;">${totalLabel}</td>
+          <td style="padding: 12px 0 0 0; border-top: 1px solid #e7e5e4; color: #d4871a; font-size: 18px; font-weight: bold; text-align: right; white-space: nowrap;">${formatMoney(receipt.total)}</td>
+        </tr>
+      </table>
+
+      ${paid ? `
+      <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 14px 18px; margin-top: 18px; color: #166534;">
+        <p style="margin: 0; font-size: 16px; font-weight: bold;">${esc(receipt.payment.heading)}: ${formatMoney(receipt.payment.amount)}</p>
+        <p style="margin: 4px 0 0 0; font-size: 13px; line-height: 1.5;">${esc(receipt.payment.note)}</p>
+      </div>` : `
+      <p style="margin: 14px 0 0 0; color: #78716c; font-size: 12px; line-height: 1.6;">${esc(receipt.payment.note)}</p>`}
+
+      <div style="margin-top: 28px; padding-top: 18px; border-top: 1px solid #f0ede8;">
+        <p style="margin: 0 0 4px 0; color: #78716c; font-size: 11px; text-transform: uppercase; font-weight: bold; letter-spacing: 0.08em;">Delivery address</p>
+        <p style="margin: 0; color: #44403c; font-size: 13px; line-height: 1.6;">${esc(receipt.address)}</p>
+      </div>
+
+      <p style="color: #a8a29e; line-height: 1.6; font-size: 12px; margin-top: 24px;">
+        Keep this email as your proof of purchase. If anything is not right, reply to it or
+        call us on ${esc(PHONE_DISPLAY)} and we will sort it out.
+      </p>
+    </div>
+  `
+
+  await deliver({
+    from: sender(),
+    to: email,
+    subject: `Your receipt from UK Sofa Shop (#${receipt.ref})`,
+    html: generateEmailHTML(content),
+  }, {
+    kind: 'order-receipt',
+    orderRef: receipt.ref,
+    ...(opts.orderId ? { orderId: opts.orderId } : {}),
+    meta: { status: receipt.status },
+  })
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

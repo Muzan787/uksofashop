@@ -9,7 +9,9 @@ import { reportOrderConversion } from '@/utils/orderConversions'
 import { reportGooglePurchase } from '@/utils/googleServer'
 import { getTrackingMode } from '@/utils/trackingMode'
 import { isGoogleOnlyAcquisition } from '@/utils/metaSignals'
-import { sendOrderStatusUpdate, sendAdminOrderStatusNotification, sendAdminOrderConfirmedNotification } from '@/utils/email'
+import { sendOrderStatusUpdate, sendAdminOrderStatusNotification, sendAdminOrderConfirmedNotification, sendOrderReceipt } from '@/utils/email'
+import { buildReceipt } from '@/utils/orderReceipt'
+import { loadOrder } from '@/app/admin/orders/orderData'
 import { requireAdmin } from '@/utils/auth'
 import { sendReviewEmailNow } from '@/utils/jobs/reviewRequests'
 import { z } from 'zod'
@@ -611,6 +613,28 @@ export async function sendToOrderFlowFromPage(formData: FormData) {
  * anybody (since 2026-10-31), so this is the only route to an invitation. The
  * page asks first when a review email has already gone.
  */
+export async function sendReceiptEmailFromPage(formData: FormData) {
+  await requireAdmin()
+  const parsed = uuid.safeParse(formData.get('orderId'))
+  if (!parsed.success) redirect('/admin/orders?error=bad-request')
+  const orderId = parsed.data
+
+  const { data: order } = await loadOrder(await createClient(), orderId)
+  if (!order) redirect(orderPage(orderId, { error: 'not_found' }))
+  if (!order.customer_email) redirect(orderPage(orderId, { error: 'receipt-no-email' }))
+  if (order.status === 'cancelled') redirect(orderPage(orderId, { error: 'receipt-cancelled' }))
+
+  let sent = true
+  try {
+    await sendOrderReceipt(order.customer_email, buildReceipt(order), { orderId })
+  } catch (err) {
+    console.error(`Receipt email failed for order ${orderId}`, err)
+    sent = false
+  }
+  revalidatePath(`/admin/orders/${orderId}`)
+  redirect(orderPage(orderId, sent ? { done: 'receipt' } : { error: 'receipt-failed' }))
+}
+
 export async function sendReviewEmailFromPage(formData: FormData) {
   await requireAdmin()
   const parsed = uuid.safeParse(formData.get('orderId'))

@@ -11,7 +11,7 @@
 import { AlertTriangle, ArrowLeft, CalendarDays, CheckCircle2, Clock3, Mail, MapPin, Phone, Radio, Truck, User } from 'lucide-react'
 import Link from 'next/link'
 import {
-  addOrderNoteFromPage, changeOrderStatusFromPage, sendReviewEmailFromPage,
+  addOrderNoteFromPage, changeOrderStatusFromPage, sendReceiptEmailFromPage, sendReviewEmailFromPage,
   sendToOrderFlowFromPage, setOrderSourceFromPage, setOrderTestFlagFromPage,
 } from '@/app/actions/orders'
 import type { OrderWithLines } from '../orderData'
@@ -91,6 +91,7 @@ function banner(sp: Record<string, string | undefined>, order: { customer_name: 
     case 'test-off': return { tone: 'ok', text: 'Marked as a real order.' }
     case 'source': return { tone: 'ok', text: 'Saved where it came from.' }
     case 'orderflow': return { tone: 'ok', text: "Sent to OrderFlow. Its answer shows below within five minutes." }
+    case 'receipt': return { tone: 'ok', text: `Receipt emailed to ${order.customer_name ? firstName(order.customer_name) : 'the customer'}.` }
     case 'review': return { tone: 'ok', text: 'Review email sent.' }
     case 'review-invite': return { tone: 'ok', text: 'Review email sent, and Trustpilot will invite them on its own schedule.' }
   }
@@ -103,6 +104,9 @@ function banner(sp: Record<string, string | undefined>, order: { customer_name: 
     not_authorised: 'You are not authorised to change orders.',
     note: 'Write a note first (up to 2,000 characters).',
     'orderflow-off': "OrderFlow isn't connected: its address and key aren't in Supabase Vault.",
+    'receipt-no-email': 'There is no email on this order, so the receipt can’t be emailed. Print it instead, or send the details on WhatsApp.',
+    'receipt-cancelled': 'This order is cancelled, so there is no receipt to send.',
+    'receipt-failed': "The receipt didn't send. Try again in a moment.",
     'review-no-email': 'There is no email on this order. Copy a review link below and send it on WhatsApp instead.',
     'review-no-products': "This order has no catalogue sofa to review, so there's no review link to send.",
     'review-not-delivered': 'The review email goes once the order is delivered.',
@@ -152,6 +156,8 @@ export interface OrderViewProps {
   events: OrderEvent[]
   sends: OrderFlowSend[]
   reviewLinks: ReviewLink[]
+  /** When the receipt email last went to the customer, or null if it never has. */
+  receiptSentAt: string | null
   pickers: { variants: PickerVariant[]; fabrics: PickerFabric[] }
   /** The signed-in admin, so their own history entries read "You". */
   userId: string | null
@@ -159,7 +165,7 @@ export interface OrderViewProps {
   sp: Record<string, string | undefined>
 }
 
-export default function OrderView({ order, events, sends, reviewLinks, pickers, userId, sp }: OrderViewProps) {
+export default function OrderView({ order, events, sends, reviewLinks, receiptSentAt, pickers, userId, sp }: OrderViewProps) {
   const orderflowNumber = sends.find(s => s.order_number)?.order_number ?? null
 
   const status = order.status ?? 'pending_cod'
@@ -427,6 +433,28 @@ export default function OrderView({ order, events, sends, reviewLinks, pickers, 
           </Link>
           {status !== 'cancelled' && <EditOrderForm order={order} variants={pickers.variants} fabrics={pickers.fabrics} />}
         </div>
+        {/* The receipt, by email: the same one the print button makes. */}
+        {status !== 'cancelled' && (
+          order.customer_email ? (
+            <form action={sendReceiptEmailFromPage} className="mt-3 border-t border-stone-100 pt-3">
+              <input type="hidden" name="orderId" value={order.id} />
+              <ConfirmSubmit
+                className={`${lightButton} w-full sm:w-auto`}
+                question={`Email the receipt to ${order.customer_email}?${status === 'delivered' ? '' : ' The order is not delivered yet, so it will show the amount due and say the guarantee starts on delivery.'}`}
+              >
+                <Mail className="h-4 w-4" aria-hidden="true" /> Email the receipt to {name}
+              </ConfirmSubmit>
+              <p className="m-0 mt-1.5 text-xs text-stone-500">
+                {receiptSentAt ? <>Last emailed <Time value={receiptSentAt} />. </> : null}
+                {status === 'delivered'
+                  ? 'Shows the amount paid and the dates the 1-year guarantee runs.'
+                  : 'Not delivered yet: it shows the amount due, and the guarantee starts on delivery. Send it again once delivered for the amount paid and the guarantee dates.'}
+              </p>
+            </form>
+          ) : (
+            <p className="m-0 mt-3 border-t border-stone-100 pt-3 text-xs text-stone-500">No email on this order, so the receipt can only be printed.</p>
+          )
+        )}
       </section>
 
       {/* ── E8: review (delivered only) ───────────────────────────────── */}

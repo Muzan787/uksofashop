@@ -59,5 +59,11 @@ export interface AdminOrderDisplay {
   preferred_delivery_date?: string | null
   special_instructions?: string | null
   delivery_total?: number | null
+  /** pending_cod, confirmed, on_hold, delivered or cancelled. */
+  status?: string | null
+  /** When it was marked delivered: the day the guarantee starts. */
+  delivered_at?: string | null
+  wants_assembly?: boolean | null
+  wants_sofa_removal?: boolean | null
   order_items: AdminOrderItemDisplay[]
 }

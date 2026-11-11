@@ -31,12 +31,14 @@ export default async function AdminOrderPage(props: { params: Params; searchPara
   const { data: order } = await loadOrder(supabase, id)
   if (!order) notFound()
 
-  const [{ data: events }, { data: sends }, pickers, { data: { user } }, reviewLinks] = await Promise.all([
+  const [{ data: events }, { data: sends }, pickers, { data: { user } }, reviewLinks, { data: receiptLog }] = await Promise.all([
     supabase.from('order_events').select('id, created_at, kind, from_status, to_status, staff_id, note').eq('order_id', id).order('created_at', { ascending: true }),
     supabase.rpc('order_orderflow_sends', { p_order_id: id }),
     loadPickers(supabase),
     supabase.auth.getUser(),
     order.status === 'delivered' ? orderReviewLinks(order.id) : Promise.resolve([]),
+    // When the receipt last went out, so a second press says so.
+    supabase.from('email_log').select('created_at').eq('order_id', id).eq('kind', 'order-receipt').eq('status', 'sent').order('created_at', { ascending: false }).limit(1),
   ])
 
   return (
@@ -45,6 +47,7 @@ export default async function AdminOrderPage(props: { params: Params; searchPara
       events={events ?? []}
       sends={(sends ?? []) as unknown as OrderFlowSend[]}
       reviewLinks={reviewLinks}
+      receiptSentAt={receiptLog?.[0]?.created_at ?? null}
       pickers={pickers}
       userId={user?.id ?? null}
       sp={sp}
