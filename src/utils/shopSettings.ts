@@ -84,7 +84,7 @@ export const DEFAULT_SHOP_SETTINGS: ShopSettings = {
   preferredLatestDays: 180,
   tierAmounts: { ELECTRIC: 50, ROMA: 30, STANDARD: 20, EXCLUDED: 0 },
   offerMinPrice: 400,
-  offerWindowHours: 48,
+  offerWindowHours: 72,
   offerEnabled: true,
   sampleLimit: 5,
   orderflowEnabled: true,
