@@ -5,8 +5,10 @@ import { createClient } from '@/utils/supabase/server'
 import MetaConversionButton from '@/app/admin/orders/MetaConversionButton'
 import { dualTimeText } from '@/utils/adminTime'
 import { adminStatusLabel } from '@/utils/adminStatus'
-import { cancelledAfterSending, deliveredEligible, deliveredPending, holdState, isGoogleOnlyAcquisition, isQa, purchaseEligible, purchasePending } from '@/utils/metaSignals'
+import { cancelledAfterSending, deliveredEligible, holdState, isGoogleOnlyAcquisition, isQa, purchaseEligible } from '@/utils/metaSignals'
 import { metaReply, type ConversionAttempt, type MetaReply } from '@/utils/metaReply'
+import { classifyMetaEvent, META_EVENT_MAX_AGE_MS, QUEUE_FILTERS, QUEUE_LABEL, type ConsentReason, type QueueItem, type QueueState } from '@/utils/metaQueue'
+import { orderAdvertisingConsent } from '@/utils/metaOrderConsent'
 import { trackingSetup } from '@/utils/trackingSetup'
 import { TRACKING_MODES, type TrackingMode } from '@/utils/shopSettings'
 import MetaHoldButtons from './MetaHoldButtons'
@@ -39,10 +41,26 @@ type MetaOrder = {
   source: string | null
   cancellation_reason: string | null
   is_test: boolean | null
+  visitor_id: string | null
+  session_id: string | null
+  arrival_id: string | null
   meta_signal_holds?: { state: string } | { state: string }[] | null
 }
 
-type SearchParams = Promise<{ stage?: string; state?: string }>
+type SearchParams = Promise<{ stage?: string; state?: string; queue?: string }>
+
+const QUEUE_TONE: Record<QueueState, string> = {
+  eligible: 'border-amber-200 bg-amber-50 text-amber-700',
+  accepted: 'border-green-200 bg-green-50 text-green-700',
+  sent_unconfirmed: 'border-yellow-200 bg-yellow-50 text-yellow-800',
+  awaiting_evidence: 'border-indigo-200 bg-indigo-50 text-indigo-700',
+  consent_unavailable: 'border-stone-300 bg-stone-100 text-stone-700',
+  too_old: 'border-stone-200 bg-stone-50 text-stone-500',
+  held: 'border-stone-300 bg-stone-100 text-stone-700',
+  google_origin: 'border-sky-200 bg-sky-50 text-sky-700',
+  not_ready: 'border-stone-200 bg-stone-50 text-stone-600',
+  blocked: 'border-red-200 bg-red-50 text-red-700',
+}
 
 // Eligibility and "pending" live in utils/metaSignals.ts, shared with the
 // More page's count, so the menu and this page always agree.
@@ -81,79 +99,31 @@ function money(value: number | null): string {
   return '£' + Number(value ?? 0).toFixed(2)
 }
 
-function signalTime(value: string | null): string | null {
-  return dualTimeText(value)
+/** The moment the queue is judged at (server render time; kept out of the component body). */
+function queueClock(): number {
+  return Date.now()
 }
 
-function signalStatus(
-  order: MetaOrder,
-  kind: 'purchase' | 'delivered',
-): { label: string; tone: string; note: string } {
+/** The note under a signal: Meta's own time for a sent event, otherwise the queue's reason. */
+function signalNote(order: MetaOrder, kind: 'purchase' | 'delivered', item: QueueItem): string {
   const sentAt = kind === 'purchase' ? order.purchase_event_sent_at : order.delivered_event_sent_at
   if (sentAt) {
-    return {
-      label: 'Sent',
-      tone: 'border-green-200 bg-green-50 text-green-700',
-      note: isGoogleOnlyAcquisition(order) ? 'Historical Meta dispatch; recorded acquisition is Google.' : signalTime(sentAt) ?? '',
-    }
+    const when = dualTimeText(sentAt) ?? ''
+    return isGoogleOnlyAcquisition(order) ? `Historical Meta dispatch ${when}; recorded acquisition is Google.` : `${when} · ${item.note}`
   }
+  return item.sendBy ? `${item.note} Send by ${dualTimeText(item.sendBy)}.` : item.note
+}
 
-  if (isGoogleOnlyAcquisition(order)) return {
-    label: 'Google origin',
-    tone: 'border-sky-200 bg-sky-50 text-sky-700',
-    note: 'No new Meta signals; Google reporting remains separate.',
-  }
-
-  const hold = holdState(order)
-  if (hold) {
-    return {
-      label: hold === 'hold' ? 'Held' : 'Won’t send',
-      tone: hold === 'hold' ? 'border-stone-300 bg-stone-100 text-stone-700' : 'border-red-200 bg-red-50 text-red-700',
-      note: hold === 'hold' ? 'On hold until released' : 'Marked Don’t send',
-    }
-  }
-
-  if (isQa(order)) {
-    return {
-      label: 'Blocked',
-      tone: 'border-violet-200 bg-violet-50 text-violet-700',
-      note: 'QA / test order',
-    }
-  }
-
-  if (order.status === 'cancelled') {
-    return {
-      label: 'Blocked',
-      tone: 'border-red-200 bg-red-50 text-red-700',
-      note: 'Cancelled order',
-    }
-  }
-
-  if (kind === 'purchase') {
-    return purchaseEligible(order)
-      ? {
-          label: 'Pending',
-          tone: 'border-amber-200 bg-amber-50 text-amber-700',
-          note: 'Confirmed and ready to send',
-        }
-      : {
-          label: 'Not ready',
-          tone: 'border-stone-200 bg-stone-50 text-stone-600',
-          note: 'Confirm the order first',
-        }
-  }
-
-  return deliveredEligible(order)
-    ? {
-        label: 'Pending',
-        tone: 'border-amber-200 bg-amber-50 text-amber-700',
-        note: 'Delivered and ready to send',
-      }
-    : {
-        label: 'Not ready',
-        tone: 'border-stone-200 bg-stone-50 text-stone-600',
-        note: 'Mark the order Delivered first',
-      }
+/**
+ * Unsent, otherwise-sendable events need the recorded ad consent before the
+ * queue can call them eligible. Looked up with the sender's own function.
+ */
+function needsConsent(order: MetaOrder, kind: 'purchase' | 'delivered', now: number): boolean {
+  const sentAt = kind === 'purchase' ? order.purchase_event_sent_at : order.delivered_event_sent_at
+  const eventAt = kind === 'purchase' ? order.confirmed_at : order.delivered_at
+  const ready = kind === 'purchase' ? purchaseEligible(order) : deliveredEligible(order)
+  return !sentAt && ready && !!eventAt && holdState(order) === null &&
+    now - Date.parse(eventAt) <= META_EVENT_MAX_AGE_MS
 }
 
 export default async function MetaAdminPage(props: { searchParams: SearchParams }) {
@@ -164,12 +134,13 @@ export default async function MetaAdminPage(props: { searchParams: SearchParams 
     sp.stage === 'purchase' || sp.stage === 'delivered' ? sp.stage : 'all'
   const state: SignalState =
     stage !== 'all' && (sp.state === 'sent' || sp.state === 'pending' || sp.state === 'held') ? sp.state : 'all'
+  const queue: QueueState | null = QUEUE_FILTERS.includes(sp.queue as QueueState) ? sp.queue as QueueState : null
 
   const [{ data, error }, attemptsRes, logRes, settingsRes] = await Promise.all([
     supabase
       .from('orders')
       .select(
-        'id, customer_name, status, total_amount, created_at, confirmed_at, delivered_at, cancelled_at, purchase_event_sent_at, delivered_event_sent_at, utm_source, gclid, gbraid, wbraid, fbclid, utm_campaign, manual_acquisition_source, manual_acquisition_note, source, cancellation_reason, is_test, meta_signal_holds(state)',
+        'id, customer_name, status, total_amount, created_at, confirmed_at, delivered_at, cancelled_at, purchase_event_sent_at, delivered_event_sent_at, utm_source, gclid, gbraid, wbraid, fbclid, utm_campaign, manual_acquisition_source, manual_acquisition_note, source, cancellation_reason, is_test, visitor_id, session_id, arrival_id, meta_signal_holds(state)',
       )
       .order('created_at', { ascending: false })
       .limit(5000),
@@ -213,23 +184,56 @@ export default async function MetaAdminPage(props: { searchParams: SearchParams 
 
   const orders = (data ?? []) as MetaOrder[]
 
+  // Each order's Purchase and OrderDelivered, classified by the sender's own
+  // rules (utils/metaQueue.ts). Consent is checked only where it decides the
+  // answer, with the same function the sender calls.
+  const now = queueClock()
+  const consentFor = new Map<string, ConsentReason>()
+  await Promise.all(
+    orders
+      .filter(o => needsConsent(o, 'purchase', now) || needsConsent(o, 'delivered', now))
+      .map(async o => consentFor.set(o.id, (await orderAdvertisingConsent(o)).reason)),
+  )
+  const queueOf = new Map<string, { purchase: QueueItem; delivered: QueueItem }>()
+  for (const o of orders) {
+    const consent = consentFor.get(o.id) ?? null
+    queueOf.set(o.id, {
+      purchase: classifyMetaEvent(o, 'purchase', consent, attemptsBy.get(`${o.id}:Purchase`) ?? [], now),
+      delivered: classifyMetaEvent(o, 'delivered', consent, attemptsBy.get(`${o.id}:OrderDelivered`) ?? [], now),
+    })
+  }
+  const q = (o: MetaOrder) => queueOf.get(o.id)!
+  const purchaseReady = (o: MetaOrder) => q(o).purchase.state === 'eligible'
+  const deliveredReady = (o: MetaOrder) => q(o).delivered.state === 'eligible'
+  const unsentWaiting = (o: MetaOrder, kind: 'purchase' | 'delivered') => {
+    const s = q(o)[kind].state
+    return s !== 'accepted' && s !== 'sent_unconfirmed' && s !== 'not_ready' && s !== 'blocked'
+  }
+
   const purchaseSent = orders.filter(o => Boolean(o.purchase_event_sent_at))
-  const purchasePendingRows = orders.filter(purchasePending)
+  const purchasePendingRows = orders.filter(purchaseReady)
+  const purchaseWaitingRows = orders.filter(o => unsentWaiting(o, 'purchase'))
   const deliveredSent = orders.filter(o => Boolean(o.delivered_event_sent_at))
-  const deliveredPendingRows = orders.filter(deliveredPending)
+  const deliveredPendingRows = orders.filter(deliveredReady)
+  const deliveredWaitingRows = orders.filter(o => unsentWaiting(o, 'delivered'))
   const cancelledSent = orders.filter(cancelledAfterSending)
 
+  const queueCount = (s: QueueState) =>
+    orders.reduce((n, o) => n + (q(o).purchase.state === s ? 1 : 0) + (q(o).delivered.state === s ? 1 : 0), 0)
+
   let visible = orders.filter(order => {
+    if (queue) return q(order).purchase.state === queue || q(order).delivered.state === queue
+
     if (stage === 'purchase') {
       if (state === 'sent') return Boolean(order.purchase_event_sent_at)
-      if (state === 'pending') return purchasePending(order)
+      if (state === 'pending') return purchaseReady(order)
       if (state === 'held') return holdState(order) !== null && !order.purchase_event_sent_at
       return purchaseEligible(order) || Boolean(order.purchase_event_sent_at)
     }
 
     if (stage === 'delivered') {
       if (state === 'sent') return Boolean(order.delivered_event_sent_at)
-      if (state === 'pending') return deliveredPending(order)
+      if (state === 'pending') return deliveredReady(order)
       if (state === 'held') return holdState(order) !== null && !order.delivered_event_sent_at
       return deliveredEligible(order) || Boolean(order.delivered_event_sent_at)
     }
@@ -237,14 +241,16 @@ export default async function MetaAdminPage(props: { searchParams: SearchParams 
     return true
   })
 
-  // In the all view, the things needing action rise to the top. Inside a
-  // signal-specific view, newest-first is easier to scan.
+  // In the all view, eligible events rise to the top, soonest Meta deadline
+  // first, so nothing expires unseen. Inside a filter, newest-first.
   if (stage === 'all') {
+    const deadline = (o: MetaOrder) => {
+      const times = [q(o).purchase.sendBy, q(o).delivered.sendBy].filter(Boolean).map(t => Date.parse(t as string))
+      return times.length ? Math.min(...times) : Infinity
+    }
     visible = [...visible].sort((a, b) => {
-      const rank = (order: MetaOrder) =>
-        deliveredPending(order) ? 0 : purchasePending(order) ? 1 : 2
-      const rankDiff = rank(a) - rank(b)
-      if (rankDiff !== 0) return rankDiff
+      const diff = deadline(a) - deadline(b)
+      if (diff !== 0 && Number.isFinite(Math.min(deadline(a), deadline(b)))) return diff
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     })
   }
@@ -289,9 +295,9 @@ export default async function MetaAdminPage(props: { searchParams: SearchParams 
               : 'border-stone-200 bg-white hover:border-stone-300'
           }`}
         >
-          <p className="m-0 text-[10px] font-bold uppercase tracking-[0.18em] text-amber-700">Meta purchase pending</p>
+          <p className="m-0 text-[10px] font-bold uppercase tracking-[0.18em] text-amber-700">Purchase eligible to send</p>
           <p className="m-0 mt-2 text-2xl font-bold text-stone-900">{purchasePendingRows.length}</p>
-          <p className="m-0 mt-1 text-xs text-stone-600">Confirmed but Purchase not sent</p>
+          <p className="m-0 mt-1 text-xs text-stone-600">{purchaseWaitingRows.length} unsent in all · the rest have a reason below</p>
         </Link>
 
         <Link
@@ -302,9 +308,9 @@ export default async function MetaAdminPage(props: { searchParams: SearchParams 
               : 'border-stone-200 bg-white hover:border-stone-300'
           }`}
         >
-          <p className="m-0 text-[10px] font-bold uppercase tracking-[0.18em] text-amber-700">Meta delivered pending</p>
+          <p className="m-0 text-[10px] font-bold uppercase tracking-[0.18em] text-amber-700">Delivered eligible to send</p>
           <p className="m-0 mt-2 text-2xl font-bold text-stone-900">{deliveredPendingRows.length}</p>
-          <p className="m-0 mt-1 text-xs text-stone-600">Delivered but OrderDelivered not sent</p>
+          <p className="m-0 mt-1 text-xs text-stone-600">{deliveredWaitingRows.length} unsent in all · the rest have a reason below</p>
         </Link>
       </div>
 
@@ -314,7 +320,7 @@ export default async function MetaAdminPage(props: { searchParams: SearchParams 
             <div>
               <p className="m-0 text-[10px] font-bold uppercase tracking-[0.18em] text-blue-700">Purchase signals</p>
               <p className="m-0 mt-1 text-sm font-semibold text-stone-800">
-                {purchaseSent.length} sent · {purchasePendingRows.length} pending
+                {purchaseSent.length} sent · {purchasePendingRows.length} eligible
               </p>
             </div>
             <ShoppingCart className="h-5 w-5 text-blue-700" />
@@ -325,7 +331,7 @@ export default async function MetaAdminPage(props: { searchParams: SearchParams 
             <div>
               <p className="m-0 text-[10px] font-bold uppercase tracking-[0.18em] text-green-700">Delivered signals</p>
               <p className="m-0 mt-1 text-sm font-semibold text-stone-800">
-                {deliveredSent.length} sent · {deliveredPendingRows.length} pending
+                {deliveredSent.length} sent · {deliveredPendingRows.length} eligible
               </p>
             </div>
             <Truck className="h-5 w-5 text-green-700" />
@@ -338,6 +344,19 @@ export default async function MetaAdminPage(props: { searchParams: SearchParams 
       <LatestEvents events={latestEvents} />
 
       <div className="space-y-3">
+        <div className="flex flex-wrap gap-2">
+          {QUEUE_FILTERS.map(key => (
+            <Link
+              key={key}
+              href={queue === key ? '/admin/meta' : `/admin/meta?queue=${key}`}
+              className={`shrink-0 rounded-pill border px-3 py-1.5 text-[11px] font-bold transition ${
+                queue === key ? 'border-stone-900 bg-stone-900 text-white' : QUEUE_TONE[key]
+              }`}
+            >
+              {QUEUE_LABEL[key]} · {queueCount(key)}
+            </Link>
+          ))}
+        </div>
         <div className="flex gap-2 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden">
           {([
             ['all', 'All'],
@@ -386,17 +405,19 @@ export default async function MetaAdminPage(props: { searchParams: SearchParams 
 
       <div className="space-y-3">
         {visible.map(order => {
-          const purchase = signalStatus(order, 'purchase')
-          const delivered = signalStatus(order, 'delivered')
+          const purchaseItem = q(order).purchase
+          const deliveredItem = q(order).delivered
+          const purchase = { label: purchaseItem.label, tone: QUEUE_TONE[purchaseItem.state], note: signalNote(order, 'purchase', purchaseItem) }
+          const delivered = { label: deliveredItem.label, tone: QUEUE_TONE[deliveredItem.state], note: signalNote(order, 'delivered', deliveredItem) }
           const attributed = metaAttributedForAdmin(order)
 
           return (
             <div
               key={order.id}
               className={`rounded-md border bg-white p-4 shadow-sm sm:p-5 ${
-                deliveredPending(order)
+                deliveredReady(order)
                   ? 'border-amber-300'
-                  : purchasePending(order)
+                  : purchaseReady(order)
                     ? 'border-blue-200'
                     : 'border-stone-200'
               }`}
@@ -461,7 +482,7 @@ export default async function MetaAdminPage(props: { searchParams: SearchParams 
                     </span>
                   </div>
 
-                  {purchasePending(order) && (
+                  {purchaseReady(order) && (
                     <div className="mt-3">
                       <MetaConversionButton
                         orderId={order.id}
@@ -473,7 +494,7 @@ export default async function MetaAdminPage(props: { searchParams: SearchParams 
                   )}
 
                   {(() => { const r = replyFor(order.id, 'Purchase'); return r && <ReplyLine reply={r} /> })()}
-                  {!order.purchase_event_sent_at && (purchasePending(order) || holdState(order) !== null) && (
+                  {!order.purchase_event_sent_at && (unsentWaiting(order, 'purchase') || holdState(order) !== null) && (
                     <MetaHoldButtons orderId={order.id} state={holdState(order)} />
                   )}
 
@@ -498,7 +519,7 @@ export default async function MetaAdminPage(props: { searchParams: SearchParams 
                     </span>
                   </div>
 
-                  {deliveredPending(order) && (
+                  {deliveredReady(order) && (
                     <div className="mt-3">
                       <MetaConversionButton
                         orderId={order.id}
@@ -538,7 +559,7 @@ export default async function MetaAdminPage(props: { searchParams: SearchParams 
         <p className="m-0 flex items-start gap-2">
           <Clock3 className="mt-0.5 h-4 w-4 shrink-0 text-stone-500" />
           <span>
-            <strong className="text-stone-800">Pending means eligible but unsent.</strong>{' '}
+            <strong className="text-stone-800">Eligible means consent recorded and within Meta’s 7-day limit.</strong>{' '}Every other unsent event shows its reason: awaiting evidence (no linked visit), consent unavailable, too old, held or Google origin.{' '}
             A fresh COD submission is not a Purchase just because an order row exists. Purchase becomes actionable
             after confirmation; OrderDelivered becomes actionable after delivery. This keeps the Meta queue aligned
             with the real business funnel.

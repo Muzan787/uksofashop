@@ -110,7 +110,11 @@ const applySettings = async pg => {
 }
 
 /** The offer floor, the excluded products and the removal band. */
-const applyOfferFloor = pg => pg.exec(read(`supabase/migrations/${OFFER_FLOOR_MIGRATION}`))
+const applyOfferFloor = async pg => {
+  await pg.exec(read(`supabase/migrations/${OFFER_FLOOR_MIGRATION}`))
+  // The 72-hour visitor window (13 Nov 2026), so the row matches today's figures.
+  await pg.exec(read('supabase/migrations/20261114090000_offer_window_default_72.sql'))
+}
 
 /** Everything, as production has it. */
 const applyAll = async pg => { await applySettings(pg); await applyOfferFloor(pg) }

@@ -169,7 +169,7 @@ export default function AdLinksView({ feed, ads, home, departments, ranges, prod
       <section className={section} aria-labelledby="profile-heading">
         <h2 id="profile-heading" className={sectionTitle}>Profile links</h2>
         <p className={sectionIntro}>
-          For the website field on each profile. These aren’t ads, so they never carry the ad offer; visitors from them get the same 48-hour offer every visitor has had since 12 Oct.
+          For the website field on each profile. These aren’t ads, so they never carry the ad offer; visitors from them get the same time-limited offer window every visitor has had since 12 Oct (its length is set in Settings).
         </p>
         <ul className="m-0 mt-2 list-none divide-y divide-stone-100 p-0">
           {PROFILE_LINKS.map(p => <LinkRow key={p.key} link={{ label: p.label, detail: p.where, url: p.url }} />)}

@@ -26,9 +26,9 @@ export function formatOfferDeadline(iso: string): string {
 }
 
 /**
- * "47:12:05", or "3d 04:12:05" for the few windows issued under the old
- * seven-day rule that are still running. Zero-padded so the width does not
- * jitter as it ticks.
+ * "71:12:05" inside a window of up to three days (the 72-hour window since
+ * 13 Nov 2026), or "3d 04:12:05" for anything longer. Zero-padded so the
+ * width does not jitter as it ticks.
  */
 export function formatCountdown(ms: number): string {
   const total = Math.max(0, Math.floor(ms / 1000))
@@ -37,9 +37,9 @@ export function formatCountdown(ms: number): string {
   const minutes = Math.floor((total % 3600) / 60)
   const seconds = total % 60
   const pad = (n: number) => String(n).padStart(2, '0')
-  // Inside the 48-hour window the hours run to 47 rather than rolling into a
-  // day, which is how a two-day countdown is read.
-  if (days >= 2) return `${days}d ${pad(hours)}:${pad(minutes)}:${pad(seconds)}`
+  // Inside the 72-hour window the hours run to 71 rather than switching to a
+  // day count part-way through the same customer's countdown.
+  if (days >= 3) return `${days}d ${pad(hours)}:${pad(minutes)}:${pad(seconds)}`
   return `${pad(days * 24 + hours)}:${pad(minutes)}:${pad(seconds)}`
 }
 
