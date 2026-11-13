@@ -1,7 +1,9 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { AlertTriangle, CheckCircle2, Clock3, Radio, ShoppingCart, Truck } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, Clock3, ShoppingCart, Truck } from 'lucide-react'
 import { createClient } from '@/utils/supabase/server'
+import { createUntypedAdminClient } from '@/utils/supabase/admin'
+import { requireAdmin } from '@/utils/auth'
 import MetaConversionButton from '@/app/admin/orders/MetaConversionButton'
 import { dualTimeText } from '@/utils/adminTime'
 import { adminStatusLabel } from '@/utils/adminStatus'
@@ -11,6 +13,7 @@ import { classifyMetaEvent, META_EVENT_MAX_AGE_MS, QUEUE_FILTERS, QUEUE_LABEL, t
 import { orderAdvertisingConsent } from '@/utils/metaOrderConsent'
 import { trackingSetup } from '@/utils/trackingSetup'
 import { TRACKING_MODES, type TrackingMode } from '@/utils/shopSettings'
+import { PageHeader } from '@/components/Admin/ui/AdminUi'
 import MetaHoldButtons from './MetaHoldButtons'
 import { CancelledAfterSending, LatestEvents, ModeAndDevice, ReplyLine, SetupCard, type LoggedEvent } from './TrackingSections'
 
@@ -127,6 +130,11 @@ function needsConsent(order: MetaOrder, kind: 'purchase' | 'delivered', now: num
 }
 
 export default async function MetaAdminPage(props: { searchParams: SearchParams }) {
+  // The admin's own session has no SELECT grant on conversion_events (the
+  // audit ledger is locked to the service role), so reading Meta's replies
+  // with it returns nothing and every sent event looked like "reply unclear".
+  // Read them server-side, after the admin check.
+  await requireAdmin()
   const supabase = await createClient()
   const sp = await props.searchParams
 
@@ -145,7 +153,7 @@ export default async function MetaAdminPage(props: { searchParams: SearchParams 
       .order('created_at', { ascending: false })
       .limit(5000),
     // Every Meta send attempt, for each order's reply and attempt count (N4).
-    supabase
+    createUntypedAdminClient()
       .from('conversion_events')
       .select('order_id, event_name, status, created_at, response_metadata')
       .eq('platform', 'meta')
@@ -165,6 +173,7 @@ export default async function MetaAdminPage(props: { searchParams: SearchParams 
   const setup = trackingSetup()
   const latestEvents = (logRes.data ?? []) as LoggedEvent[]
 
+  const attemptsFailed = Boolean(attemptsRes.error)
   const attemptsBy = new Map<string, ConversionAttempt[]>()
   for (const a of (attemptsRes.data ?? []) as ConversionAttempt[]) {
     if (!a.order_id) continue
@@ -262,18 +271,15 @@ export default async function MetaAdminPage(props: { searchParams: SearchParams 
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 lg:space-y-8">
-      <div>
-        <div className="flex items-center gap-2">
-          <Radio className="h-6 w-6 text-blue-700" />
-          <h1 className="m-0 text-2xl font-bold tracking-tight text-ink-900 lg:text-3xl">
-            Meta
-          </h1>
-        </div>
-        <p className="m-0 mt-2 max-w-3xl text-sm leading-relaxed text-ink-500">
-          Order-linked Meta conversion control. Purchase becomes eligible only after the order is confirmed.
-          Delivered becomes eligible only after the order is actually delivered.
+      <PageHeader
+        title="Meta"
+        lead="Order-linked Meta conversion control. Purchase becomes eligible only after the order is confirmed. Delivered becomes eligible only after the order is actually delivered."
+      />
+      {attemptsFailed && (
+        <p role="alert" className="rounded-md border border-ember-500 bg-calico-100 p-4 text-sm text-ink-900">
+          Meta&apos;s replies could not be loaded just now, so sent events may show as &ldquo;reply unclear&rdquo;. That is a display gap, not proof Meta refused them.
         </p>
-      </div>
+      )}
 
       <CancelledAfterSending orders={cancelledSent} />
 

@@ -71,3 +71,14 @@ test('holds, Google origin, cancellations and sent events are never eligible', (
 test('Delivered is not ready until the order is actually delivered', () => {
   assert.equal(classifyMetaEvent(order(), 'delivered', 'recorded_grant', [], NOW).state, 'not_ready')
 })
+
+test('Admin -> Meta reads Meta’s replies with the server-side client: the admin session has no SELECT grant on conversion_events', () => {
+  // Found live on 14 Nov 2026: with the session client every sent event showed
+  // "reply unclear" and "Already accepted" read 0, although the ledger held
+  // 106 accepted replies. The reply read must stay behind requireAdmin().
+  const page = fs.readFileSync(path.join(root, 'src/app/admin/meta/page.tsx'), 'utf8')
+  assert.match(page, /await requireAdmin\(\)/)
+  assert.match(page, /createUntypedAdminClient\(\)\s*\.from\('conversion_events'\)/)
+  assert.doesNotMatch(page, /supabase\s*\.from\('conversion_events'\)/)
+  assert.match(page, /attemptsFailed/)
+})
