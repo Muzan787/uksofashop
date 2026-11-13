@@ -72,9 +72,12 @@ const LEAD_FUNCTION_MIGRATIONS=LEAD_MIGRATIONS.slice(1)
 before(async()=>{db=new PGlite();await db.exec(fs.readFileSync(path.join(__dirname,'fixtures/tracking-schema.sql'),'utf8'));await db.exec(migration('20261008105105_manual_order_unused_enquiry_guard.sql'));for(const m of LEAD_MIGRATIONS)await db.exec(migration(m))})
 after(async()=>{await db.close()})
 async function reset(){await db.exec('truncate orders,order_items,whatsapp_enquiries,attribution_sessions,google_consent_receipts,conversion_events,google_offline_conversions')}
+// The fixture click carries BOTH a Google and a Meta click id. A Google-only order
+// must never produce a new Meta signal (utils/metaSignals.ts), so a fixture that
+// only had Google ids no longer exercises the eligible Meta path these tests cover.
 async function click(suffix,time='2026-10-07T09:58:00Z',converted=null){
  const reference='UKSS-WA-261007-'+suffix
- await db.query('insert into whatsapp_enquiries(reference,created_at,visitor_id,session_id,arrival_id,utm_source,gclid,gbraid,wbraid,meta_fbp,meta_fbc,converted_order_id) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)',[reference,time,visitor,session,arrival,'google','fixture-gclid','fixture-gbraid','fixture-wbraid','fixture-fbp','fixture-fbc',converted]);return reference
+ await db.query('insert into whatsapp_enquiries(reference,created_at,visitor_id,session_id,arrival_id,utm_source,gclid,gbraid,wbraid,fbclid,meta_fbp,meta_fbc,converted_order_id) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)',[reference,time,visitor,session,arrival,'google','fixture-gclid','fixture-gbraid','fixture-wbraid','fixture-fbclid','fixture-fbp','fixture-fbc',converted]);return reference
 }
 async function order(){const {rows}=await db.query('select * from orders order by created_at desc limit 1');return rows[0]}
 async function choice(value='granted',time='2026-10-07T09:55:00Z',analytics='granted'){
