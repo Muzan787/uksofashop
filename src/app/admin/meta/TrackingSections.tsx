@@ -36,19 +36,19 @@ const REPLY_TONE: Record<MetaReply['tone'], string> = {
   ok: 'text-green-800',
   bad: 'text-red-700',
   unclear: 'text-amber-800',
-  none: 'text-stone-600',
+  none: 'text-ink-700',
 }
 
 const MODE_LABEL: Record<string, string> = { live: 'Live', test: 'Test', dry_run: 'Dry run' }
 
-const card = 'rounded-md border border-stone-200 bg-white shadow-sm'
+const card = 'rounded-md border border-calico-300 bg-white shadow-sm'
 
 /** Meta's reply to the latest attempt, and how many attempts there were (N4). */
 export function ReplyLine({ reply }: { reply: MetaReply }) {
   return (
     <p className={`m-0 mt-2 text-[11px] font-semibold leading-relaxed ${REPLY_TONE[reply.tone]}`}>
       {reply.text}
-      <span className="font-normal text-stone-500"> {reply.attempts === 1 ? '1 attempt' : `${reply.attempts} attempts`}</span>
+      <span className="font-normal text-ink-500"> {reply.attempts === 1 ? '1 attempt' : `${reply.attempts} attempts`}</span>
     </p>
   )
 }
@@ -87,7 +87,7 @@ export function ModeAndDevice({ mode, liveServer }: { mode: TrackingMode; liveSe
   return (
     <div className="grid gap-3 lg:grid-cols-[2fr_1fr]">
       <section className={`${card} p-4`} aria-labelledby="mode-heading">
-        <h2 id="mode-heading" className="m-0 text-base font-bold text-stone-900">Mode</h2>
+        <h2 id="mode-heading" className="m-0 text-base font-bold text-ink-900">Mode</h2>
         {!liveServer && (
           <p className="m-0 mt-1 text-sm text-amber-800">This server isn’t the live one, so nothing is sent from here in any mode.</p>
         )}
@@ -96,7 +96,7 @@ export function ModeAndDevice({ mode, liveServer }: { mode: TrackingMode; liveSe
         </div>
       </section>
       <section className={`${card} p-4`} aria-labelledby="device-heading">
-        <h2 id="device-heading" className="m-0 mb-2 text-base font-bold text-stone-900">This device</h2>
+        <h2 id="device-heading" className="m-0 mb-2 text-base font-bold text-ink-900">This device</h2>
         <StaffDeviceSwitch />
       </section>
     </div>
@@ -110,25 +110,25 @@ export function SetupCard({ setup }: { setup: SetupItem[] }) {
   return (
     <details className={card}>
       <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
-        <span className="text-base font-bold text-stone-900">What’s set up</span>
-        <span className="text-right text-sm text-stone-500">
+        <span className="text-base font-bold text-ink-900">What’s set up</span>
+        <span className="text-right text-sm text-ink-500">
           {ready} of {setup.length} ready{warn ? ` · ${warn} to look at` : ''}
         </span>
       </summary>
-      <ul className="m-0 list-none divide-y divide-stone-100 border-t border-stone-100 p-0">
+      <ul className="m-0 list-none divide-y divide-calico-100 border-t border-calico-100 p-0">
         {setup.map(item => (
           <li key={item.key} className="flex gap-3 px-4 py-3">
             <span className={`mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full ${item.state === true ? 'bg-green-100 text-green-800' : item.state === 'warn' ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-700'}`}>
               {item.state === true ? <Check className="h-4 w-4" aria-label="Set up" /> : item.state === 'warn' ? <Minus className="h-4 w-4" aria-label="Look at this" /> : <X className="h-4 w-4" aria-label="Not set up" />}
             </span>
             <span className="min-w-0">
-              <span className="block text-sm font-semibold text-stone-900">{item.label}</span>
-              <span className="block text-xs leading-relaxed text-stone-600">{item.note}</span>
+              <span className="block text-sm font-semibold text-ink-900">{item.label}</span>
+              <span className="block text-xs leading-relaxed text-ink-700">{item.note}</span>
             </span>
           </li>
         ))}
       </ul>
-      <p className="m-0 border-t border-stone-100 px-4 py-3 text-xs text-stone-500">Ticks only: no ID, token or code is ever shown here.</p>
+      <p className="m-0 border-t border-calico-100 px-4 py-3 text-xs text-ink-500">Ticks only: no ID, token or code is ever shown here.</p>
     </details>
   )
 }
@@ -141,27 +141,27 @@ export function LatestEvents({ events }: { events: LoggedEvent[] }) {
   return (
     <details className={card}>
       <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
-        <span className="text-base font-bold text-stone-900">Latest events</span>
-        <span className="text-sm text-stone-500">{events.length === 40 ? 'Last 40' : events.length} · kept 30 days</span>
+        <span className="text-base font-bold text-ink-900">Latest events</span>
+        <span className="text-sm text-ink-500">{events.length === 40 ? 'Last 40' : events.length} · kept 30 days</span>
       </summary>
-      <p className="m-0 border-t border-stone-100 px-4 py-3 text-xs leading-relaxed text-stone-600">
+      <p className="m-0 border-t border-calico-100 px-4 py-3 text-xs leading-relaxed text-ink-700">
         Every event the server built for Meta and GA4, exactly as built. Personal details are hashed: Meta’s match keys as Meta asks, and the IP address, browser, cookies and GA4 client id in this copy. The tags in a visitor’s browser send their own copies, which Meta’s Events Manager shows.
       </p>
       {events.length === 0 ? (
-        <p className="m-0 border-t border-stone-100 px-4 py-3 text-sm text-stone-500">Nothing yet. Events appear here from the first one built after 15 Oct 2026.</p>
+        <p className="m-0 border-t border-calico-100 px-4 py-3 text-sm text-ink-500">Nothing yet. Events appear here from the first one built after 15 Oct 2026.</p>
       ) : (
-        <ul className="m-0 list-none divide-y divide-stone-100 border-t border-stone-100 p-0">
+        <ul className="m-0 list-none divide-y divide-calico-100 border-t border-calico-100 p-0">
           {events.map(e => (
             <li key={e.id}>
               <details>
                 <summary className="flex min-h-12 cursor-pointer list-none flex-wrap items-center gap-x-2 gap-y-1 px-4 py-2 text-sm">
-                  <span className="font-semibold text-stone-900">{e.platform === 'meta' ? 'Meta' : 'GA4'} {e.event_name}</span>
-                  {e.order_ref && <span className="font-mono text-xs text-stone-500">{e.order_ref}</span>}
-                  <span className={`rounded-pill border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${e.mode === 'live' ? 'border-stone-200 bg-stone-50 text-stone-600' : 'border-violet-200 bg-violet-50 text-violet-700'}`}>{MODE_LABEL[e.mode] ?? e.mode}</span>
-                  <span className={`text-xs font-semibold ${GOOD.has(e.outcome) ? 'text-green-800' : BAD.has(e.outcome) ? 'text-red-700' : 'text-stone-600'}`}>{e.outcome.replace(/_/g, ' ')}</span>
-                  <span className="w-full text-xs text-stone-500">{dualTimeText(e.created_at)}</span>
+                  <span className="font-semibold text-ink-900">{e.platform === 'meta' ? 'Meta' : 'GA4'} {e.event_name}</span>
+                  {e.order_ref && <span className="font-mono text-xs text-ink-500">{e.order_ref}</span>}
+                  <span className={`rounded-pill border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${e.mode === 'live' ? 'border-calico-300 bg-calico-50 text-ink-700' : 'border-violet-200 bg-violet-50 text-violet-700'}`}>{MODE_LABEL[e.mode] ?? e.mode}</span>
+                  <span className={`text-xs font-semibold ${GOOD.has(e.outcome) ? 'text-green-800' : BAD.has(e.outcome) ? 'text-red-700' : 'text-ink-700'}`}>{e.outcome.replace(/_/g, ' ')}</span>
+                  <span className="w-full text-xs text-ink-500">{dualTimeText(e.created_at)}</span>
                 </summary>
-                <pre className="m-0 max-h-80 overflow-auto whitespace-pre bg-stone-50 px-4 py-3 text-[11px] leading-relaxed text-stone-800">{JSON.stringify(e.payload, null, 2)}</pre>
+                <pre className="m-0 max-h-80 overflow-auto whitespace-pre bg-calico-50 px-4 py-3 text-[11px] leading-relaxed text-ink-900">{JSON.stringify(e.payload, null, 2)}</pre>
               </details>
             </li>
           ))}

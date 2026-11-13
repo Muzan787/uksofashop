@@ -61,15 +61,15 @@ export default function TrackingModeSwitch({ mode }: { mode: TrackingMode }) {
               className={`min-h-16 rounded-sm border p-3 text-left transition disabled:cursor-default ${
                 current
                   ? m.mode === 'live' ? 'border-green-300 bg-green-50' : 'border-violet-300 bg-violet-50'
-                  : 'border-stone-200 bg-white hover:border-stone-400'
+                  : 'border-calico-300 bg-white hover:border-ink-400'
               }`}
             >
-              <span className="flex items-center gap-2 text-sm font-bold text-stone-900">
+              <span className="flex items-center gap-2 text-sm font-bold text-ink-900">
                 {busy === m.mode && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
                 {m.label}
-                {current && <span className="rounded-pill bg-stone-900 px-2 py-0.5 text-[10px] uppercase tracking-wider text-white">On</span>}
+                {current && <span className="rounded-pill bg-ink-900 px-2 py-0.5 text-[10px] uppercase tracking-wider text-white">On</span>}
               </span>
-              <span className="mt-1 block text-xs leading-relaxed text-stone-600">{m.detail}</span>
+              <span className="mt-1 block text-xs leading-relaxed text-ink-700">{m.detail}</span>
             </button>
           )
         })}

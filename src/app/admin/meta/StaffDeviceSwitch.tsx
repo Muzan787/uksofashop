@@ -25,11 +25,11 @@ export default function StaffDeviceSwitch() {
 
   return (
     <div>
-      <p className={`m-0 flex items-center gap-2 text-sm font-bold ${on ? 'text-green-800' : 'text-stone-900'}`}>
+      <p className={`m-0 flex items-center gap-2 text-sm font-bold ${on ? 'text-green-800' : 'text-ink-900'}`}>
         <MonitorSmartphone className="h-5 w-5 shrink-0" aria-hidden="true" />
         {on === null ? 'Checking this device…' : on ? 'Excluded: nothing done on this device counts' : 'This device counts like a customer’s'}
       </p>
-      <p className="m-0 mt-1 text-xs leading-relaxed text-stone-600">
+      <p className="m-0 mt-1 text-xs leading-relaxed text-ink-700">
         When it’s excluded, no Meta or Google tag loads here, nothing you do here is sent or recorded, and an order placed here is marked as a test. It applies to this browser only; do it on each phone and computer the team uses.
       </p>
       <button
@@ -45,7 +45,7 @@ export default function StaffDeviceSwitch() {
           if (res.ok) setChanged(next)
           else setError(res.text)
         }}
-        className={`mt-3 inline-flex min-h-11 items-center gap-2 rounded-sm px-4 text-sm font-bold disabled:opacity-50 ${on ? 'border border-stone-300 bg-white text-stone-800' : 'bg-stone-900 text-white'}`}
+        className={`mt-3 inline-flex min-h-11 items-center gap-2 rounded-sm px-4 text-sm font-bold disabled:opacity-50 ${on ? 'border border-calico-300 bg-white text-ink-900' : 'bg-ink-900 text-white'}`}
       >
         {busy && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
         {on ? 'Count this device again' : 'Exclude this device'}

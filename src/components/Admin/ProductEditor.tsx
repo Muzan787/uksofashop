@@ -38,11 +38,11 @@ export interface EditorProps {
   collections: { id: string; name: string; status: string }[]
 }
 
-const label = 'mb-1.5 block text-xs font-bold uppercase tracking-wider text-stone-500'
-const input = 'w-full min-h-11 rounded-sm border border-stone-200 bg-stone-50 p-3 text-base text-stone-900 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/30'
-const hint = 'mt-1.5 text-[11px] leading-relaxed text-stone-500'
-const section = 'space-y-4 rounded-md border border-stone-200 bg-white p-4 shadow-sm lg:p-6'
-const sectionTitle = 'm-0 text-sm font-bold uppercase tracking-[0.14em] text-stone-700'
+const label = 'mb-1.5 block text-xs font-bold uppercase tracking-wider text-ink-500'
+const input = 'w-full min-h-11 rounded-sm border border-calico-300 bg-calico-50 p-3 text-base text-ink-900 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/30'
+const hint = 'mt-1.5 text-[11px] leading-relaxed text-ink-500'
+const section = 'space-y-4 rounded-md border border-calico-300 bg-white p-4 shadow-sm lg:p-6'
+const sectionTitle = 'm-0 text-sm font-bold uppercase tracking-[0.14em] text-ink-700'
 
 function FieldError({ text }: { text?: string }) {
   if (!text) return null
@@ -55,7 +55,7 @@ function FieldError({ text }: { text?: string }) {
 
 function Counter({ value, guide, max }: { value: string; guide: number; max: number }) {
   const n = value.trim().length
-  const tone = n > max ? 'text-red-700' : n > guide ? 'text-amber-700' : 'text-stone-500'
+  const tone = n > max ? 'text-red-700' : n > guide ? 'text-amber-700' : 'text-ink-500'
   return (
     <p className={`m-0 mt-1 text-right text-xs tabular-nums ${tone}`} aria-live="polite">
       {n} / {guide}{n > guide && n <= max ? ' - search results cut it off here' : ''}{n > max ? ` - too long, the limit is ${max}` : ''}
@@ -188,7 +188,7 @@ export default function ProductEditor({ mode, initial, categories, groups: initi
         </div>
         <div data-field="slug">
           <label className={label} htmlFor="slug">Web address</label>
-          <div className="flex items-center gap-1 text-sm text-stone-500">
+          <div className="flex items-center gap-1 text-sm text-ink-500">
             <span className="shrink-0">/shop/…/</span>
             <input id="slug" value={slug} onChange={e => { setSlug(e.target.value.toLowerCase()); setSlugTouched(true) }} className={input} autoCapitalize="none" spellCheck={false} />
           </div>
@@ -215,7 +215,7 @@ export default function ProductEditor({ mode, initial, categories, groups: initi
           <FieldError text={errors.tier} />
         </div>
 
-        <div className="rounded-sm border border-stone-200 bg-stone-50 p-4" data-field="range">
+        <div className="rounded-sm border border-calico-300 bg-calico-50 p-4" data-field="range">
           <p className={label}>Range (optional)</p>
           {newGroup === null ? (
             <div className="flex flex-col gap-2 sm:flex-row">
@@ -224,13 +224,13 @@ export default function ProductEditor({ mode, initial, categories, groups: initi
                 <option value="">No range (a product on its own)</option>
                 {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
               </select>
-              <button type="button" onClick={() => setNewGroup('')} className="min-h-11 shrink-0 rounded-sm border border-stone-300 bg-white px-4 text-sm font-bold text-stone-700">New range</button>
+              <button type="button" onClick={() => setNewGroup('')} className="min-h-11 shrink-0 rounded-sm border border-calico-300 bg-white px-4 text-sm font-bold text-ink-700">New range</button>
             </div>
           ) : (
             <div className="flex flex-col gap-2 sm:flex-row">
               <label className="sr-only" htmlFor="new-range">New range name</label>
               <input id="new-range" value={newGroup} onChange={e => setNewGroup(e.target.value)} placeholder="e.g. Havana Sofa Set" className={`${input} bg-white`} />
-              <button type="button" className="min-h-11 shrink-0 rounded-sm bg-stone-900 px-4 text-sm font-bold text-white" onClick={async () => {
+              <button type="button" className="min-h-11 shrink-0 rounded-sm bg-ink-900 px-4 text-sm font-bold text-white" onClick={async () => {
                 const res = await createVariantGroup(newGroup)
                 if (!res.ok) { setGroupMessage(res.text); return }
                 setGroups(prev => [...prev, res.group].sort((a, b) => a.name.localeCompare(b.name)))
@@ -239,13 +239,13 @@ export default function ProductEditor({ mode, initial, categories, groups: initi
                 setGroupMessage('')
                 setDirty(true)
               }}>Save range</button>
-              <button type="button" onClick={() => { setNewGroup(null); setGroupMessage('') }} className="min-h-11 shrink-0 rounded-sm border border-stone-300 bg-white px-4 text-sm font-bold text-stone-700">Cancel</button>
+              <button type="button" onClick={() => { setNewGroup(null); setGroupMessage('') }} className="min-h-11 shrink-0 rounded-sm border border-calico-300 bg-white px-4 text-sm font-bold text-ink-700">Cancel</button>
             </div>
           )}
           {groupMessage && <FieldError text={groupMessage} />}
           <FieldError text={errors.range} />
           {groupId && (
-            <div className="mt-4 grid grid-cols-1 gap-4 border-t border-stone-200 pt-4 sm:grid-cols-2">
+            <div className="mt-4 grid grid-cols-1 gap-4 border-t border-calico-300 pt-4 sm:grid-cols-2">
               <div data-field="size_label">
                 <label className={label} htmlFor="size-label">Size label (on the size button)</label>
                 <input id="size-label" value={sizeLabel} onChange={e => touch(setSizeLabel)(e.target.value)} placeholder="e.g. 3 Seater, Corner" className={`${input} bg-white`} />
@@ -282,9 +282,9 @@ export default function ProductEditor({ mode, initial, categories, groups: initi
           <legend className={label}>Categories</legend>
           <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
             {categories.map(c => (
-              <label key={c.id} className="flex min-h-11 cursor-pointer items-center gap-3 rounded-sm px-2 hover:bg-stone-50">
+              <label key={c.id} className="flex min-h-11 cursor-pointer items-center gap-3 rounded-sm px-2 hover:bg-calico-50">
                 <input type="checkbox" checked={categoryIds.includes(c.id)} onChange={e => touch(setCategoryIds)(e.target.checked ? [...categoryIds, c.id] : categoryIds.filter(id => id !== c.id))} className="h-5 w-5 accent-orange-500" />
-                <span className="font-medium text-stone-800">{c.name}</span>
+                <span className="font-medium text-ink-900">{c.name}</span>
               </label>
             ))}
           </div>
@@ -300,17 +300,17 @@ export default function ProductEditor({ mode, initial, categories, groups: initi
           <p className={hint}>The top level of the Collections page. Leave it unset and the product still sells, it just won&apos;t appear under any collection.</p>
           <FieldError text={errors.main_collection} />
         </div>
-        <label className="flex cursor-pointer items-start gap-3 rounded-sm border border-stone-200 bg-stone-50 p-3.5">
+        <label className="flex cursor-pointer items-start gap-3 rounded-sm border border-calico-300 bg-calico-50 p-3.5">
           <input type="checkbox" checked={isActive} onChange={e => touch(setIsActive)(e.target.checked)} className="mt-0.5 h-5 w-5 shrink-0 accent-orange-500" />
           <span>
-            <span className="flex items-center gap-1.5 text-sm font-bold text-stone-900">{isActive ? <Eye className="h-4 w-4" aria-hidden="true" /> : <EyeOff className="h-4 w-4" aria-hidden="true" />} Shown in the shop</span>
+            <span className="flex items-center gap-1.5 text-sm font-bold text-ink-900">{isActive ? <Eye className="h-4 w-4" aria-hidden="true" /> : <EyeOff className="h-4 w-4" aria-hidden="true" />} Shown in the shop</span>
             <span className={hint}>Untick to hide it everywhere in the shop. It keeps its orders, reviews and address.</span>
           </span>
         </label>
-        <label className="flex cursor-pointer items-start gap-3 rounded-sm border border-stone-200 bg-stone-50 p-3.5">
+        <label className="flex cursor-pointer items-start gap-3 rounded-sm border border-calico-300 bg-calico-50 p-3.5">
           <input type="checkbox" checked={isFeatured} onChange={e => touch(setIsFeatured)(e.target.checked)} className="mt-0.5 h-5 w-5 shrink-0 accent-orange-500" />
           <span>
-            <span className="block text-sm font-bold text-stone-900">Feature on the homepage</span>
+            <span className="block text-sm font-bold text-ink-900">Feature on the homepage</span>
             <span className={hint}>The homepage rail shows six products. Ticked ones go first, newest fills the rest.</span>
           </span>
         </label>
@@ -325,13 +325,13 @@ export default function ProductEditor({ mode, initial, categories, groups: initi
         <p className={hint}>Put sizes on the Dimensions line in cm, including corner sides and any named pieces in a set. The list flags a product with no Dimensions.</p>
         <div className="space-y-2">
           {specs.map((spec, i) => (
-            <div key={i} className="flex flex-col gap-2 rounded-sm border border-stone-200 bg-stone-50 p-2 sm:flex-row">
+            <div key={i} className="flex flex-col gap-2 rounded-sm border border-calico-300 bg-calico-50 p-2 sm:flex-row">
               <label className="sr-only" htmlFor={`spec-key-${i}`}>Name</label>
               <input id={`spec-key-${i}`} value={spec.key} placeholder="Name" onChange={e => touch(setSpecs)(specs.map((s, j) => (j === i ? { ...s, key: e.target.value } : s)))} className={`${input} bg-white sm:flex-1`} />
               <div className="flex gap-2 sm:flex-[2]">
                 <label className="sr-only" htmlFor={`spec-value-${i}`}>Value</label>
                 <input id={`spec-value-${i}`} value={spec.value} placeholder="Value" onChange={e => touch(setSpecs)(specs.map((s, j) => (j === i ? { ...s, value: e.target.value } : s)))} className={`${input} bg-white`} />
-                <button type="button" aria-label={`Remove ${spec.key || 'line'}`} onClick={() => touch(setSpecs)(specs.filter((_, j) => j !== i))} className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-sm border border-stone-200 bg-white text-red-600"><Trash2 className="h-4 w-4" aria-hidden="true" /></button>
+                <button type="button" aria-label={`Remove ${spec.key || 'line'}`} onClick={() => touch(setSpecs)(specs.filter((_, j) => j !== i))} className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-sm border border-calico-300 bg-white text-red-600"><Trash2 className="h-4 w-4" aria-hidden="true" /></button>
               </div>
             </div>
           ))}
@@ -352,10 +352,10 @@ export default function ProductEditor({ mode, initial, categories, groups: initi
           <p className={hint}>Only pick &quot;Made in the UK&quot; if you can evidence it. Recliner ranges are imported.</p>
           <FieldError text={errors.origin} />
         </div>
-        <label className="flex cursor-pointer items-start gap-3 rounded-sm border border-stone-200 bg-stone-50 p-3.5">
+        <label className="flex cursor-pointer items-start gap-3 rounded-sm border border-calico-300 bg-calico-50 p-3.5">
           <input type="checkbox" checked={customMade} onChange={e => touch(setCustomMade)(e.target.checked)} className="mt-0.5 h-5 w-5 shrink-0 accent-orange-500" />
           <span>
-            <span className="block text-sm font-bold text-stone-900">Can be made to order</span>
+            <span className="block text-sm font-bold text-ink-900">Can be made to order</span>
             <span className={hint}>Shows the &quot;Made to your specification&quot; block with a WhatsApp button, and warns that made-to-measure orders are exempt from the 14-day return right. Fabric sofas only, not recliners.</span>
           </span>
         </label>
@@ -365,15 +365,15 @@ export default function ProductEditor({ mode, initial, categories, groups: initi
       <section className={section} aria-labelledby="colourways-heading" data-field="colourways">
         <div className="flex items-center justify-between gap-3">
           <h2 id="colourways-heading" className={sectionTitle}>Colourways</h2>
-          <button type="button" onClick={() => touch(setColourways)([...colourways, blankColourway(colourways.length + 1)])} className="inline-flex min-h-11 items-center gap-1.5 rounded-sm bg-stone-900 px-3 text-sm font-bold text-white"><Plus className="h-4 w-4" aria-hidden="true" /> Add colourway</button>
+          <button type="button" onClick={() => touch(setColourways)([...colourways, blankColourway(colourways.length + 1)])} className="inline-flex min-h-11 items-center gap-1.5 rounded-sm bg-ink-900 px-3 text-sm font-bold text-white"><Plus className="h-4 w-4" aria-hidden="true" /> Add colourway</button>
         </div>
         <p className={hint}>Removing a colourway that has ever been ordered hides it instead, so old orders keep their details. Lower order numbers come first.</p>
         <FieldError text={errors.colourways} />
         <div className="space-y-3">
           {colourways.map((c, i) => (
-            <div key={c.id ?? `new-${i}`} className={`space-y-3 rounded-md border p-3 ${badSku && badSku === c.sku.trim() ? 'border-red-400 bg-red-50' : c.isActive ? 'border-stone-200 bg-stone-50' : 'border-amber-300 bg-amber-50/50'}`}>
+            <div key={c.id ?? `new-${i}`} className={`space-y-3 rounded-md border p-3 ${badSku && badSku === c.sku.trim() ? 'border-red-400 bg-red-50' : c.isActive ? 'border-calico-300 bg-calico-50' : 'border-amber-300 bg-amber-50/50'}`}>
               <div className="flex items-start justify-between gap-2">
-                <p className="m-0 text-xs font-bold uppercase tracking-wider text-stone-500">{c.optionsLabel || (c.id ? `Colourway ${i + 1}` : `New colourway ${i + 1}`)}{!c.isActive && ' · hidden'}</p>
+                <p className="m-0 text-xs font-bold uppercase tracking-wider text-ink-500">{c.optionsLabel || (c.id ? `Colourway ${i + 1}` : `New colourway ${i + 1}`)}{!c.isActive && ' · hidden'}</p>
                 <button type="button" onClick={() => touch(setColourways)(colourways.filter((_, j) => j !== i))} className="inline-flex min-h-11 items-center gap-1 rounded-sm px-2 text-xs font-bold text-red-600" aria-label={`Remove colourway ${c.color || i + 1}`}>
                   <Trash2 className="h-4 w-4" aria-hidden="true" /> Remove
                 </button>
@@ -381,7 +381,7 @@ export default function ProductEditor({ mode, initial, categories, groups: initi
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 <div className="col-span-2">
                   <label className={label} htmlFor={`colour-${i}`}>Colour name and swatch</label>
-                  <div className="flex items-center gap-2 rounded-sm border border-stone-200 bg-white p-1.5 focus-within:border-orange-500">
+                  <div className="flex items-center gap-2 rounded-sm border border-calico-300 bg-white p-1.5 focus-within:border-orange-500">
                     <input type="color" aria-label="Swatch colour" value={/^#[0-9a-f]{6}$/i.test(c.colorHex) ? c.colorHex : '#000000'} onChange={e => updateColourway(i, { colorHex: e.target.value })} className="h-11 w-11 shrink-0 cursor-pointer border-0 p-0" />
                     <input id={`colour-${i}`} value={c.color} onChange={e => updateColourway(i, { color: e.target.value })} placeholder="e.g. Grey" className="min-h-11 w-full p-1 text-base outline-none" />
                   </div>
@@ -402,9 +402,9 @@ export default function ProductEditor({ mode, initial, categories, groups: initi
                   <label className={label} htmlFor={`order-${i}`}>Order</label>
                   <input id={`order-${i}`} type="number" inputMode="numeric" min={0} value={c.priority} onChange={e => updateColourway(i, { priority: e.target.value })} className={`${input} bg-white`} />
                 </div>
-                <label className="col-span-1 flex min-h-11 cursor-pointer items-center gap-2 self-end rounded-sm border border-stone-200 bg-white px-3">
+                <label className="col-span-1 flex min-h-11 cursor-pointer items-center gap-2 self-end rounded-sm border border-calico-300 bg-white px-3">
                   <input type="checkbox" checked={c.isActive} onChange={e => updateColourway(i, { isActive: e.target.checked })} className="h-5 w-5 accent-orange-500" />
-                  <span className="text-sm font-semibold text-stone-800">Shown</span>
+                  <span className="text-sm font-semibold text-ink-900">Shown</span>
                 </label>
               </div>
               <div>
@@ -425,7 +425,7 @@ export default function ProductEditor({ mode, initial, categories, groups: initi
             {gallery.map((url, i) => (
               <li key={`${url}-${i}`} className="relative">
                 {/* eslint-disable-next-line @next/next/no-img-element -- Admin preview: behind auth, never indexed. */}
-                <img src={url} alt={`Gallery photo ${i + 1}`} className="h-24 w-24 rounded-sm border border-stone-200 object-cover" />
+                <img src={url} alt={`Gallery photo ${i + 1}`} className="h-24 w-24 rounded-sm border border-calico-300 object-cover" />
                 <button type="button" onClick={() => touch(setGallery)(gallery.filter((_, j) => j !== i))} aria-label={`Remove gallery photo ${i + 1}`} className="absolute -right-2 -top-2 inline-flex h-11 w-11 items-center justify-center rounded-full bg-red-600 text-white shadow">
                   <Trash2 className="h-4 w-4" aria-hidden="true" />
                 </button>
@@ -460,7 +460,7 @@ export default function ProductEditor({ mode, initial, categories, groups: initi
         </div>
       </section>
 
-      <div className="sticky bottom-[calc(5rem+env(safe-area-inset-bottom))] z-10 rounded-md border border-stone-200 bg-white/95 p-3 shadow-lg backdrop-blur lg:bottom-4">
+      <div className="sticky bottom-[calc(5rem+env(safe-area-inset-bottom))] z-10 rounded-md border border-calico-300 bg-white/95 p-3 shadow-lg backdrop-blur lg:bottom-4">
         <button type="submit" disabled={saving} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-md bg-orange-500 text-lg font-black text-white transition hover:bg-orange-600 disabled:opacity-70">
           {saving ? <><Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" /> Saving…</> : mode === 'edit' ? 'Save changes' : 'Save product'}
         </button>

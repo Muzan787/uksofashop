@@ -67,8 +67,8 @@ export default async function AdminVideosPage() {
   return (
     <div className="mx-auto max-w-4xl space-y-8 p-4 sm:p-8">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-stone-900 lg:text-3xl">Videos</h1>
-        <p className="mt-1 text-sm text-stone-500">
+        <h1 className="text-2xl font-bold tracking-tight text-ink-900 lg:text-3xl">Videos</h1>
+        <p className="mt-1 text-sm text-ink-500">
           Studio clips go in the product gallery, customer clips on the product and reviews pages, warehouse clips on About and Showroom.
         </p>
       </div>
@@ -86,12 +86,12 @@ export default async function AdminVideosPage() {
         return (
           <section key={kind} className="space-y-4">
             <div className="flex items-baseline gap-3">
-              <h2 className="m-0 flex items-center gap-2 text-lg font-bold text-stone-900">
-                <Clapperboard className="h-5 w-5 text-stone-400" />
+              <h2 className="m-0 flex items-center gap-2 text-lg font-bold text-ink-900">
+                <Clapperboard className="h-5 w-5 text-ink-500" />
                 {label}
-                <span className="text-sm font-normal text-stone-400">{group.length}</span>
+                <span className="text-sm font-normal text-ink-500">{group.length}</span>
               </h2>
-              <span className="text-xs text-stone-500">{where}</span>
+              <span className="text-xs text-ink-500">{where}</span>
             </div>
 
             <div className="grid gap-4">
@@ -99,7 +99,7 @@ export default async function AdminVideosPage() {
                 <div
                   key={v.id}
                   className={`flex flex-col gap-4 rounded-md border bg-white p-4 shadow-sm sm:flex-row ${
-                    v.is_active ? 'border-stone-200' : 'border-amber-300 bg-amber-50/40'
+                    v.is_active ? 'border-calico-300' : 'border-amber-300 bg-amber-50/40'
                   }`}
                 >
                   {/* The first frame, linked to the clip itself for a quick check. */}
@@ -107,7 +107,7 @@ export default async function AdminVideosPage() {
                     href={v.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="relative block h-40 w-full shrink-0 overflow-hidden rounded-sm bg-stone-900 sm:h-32 sm:w-32"
+                    className="relative block h-40 w-full shrink-0 overflow-hidden rounded-sm bg-ink-900 sm:h-32 sm:w-32"
                   >
                     <Image
                       src={videoPoster(v.url, 400)}
@@ -124,7 +124,7 @@ export default async function AdminVideosPage() {
                   </a>
 
                   <div className="min-w-0 flex-1 space-y-3">
-                    <div className="flex flex-wrap items-center gap-2 text-xs text-stone-500">
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-ink-500">
                       {v.is_active ? (
                         <span className="rounded-sm bg-green-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-green-700">Live</span>
                       ) : (
@@ -142,13 +142,13 @@ export default async function AdminVideosPage() {
                         defaultValue={v.caption ?? ''}
                         placeholder="Caption (optional)"
                         maxLength={140}
-                        className="w-full rounded-sm border border-stone-300 p-2 text-sm text-stone-900"
+                        className="w-full rounded-sm border border-calico-300 p-2 text-sm text-ink-900"
                       />
                       {kind !== 'warehouse' ? (
                         <select
                           name="product_id"
                           defaultValue={v.product_id ?? ''}
-                          className="rounded-sm border border-stone-300 bg-white p-2 text-sm text-stone-900"
+                          className="rounded-sm border border-calico-300 bg-white p-2 text-sm text-ink-900"
                         >
                           <option value="">No product</option>
                           {productOptions.map(p => (
@@ -159,16 +159,16 @@ export default async function AdminVideosPage() {
                         <input type="hidden" name="product_id" value="" />
                       )}
                       <div className="flex items-center gap-2">
-                        <label className="text-xs text-stone-500" title="Lower numbers come first">Order</label>
+                        <label className="text-xs text-ink-500" title="Lower numbers come first">Order</label>
                         <input
                           type="number"
                           name="sort_order"
                           defaultValue={v.sort_order}
-                          className="w-16 rounded-sm border border-stone-300 p-2 text-sm text-stone-900"
+                          className="w-16 rounded-sm border border-calico-300 p-2 text-sm text-ink-900"
                         />
                         <button
                           type="submit"
-                          className="flex h-9 items-center gap-1 rounded-sm bg-stone-900 px-3 text-xs font-bold text-white hover:bg-orange-500"
+                          className="flex h-9 items-center gap-1 rounded-sm bg-ink-900 px-3 text-xs font-bold text-white hover:bg-orange-500"
                         >
                           <Save className="h-3.5 w-3.5" /> Save
                         </button>
@@ -181,7 +181,7 @@ export default async function AdminVideosPage() {
                         <input type="hidden" name="active" value={v.is_active ? 'false' : 'true'} />
                         <button
                           type="submit"
-                          className="flex h-9 items-center gap-1.5 rounded-sm border border-stone-300 px-3 text-xs font-bold text-stone-700 hover:bg-stone-100"
+                          className="flex h-9 items-center gap-1.5 rounded-sm border border-calico-300 px-3 text-xs font-bold text-ink-700 hover:bg-calico-100"
                         >
                           {v.is_active ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                           {v.is_active ? 'Hide from site' : 'Show on site'}
@@ -206,7 +206,7 @@ export default async function AdminVideosPage() {
       })}
 
       {!videos.length && !error && (
-        <p className="text-sm text-stone-500">No videos yet. The first one you upload appears here.</p>
+        <p className="text-sm text-ink-500">No videos yet. The first one you upload appears here.</p>
       )}
     </div>
   )

@@ -43,6 +43,8 @@ const STATIC_PATHS = [
   '/showroom',
   '/reviews',
   '/delivery-returns',
+  '/black-friday',
+  '/christmas',
   '/faq',
   '/size-guide',
   '/care-guide',

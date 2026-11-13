@@ -40,10 +40,10 @@ interface Line {
   customTitle: string
 }
 
-const label = 'block text-[11px] font-bold uppercase tracking-wider text-stone-500 mb-1.5'
+const label = 'block text-[11px] font-bold uppercase tracking-wider text-ink-500 mb-1.5'
 const field =
-  'w-full rounded-sm border border-stone-300 bg-white px-3 py-2 text-sm text-stone-900 ' +
-  'focus:border-stone-900 focus:outline-none focus:ring-0'
+  'w-full rounded-sm border border-calico-300 bg-white px-3 py-2 text-sm text-ink-900 ' +
+  'focus:border-ink-900 focus:outline-none focus:ring-0'
 
 function linesFrom(order: AdminOrderDisplay): Line[] {
   return (order.order_items ?? []).map(item => ({
@@ -171,7 +171,7 @@ export default function EditOrderForm({
       <button
         type="button"
         onClick={() => { reset(); setOpen(true) }}
-        className="flex items-center justify-center gap-2 rounded-sm bg-stone-100 px-4 py-2.5 text-sm font-bold text-stone-700 transition hover:bg-stone-200 active:scale-95"
+        className="flex items-center justify-center gap-2 rounded-sm bg-calico-100 px-4 py-2.5 text-sm font-bold text-ink-700 transition hover:bg-calico-300 active:scale-95"
         title="Edit this order"
         aria-label="Edit order"
       >
@@ -183,15 +183,15 @@ export default function EditOrderForm({
   return (
     // basis-full: the quick-actions row wraps, so the open form takes a full
     // line of its own beneath the buttons rather than squeezing between them.
-    <form onSubmit={submit} noValidate className="mt-2 w-full basis-full space-y-4 rounded-sm border border-stone-300 bg-white p-4">
+    <form onSubmit={submit} noValidate className="mt-2 w-full basis-full space-y-4 rounded-sm border border-calico-300 bg-white p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="m-0 text-sm font-bold text-stone-900">Edit order #{order.id.substring(0, 8).toUpperCase()}</p>
-          <p className="m-0 mt-0.5 text-xs text-stone-500">
+          <p className="m-0 text-sm font-bold text-ink-900">Edit order #{order.id.substring(0, 8).toUpperCase()}</p>
+          <p className="m-0 mt-0.5 text-xs text-ink-500">
             Changes the record only. No email goes out and the status stays as it is.
           </p>
         </div>
-        <button type="button" onClick={() => setOpen(false)} className="rounded-sm p-1.5 text-stone-400 transition hover:bg-stone-100 hover:text-stone-700" aria-label="Close">
+        <button type="button" onClick={() => setOpen(false)} className="rounded-sm p-1.5 text-ink-500 transition hover:bg-calico-100 hover:text-ink-700" aria-label="Close">
           <X className="h-4 w-4" />
         </button>
       </div>
@@ -206,7 +206,7 @@ export default function EditOrderForm({
           <input id={`edit-phone-${order.id}`} className={field} value={phone} onChange={e => setPhone(e.target.value)} inputMode="tel" autoComplete="off" />
         </div>
         <div>
-          <label className={label} htmlFor={`edit-email-${order.id}`}>Email <span className="font-normal normal-case tracking-normal text-stone-400">(optional)</span></label>
+          <label className={label} htmlFor={`edit-email-${order.id}`}>Email <span className="font-normal normal-case tracking-normal text-ink-500">(optional)</span></label>
           <input id={`edit-email-${order.id}`} className={field} value={email} onChange={e => setEmail(e.target.value)} inputMode="email" autoComplete="off" />
         </div>
         <div>
@@ -223,7 +223,7 @@ export default function EditOrderForm({
         <p className={label}>Lines</p>
         <div className="space-y-2">
           {lines.map((line, i) => (
-            <div key={line.itemId ?? `new-${i}`} className="rounded-sm border border-stone-200 bg-stone-50/60 p-3">
+            <div key={line.itemId ?? `new-${i}`} className="rounded-sm border border-calico-300 bg-calico-50/60 p-3">
               <div className="flex gap-2">
                 <SearchSelect
                   className="flex-1"
@@ -238,7 +238,7 @@ export default function EditOrderForm({
                   <button
                     type="button"
                     onClick={() => setLines(ls => ls.filter((_, n) => n !== i))}
-                    className="shrink-0 rounded-sm px-2 text-stone-400 transition hover:bg-stone-200 hover:text-stone-700"
+                    className="shrink-0 rounded-sm px-2 text-ink-500 transition hover:bg-calico-300 hover:text-ink-700"
                     aria-label="Remove this line"
                   >
                     <X className="h-4 w-4" />
@@ -293,7 +293,7 @@ export default function EditOrderForm({
         <button
           type="button"
           onClick={() => setLines(ls => [...ls, { itemId: null, variantId: '', fallbackLabel: '', quantity: 1, price: '', fabricId: '', customTitle: '' }])}
-          className="mt-2 inline-flex items-center gap-1.5 text-xs font-bold text-stone-600 transition hover:text-stone-900"
+          className="mt-2 inline-flex items-center gap-1.5 text-xs font-bold text-ink-700 transition hover:text-ink-900"
         >
           <Plus className="h-3.5 w-3.5" />
           Another sofa
@@ -311,7 +311,7 @@ export default function EditOrderForm({
             onChange={e => setDelivery(e.target.value)}
           />
           {(Number(order.fee_upstairs ?? 0) + Number(order.fee_assembly ?? 0) + Number(order.fee_sofa_removal ?? 0) + Number(order.fee_distance ?? 0)) > 0 && (
-            <p className="m-0 mt-1 text-[11px] leading-snug text-stone-500">
+            <p className="m-0 mt-1 text-[11px] leading-snug text-ink-500">
               Currently itemised (distance, upstairs, assembly, removal). Changing the figure replaces that with one agreed charge.
             </p>
           )}
@@ -328,7 +328,7 @@ export default function EditOrderForm({
 
       <div className="grid gap-3 sm:grid-cols-3">
         <div>
-          <label className={label} htmlFor={`edit-deposit-${order.id}`}>Deposit paid <span className="font-normal normal-case tracking-normal text-stone-400">(optional)</span></label>
+          <label className={label} htmlFor={`edit-deposit-${order.id}`}>Deposit paid <span className="font-normal normal-case tracking-normal text-ink-500">(optional)</span></label>
           <input
             id={`edit-deposit-${order.id}`}
             className={field}
@@ -338,7 +338,7 @@ export default function EditOrderForm({
             placeholder="0.00"
             autoComplete="off"
           />
-          <p className="m-0 mt-1 text-[11px] leading-snug text-stone-500">
+          <p className="m-0 mt-1 text-[11px] leading-snug text-ink-500">
             Money already received. Part of the price: the balance is collected on delivery. Empty removes it.
           </p>
         </div>
@@ -348,19 +348,19 @@ export default function EditOrderForm({
         <p className="rounded-sm border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700">{error}</p>
       )}
 
-      <div className="flex flex-col gap-2 border-t border-stone-200 pt-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="m-0 text-sm text-stone-700">
-          New total <span className="font-mono font-bold text-stone-900">£{total.toFixed(2)}</span>
-          {(() => { const d = parseDepositInput(deposit); return d.ok && d.value > 0 && d.value <= total + 0.004 ? <span className="text-stone-500"> · deposit £{d.value.toFixed(2)} · balance £{Math.max(0, total - d.value).toFixed(2)}</span> : null })()}
+      <div className="flex flex-col gap-2 border-t border-calico-300 pt-3 sm:flex-row sm:items-center sm:justify-between">
+        <p className="m-0 text-sm text-ink-700">
+          New total <span className="font-mono font-bold text-ink-900">£{total.toFixed(2)}</span>
+          {(() => { const d = parseDepositInput(deposit); return d.ok && d.value > 0 && d.value <= total + 0.004 ? <span className="text-ink-500"> · deposit £{d.value.toFixed(2)} · balance £{Math.max(0, total - d.value).toFixed(2)}</span> : null })()}
           {Number(order.discount_amount ?? 0) > 0 && (
-            <span className="text-stone-500"> (after the £{Number(order.discount_amount).toFixed(2)} offer already on the order)</span>
+            <span className="text-ink-500"> (after the £{Number(order.discount_amount).toFixed(2)} offer already on the order)</span>
           )}
         </p>
         <div className="flex gap-2">
-          <button type="button" onClick={() => setOpen(false)} disabled={pending} className="rounded-sm border border-stone-300 bg-white px-4 py-2.5 text-sm font-bold text-stone-700 transition hover:bg-stone-100">
+          <button type="button" onClick={() => setOpen(false)} disabled={pending} className="rounded-sm border border-calico-300 bg-white px-4 py-2.5 text-sm font-bold text-ink-700 transition hover:bg-calico-100">
             Cancel
           </button>
-          <button type="submit" disabled={pending} className="inline-flex items-center gap-2 rounded-sm bg-stone-900 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-stone-800 disabled:opacity-60">
+          <button type="submit" disabled={pending} className="inline-flex items-center gap-2 rounded-sm bg-ink-900 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-ink-900 disabled:opacity-60">
             {pending && <Loader2 className="h-4 w-4 animate-spin" />}
             Save changes
           </button>

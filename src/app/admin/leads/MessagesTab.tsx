@@ -24,7 +24,7 @@ export interface ContactMessage {
 const STATE: Record<string, { label: string; style: string }> = {
   new: { label: 'New', style: 'border-orange-200 bg-orange-50 text-orange-800' },
   replied: { label: 'Replied', style: 'border-green-200 bg-green-50 text-green-800' },
-  closed: { label: 'Closed without reply', style: 'border-stone-200 bg-stone-100 text-stone-600' },
+  closed: { label: 'Closed without reply', style: 'border-calico-300 bg-calico-100 text-ink-700' },
 }
 
 const button = 'inline-flex min-h-11 items-center rounded-sm px-4 text-sm font-bold disabled:opacity-60'
@@ -45,19 +45,19 @@ export default function MessagesTab({ messages, showAll }: { messages: ContactMe
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="m-0 text-sm text-stone-600">
+        <p className="m-0 text-sm text-ink-700">
           {showAll ? 'Every message, newest first.' : 'Messages nobody has answered yet. Reply by email, then mark it replied.'}
         </p>
-        <Link href={leadsHref('messages', { show: showAll ? null : 'all' })} className="inline-flex min-h-11 items-center text-sm font-semibold text-stone-900 underline">
+        <Link href={leadsHref('messages', { show: showAll ? null : 'all' })} className="inline-flex min-h-11 items-center text-sm font-semibold text-ink-900 underline">
           {showAll ? 'Only new ones' : 'Show all'}
         </Link>
       </div>
 
       {messages.length === 0 ? (
-        <div className="rounded-xl border border-stone-200 bg-white px-4 py-16 text-center">
-          <Inbox className="mx-auto mb-3 h-8 w-8 text-stone-300" aria-hidden="true" />
-          <p className="m-0 font-semibold text-stone-700">{showAll ? 'No messages yet' : 'No new messages'}</p>
-          <p className="m-0 mt-1 text-sm text-stone-500">Messages from the contact form appear here, as well as in the inbox.</p>
+        <div className="rounded-xl border border-calico-300 bg-white px-4 py-16 text-center">
+          <Inbox className="mx-auto mb-3 h-8 w-8 text-calico-300" aria-hidden="true" />
+          <p className="m-0 font-semibold text-ink-700">{showAll ? 'No messages yet' : 'No new messages'}</p>
+          <p className="m-0 mt-1 text-sm text-ink-500">Messages from the contact form appear here, as well as in the inbox.</p>
         </div>
       ) : (
         <ul className="m-0 list-none space-y-3 p-0">
@@ -65,14 +65,14 @@ export default function MessagesTab({ messages, showAll }: { messages: ContactMe
             const state = STATE[m.status] ?? STATE.new
             const reply = `mailto:${m.email}?subject=${encodeURIComponent(`Re: your message to UK Sofa Shop${m.order_number ? ` (order ${m.order_number})` : ''}`)}`
             return (
-              <li key={m.id} className="rounded-md border border-stone-200 bg-white p-4 shadow-sm">
+              <li key={m.id} className="rounded-md border border-calico-300 bg-white p-4 shadow-sm">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="m-0 text-base font-semibold text-stone-900">{m.name}</p>
+                  <p className="m-0 text-base font-semibold text-ink-900">{m.name}</p>
                   <span className={`inline-flex items-center rounded-pill border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${state.style}`}>
                     {state.label}
                   </span>
                 </div>
-                <p className="m-0 mt-1 text-xs text-stone-500">
+                <p className="m-0 mt-1 text-xs text-ink-500">
                   {dualTimeText(m.created_at)}
                   {m.status !== 'new' && m.status_changed_at && ` · ${state.label.toLowerCase()} ${dualTimeText(m.status_changed_at)}`}
                 </p>
@@ -81,20 +81,20 @@ export default function MessagesTab({ messages, showAll }: { messages: ContactMe
                     <Mail className="h-4 w-4 shrink-0" aria-hidden="true" /><span className="truncate">{m.email}</span>
                   </a>
                   {m.order_number && (
-                    <Link href={`/admin/orders?q=${encodeURIComponent(m.order_number)}`} className="inline-flex min-h-11 items-center gap-1.5 text-stone-700 underline">
+                    <Link href={`/admin/orders?q=${encodeURIComponent(m.order_number)}`} className="inline-flex min-h-11 items-center gap-1.5 text-ink-700 underline">
                       <Package className="h-4 w-4 shrink-0" aria-hidden="true" /> Order {m.order_number}
                     </Link>
                   )}
                 </div>
-                <p className="m-0 mt-2 whitespace-pre-line break-words rounded-sm bg-stone-50 p-3 text-sm text-stone-800">{m.message}</p>
+                <p className="m-0 mt-2 whitespace-pre-line break-words rounded-sm bg-calico-50 p-3 text-sm text-ink-900">{m.message}</p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {m.status === 'new' ? (
                     <>
-                      <StatusButton id={m.id} status="replied" show={show} className={`${button} bg-stone-900 text-white`}>Mark replied</StatusButton>
-                      <StatusButton id={m.id} status="closed" show={show} className={`${button} border border-stone-200 bg-white text-stone-600`}>Close without reply</StatusButton>
+                      <StatusButton id={m.id} status="replied" show={show} className={`${button} bg-ink-900 text-white`}>Mark replied</StatusButton>
+                      <StatusButton id={m.id} status="closed" show={show} className={`${button} border border-calico-300 bg-white text-ink-700`}>Close without reply</StatusButton>
                     </>
                   ) : (
-                    <StatusButton id={m.id} status="new" show={show} className={`${button} border border-stone-200 bg-white text-stone-600`}>Mark as new</StatusButton>
+                    <StatusButton id={m.id} status="new" show={show} className={`${button} border border-calico-300 bg-white text-ink-700`}>Mark as new</StatusButton>
                   )}
                 </div>
               </li>

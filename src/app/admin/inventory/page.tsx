@@ -25,7 +25,7 @@ const SHOW = [
 ] as const
 
 const FLAG: Record<ProductFlag, { label: string; style: string }> = {
-  hidden: { label: 'Hidden', style: 'border-stone-300 bg-stone-100 text-stone-700' },
+  hidden: { label: 'Hidden', style: 'border-calico-300 bg-calico-100 text-ink-700' },
   featured: { label: 'Featured', style: 'border-orange-200 bg-orange-50 text-orange-800' },
   'made-to-order': { label: 'Made to order', style: 'border-amber-200 bg-amber-50 text-amber-800' },
   'no-photo': { label: 'No photo', style: 'border-red-200 bg-red-50 text-red-800' },
@@ -96,8 +96,8 @@ export default async function InventoryPage(props: { searchParams: SearchParams 
     <div className="mx-auto max-w-6xl space-y-5 animate-in fade-in duration-500">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="m-0 text-2xl font-bold tracking-tight text-stone-900 lg:text-3xl">Products</h1>
-          <p className="m-0 mt-1 text-sm text-stone-500">
+          <h1 className="m-0 text-2xl font-bold tracking-tight text-ink-900 lg:text-3xl">Products</h1>
+          <p className="m-0 mt-1 text-sm text-ink-500">
             {totals.all} in all · {totals.shown} shown · {totals.hidden} hidden · {totals.attention} need attention
           </p>
         </div>
@@ -118,8 +118,8 @@ export default async function InventoryPage(props: { searchParams: SearchParams 
         <label htmlFor="product-search" className="sr-only">Search products</label>
         <input id="product-search" name="q" type="search" defaultValue={q} maxLength={80} autoComplete="off"
           placeholder="Name, range, colour or SKU"
-          className="min-h-11 min-w-0 flex-1 rounded-sm border border-stone-300 bg-white px-3 text-base text-stone-900 focus:border-stone-900 focus:outline-none" />
-        <button type="submit" className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-sm bg-stone-900 px-4 text-sm font-bold text-white">
+          className="min-h-11 min-w-0 flex-1 rounded-sm border border-calico-300 bg-white px-3 text-base text-ink-900 focus:border-ink-900 focus:outline-none" />
+        <button type="submit" className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-sm bg-ink-900 px-4 text-sm font-bold text-white">
           <Search className="h-4 w-4" aria-hidden="true" /> Search
         </button>
       </form>
@@ -127,28 +127,28 @@ export default async function InventoryPage(props: { searchParams: SearchParams 
       <nav aria-label="Show" className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [&::-webkit-scrollbar]:hidden lg:mx-0 lg:px-0">
         {SHOW.map(s => (
           <Link key={s.key} href={href({ show: s.key })} aria-current={show === s.key ? 'page' : undefined}
-            className={`inline-flex min-h-11 shrink-0 items-center rounded-sm px-3.5 text-xs font-bold ${show === s.key ? 'bg-stone-900 text-white' : 'border border-stone-200 bg-white text-stone-600'}`}>
+            className={`inline-flex min-h-11 shrink-0 items-center rounded-sm px-3.5 text-xs font-bold ${show === s.key ? 'bg-ink-900 text-white' : 'border border-calico-300 bg-white text-ink-700'}`}>
             {s.label}
-            <span className={`ml-1.5 rounded-full px-1.5 py-0.5 text-[10px] ${show === s.key ? 'bg-white/15' : 'bg-stone-100 text-stone-500'}`}>{totals[s.key]}</span>
+            <span className={`ml-1.5 rounded-full px-1.5 py-0.5 text-[10px] ${show === s.key ? 'bg-white/15' : 'bg-calico-100 text-ink-500'}`}>{totals[s.key]}</span>
           </Link>
         ))}
       </nav>
       <nav aria-label="Type" className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [&::-webkit-scrollbar]:hidden lg:mx-0 lg:px-0">
         <Link href={href({ type: '' })} aria-current={!type ? 'page' : undefined}
-          className={`inline-flex min-h-11 shrink-0 items-center rounded-pill border px-3.5 text-xs font-bold ${!type ? 'border-stone-900 bg-stone-900 text-white' : 'border-stone-200 bg-white text-stone-600'}`}>Every type</Link>
+          className={`inline-flex min-h-11 shrink-0 items-center rounded-pill border px-3.5 text-xs font-bold ${!type ? 'border-ink-900 bg-ink-900 text-white' : 'border-calico-300 bg-white text-ink-700'}`}>Every type</Link>
         {(categories ?? []).map(c => (
           <Link key={c.id} href={href({ type: c.id })} aria-current={type === c.id ? 'page' : undefined}
-            className={`inline-flex min-h-11 shrink-0 items-center rounded-pill border px-3.5 text-xs font-bold ${type === c.id ? 'border-stone-900 bg-stone-900 text-white' : 'border-stone-200 bg-white text-stone-600'}`}>{c.name}</Link>
+            className={`inline-flex min-h-11 shrink-0 items-center rounded-pill border px-3.5 text-xs font-bold ${type === c.id ? 'border-ink-900 bg-ink-900 text-white' : 'border-calico-300 bg-white text-ink-700'}`}>{c.name}</Link>
         ))}
       </nav>
 
-      {q && <p className="m-0 text-sm text-stone-600">{products.length} {products.length === 1 ? 'product matches' : 'products match'} &ldquo;{q}&rdquo;.</p>}
+      {q && <p className="m-0 text-sm text-ink-700">{products.length} {products.length === 1 ? 'product matches' : 'products match'} &ldquo;{q}&rdquo;.</p>}
 
       {products.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-lg border border-stone-200 bg-white px-4 py-14 text-center shadow-sm">
-          <LayoutGrid className="mb-3 h-10 w-10 text-stone-300" aria-hidden="true" />
-          <p className="m-0 text-lg font-bold text-stone-900">{all.length ? 'No products here' : 'The catalogue is empty'}</p>
-          <p className="m-0 mt-1 text-sm text-stone-500">{all.length ? 'Try another search or filter.' : 'Add the first product to start selling.'}</p>
+        <div className="flex flex-col items-center justify-center rounded-lg border border-calico-300 bg-white px-4 py-14 text-center shadow-sm">
+          <LayoutGrid className="mb-3 h-10 w-10 text-calico-300" aria-hidden="true" />
+          <p className="m-0 text-lg font-bold text-ink-900">{all.length ? 'No products here' : 'The catalogue is empty'}</p>
+          <p className="m-0 mt-1 text-sm text-ink-500">{all.length ? 'Try another search or filter.' : 'Add the first product to start selling.'}</p>
         </div>
       ) : (
         <ul className="m-0 grid list-none grid-cols-1 gap-3 p-0 sm:grid-cols-2 lg:grid-cols-3">
@@ -160,44 +160,44 @@ export default async function InventoryPage(props: { searchParams: SearchParams 
             const size = p.size_label ?? productSize(p)
             const off = p.was_price ? percentOff(p.base_price, p.was_price) : 0
             return (
-              <li key={p.id} className={`flex flex-col overflow-hidden rounded-md border bg-white shadow-sm ${p.is_active ? 'border-stone-200' : 'border-stone-300 bg-stone-50'}`}>
-                <Link href={`/admin/inventory/${p.id}/edit`} className="flex flex-1 gap-3 p-3 hover:bg-stone-50">
+              <li key={p.id} className={`flex flex-col overflow-hidden rounded-md border bg-white shadow-sm ${p.is_active ? 'border-calico-300' : 'border-calico-300 bg-calico-50'}`}>
+                <Link href={`/admin/inventory/${p.id}/edit`} className="flex flex-1 gap-3 p-3 hover:bg-calico-50">
                   {photo ? (
                     // eslint-disable-next-line @next/next/no-img-element -- Admin thumbnail: behind auth, never indexed.
-                    <img src={photo} alt="" loading="lazy" className={`h-20 w-20 shrink-0 rounded-sm border border-stone-200 object-cover ${p.is_active ? '' : 'opacity-60'}`} />
+                    <img src={photo} alt="" loading="lazy" className={`h-20 w-20 shrink-0 rounded-sm border border-calico-300 object-cover ${p.is_active ? '' : 'opacity-60'}`} />
                   ) : (
                     <span className="grid h-20 w-20 shrink-0 place-items-center rounded-sm border border-dashed border-red-300 bg-red-50 text-[10px] font-bold uppercase text-red-700">No photo</span>
                   )}
                   <div className="min-w-0 flex-1">
-                    <p className="m-0 line-clamp-2 font-bold leading-snug text-stone-900">{p.title}</p>
-                    <p className="m-0 mt-0.5 truncate text-xs text-stone-500">
+                    <p className="m-0 line-clamp-2 font-bold leading-snug text-ink-900">{p.title}</p>
+                    <p className="m-0 mt-0.5 truncate text-xs text-ink-500">
                       {[p.category_id ? categoryName.get(p.category_id) : null, size].filter(Boolean).join(' · ') || 'No type or size'}
                     </p>
                     <p className="m-0 mt-1 flex flex-wrap items-baseline gap-x-2 tabular-nums">
-                      <span className="font-black text-stone-900">{pounds(p.base_price)}</span>
-                      {off >= 1 && <><span className="text-xs text-stone-400 line-through">{pounds(p.was_price!)}</span><span className="text-[10px] font-black uppercase text-orange-700">{off}% off</span></>}
+                      <span className="font-black text-ink-900">{pounds(p.base_price)}</span>
+                      {off >= 1 && <><span className="text-xs text-ink-500 line-through">{pounds(p.was_price!)}</span><span className="text-[10px] font-black uppercase text-orange-700">{off}% off</span></>}
                     </p>
                     {swatches.length > 0 && (
                       <p className="m-0 mt-1.5 flex flex-wrap items-center gap-1" aria-label={`Colours: ${shownVariants.map(v => v.color).filter(Boolean).join(', ')}`}>
                         {swatches.map(v => (
-                          <span key={v.sku} title={v.color ?? v.sku} className="inline-block h-4 w-4 rounded-full border border-stone-300" style={{ background: v.color_hex ?? '#e7e5e4' }} />
+                          <span key={v.sku} title={v.color ?? v.sku} className="inline-block h-4 w-4 rounded-full border border-calico-300" style={{ background: v.color_hex ?? '#e7e5e4' }} />
                         ))}
-                        {shownVariants.length > swatches.length && <span className="text-[10px] text-stone-500">+{shownVariants.length - swatches.length}</span>}
+                        {shownVariants.length > swatches.length && <span className="text-[10px] text-ink-500">+{shownVariants.length - swatches.length}</span>}
                       </p>
                     )}
                   </div>
                 </Link>
-                <div className="flex items-center justify-between gap-2 border-t border-stone-100 px-3 py-2">
+                <div className="flex items-center justify-between gap-2 border-t border-calico-100 px-3 py-2">
                   <div className="flex min-w-0 flex-wrap gap-1">
                     {flags.length === 0
-                      ? <span className="text-[11px] text-stone-400">Nothing to fix</span>
+                      ? <span className="text-[11px] text-ink-500">Nothing to fix</span>
                       : flags.map(f => (
                         <span key={f} className={`inline-flex items-center rounded-pill border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${FLAG[f].style}`}>{FLAG[f].label}</span>
                       ))}
                   </div>
                   <form action={p.is_active ? deleteProduct : activateProduct} className="shrink-0">
                     <input type="hidden" name="productId" value={p.id} />
-                    <ConfirmSubmit className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded-sm ${p.is_active ? 'bg-stone-100 text-stone-700' : 'bg-green-50 text-green-700'}`}>
+                    <ConfirmSubmit className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded-sm ${p.is_active ? 'bg-calico-100 text-ink-700' : 'bg-green-50 text-green-700'}`}>
                       {p.is_active
                         ? <><EyeOff className="h-4 w-4" aria-hidden="true" /><span className="sr-only">Hide {p.title} from the shop</span></>
                         : <><Eye className="h-4 w-4" aria-hidden="true" /><span className="sr-only">Show {p.title} in the shop</span></>}

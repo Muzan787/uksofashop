@@ -88,8 +88,8 @@ export default function OrdersList({
       <LegacyHashRedirect />
 
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h1 className="m-0 text-2xl font-bold tracking-tight text-stone-900 lg:text-3xl">Orders</h1>
-        <span className="text-sm text-stone-500">{overall} in all · {total} in this view</span>
+        <h1 className="m-0 text-2xl font-bold tracking-tight text-ink-900 lg:text-3xl">Orders</h1>
+        <span className="text-sm text-ink-500">{overall} in all · {total} in this view</span>
       </div>
 
       {/* D6: after a delete. */}
@@ -110,25 +110,25 @@ export default function OrdersList({
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Link href={href('attention')} className="min-w-0 rounded-md border border-amber-200 bg-amber-50 p-3.5 transition hover:border-amber-300 lg:p-4">
           <p className="m-0 text-[10px] font-bold uppercase tracking-[0.18em] text-amber-700">Needs attention</p>
-          <p className="m-0 mt-2 text-2xl font-bold text-stone-900">{tiles.attention}</p>
-          <p className="m-0 mt-1 text-xs text-stone-600">Waiting, confirmed or on hold</p>
+          <p className="m-0 mt-2 text-2xl font-bold text-ink-900">{tiles.attention}</p>
+          <p className="m-0 mt-1 text-xs text-ink-700">Waiting, confirmed or on hold</p>
         </Link>
-        <Link href={href('attention')} className="min-w-0 rounded-md border border-stone-200 bg-white p-3.5 transition hover:border-stone-300 lg:p-4">
-          <p className="m-0 text-[10px] font-bold uppercase tracking-[0.18em] text-stone-500">To collect</p>
-          <p className="m-0 mt-2 break-words text-xl font-bold tabular-nums text-stone-900 lg:text-2xl">{money(tiles.toCollect)}</p>
-          <p className="m-0 mt-1 text-xs text-stone-500">On orders not yet delivered</p>
+        <Link href={href('attention')} className="min-w-0 rounded-md border border-calico-300 bg-white p-3.5 transition hover:border-calico-300 lg:p-4">
+          <p className="m-0 text-[10px] font-bold uppercase tracking-[0.18em] text-ink-500">To collect</p>
+          <p className="m-0 mt-2 break-words text-xl font-bold tabular-nums text-ink-900 lg:text-2xl">{money(tiles.toCollect)}</p>
+          <p className="m-0 mt-1 text-xs text-ink-500">On orders not yet delivered</p>
         </Link>
         <Link href={href('confirmed')} className="min-w-0 rounded-md border border-amber-200 bg-amber-50 p-3.5 transition hover:border-amber-300 lg:p-4">
           <p className="m-0 text-[10px] font-bold uppercase tracking-[0.18em] text-amber-700">Confirmed</p>
-          <p className="m-0 mt-2 text-2xl font-bold text-stone-900">{tiles.confirmed}</p>
-          <p className="m-0 mt-1 text-xs text-stone-600">
+          <p className="m-0 mt-2 text-2xl font-bold text-ink-900">{tiles.confirmed}</p>
+          <p className="m-0 mt-1 text-xs text-ink-700">
             {tiles.withPreferredDay} open {tiles.withPreferredDay === 1 ? 'order has' : 'orders have'} a preferred day
           </p>
         </Link>
         <Link href={href('on_hold')} className="min-w-0 rounded-md border border-orange-200 bg-orange-50 p-3.5 transition hover:border-orange-300 lg:p-4">
           <p className="m-0 text-[10px] font-bold uppercase tracking-[0.18em] text-orange-700">On hold</p>
-          <p className="m-0 mt-2 text-2xl font-bold text-stone-900">{tiles.onHold}</p>
-          <p className="m-0 mt-1 text-xs text-stone-600">Paused; to rebook</p>
+          <p className="m-0 mt-2 text-2xl font-bold text-ink-900">{tiles.onHold}</p>
+          <p className="m-0 mt-1 text-xs text-ink-700">Paused; to rebook</p>
         </Link>
       </div>
 
@@ -144,19 +144,19 @@ export default function OrdersList({
           maxLength={80}
           autoComplete="off"
           placeholder="Code, name, postcode or phone"
-          className="min-h-11 min-w-0 flex-1 rounded-sm border border-stone-300 bg-white px-3 py-2.5 text-base text-stone-900 focus:border-stone-900 focus:outline-none"
+          className="min-h-11 min-w-0 flex-1 rounded-sm border border-calico-300 bg-white px-3 py-2.5 text-base text-ink-900 focus:border-ink-900 focus:outline-none"
         />
-        <button type="submit" className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-sm bg-stone-900 px-4 text-sm font-bold text-white hover:bg-stone-700">
+        <button type="submit" className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-sm bg-ink-900 px-4 text-sm font-bold text-white hover:bg-ink-700">
           <Search className="h-4 w-4" aria-hidden="true" /> Search
         </button>
       </form>
       {q && (
-        <p className="m-0 -mt-2 flex flex-wrap items-center gap-x-3 text-sm text-stone-600">
+        <p className="m-0 -mt-2 flex flex-wrap items-center gap-x-3 text-sm text-ink-700">
           <span>
             {total} {total === 1 ? 'order matches' : 'orders match'} &ldquo;{q}&rdquo;
             {searchTooBroad && ` (the newest ${searchTooBroad} shown; type more to narrow it)`}
           </span>
-          <Link href={status !== 'attention' && status !== 'all' ? `/admin/orders?status=${status}` : '/admin/orders'} className="inline-flex min-h-11 items-center font-semibold text-stone-900 underline">
+          <Link href={status !== 'attention' && status !== 'all' ? `/admin/orders?status=${status}` : '/admin/orders'} className="inline-flex min-h-11 items-center font-semibold text-ink-900 underline">
             Clear search
           </Link>
         </p>
@@ -170,11 +170,11 @@ export default function OrdersList({
             href={href(f.key)}
             aria-current={status === f.key ? 'page' : undefined}
             className={`inline-flex min-h-11 shrink-0 items-center rounded-sm px-3.5 text-xs font-bold transition ${
-              status === f.key ? 'bg-stone-900 text-white' : 'border border-stone-200 bg-white text-stone-600 hover:border-stone-300'
+              status === f.key ? 'bg-ink-900 text-white' : 'border border-calico-300 bg-white text-ink-700 hover:border-calico-300'
             }`}
           >
             {f.label}
-            <span className={`ml-1.5 rounded-full px-1.5 py-0.5 text-[10px] ${status === f.key ? 'bg-white/15 text-white' : 'bg-stone-100 text-stone-500'}`}>
+            <span className={`ml-1.5 rounded-full px-1.5 py-0.5 text-[10px] ${status === f.key ? 'bg-white/15 text-white' : 'bg-calico-100 text-ink-500'}`}>
               {counts[f.key] ?? 0}
             </span>
           </Link>
@@ -190,22 +190,22 @@ export default function OrdersList({
             const placed = dualTime(order.created_at)
             const chat = whatsAppLink(order.customer_phone)
             return (
-              <li key={order.id} className="overflow-hidden rounded-md border border-stone-200 bg-white shadow-sm transition hover:border-stone-300">
+              <li key={order.id} className="overflow-hidden rounded-md border border-calico-300 bg-white shadow-sm transition hover:border-calico-300">
                 <Link href={`/admin/orders/${order.id}`} className="block p-4">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-mono text-sm font-bold text-stone-900">#{shortCode(order.id)}</span>
+                    <span className="font-mono text-sm font-bold text-ink-900">#{shortCode(order.id)}</span>
                     <StatusBadge status={order.status} />
                     <OrderTags order={order} />
                   </div>
                   <div className="mt-2 flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="m-0 truncate text-base font-semibold text-stone-900">{order.customer_name}</p>
-                      <p className="m-0 text-sm text-stone-500">
+                      <p className="m-0 truncate text-base font-semibold text-ink-900">{order.customer_name}</p>
+                      <p className="m-0 text-sm text-ink-500">
                         {[postcode, `${items} ${items === 1 ? 'item' : 'items'}`].filter(Boolean).join(' · ')}
                       </p>
                     </div>
                     <div className="shrink-0 text-right">
-                      <p className="m-0 text-lg font-bold tabular-nums text-stone-900">{money(order.total_amount)}</p>
+                      <p className="m-0 text-lg font-bold tabular-nums text-ink-900">{money(order.total_amount)}</p>
                       {deposits[order.id] > 0 && (
                         <p className="m-0 text-xs font-semibold tabular-nums text-green-700">
                           {money(deposits[order.id])} deposit paid
@@ -213,15 +213,15 @@ export default function OrdersList({
                       )}
                     </div>
                   </div>
-                  <div className="mt-2 space-y-1 text-xs text-stone-500">
+                  <div className="mt-2 space-y-1 text-xs text-ink-500">
                     {placed && (
                       <p className="m-0 flex items-start gap-1.5">
                         <Clock3 className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                        <span>{placed.uk} UK <span className="text-stone-300">|</span> {placed.pk} PK</span>
+                        <span>{placed.uk} UK <span className="text-calico-300">|</span> {placed.pk} PK</span>
                       </p>
                     )}
                     {order.preferred_delivery_date && (
-                      <p className="m-0 flex items-start gap-1.5 font-semibold text-stone-800">
+                      <p className="m-0 flex items-start gap-1.5 font-semibold text-ink-900">
                         <CalendarDays className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600" aria-hidden="true" />
                         Wants {formatPreferredDeliveryDate(order.preferred_delivery_date)}
                       </p>
@@ -233,7 +233,7 @@ export default function OrdersList({
                     href={chat}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex min-h-11 items-center justify-center gap-2 border-t border-stone-100 bg-[#25D366]/10 px-4 py-2.5 text-sm font-bold text-[#128C7E] transition hover:bg-[#25D366]/20"
+                    className="flex min-h-11 items-center justify-center gap-2 border-t border-calico-100 bg-[#25D366]/10 px-4 py-2.5 text-sm font-bold text-[#128C7E] transition hover:bg-[#25D366]/20"
                   >
                     <WhatsAppMark /> WhatsApp {firstName(order.customer_name)}
                   </a>
@@ -246,12 +246,12 @@ export default function OrdersList({
 
       {/* D6: the empty state. */}
       {orders.length === 0 && (
-        <div className="flex flex-col items-center justify-center rounded-lg border border-stone-200 bg-white px-4 py-12 text-center shadow-sm">
-          <Inbox className="mb-3 h-12 w-12 text-stone-300" aria-hidden="true" />
-          <p className="m-0 text-lg font-bold text-stone-900">
+        <div className="flex flex-col items-center justify-center rounded-lg border border-calico-300 bg-white px-4 py-12 text-center shadow-sm">
+          <Inbox className="mb-3 h-12 w-12 text-calico-300" aria-hidden="true" />
+          <p className="m-0 text-lg font-bold text-ink-900">
             {q ? 'No orders match that search' : status === 'attention' ? 'Nothing needs your attention' : 'No orders here'}
           </p>
-          <p className="m-0 mt-1 text-sm text-stone-500">
+          <p className="m-0 mt-1 text-sm text-ink-500">
             {q ? 'Try the order code, a surname, or the postcode.' : status === 'attention' ? 'Every order is either on its way or done.' : 'Try a different filter.'}
           </p>
         </div>
@@ -261,13 +261,13 @@ export default function OrdersList({
       {lastPage > 1 && (
         <div className="flex items-center justify-between gap-4 pt-1">
           {page > 1 ? (
-            <Link href={href(status, page - 1)} className="inline-flex min-h-11 items-center rounded-sm border border-stone-200 bg-white px-4 text-xs font-bold text-stone-700 transition hover:border-stone-300">
+            <Link href={href(status, page - 1)} className="inline-flex min-h-11 items-center rounded-sm border border-calico-300 bg-white px-4 text-xs font-bold text-ink-700 transition hover:border-calico-300">
               ← Newer
             </Link>
           ) : <span />}
-          <span className="text-xs font-medium text-stone-500">Page {page} of {lastPage}</span>
+          <span className="text-xs font-medium text-ink-500">Page {page} of {lastPage}</span>
           {page < lastPage ? (
-            <Link href={href(status, page + 1)} className="inline-flex min-h-11 items-center rounded-sm border border-stone-200 bg-white px-4 text-xs font-bold text-stone-700 transition hover:border-stone-300">
+            <Link href={href(status, page + 1)} className="inline-flex min-h-11 items-center rounded-sm border border-calico-300 bg-white px-4 text-xs font-bold text-ink-700 transition hover:border-calico-300">
               Older →
             </Link>
           ) : <span />}

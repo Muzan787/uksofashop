@@ -103,12 +103,12 @@ export default function SearchSelect({
   }
 
   const field =
-    'w-full rounded-sm border border-stone-300 bg-white py-2 pl-9 pr-8 text-sm text-stone-900 ' +
-    'focus:border-stone-900 focus:outline-none focus:ring-0'
+    'w-full rounded-sm border border-calico-300 bg-white py-2 pl-9 pr-8 text-sm text-ink-900 ' +
+    'focus:border-ink-900 focus:outline-none focus:ring-0'
 
   return (
     <div ref={wrap} className={`relative ${className}`}>
-      <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+      <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-500" />
       <input
         type="text"
         role="combobox"
@@ -132,17 +132,17 @@ export default function SearchSelect({
           else if (e.key === 'Escape') { setOpen(false); setQuery('') }
         }}
       />
-      <ChevronDown aria-hidden="true" className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+      <ChevronDown aria-hidden="true" className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-500" />
 
       {open && (
         <ul
           id={listId}
           role="listbox"
           aria-label={ariaLabel}
-          className="absolute left-0 right-0 top-full z-30 m-0 mt-1 max-h-64 list-none overflow-y-auto overscroll-contain rounded-sm border border-stone-300 bg-white p-0 shadow-lg"
+          className="absolute left-0 right-0 top-full z-30 m-0 mt-1 max-h-64 list-none overflow-y-auto overscroll-contain rounded-sm border border-calico-300 bg-white p-0 shadow-lg"
         >
           {rows.length === 0 ? (
-            <li className="px-3 py-3 text-sm text-stone-500">Nothing matches that.</li>
+            <li className="px-3 py-3 text-sm text-ink-500">Nothing matches that.</li>
           ) : (
             rows.map((o, i) => (
               <li key={o.id || 'none'} id={`${listId}-${i}`} role="option" aria-selected={o.id === value}>
@@ -150,10 +150,10 @@ export default function SearchSelect({
                   type="button"
                   onMouseEnter={() => setActive(i)}
                   onClick={() => pick(o)}
-                  className={`block w-full px-3 py-2.5 text-left text-sm ${i === active ? 'bg-stone-100' : 'bg-white'} ${o.id === value ? 'font-bold text-stone-900' : 'text-stone-800'}`}
+                  className={`block w-full px-3 py-2.5 text-left text-sm ${i === active ? 'bg-calico-100' : 'bg-white'} ${o.id === value ? 'font-bold text-ink-900' : 'text-ink-900'}`}
                 >
                   <span className="block leading-snug">{o.label}</span>
-                  {o.hint && <span className="mt-0.5 block text-xs text-stone-500">{o.hint}</span>}
+                  {o.hint && <span className="mt-0.5 block text-xs text-ink-500">{o.hint}</span>}
                 </button>
               </li>
             ))

@@ -32,12 +32,12 @@ export default function MetaHoldButtons({ orderId, state }: { orderId: string; s
     <div className="mt-2">
       <div className="flex gap-2">
         {state === null && (
-          <button type="button" disabled={busy !== null} onClick={() => set('hold')} className={`${button} border-stone-300 bg-white text-stone-800`}>
+          <button type="button" disabled={busy !== null} onClick={() => set('hold')} className={`${button} border-calico-300 bg-white text-ink-900`}>
             {spinner('hold')} Hold
           </button>
         )}
         {state === 'hold' && (
-          <button type="button" disabled={busy !== null} onClick={() => set(null)} className={`${button} border-stone-300 bg-white text-stone-800`}>
+          <button type="button" disabled={busy !== null} onClick={() => set(null)} className={`${button} border-calico-300 bg-white text-ink-900`}>
             {spinner('release')} Release
           </button>
         )}
@@ -51,7 +51,7 @@ export default function MetaHoldButtons({ orderId, state }: { orderId: string; s
             {spinner('dont_send')} Don’t send
           </button>
         ) : (
-          <button type="button" disabled={busy !== null} onClick={() => set(null)} className={`${button} border-stone-300 bg-white text-stone-800`}>
+          <button type="button" disabled={busy !== null} onClick={() => set(null)} className={`${button} border-calico-300 bg-white text-ink-900`}>
             {spinner('release')} Undo Don’t send
           </button>
         )}

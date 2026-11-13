@@ -141,8 +141,8 @@ export default async function AdminLeadsPage(props: { searchParams: SearchParams
   return (
     <div className="mx-auto max-w-5xl space-y-5 animate-in fade-in duration-500">
       <header>
-        <h1 className="m-0 text-2xl font-bold tracking-tight text-zinc-900 lg:text-3xl">Leads</h1>
-        <p className="m-0 mt-1 text-sm text-zinc-500">Samples to post, messages, WhatsApp enquiries, basket reminders and the newsletter.</p>
+        <h1 className="m-0 text-2xl font-bold tracking-tight text-ink-900 lg:text-3xl">Leads</h1>
+        <p className="m-0 mt-1 text-sm text-ink-500">Samples to post, messages, WhatsApp enquiries, basket reminders and the newsletter.</p>
       </header>
 
       <LeadsTabNav tab={tab} counts={counts} />

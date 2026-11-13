@@ -57,7 +57,7 @@ export default function DeleteOrderButton({
       <button
         type="button"
         onClick={() => setArmed(true)}
-        className="flex items-center justify-center gap-2 rounded-sm px-3 py-2.5 text-xs font-bold text-stone-500 transition hover:bg-red-50 hover:text-red-700"
+        className="flex items-center justify-center gap-2 rounded-sm px-3 py-2.5 text-xs font-bold text-ink-500 transition hover:bg-red-50 hover:text-red-700"
       >
         <Trash2 className="h-4 w-4" aria-hidden="true" />
         Delete order
@@ -84,7 +84,7 @@ export default function DeleteOrderButton({
           type="button"
           onClick={() => setArmed(false)}
           disabled={pending}
-          className="flex-1 rounded-sm border border-stone-300 bg-white px-3 py-2.5 text-sm font-bold text-stone-700 transition hover:bg-stone-100"
+          className="flex-1 rounded-sm border border-calico-300 bg-white px-3 py-2.5 text-sm font-bold text-ink-700 transition hover:bg-calico-100"
         >
           Keep it
         </button>

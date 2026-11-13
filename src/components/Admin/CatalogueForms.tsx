@@ -16,9 +16,9 @@ import {
 } from '@/app/actions/catalogue'
 import { slugify } from '@/utils/catalogue'
 
-const label = 'mb-1 block text-xs font-bold uppercase tracking-wider text-stone-500'
-const input = 'min-h-11 w-full rounded-sm border border-stone-200 bg-white px-3 py-2 text-base text-stone-900 outline-none focus:border-orange-500'
-const hint = 'mt-1 text-[11px] leading-relaxed text-stone-500'
+const label = 'mb-1 block text-xs font-bold uppercase tracking-wider text-ink-500'
+const input = 'min-h-11 w-full rounded-sm border border-calico-300 bg-white px-3 py-2 text-base text-ink-900 outline-none focus:border-orange-500'
+const hint = 'mt-1 text-[11px] leading-relaxed text-ink-500'
 
 /** Save and Delete buttons with the message under them. */
 function Actions({ busy, saveText, onDelete, message }: {
@@ -27,7 +27,7 @@ function Actions({ busy, saveText, onDelete, message }: {
   return (
     <>
       <div className="flex flex-wrap items-center gap-2">
-        <button type="submit" disabled={busy} className="inline-flex min-h-11 items-center gap-2 rounded-sm bg-stone-900 px-5 text-sm font-bold text-white disabled:opacity-60">
+        <button type="submit" disabled={busy} className="inline-flex min-h-11 items-center gap-2 rounded-sm bg-ink-900 px-5 text-sm font-bold text-white disabled:opacity-60">
           {busy && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />} {saveText}
         </button>
         {onDelete && (
@@ -130,9 +130,9 @@ export function CollectionForm({ collection }: { collection?: CollectionRow }) {
           <label className={label} htmlFor={`col-sort-${key}`}>Order</label>
           <input id={`col-sort-${key}`} name="sort" type="number" inputMode="numeric" min={0} defaultValue={collection?.sort ?? 99} className={input} />
         </div>
-        <label className="flex min-h-11 cursor-pointer items-center gap-3 self-end rounded-sm border border-stone-200 bg-stone-50 px-3">
+        <label className="flex min-h-11 cursor-pointer items-center gap-3 self-end rounded-sm border border-calico-300 bg-calico-50 px-3">
           <input type="checkbox" name="isActive" defaultChecked={collection?.is_active ?? true} className="h-5 w-5 accent-orange-500" />
-          <span className="text-sm font-semibold text-stone-800">Shown in the shop</span>
+          <span className="text-sm font-semibold text-ink-900">Shown in the shop</span>
         </label>
       </div>
       <div>
@@ -191,7 +191,7 @@ export function FabricForm({ fabric, collectionId, collections }: { fabric?: Fab
         <div>
           <label className={label} htmlFor={`fab-hex-${key}`}>Swatch colour</label>
           <div className="flex items-center gap-2">
-            <input type="color" aria-label="Pick the swatch colour" value={/^#[0-9a-f]{6}$/i.test(hex) ? hex : '#cccccc'} onChange={e => setHex(e.target.value)} className="h-11 w-11 shrink-0 cursor-pointer rounded-sm border border-stone-200 p-0.5" />
+            <input type="color" aria-label="Pick the swatch colour" value={/^#[0-9a-f]{6}$/i.test(hex) ? hex : '#cccccc'} onChange={e => setHex(e.target.value)} className="h-11 w-11 shrink-0 cursor-pointer rounded-sm border border-calico-300 p-0.5" />
             <input id={`fab-hex-${key}`} value={hex} onChange={e => setHex(e.target.value)} placeholder="#808080" className={`${input} font-mono`} />
           </div>
         </div>
@@ -201,13 +201,13 @@ export function FabricForm({ fabric, collectionId, collections }: { fabric?: Fab
         </div>
       </div>
       <div className="grid gap-2 sm:grid-cols-2">
-        <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-sm border border-stone-200 bg-stone-50 px-3">
+        <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-sm border border-calico-300 bg-calico-50 px-3">
           <input type="checkbox" name="isActive" defaultChecked={fabric?.is_active ?? true} className="h-5 w-5 accent-orange-500" />
-          <span className="text-sm font-semibold text-stone-800">Shown in the shop</span>
+          <span className="text-sm font-semibold text-ink-900">Shown in the shop</span>
         </label>
-        <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-sm border border-stone-200 bg-stone-50 px-3">
+        <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-sm border border-calico-300 bg-calico-50 px-3">
           <input type="checkbox" name="isSwatchable" defaultChecked={fabric?.is_swatchable ?? true} className="h-5 w-5 accent-orange-500" />
-          <span className="text-sm font-semibold text-stone-800">Can be sent as a sample</span>
+          <span className="text-sm font-semibold text-ink-900">Can be sent as a sample</span>
         </label>
       </div>
       <div>

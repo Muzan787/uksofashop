@@ -25,9 +25,9 @@ interface Props {
 }
 
 const INPUT =
-  'w-full p-3.5 bg-white border border-stone-200 rounded-sm focus:ring-2 focus:ring-orange-500 outline-none font-bold text-lg'
-const LABEL = 'block text-xs font-bold text-stone-500 uppercase tracking-wider mb-2'
-const HINT = 'text-[11px] text-stone-400 mt-1.5 leading-relaxed'
+  'w-full p-3.5 bg-white border border-calico-300 rounded-sm focus:ring-2 focus:ring-orange-500 outline-none font-bold text-lg'
+const LABEL = 'block text-xs font-bold text-ink-500 uppercase tracking-wider mb-2'
+const HINT = 'text-[11px] text-ink-500 mt-1.5 leading-relaxed'
 
 export default function PriceFields({ basePrice: initialBase, wasPrice: initialWas }: Props) {
   const [basePrice, setBasePrice] = useState(
@@ -49,7 +49,7 @@ export default function PriceFields({ basePrice: initialBase, wasPrice: initialW
   const tooSmall = haveWas && haveBase && !tooLow && pct < 1
 
   return (
-    <div className="md:col-span-2 grid grid-cols-1 gap-5 rounded-sm border border-stone-200 bg-stone-50 p-5 sm:grid-cols-2">
+    <div className="md:col-span-2 grid grid-cols-1 gap-5 rounded-sm border border-calico-300 bg-calico-50 p-5 sm:grid-cols-2">
       <div>
         <label className={LABEL} htmlFor="basePrice">Price now (£)</label>
         <input
@@ -72,7 +72,7 @@ export default function PriceFields({ basePrice: initialBase, wasPrice: initialW
 
       <div>
         <label className={LABEL} htmlFor="wasPrice">
-          Was price (£) <span className="text-stone-400">— optional</span>
+          Was price (£) <span className="text-ink-500">— optional</span>
         </label>
         <input
           id="wasPrice"
@@ -94,8 +94,8 @@ export default function PriceFields({ basePrice: initialBase, wasPrice: initialW
       {/* ── What the customer will see ──────────────────────────────────── */}
       <div className="sm:col-span-2">
         {!haveWas ? (
-          <p className="m-0 flex items-center gap-2 text-xs font-medium text-stone-500">
-            <Tag className="h-4 w-4 shrink-0 text-stone-300" aria-hidden="true" />
+          <p className="m-0 flex items-center gap-2 text-xs font-medium text-ink-500">
+            <Tag className="h-4 w-4 shrink-0 text-calico-300" aria-hidden="true" />
             No discount. The price shows on its own, exactly as it does now.
           </p>
         ) : tooLow ? (
@@ -110,19 +110,19 @@ export default function PriceFields({ basePrice: initialBase, wasPrice: initialW
             Under 1% off — too small to round to a percentage, so nothing will be crossed out.
           </p>
         ) : (
-          <div className="rounded-sm border border-stone-200 bg-white p-4">
-            <p className="m-0 mb-2.5 text-[10px] font-bold uppercase tracking-widest text-stone-400">
+          <div className="rounded-sm border border-calico-300 bg-white p-4">
+            <p className="m-0 mb-2.5 text-[10px] font-bold uppercase tracking-widest text-ink-500">
               What the customer sees
             </p>
             <div className="flex flex-wrap items-center gap-3">
-              <span className="text-2xl font-black tracking-tight text-stone-900">{pounds(base)}</span>
-              <span className="text-lg font-bold text-stone-400 line-through">{pounds(was)}</span>
+              <span className="text-2xl font-black tracking-tight text-ink-900">{pounds(base)}</span>
+              <span className="text-lg font-bold text-ink-500 line-through">{pounds(was)}</span>
               <span className="rounded-sm bg-orange-500 px-2.5 py-1 text-[11px] font-black uppercase tracking-wider text-white">
                 {pct}% off
               </span>
             </div>
-            <p className="m-0 mt-2.5 text-[11px] leading-relaxed text-stone-500">
-              They save <strong className="font-bold text-stone-700">{pounds(was - base)}</strong>. The
+            <p className="m-0 mt-2.5 text-[11px] leading-relaxed text-ink-500">
+              They save <strong className="font-bold text-ink-700">{pounds(was - base)}</strong>. The
               same crossed-out price and badge appear on the product page, on every listing card, and
               in the Google and Facebook product feeds.
             </p>

@@ -30,8 +30,8 @@ import {
 
 export type VisitChannel = 'whatsapp' | 'call' | 'swatches' | 'any'
 
-const label = 'mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-stone-500'
-const field = 'w-full rounded-sm border border-stone-300 bg-white px-3 py-2.5 text-base text-stone-900 focus:border-stone-900 focus:outline-none sm:text-sm'
+const label = 'mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-ink-500'
+const field = 'w-full rounded-sm border border-calico-300 bg-white px-3 py-2.5 text-base text-ink-900 focus:border-ink-900 focus:outline-none sm:text-sm'
 const chip = 'inline-flex items-center rounded-pill border px-2 py-0.5 text-[11px] font-semibold'
 
 const SPANS: [VisitSpan, string][] = [['15', '± 15 min'], ['30', '± 30 min'], ['60', '± 1 hour'], ['180', '± 3 hours'], ['720', '± 12 hours']]
@@ -98,48 +98,48 @@ export function VisitCard({ visit, action, highlight = false }: { visit: VisitCa
   if (visit.reached_checkout) signals.push({ text: 'Reached checkout' })
 
   return (
-    <li className={`rounded-sm border bg-white p-3 ${highlight ? 'border-green-400 ring-1 ring-green-300' : 'border-stone-200'}`}>
+    <li className={`rounded-sm border bg-white p-3 ${highlight ? 'border-green-400 ring-1 ring-green-300' : 'border-calico-300'}`}>
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-        <p className="m-0 text-sm font-bold text-stone-900">
-          Last seen {last?.uk} UK <span className="font-normal text-stone-500">· {last?.pk} PK</span>
+        <p className="m-0 text-sm font-bold text-ink-900">
+          Last seen {last?.uk} UK <span className="font-normal text-ink-500">· {last?.pk} PK</span>
         </p>
-        <span className="inline-flex items-center gap-1 text-xs text-stone-500">
+        <span className="inline-flex items-center gap-1 text-xs text-ink-500">
           <DeviceIcon device={visit.device} /> {DEVICE[visit.device ?? ''] ?? 'Device unknown'}
         </span>
       </div>
       <div className="mt-1.5 flex flex-wrap gap-1.5">
-        <span className={`${chip} ${source.tone === 'meta' ? 'border-blue-200 bg-blue-50 text-blue-800' : source.tone === 'google' ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-stone-200 bg-stone-50 text-stone-700'}`}>
+        <span className={`${chip} ${source.tone === 'meta' ? 'border-blue-200 bg-blue-50 text-blue-800' : source.tone === 'google' ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-calico-300 bg-calico-50 text-ink-700'}`}>
           {source.text}
         </span>
-        {visit.arrival?.campaign && <span className={`${chip} border-stone-200 bg-white text-stone-600`}>Campaign: {visit.arrival.campaign}</span>}
-        {visit.arrival?.content && <span className={`${chip} border-stone-200 bg-white text-stone-600`}>Ad: {visit.arrival.content}</span>}
+        {visit.arrival?.campaign && <span className={`${chip} border-calico-300 bg-white text-ink-700`}>Campaign: {visit.arrival.campaign}</span>}
+        {visit.arrival?.content && <span className={`${chip} border-calico-300 bg-white text-ink-700`}>Ad: {visit.arrival.content}</span>}
       </div>
       {signals.length > 0 && (
         <ul className="m-0 mt-2 flex list-none flex-wrap gap-1.5 p-0">
           {signals.map(s => (
-            <li key={s.text} className={`${chip} ${s.strong ? 'border-green-300 bg-green-50 text-green-800' : 'border-stone-200 bg-stone-50 text-stone-700'}`}>{s.text}</li>
+            <li key={s.text} className={`${chip} ${s.strong ? 'border-green-300 bg-green-50 text-green-800' : 'border-calico-300 bg-calico-50 text-ink-700'}`}>{s.text}</li>
           ))}
         </ul>
       )}
       {visit.pages.length > 0 ? (
-        <ol className="m-0 mt-3 list-none space-y-1 border-l-2 border-stone-200 p-0 pl-3 text-sm">
+        <ol className="m-0 mt-3 list-none space-y-1 border-l-2 border-calico-300 p-0 pl-3 text-sm">
           {pages.map((p, i) => (
             <li key={`${p.at}-${i}`} className="flex gap-2">
-              <span className="w-12 shrink-0 tabular-nums text-xs leading-5 text-stone-400">{ukTime(p.at).split(' ').pop()}</span>
-              <span className={p.product ? 'font-semibold text-stone-900' : 'text-stone-700'}>{pageName(p)}</span>
+              <span className="w-12 shrink-0 tabular-nums text-xs leading-5 text-ink-500">{ukTime(p.at).split(' ').pop()}</span>
+              <span className={p.product ? 'font-semibold text-ink-900' : 'text-ink-700'}>{pageName(p)}</span>
             </li>
           ))}
         </ol>
       ) : (
-        <p className="m-0 mt-3 text-xs text-stone-500">No page list for this visit.</p>
+        <p className="m-0 mt-3 text-xs text-ink-500">No page list for this visit.</p>
       )}
       {visit.pages.length > 8 && (
-        <button type="button" onClick={() => setAllPages(v => !v)} className="mt-1 min-h-9 text-xs font-bold text-stone-600 underline-offset-2 hover:underline">
+        <button type="button" onClick={() => setAllPages(v => !v)} className="mt-1 min-h-9 text-xs font-bold text-ink-700 underline-offset-2 hover:underline">
           {allPages ? 'Show fewer pages' : `Show all ${visit.pages.length} pages`}
         </button>
       )}
       {visit.linked_order_id ? (
-        <p className="m-0 mt-3 text-xs font-semibold text-stone-500">
+        <p className="m-0 mt-3 text-xs font-semibold text-ink-500">
           Already on order{' '}
           <Link href={`/admin/orders/${visit.linked_order_id}`} className="font-mono underline">#{visit.linked_order_id.slice(0, 8).toUpperCase()}</Link>
         </p>
@@ -235,7 +235,7 @@ export default function FindVisit({
         <ul className="m-0 list-none p-0">
           <VisitCard visit={mode.selected} highlight />
         </ul>
-        <button type="button" onClick={() => mode.onPick(null)} className="inline-flex min-h-11 items-center gap-1.5 text-xs font-bold text-stone-600 hover:text-stone-900">
+        <button type="button" onClick={() => mode.onPick(null)} className="inline-flex min-h-11 items-center gap-1.5 text-xs font-bold text-ink-700 hover:text-ink-900">
           <X className="h-4 w-4" aria-hidden="true" /> Choose a different visit
         </button>
       </div>
@@ -250,7 +250,7 @@ export default function FindVisit({
         <legend className={label}>How they got in touch</legend>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {CHANNELS.map(([value, text]) => (
-            <label key={value} className={`flex min-h-11 cursor-pointer items-center justify-center rounded-sm border px-2 text-sm font-semibold transition ${channel === value ? 'border-stone-900 bg-stone-900 text-white' : 'border-stone-300 bg-white text-stone-700 hover:border-stone-500'}`}>
+            <label key={value} className={`flex min-h-11 cursor-pointer items-center justify-center rounded-sm border px-2 text-sm font-semibold transition ${channel === value ? 'border-ink-900 bg-ink-900 text-white' : 'border-calico-300 bg-white text-ink-700 hover:border-ink-500'}`}>
               <input type="radio" className="sr-only" name="visit-channel" value={value} checked={channel === value} onChange={() => setChannel(value)} />
               {text}
             </label>
@@ -283,7 +283,7 @@ export default function FindVisit({
       </div>
 
       <div>
-        <span className={label}>Sofa they asked about <span className="font-normal normal-case tracking-normal text-stone-400">— optional, narrows the list</span></span>
+        <span className={label}>Sofa they asked about <span className="font-normal normal-case tracking-normal text-ink-500">— optional, narrows the list</span></span>
         <SearchSelect options={productOptions} value={productId} onChange={setProductId} ariaLabel="Sofa they asked about" placeholder="Any sofa" emptyOptionLabel="Any sofa" />
       </div>
 
@@ -320,41 +320,41 @@ export default function FindVisit({
 
       {result && (
         <div className="space-y-2">
-          <p className="m-0 text-sm text-stone-700">
+          <p className="m-0 text-sm text-ink-700">
             {result.visits.length === 0
               ? `No visits we can use between ${range}.`
               : `${result.visits.length}${result.more ? ` of ${result.visits.length + result.more}` : ''} visit${result.visits.length === 1 ? '' : 's'} between ${range}, closest first.`}
             {result.more > 0 && ' Narrow the time or pick the sofa to see the rest.'}
           </p>
           {result.hidden > 0 && (
-            <p className="m-0 text-xs text-stone-500">
+            <p className="m-0 text-xs text-ink-500">
               {result.hidden} more visit{result.hidden === 1 ? '' : 's'} in that time can&apos;t be used: they didn&apos;t allow advertising cookies.
             </p>
           )}
-          <p className="m-0 text-xs text-stone-500">Only pick one you are sure of: the pages should be what the customer talked about.</p>
+          <p className="m-0 text-xs text-ink-500">Only pick one you are sure of: the pages should be what the customer talked about.</p>
           <ul className="m-0 list-none space-y-3 p-0">
             {result.visits.map(v => {
               const isChosen = chosen?.session_id === v.session_id
               const action = mode.kind === 'pick' ? (
-                <button type="button" onClick={() => mode.onPick(v)} className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-sm bg-stone-900 px-4 text-sm font-bold text-white hover:bg-stone-700">
+                <button type="button" onClick={() => mode.onPick(v)} className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-sm bg-ink-900 px-4 text-sm font-bold text-white hover:bg-ink-700">
                   <Check className="h-4 w-4" aria-hidden="true" /> This is them
                 </button>
               ) : isChosen ? (
-                <div className="mt-3 space-y-2 border-t border-stone-100 pt-3">
-                  <label className={label} htmlFor={`visit-note-${v.session_id}`}>Why you are sure <span className="font-normal normal-case tracking-normal text-stone-400">— optional, kept on the order</span></label>
+                <div className="mt-3 space-y-2 border-t border-calico-100 pt-3">
+                  <label className={label} htmlFor={`visit-note-${v.session_id}`}>Why you are sure <span className="font-normal normal-case tracking-normal text-ink-500">— optional, kept on the order</span></label>
                   <input id={`visit-note-${v.session_id}`} className={field} maxLength={300} value={note} onChange={e => setNote(e.target.value)} placeholder="e.g. asked about the grey Hannah, rang at 2pm" />
                   <div className="flex flex-col gap-2 sm:flex-row">
                     <button type="button" disabled={saving} onClick={() => save(v)} className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-sm bg-green-700 px-4 text-sm font-bold text-white hover:bg-green-800 disabled:opacity-60">
                       {saving ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Check className="h-4 w-4" aria-hidden="true" />}
                       Put this visit on the order
                     </button>
-                    <button type="button" disabled={saving} onClick={() => setChosen(null)} className="inline-flex min-h-11 items-center justify-center rounded-sm border border-stone-300 bg-white px-4 text-sm font-bold text-stone-700">
+                    <button type="button" disabled={saving} onClick={() => setChosen(null)} className="inline-flex min-h-11 items-center justify-center rounded-sm border border-calico-300 bg-white px-4 text-sm font-bold text-ink-700">
                       Cancel
                     </button>
                   </div>
                 </div>
               ) : (
-                <button type="button" onClick={() => { setChosen(v); setNote('') }} className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-sm bg-stone-900 px-4 text-sm font-bold text-white hover:bg-stone-700">
+                <button type="button" onClick={() => { setChosen(v); setNote('') }} className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-sm bg-ink-900 px-4 text-sm font-bold text-white hover:bg-ink-700">
                   <Check className="h-4 w-4" aria-hidden="true" /> This is them
                 </button>
               )
@@ -386,7 +386,7 @@ export function RemoveVisitMatch({ orderId }: { orderId: string }) {
             else router.refresh()
           })
         }}
-        className="inline-flex min-h-11 items-center gap-2 rounded-sm border border-stone-300 bg-white px-4 text-sm font-bold text-stone-700 hover:border-stone-500 disabled:opacity-60"
+        className="inline-flex min-h-11 items-center gap-2 rounded-sm border border-calico-300 bg-white px-4 text-sm font-bold text-ink-700 hover:border-ink-500 disabled:opacity-60"
       >
         {saving && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
         It wasn&apos;t them: remove this match

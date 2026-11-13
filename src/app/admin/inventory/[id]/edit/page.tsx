@@ -48,12 +48,12 @@ export default async function EditProductPage(props: { params: Promise<{ id: str
   return (
     <div className="mx-auto max-w-4xl space-y-5">
       <div className="flex items-start gap-3">
-        <Link href="/admin/inventory" className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-sm text-stone-500 hover:bg-stone-100" aria-label="Back to products">
+        <Link href="/admin/inventory" className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-sm text-ink-500 hover:bg-calico-100" aria-label="Back to products">
           <ArrowLeft className="h-5 w-5" aria-hidden="true" />
         </Link>
         <div className="min-w-0">
-          <h1 className="m-0 text-2xl font-bold text-stone-900 lg:text-3xl">{source.title}</h1>
-          <p className="m-0 mt-1 text-sm text-stone-500">{source.is_active === false ? 'Hidden from the shop.' : 'In the shop.'}</p>
+          <h1 className="m-0 text-2xl font-bold text-ink-900 lg:text-3xl">{source.title}</h1>
+          <p className="m-0 mt-1 text-sm text-ink-500">{source.is_active === false ? 'Hidden from the shop.' : 'In the shop.'}</p>
         </div>
       </div>
 
@@ -65,16 +65,16 @@ export default async function EditProductPage(props: { params: Promise<{ id: str
 
       <div className="flex flex-wrap gap-2">
         {shopHref && source.is_active !== false && (
-          <a href={shopHref} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center gap-1.5 rounded-sm border border-stone-300 bg-white px-4 text-sm font-bold text-stone-700">
+          <a href={shopHref} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center gap-1.5 rounded-sm border border-calico-300 bg-white px-4 text-sm font-bold text-ink-700">
             <ExternalLink className="h-4 w-4" aria-hidden="true" /> See it in the shop
           </a>
         )}
-        <Link href={`/admin/inventory/new?from=${source.id}`} className="inline-flex min-h-11 items-center gap-1.5 rounded-sm border border-stone-300 bg-white px-4 text-sm font-bold text-stone-700">
+        <Link href={`/admin/inventory/new?from=${source.id}`} className="inline-flex min-h-11 items-center gap-1.5 rounded-sm border border-calico-300 bg-white px-4 text-sm font-bold text-ink-700">
           <Copy className="h-4 w-4" aria-hidden="true" /> Copy as a new product
         </Link>
         <form action={source.is_active === false ? activateProduct : deleteProduct}>
           <input type="hidden" name="productId" value={source.id} />
-          <ConfirmSubmit className="inline-flex min-h-11 items-center gap-1.5 rounded-sm border border-stone-300 bg-white px-4 text-sm font-bold text-stone-700">
+          <ConfirmSubmit className="inline-flex min-h-11 items-center gap-1.5 rounded-sm border border-calico-300 bg-white px-4 text-sm font-bold text-ink-700">
             {source.is_active === false ? <><Eye className="h-4 w-4" aria-hidden="true" /> Show in the shop</> : <><EyeOff className="h-4 w-4" aria-hidden="true" /> Hide from the shop</>}
           </ConfirmSubmit>
         </form>

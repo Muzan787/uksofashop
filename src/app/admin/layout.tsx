@@ -27,7 +27,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   if (adminEmail === null) notFound()
 
   return (
-    <div className="min-h-screen bg-zinc-50 print:min-h-0 print:bg-white">
+    <div className="min-h-screen bg-calico-50 text-ink-900 print:min-h-0 print:bg-white">
       <AdminSidebarClient email={adminEmail} />
 
       {/* lg:ml-64 creates room for the desktop sidebar. On phones the bottom

@@ -72,38 +72,38 @@ export default function EnquiriesTab({ enquiries, showAll, q, page, lastPage, to
           autoComplete="off"
           autoCapitalize="characters"
           placeholder="Reference, e.g. UKSS-WA-…"
-          className="min-h-11 min-w-0 flex-1 rounded-sm border border-stone-300 bg-white px-3 py-2.5 text-base text-stone-900 focus:border-stone-900 focus:outline-none"
+          className="min-h-11 min-w-0 flex-1 rounded-sm border border-calico-300 bg-white px-3 py-2.5 text-base text-ink-900 focus:border-ink-900 focus:outline-none"
         />
-        <button type="submit" className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-sm bg-stone-900 px-4 text-sm font-bold text-white hover:bg-stone-700">
+        <button type="submit" className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-sm bg-ink-900 px-4 text-sm font-bold text-white hover:bg-ink-700">
           <Search className="h-4 w-4" aria-hidden="true" /> Search
         </button>
       </form>
 
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="m-0 text-sm text-stone-600">
+        <p className="m-0 text-sm text-ink-700">
           {q
             ? `${total} ${total === 1 ? 'enquiry matches' : 'enquiries match'} “${q}”.`
             : showAll ? `Every WhatsApp tap, newest first (${total}).` : 'WhatsApp taps in the last 24 hours.'}
         </p>
-        <Link href={q ? leadsHref('enquiries') : leadsHref('enquiries', { show: showAll ? null : 'all' })} className="inline-flex min-h-11 items-center text-sm font-semibold text-stone-900 underline">
+        <Link href={q ? leadsHref('enquiries') : leadsHref('enquiries', { show: showAll ? null : 'all' })} className="inline-flex min-h-11 items-center text-sm font-semibold text-ink-900 underline">
           {q ? 'Clear search' : showAll ? 'Last 24 hours' : 'Show all'}
         </Link>
       </div>
 
       {enquiries.length === 0 ? (
-        <div className="rounded-xl border border-stone-200 bg-white px-4 py-16 text-center">
-          <Inbox className="mx-auto mb-3 h-8 w-8 text-stone-300" aria-hidden="true" />
-          <p className="m-0 font-semibold text-stone-700">{q ? 'No enquiry with that reference' : 'No WhatsApp taps here'}</p>
-          <p className="m-0 mt-1 text-sm text-stone-500">{q ? 'Check the reference in the chat, or try Show all.' : 'Each tap on a WhatsApp button on the site appears here.'}</p>
+        <div className="rounded-xl border border-calico-300 bg-white px-4 py-16 text-center">
+          <Inbox className="mx-auto mb-3 h-8 w-8 text-calico-300" aria-hidden="true" />
+          <p className="m-0 font-semibold text-ink-700">{q ? 'No enquiry with that reference' : 'No WhatsApp taps here'}</p>
+          <p className="m-0 mt-1 text-sm text-ink-500">{q ? 'Check the reference in the chat, or try Show all.' : 'Each tap on a WhatsApp button on the site appears here.'}</p>
         </div>
       ) : (
-        <ul className="m-0 list-none divide-y divide-stone-100 overflow-hidden rounded-md border border-stone-200 bg-white p-0 shadow-sm">
+        <ul className="m-0 list-none divide-y divide-calico-100 overflow-hidden rounded-md border border-calico-300 bg-white p-0 shadow-sm">
           {enquiries.map(e => {
             const path = pagePath(e.page_url)
             return (
               <li key={e.id} className="p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="select-all font-mono text-sm font-bold text-stone-900">{e.reference}</span>
+                  <span className="select-all font-mono text-sm font-bold text-ink-900">{e.reference}</span>
                   {e.converted_order_id ? (
                     <Link href={`/admin/orders/${e.converted_order_id}`} className="inline-flex min-h-11 items-center rounded-pill border border-green-200 bg-green-50 px-3 text-xs font-bold uppercase tracking-wider text-green-800">
                       Ordered #{shortCode(e.converted_order_id)}
@@ -114,11 +114,11 @@ export default function EnquiriesTab({ enquiries, showAll, q, page, lastPage, to
                     </Link>
                   )}
                 </div>
-                <p className="m-0 mt-1 text-xs text-stone-500">{dualTimeText(e.created_at)}</p>
+                <p className="m-0 mt-1 text-xs text-ink-500">{dualTimeText(e.created_at)}</p>
                 <dl className="m-0 mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-sm">
-                  {e.product_name && <><dt className="text-stone-500">Product</dt><dd className="m-0 text-stone-900">{e.product_name}</dd></>}
-                  {path && <><dt className="text-stone-500">Page</dt><dd className="m-0 break-all text-stone-900">{path}{e.page_context ? <span className="text-stone-500"> · {e.page_context}</span> : null}</dd></>}
-                  <dt className="text-stone-500">From</dt><dd className="m-0 break-words text-stone-900">{cameFrom(e)}</dd>
+                  {e.product_name && <><dt className="text-ink-500">Product</dt><dd className="m-0 text-ink-900">{e.product_name}</dd></>}
+                  {path && <><dt className="text-ink-500">Page</dt><dd className="m-0 break-all text-ink-900">{path}{e.page_context ? <span className="text-ink-500"> · {e.page_context}</span> : null}</dd></>}
+                  <dt className="text-ink-500">From</dt><dd className="m-0 break-words text-ink-900">{cameFrom(e)}</dd>
                 </dl>
               </li>
             )
@@ -128,9 +128,9 @@ export default function EnquiriesTab({ enquiries, showAll, q, page, lastPage, to
 
       {lastPage > 1 && (
         <div className="flex items-center justify-between gap-4">
-          {page > 1 ? <Link href={href(page - 1)} className="inline-flex min-h-11 items-center rounded-sm border border-stone-200 bg-white px-4 text-xs font-bold text-stone-700">← Newer</Link> : <span />}
-          <span className="text-xs font-medium text-stone-500">Page {page} of {lastPage}</span>
-          {page < lastPage ? <Link href={href(page + 1)} className="inline-flex min-h-11 items-center rounded-sm border border-stone-200 bg-white px-4 text-xs font-bold text-stone-700">Older →</Link> : <span />}
+          {page > 1 ? <Link href={href(page - 1)} className="inline-flex min-h-11 items-center rounded-sm border border-calico-300 bg-white px-4 text-xs font-bold text-ink-700">← Newer</Link> : <span />}
+          <span className="text-xs font-medium text-ink-500">Page {page} of {lastPage}</span>
+          {page < lastPage ? <Link href={href(page + 1)} className="inline-flex min-h-11 items-center rounded-sm border border-calico-300 bg-white px-4 text-xs font-bold text-ink-700">Older →</Link> : <span />}
         </div>
       )}
     </div>

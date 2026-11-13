@@ -54,11 +54,11 @@ const QUEUE_TONE: Record<QueueState, string> = {
   accepted: 'border-green-200 bg-green-50 text-green-700',
   sent_unconfirmed: 'border-yellow-200 bg-yellow-50 text-yellow-800',
   awaiting_evidence: 'border-indigo-200 bg-indigo-50 text-indigo-700',
-  consent_unavailable: 'border-stone-300 bg-stone-100 text-stone-700',
-  too_old: 'border-stone-200 bg-stone-50 text-stone-500',
-  held: 'border-stone-300 bg-stone-100 text-stone-700',
+  consent_unavailable: 'border-calico-300 bg-calico-100 text-ink-700',
+  too_old: 'border-calico-300 bg-calico-50 text-ink-500',
+  held: 'border-calico-300 bg-calico-100 text-ink-700',
   google_origin: 'border-sky-200 bg-sky-50 text-sky-700',
-  not_ready: 'border-stone-200 bg-stone-50 text-stone-600',
+  not_ready: 'border-calico-300 bg-calico-50 text-ink-700',
   blocked: 'border-red-200 bg-red-50 text-red-700',
 }
 
@@ -265,11 +265,11 @@ export default async function MetaAdminPage(props: { searchParams: SearchParams 
       <div>
         <div className="flex items-center gap-2">
           <Radio className="h-6 w-6 text-blue-700" />
-          <h1 className="m-0 text-2xl font-bold tracking-tight text-stone-900 lg:text-3xl">
+          <h1 className="m-0 text-2xl font-bold tracking-tight text-ink-900 lg:text-3xl">
             Meta
           </h1>
         </div>
-        <p className="m-0 mt-2 max-w-3xl text-sm leading-relaxed text-stone-500">
+        <p className="m-0 mt-2 max-w-3xl text-sm leading-relaxed text-ink-500">
           Order-linked Meta conversion control. Purchase becomes eligible only after the order is confirmed.
           Delivered becomes eligible only after the order is actually delivered.
         </p>
@@ -280,11 +280,11 @@ export default async function MetaAdminPage(props: { searchParams: SearchParams 
       <div className="grid gap-3 sm:grid-cols-3">
         <Link
           href="/admin/meta"
-          className="rounded-md border border-stone-200 bg-white p-4 transition hover:border-stone-300"
+          className="rounded-md border border-calico-300 bg-white p-4 transition hover:border-calico-300"
         >
-          <p className="m-0 text-[10px] font-bold uppercase tracking-[0.18em] text-stone-500">All orders</p>
-          <p className="m-0 mt-2 text-2xl font-bold text-stone-900">{orders.length}</p>
-          <p className="m-0 mt-1 text-xs text-stone-500">Full order-linked Meta view</p>
+          <p className="m-0 text-[10px] font-bold uppercase tracking-[0.18em] text-ink-500">All orders</p>
+          <p className="m-0 mt-2 text-2xl font-bold text-ink-900">{orders.length}</p>
+          <p className="m-0 mt-1 text-xs text-ink-500">Full order-linked Meta view</p>
         </Link>
 
         <Link
@@ -292,12 +292,12 @@ export default async function MetaAdminPage(props: { searchParams: SearchParams 
           className={`rounded-md border p-4 transition ${
             purchasePendingRows.length
               ? 'border-amber-300 bg-amber-50 hover:border-amber-400'
-              : 'border-stone-200 bg-white hover:border-stone-300'
+              : 'border-calico-300 bg-white hover:border-calico-300'
           }`}
         >
           <p className="m-0 text-[10px] font-bold uppercase tracking-[0.18em] text-amber-700">Purchase eligible to send</p>
-          <p className="m-0 mt-2 text-2xl font-bold text-stone-900">{purchasePendingRows.length}</p>
-          <p className="m-0 mt-1 text-xs text-stone-600">{purchaseWaitingRows.length} unsent in all · the rest have a reason below</p>
+          <p className="m-0 mt-2 text-2xl font-bold text-ink-900">{purchasePendingRows.length}</p>
+          <p className="m-0 mt-1 text-xs text-ink-700">{purchaseWaitingRows.length} unsent in all · the rest have a reason below</p>
         </Link>
 
         <Link
@@ -305,12 +305,12 @@ export default async function MetaAdminPage(props: { searchParams: SearchParams 
           className={`rounded-md border p-4 transition ${
             deliveredPendingRows.length
               ? 'border-amber-300 bg-amber-50 hover:border-amber-400'
-              : 'border-stone-200 bg-white hover:border-stone-300'
+              : 'border-calico-300 bg-white hover:border-calico-300'
           }`}
         >
           <p className="m-0 text-[10px] font-bold uppercase tracking-[0.18em] text-amber-700">Delivered eligible to send</p>
-          <p className="m-0 mt-2 text-2xl font-bold text-stone-900">{deliveredPendingRows.length}</p>
-          <p className="m-0 mt-1 text-xs text-stone-600">{deliveredWaitingRows.length} unsent in all · the rest have a reason below</p>
+          <p className="m-0 mt-2 text-2xl font-bold text-ink-900">{deliveredPendingRows.length}</p>
+          <p className="m-0 mt-1 text-xs text-ink-700">{deliveredWaitingRows.length} unsent in all · the rest have a reason below</p>
         </Link>
       </div>
 
@@ -319,7 +319,7 @@ export default async function MetaAdminPage(props: { searchParams: SearchParams 
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="m-0 text-[10px] font-bold uppercase tracking-[0.18em] text-blue-700">Purchase signals</p>
-              <p className="m-0 mt-1 text-sm font-semibold text-stone-800">
+              <p className="m-0 mt-1 text-sm font-semibold text-ink-900">
                 {purchaseSent.length} sent · {purchasePendingRows.length} eligible
               </p>
             </div>
@@ -330,7 +330,7 @@ export default async function MetaAdminPage(props: { searchParams: SearchParams 
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="m-0 text-[10px] font-bold uppercase tracking-[0.18em] text-green-700">Delivered signals</p>
-              <p className="m-0 mt-1 text-sm font-semibold text-stone-800">
+              <p className="m-0 mt-1 text-sm font-semibold text-ink-900">
                 {deliveredSent.length} sent · {deliveredPendingRows.length} eligible
               </p>
             </div>
@@ -350,7 +350,7 @@ export default async function MetaAdminPage(props: { searchParams: SearchParams 
               key={key}
               href={queue === key ? '/admin/meta' : `/admin/meta?queue=${key}`}
               className={`shrink-0 rounded-pill border px-3 py-1.5 text-[11px] font-bold transition ${
-                queue === key ? 'border-stone-900 bg-stone-900 text-white' : QUEUE_TONE[key]
+                queue === key ? 'border-ink-900 bg-ink-900 text-white' : QUEUE_TONE[key]
               }`}
             >
               {QUEUE_LABEL[key]} · {queueCount(key)}
@@ -368,8 +368,8 @@ export default async function MetaAdminPage(props: { searchParams: SearchParams 
               href={stageHref(key)}
               className={`shrink-0 rounded-sm px-4 py-2.5 text-xs font-bold transition ${
                 stage === key
-                  ? 'bg-stone-900 text-white'
-                  : 'border border-stone-200 bg-white text-stone-600 hover:border-stone-300'
+                  ? 'bg-ink-900 text-white'
+                  : 'border border-calico-300 bg-white text-ink-700 hover:border-calico-300'
               }`}
             >
               {label}
@@ -393,7 +393,7 @@ export default async function MetaAdminPage(props: { searchParams: SearchParams 
                     ? stage === 'purchase'
                       ? 'bg-blue-700 text-white'
                       : 'bg-green-700 text-white'
-                    : 'border border-stone-200 bg-white text-stone-600 hover:border-stone-300'
+                    : 'border border-calico-300 bg-white text-ink-700 hover:border-calico-300'
                 }`}
               >
                 {label}
@@ -419,14 +419,14 @@ export default async function MetaAdminPage(props: { searchParams: SearchParams 
                   ? 'border-amber-300'
                   : purchaseReady(order)
                     ? 'border-blue-200'
-                    : 'border-stone-200'
+                    : 'border-calico-300'
               }`}
             >
               <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-mono text-xs text-stone-500">#{shortRef(order.id)}</span>
-                    <span className="rounded-pill border border-stone-200 bg-stone-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-stone-600">
+                    <span className="font-mono text-xs text-ink-500">#{shortRef(order.id)}</span>
+                    <span className="rounded-pill border border-calico-300 bg-calico-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-ink-700">
                       {sourceLabel(order.source)}
                     </span>
                     {isGoogleOnlyAcquisition(order) && (
@@ -448,12 +448,12 @@ export default async function MetaAdminPage(props: { searchParams: SearchParams 
                   </div>
 
                   <div className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                    <p className="m-0 text-lg font-bold text-stone-900">{order.customer_name}</p>
-                    <p className="m-0 text-lg font-bold text-stone-900">{money(order.total_amount)}</p>
+                    <p className="m-0 text-lg font-bold text-ink-900">{order.customer_name}</p>
+                    <p className="m-0 text-lg font-bold text-ink-900">{money(order.total_amount)}</p>
                   </div>
 
-                  <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-stone-500">
-                    <span className="font-semibold text-stone-700">
+                  <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-ink-500">
+                    <span className="font-semibold text-ink-700">
                       {adminStatusLabel(order.status)}
                     </span>
                     <span>{dualTimeText(order.created_at)}</span>
@@ -469,13 +469,13 @@ export default async function MetaAdminPage(props: { searchParams: SearchParams 
               </div>
 
               <div className="mt-4 grid gap-3 md:grid-cols-2">
-                <div className="rounded-sm border border-stone-200 bg-stone-50 p-3.5">
+                <div className="rounded-sm border border-calico-300 bg-calico-50 p-3.5">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="m-0 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-stone-700">
+                      <p className="m-0 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-ink-700">
                         <ShoppingCart className="h-4 w-4 text-blue-700" /> Purchase
                       </p>
-                      <p className="m-0 mt-1 text-[11px] leading-relaxed text-stone-500">{purchase.note}</p>
+                      <p className="m-0 mt-1 text-[11px] leading-relaxed text-ink-500">{purchase.note}</p>
                     </div>
                     <span className={`rounded-pill border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${purchase.tone}`}>
                       {purchase.label}
@@ -506,13 +506,13 @@ export default async function MetaAdminPage(props: { searchParams: SearchParams 
                   )}
                 </div>
 
-                <div className="rounded-sm border border-stone-200 bg-stone-50 p-3.5">
+                <div className="rounded-sm border border-calico-300 bg-calico-50 p-3.5">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="m-0 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-stone-700">
+                      <p className="m-0 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-ink-700">
                         <Truck className="h-4 w-4 text-green-700" /> Delivered
                       </p>
-                      <p className="m-0 mt-1 text-[11px] leading-relaxed text-stone-500">{delivered.note}</p>
+                      <p className="m-0 mt-1 text-[11px] leading-relaxed text-ink-500">{delivered.note}</p>
                     </div>
                     <span className={`rounded-pill border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${delivered.tone}`}>
                       {delivered.label}
@@ -528,7 +528,7 @@ export default async function MetaAdminPage(props: { searchParams: SearchParams 
                         className="w-full rounded-sm bg-green-700 px-3 py-2.5 text-xs font-bold text-white transition hover:bg-green-800 disabled:cursor-not-allowed disabled:opacity-60"
                       />
                       {!order.purchase_event_sent_at && (
-                        <p className="m-0 mt-1.5 text-[10px] leading-relaxed text-stone-500">
+                        <p className="m-0 mt-1.5 text-[10px] leading-relaxed text-ink-500">
                           Purchase is still unsent. This action sends Purchase first, then OrderDelivered.
                         </p>
                       )}
@@ -545,21 +545,21 @@ export default async function MetaAdminPage(props: { searchParams: SearchParams 
         })}
 
         {visible.length === 0 && (
-          <div className="rounded-md border border-stone-200 bg-white py-12 text-center shadow-sm">
+          <div className="rounded-md border border-calico-300 bg-white py-12 text-center shadow-sm">
             <CheckCircle2 className="mx-auto h-10 w-10 text-green-500" />
-            <p className="m-0 mt-3 text-lg font-bold text-stone-900">Nothing pending here</p>
-            <p className="m-0 mt-1 text-sm text-stone-500">
+            <p className="m-0 mt-3 text-lg font-bold text-ink-900">Nothing pending here</p>
+            <p className="m-0 mt-1 text-sm text-ink-500">
               This filter has no orders requiring a Meta action.
             </p>
           </div>
         )}
       </div>
 
-      <div className="rounded-md border border-stone-200 bg-stone-50 p-4 text-xs leading-relaxed text-stone-600">
+      <div className="rounded-md border border-calico-300 bg-calico-50 p-4 text-xs leading-relaxed text-ink-700">
         <p className="m-0 flex items-start gap-2">
-          <Clock3 className="mt-0.5 h-4 w-4 shrink-0 text-stone-500" />
+          <Clock3 className="mt-0.5 h-4 w-4 shrink-0 text-ink-500" />
           <span>
-            <strong className="text-stone-800">Eligible means consent recorded and within Meta’s 7-day limit.</strong>{' '}Every other unsent event shows its reason: awaiting evidence (no linked visit), consent unavailable, too old, held or Google origin.{' '}
+            <strong className="text-ink-900">Eligible means consent recorded and within Meta’s 7-day limit.</strong>{' '}Every other unsent event shows its reason: awaiting evidence (no linked visit), consent unavailable, too old, held or Google origin.{' '}
             A fresh COD submission is not a Purchase just because an order row exists. Purchase becomes actionable
             after confirmation; OrderDelivered becomes actionable after delivery. This keeps the Meta queue aligned
             with the real business funnel.

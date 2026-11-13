@@ -59,9 +59,9 @@ export interface SettingsViewProps {
   orderflow: OrderFlowStatus | null
 }
 
-const section = 'rounded-md border border-stone-200 bg-white p-4 shadow-sm lg:p-5'
-const sectionTitle = 'm-0 text-lg font-bold text-stone-900'
-const sectionIntro = 'm-0 mt-1 text-sm text-stone-500'
+const section = 'rounded-md border border-calico-300 bg-white p-4 shadow-sm lg:p-5'
+const sectionTitle = 'm-0 text-lg font-bold text-ink-900'
+const sectionIntro = 'm-0 mt-1 text-sm text-ink-500'
 
 const SEND_SOURCE: Record<string, string> = {
   change: 'Order change',
@@ -93,8 +93,8 @@ export default function SettingsView(props: SettingsViewProps) {
   return (
     <div className="mx-auto max-w-3xl space-y-5 animate-in fade-in duration-500">
       <header>
-        <h1 className="m-0 text-2xl font-bold tracking-tight text-stone-900 lg:text-3xl">Settings</h1>
-        <p className="m-0 mt-1 text-sm text-stone-500">
+        <h1 className="m-0 text-2xl font-bold tracking-tight text-ink-900 lg:text-3xl">Settings</h1>
+        <p className="m-0 mt-1 text-sm text-ink-500">
           The figures checkout charges, the visitor offer and OrderFlow.
           {changed && <> Last changed {changed}.</>}
         </p>
@@ -149,27 +149,27 @@ export default function SettingsView(props: SettingsViewProps) {
             : 'No postcode district pays extra.'}
         </p>
         {groups.length > 0 && (
-          <ul className="m-0 mt-3 list-none divide-y divide-stone-100 p-0">
+          <ul className="m-0 mt-3 list-none divide-y divide-calico-100 p-0">
             {groups.map(g => (
               <li key={`${g.fee}-${g.region}`}>
                 <details>
                   <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 py-2">
                     <span className="min-w-0">
-                      <span className="block font-semibold text-stone-900">{g.region}</span>
-                      <span className="block text-xs text-stone-500">
+                      <span className="block font-semibold text-ink-900">{g.region}</span>
+                      <span className="block text-xs text-ink-500">
                         {plural(g.outcodes.length, 'district', 'districts')}
                         {g.miles.length > 0 && ` · ${Math.min(...g.miles)}-${Math.max(...g.miles)} miles`}
                       </span>
                     </span>
-                    <span className="shrink-0 font-bold tabular-nums text-stone-900">{gbpFigure(g.fee)}</span>
+                    <span className="shrink-0 font-bold tabular-nums text-ink-900">{gbpFigure(g.fee)}</span>
                   </summary>
-                  <p className="m-0 pb-3 font-mono text-xs leading-relaxed text-stone-600">{g.outcodes.join(' ')}</p>
+                  <p className="m-0 pb-3 font-mono text-xs leading-relaxed text-ink-700">{g.outcodes.join(' ')}</p>
                 </details>
               </li>
             ))}
           </ul>
         )}
-        <p className="m-0 mt-3 text-xs text-stone-500">Shown here to check. A change to these is made by hand in Supabase for now.</p>
+        <p className="m-0 mt-3 text-xs text-ink-500">Shown here to check. A change to these is made by hand in Supabase for now.</p>
       </section>
 
       {/* ── M4: OrderFlow ───────────────────────────────────────────────── */}
@@ -180,13 +180,13 @@ export default function SettingsView(props: SettingsViewProps) {
         ) : (
           <>
             <dl className="m-0 mt-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
-              <dt className="text-stone-500">Connected</dt>
+              <dt className="text-ink-500">Connected</dt>
               <dd className="m-0 font-semibold">
                 {orderflow.connected
                   ? <span className="text-green-800">Yes: its address and key are in Supabase Vault</span>
                   : <span className="text-red-700">No: its address and key aren&apos;t in Supabase Vault</span>}
               </dd>
-              <dt className="text-stone-500">Sending</dt>
+              <dt className="text-ink-500">Sending</dt>
               <dd className="m-0 font-semibold">
                 {orderflow.enabled
                   ? <span className="text-green-800">On: every order goes to OrderFlow</span>
@@ -202,25 +202,25 @@ export default function SettingsView(props: SettingsViewProps) {
               />
             </div>
 
-            <h3 className="m-0 mt-5 text-xs font-bold uppercase tracking-[0.14em] text-stone-500">Latest sends</h3>
+            <h3 className="m-0 mt-5 text-xs font-bold uppercase tracking-[0.14em] text-ink-500">Latest sends</h3>
             {orderflow.sends.length === 0 ? (
-              <p className="m-0 mt-2 text-sm text-stone-500">Nothing sent yet.</p>
+              <p className="m-0 mt-2 text-sm text-ink-500">Nothing sent yet.</p>
             ) : (
-              <ul className="m-0 mt-1 list-none divide-y divide-stone-100 p-0 text-sm">
+              <ul className="m-0 mt-1 list-none divide-y divide-calico-100 p-0 text-sm">
                 {orderflow.sends.map((s, i) => (
                   <li key={`${s.order_id}-${s.sent_at}-${i}`}>
-                    <Link href={`/admin/orders/${s.order_id}`} className="flex min-h-12 items-start justify-between gap-2 py-2 hover:bg-stone-50">
+                    <Link href={`/admin/orders/${s.order_id}`} className="flex min-h-12 items-start justify-between gap-2 py-2 hover:bg-calico-50">
                       <span className="min-w-0">
-                        <span className="block font-semibold text-stone-900">
+                        <span className="block font-semibold text-ink-900">
                           <span className="font-mono">{s.order_id.slice(0, 8).toUpperCase()}</span>
-                          {s.order_number ? <span className="font-normal text-stone-500"> · OrderFlow #{s.order_number}</span> : null}
+                          {s.order_number ? <span className="font-normal text-ink-500"> · OrderFlow #{s.order_number}</span> : null}
                         </span>
-                        <span className="block break-words text-xs text-stone-500">
+                        <span className="block break-words text-xs text-ink-500">
                           {dualTimeText(s.sent_at)} · {SEND_SOURCE[s.source] ?? s.source}
                           {s.answered_at !== null && !s.ok && (s.message || s.error) ? ` · ${s.message ?? s.error}` : ''}
                         </span>
                       </span>
-                      <span className={`shrink-0 rounded-pill border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${s.answered_at === null ? 'border-stone-200 bg-stone-50 text-stone-600' : s.ok ? 'border-green-200 bg-green-50 text-green-800' : 'border-red-200 bg-red-50 text-red-800'}`}>
+                      <span className={`shrink-0 rounded-pill border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${s.answered_at === null ? 'border-calico-300 bg-calico-50 text-ink-700' : s.ok ? 'border-green-200 bg-green-50 text-green-800' : 'border-red-200 bg-red-50 text-red-800'}`}>
                         {s.answered_at === null ? 'Waiting' : s.ok ? (s.outcome === 'created' ? 'Added' : s.outcome === 'updated' ? 'Updated' : 'OK') : 'Refused'}
                       </span>
                     </Link>

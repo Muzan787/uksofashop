@@ -50,8 +50,8 @@ export interface SampleRequest {
 function PhoneLine({ phone }: { phone: string }) {
   const href = whatsAppLink(phone)
   return (
-    <p className="m-0 flex items-center gap-2 text-stone-700">
-      <Phone className="h-4 w-4 shrink-0 text-stone-400" aria-hidden="true" />
+    <p className="m-0 flex items-center gap-2 text-ink-700">
+      <Phone className="h-4 w-4 shrink-0 text-ink-500" aria-hidden="true" />
       {href ? <a href={href} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center text-blue-600">{phone}</a> : phone}
     </p>
   )
@@ -73,7 +73,7 @@ function StatusForm({ id, status, children, question, className }: {
 }
 
 const green = 'inline-flex min-h-11 items-center rounded-lg bg-green-600 px-4 text-sm font-bold text-white disabled:opacity-60'
-const plain = 'inline-flex min-h-11 items-center rounded-lg border border-stone-200 bg-white px-4 text-sm font-bold text-stone-600 disabled:opacity-60'
+const plain = 'inline-flex min-h-11 items-center rounded-lg border border-calico-300 bg-white px-4 text-sm font-bold text-ink-700 disabled:opacity-60'
 
 export default function SamplesTab({ requests, status }: { requests: SampleRequest[]; status: string }) {
   return (
@@ -89,7 +89,7 @@ export default function SamplesTab({ requests, status }: { requests: SampleReque
             href={leadsHref('samples', { status: f.key === 'pending' ? null : f.key })}
             aria-current={status === f.key ? 'page' : undefined}
             className={`inline-flex min-h-11 shrink-0 items-center rounded-pill border px-4 text-sm font-semibold no-underline ${
-              status === f.key ? 'border-stone-900 bg-stone-900 text-white' : 'border-stone-200 bg-white text-stone-600'
+              status === f.key ? 'border-ink-900 bg-ink-900 text-white' : 'border-calico-300 bg-white text-ink-700'
             }`}
           >
             {f.label}
@@ -98,18 +98,18 @@ export default function SamplesTab({ requests, status }: { requests: SampleReque
       </nav>
 
       {requests.length === 0 ? (
-        <div className="rounded-xl border border-stone-200 bg-white px-4 py-16 text-center">
-          <Inbox className="mx-auto mb-3 h-8 w-8 text-stone-300" aria-hidden="true" />
-          <p className="m-0 font-semibold text-stone-700">{status === 'pending' ? 'Nothing waiting to be posted' : 'Nothing here'}</p>
-          <p className="m-0 mt-1 text-sm text-stone-500">New sample requests from the shop appear here.</p>
+        <div className="rounded-xl border border-calico-300 bg-white px-4 py-16 text-center">
+          <Inbox className="mx-auto mb-3 h-8 w-8 text-calico-300" aria-hidden="true" />
+          <p className="m-0 font-semibold text-ink-700">{status === 'pending' ? 'Nothing waiting to be posted' : 'Nothing here'}</p>
+          <p className="m-0 mt-1 text-sm text-ink-500">New sample requests from the shop appear here.</p>
         </div>
       ) : (
         <div className="space-y-4">
           {requests.map(r => (
-            <div key={r.id} className="rounded-xl border border-stone-200 bg-white p-4 sm:p-5">
+            <div key={r.id} className="rounded-xl border border-calico-300 bg-white p-4 sm:p-5">
               {/* The picking list. Big, monospaced, and first. */}
-              <div className="rounded-lg bg-stone-900 px-4 py-3 text-center">
-                <p className="m-0 text-[10px] font-bold uppercase tracking-[2px] text-stone-400">Pull these</p>
+              <div className="rounded-lg bg-ink-900 px-4 py-3 text-center">
+                <p className="m-0 text-[10px] font-bold uppercase tracking-[2px] text-ink-500">Pull these</p>
                 <p className="m-0 mt-1 break-words font-mono text-xl tracking-[2px] text-white sm:text-2xl">
                   {r.swatch_request_items.map(i => i.fabric_code).join('  ')}
                 </p>
@@ -126,31 +126,31 @@ export default function SamplesTab({ requests, status }: { requests: SampleReque
 
               <ul className="m-0 mt-3 flex list-none flex-wrap gap-2 p-0">
                 {r.swatch_request_items.map(i => (
-                  <li key={i.id} className="rounded-pill border border-stone-200 bg-stone-50 px-3 py-1 text-xs font-semibold text-stone-600">
+                  <li key={i.id} className="rounded-pill border border-calico-300 bg-calico-50 px-3 py-1 text-xs font-semibold text-ink-700">
                     {i.fabric_collection} {i.fabric_name}
                   </li>
                 ))}
               </ul>
 
-              <div className="mt-4 grid gap-2 border-t border-stone-100 pt-4 text-sm sm:grid-cols-2">
-                <p className="m-0 flex items-center gap-2 text-stone-700">
-                  <User className="h-4 w-4 shrink-0 text-stone-400" aria-hidden="true" />
+              <div className="mt-4 grid gap-2 border-t border-calico-100 pt-4 text-sm sm:grid-cols-2">
+                <p className="m-0 flex items-center gap-2 text-ink-700">
+                  <User className="h-4 w-4 shrink-0 text-ink-500" aria-hidden="true" />
                   {r.customer_name}
                 </p>
-                <p className="m-0 flex min-w-0 items-center gap-2 text-stone-700">
-                  <Mail className="h-4 w-4 shrink-0 text-stone-400" aria-hidden="true" />
+                <p className="m-0 flex min-w-0 items-center gap-2 text-ink-700">
+                  <Mail className="h-4 w-4 shrink-0 text-ink-500" aria-hidden="true" />
                   <a href={`mailto:${r.customer_email}`} className="inline-flex min-h-11 min-w-0 items-center text-blue-600"><span className="truncate">{r.customer_email}</span></a>
                 </p>
                 {r.customer_phone && <PhoneLine phone={r.customer_phone} />}
-                <p className="m-0 flex items-start gap-2 text-stone-700 sm:col-span-2">
-                  <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-stone-400" aria-hidden="true" />
+                <p className="m-0 flex items-start gap-2 text-ink-700 sm:col-span-2">
+                  <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-ink-500" aria-hidden="true" />
                   <span>{r.shipping_address}, <strong>{r.postcode}</strong></span>
                 </p>
               </div>
 
               {/* Chase and copy, apart from the buttons that change the record,
                   so a Cancel is never pressed by mistake. */}
-              <div className="mt-4 border-t border-stone-100 pt-4">
+              <div className="mt-4 border-t border-calico-100 pt-4">
                 <SwatchActions
                   request={{
                     customerName: r.customer_name,
@@ -164,8 +164,8 @@ export default function SamplesTab({ requests, status }: { requests: SampleReque
                 />
               </div>
 
-              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-stone-100 pt-4">
-                <p className="m-0 text-xs text-stone-400">
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-calico-100 pt-4">
+                <p className="m-0 text-xs text-ink-500">
                   Asked {when(r.created_at)}
                   {r.posted_at && ` · posted ${when(r.posted_at)}`}
                 </p>

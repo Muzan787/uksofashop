@@ -28,20 +28,20 @@ export default async function RangesPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-5 animate-in fade-in duration-500">
       <div className="flex items-start gap-3">
-        <Link href="/admin/catalogue" className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-sm text-stone-500 hover:bg-stone-100" aria-label="Back to the catalogue">
+        <Link href="/admin/catalogue" className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-sm text-ink-500 hover:bg-calico-100" aria-label="Back to the catalogue">
           <ArrowLeft className="h-5 w-5" aria-hidden="true" />
         </Link>
         <div>
-          <h1 className="m-0 text-2xl font-bold tracking-tight text-stone-900 lg:text-3xl">Ranges</h1>
-          <p className="m-0 mt-1 text-sm text-stone-500">Sizes and styles of one sofa, shown together on its product page. New ranges are made from the product editor.</p>
+          <h1 className="m-0 text-2xl font-bold tracking-tight text-ink-900 lg:text-3xl">Ranges</h1>
+          <p className="m-0 mt-1 text-sm text-ink-500">Sizes and styles of one sofa, shown together on its product page. New ranges are made from the product editor.</p>
         </div>
       </div>
 
       {(groups ?? []).length === 0 ? (
-        <div className="flex flex-col items-center rounded-lg border border-stone-200 bg-white px-4 py-12 text-center shadow-sm">
-          <Layers className="mb-3 h-10 w-10 text-stone-300" aria-hidden="true" />
-          <p className="m-0 font-bold text-stone-900">No ranges yet</p>
-          <p className="m-0 mt-1 text-sm text-stone-500">Choose &quot;New range&quot; in a product&apos;s editor to start one.</p>
+        <div className="flex flex-col items-center rounded-lg border border-calico-300 bg-white px-4 py-12 text-center shadow-sm">
+          <Layers className="mb-3 h-10 w-10 text-calico-300" aria-hidden="true" />
+          <p className="m-0 font-bold text-ink-900">No ranges yet</p>
+          <p className="m-0 mt-1 text-sm text-ink-500">Choose &quot;New range&quot; in a product&apos;s editor to start one.</p>
         </div>
       ) : (
         <ul className="m-0 list-none space-y-2 p-0">
@@ -49,21 +49,21 @@ export default async function RangesPage() {
             const members = byGroup.get(g.id) ?? []
             return (
               <li key={g.id}>
-                <details className="rounded-md border border-stone-200 bg-white shadow-sm">
+                <details className="rounded-md border border-calico-300 bg-white shadow-sm">
                   <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 p-3">
                     <span className="min-w-0">
-                      <span className="block truncate font-bold text-stone-900">{g.name}</span>
-                      <span className="block truncate text-xs text-stone-500">{members.length} {members.length === 1 ? 'product' : 'products'} · style choice: {g.subgroup_title}</span>
+                      <span className="block truncate font-bold text-ink-900">{g.name}</span>
+                      <span className="block truncate text-xs text-ink-500">{members.length} {members.length === 1 ? 'product' : 'products'} · style choice: {g.subgroup_title}</span>
                     </span>
                   </summary>
-                  <div className="space-y-4 border-t border-stone-100 p-3">
+                  <div className="space-y-4 border-t border-calico-100 p-3">
                     {members.length > 0 && (
                       <ul className="m-0 list-none space-y-1 p-0 text-sm">
                         {members.map(p => (
                           <li key={p.id}>
-                            <Link href={`/admin/inventory/${p.id}/edit`} className="flex min-h-11 items-center justify-between gap-2 rounded-sm px-2 hover:bg-stone-50">
-                              <span className="min-w-0 truncate font-semibold text-stone-800">{p.title}{p.is_active ? '' : ' (hidden)'}</span>
-                              <span className="shrink-0 text-xs text-stone-500">{[p.size_label, p.subgroup_label].filter(Boolean).join(' · ')}</span>
+                            <Link href={`/admin/inventory/${p.id}/edit`} className="flex min-h-11 items-center justify-between gap-2 rounded-sm px-2 hover:bg-calico-50">
+                              <span className="min-w-0 truncate font-semibold text-ink-900">{p.title}{p.is_active ? '' : ' (hidden)'}</span>
+                              <span className="shrink-0 text-xs text-ink-500">{[p.size_label, p.subgroup_label].filter(Boolean).join(' · ')}</span>
                             </Link>
                           </li>
                         ))}

@@ -12,7 +12,8 @@
 // with the real figure for THIS product's tier, and the sheet opens only if
 // they tap for the detail.
 //
-// THE COUNTDOWN IS REAL. Each visitor's window is 48 hours from their first
+// THE COUNTDOWN IS REAL. Each visitor's window is the length set in Admin ->
+// Settings (72 hours since 13 Nov 2026) from their first
 // ad click, fixed: a later click does not extend it, and once it ends it is
 // not given again (see the 48-hour migration). When the clock reaches zero
 // the strip goes, the checkout stops taking the money off, and the code stops
@@ -34,6 +35,8 @@ import { OFFER_OPEN_EVENT, OFFER_PUBLIC_CODE } from '@/utils/offers/constants'
 import { useShopSettings } from '@/components/ShopSettingsProvider'
 import type { OfferTier } from '@/types/offers'
 import { useOfferCountdown } from './useOfferCountdown'
+
+const money = (n: number) => `£${n.toLocaleString('en-GB', { maximumFractionDigits: 2 })}`
 
 interface Props {
   /**
@@ -77,6 +80,15 @@ export default function OfferStrip({ tier, price, className = '' }: Props) {
         <span className="block text-body-sm font-semibold leading-snug text-ink-900">
           £{amount} off this sofa with <code className="font-data font-extrabold tracking-[0.08em]">{OFFER_PUBLIC_CODE}</code>
         </span>
+        {/* The price actually payable. Nothing is estimated: it is the price on
+            screen minus the same amount checkout takes off, so the two can
+            never disagree and the saving is no surprise at the end. */}
+        {price !== undefined && (
+          <span className="mt-0.5 block text-caption font-semibold text-ink-900">
+            You pay <span className="tabular-nums">{money(price - amount)}</span> with the offer
+            <span className="font-normal text-ink-500"> (otherwise <span className="tabular-nums">{money(price)}</span>)</span>
+          </span>
+        )}
         <span className="mt-0.5 block text-caption text-ink-500">
           {clock ? (
             <>

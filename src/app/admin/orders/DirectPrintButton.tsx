@@ -402,7 +402,7 @@ export default function DirectPrintButton({ order }: { order: AdminOrderDisplay 
     <button 
       onClick={handlePrint}
       type="button"
-      className="flex items-center justify-center gap-2 bg-stone-100 text-stone-700 px-4 py-2.5 rounded-sm text-sm font-bold hover:bg-stone-200 active:scale-95 transition"
+      className="flex items-center justify-center gap-2 bg-calico-100 text-ink-700 px-4 py-2.5 rounded-sm text-sm font-bold hover:bg-calico-300 active:scale-95 transition"
       title="Print the receipt"
     >
       <Printer className="w-5 h-5" />

@@ -17,6 +17,8 @@ interface Props {
   /** Sits under the lede — a "last updated" stamp, a count, a price range. */
   meta?: React.ReactNode
   children?: React.ReactNode
+  /** Decoration behind the type (aria-hidden by its owner), e.g. the seasonal snow. */
+  decoration?: React.ReactNode
 }
 
 /**
@@ -29,7 +31,7 @@ interface Props {
  * Ember 300 — the ember made for dark grounds.
  */
 export default function EditorialHero({
-  eyebrow, title, lede, image, breadcrumb, meta, children,
+  eyebrow, title, lede, image, breadcrumb, meta, children, decoration,
 }: Props) {
   return (
     <header className="relative flex min-h-[44vh] flex-col justify-end overflow-hidden bg-ink-900 pb-10 pt-28 sm:pb-14">
@@ -54,6 +56,8 @@ export default function EditorialHero({
           />
         </>
       )}
+
+      {decoration}
 
       <div className="relative mx-auto w-full max-w-shell px-4 sm:px-6 lg:px-8">
         {breadcrumb && breadcrumb.length > 0 && (

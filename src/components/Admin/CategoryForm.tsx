@@ -25,9 +25,9 @@ export interface CategoryRow {
   search_words: string | null
 }
 
-const label = 'mb-1 block text-xs font-bold uppercase tracking-wider text-stone-500'
-const input = 'min-h-11 w-full rounded-sm border border-stone-200 bg-white px-3 py-2 text-base text-stone-900 outline-none focus:border-orange-500'
-const hint = 'mt-1 text-[11px] leading-relaxed text-stone-500'
+const label = 'mb-1 block text-xs font-bold uppercase tracking-wider text-ink-500'
+const input = 'min-h-11 w-full rounded-sm border border-calico-300 bg-white px-3 py-2 text-base text-ink-900 outline-none focus:border-orange-500'
+const hint = 'mt-1 text-[11px] leading-relaxed text-ink-500'
 
 /** A category and everything beneath it, so it can't be put inside its own branch. */
 function branchOf(id: string, all: { id: string; parent_id: string | null }[]): Set<string> {
@@ -95,9 +95,9 @@ export default function CategoryForm({ category, categories }: { category?: Cate
           <p className={hint}>Lower comes first in the menu. Equal numbers go in name order.</p>
         </div>
       </div>
-      <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-sm border border-stone-200 bg-stone-50 px-3">
+      <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-sm border border-calico-300 bg-calico-50 px-3">
         <input type="checkbox" name="isActive" defaultChecked={category?.is_active ?? true} className="h-5 w-5 accent-orange-500" />
-        <span className="text-sm font-semibold text-stone-800">Shown in the menu, the home page and the sitemap</span>
+        <span className="text-sm font-semibold text-ink-900">Shown in the menu, the home page and the sitemap</span>
       </label>
       <p className={hint}>Hiding a category takes it out of those lists only. Its page and its products still open from a link or an ad.</p>
       <div>
@@ -116,7 +116,7 @@ export default function CategoryForm({ category, categories }: { category?: Cate
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <button type="submit" disabled={busy} className="inline-flex min-h-11 items-center gap-2 rounded-sm bg-stone-900 px-5 text-sm font-bold text-white disabled:opacity-60">
+        <button type="submit" disabled={busy} className="inline-flex min-h-11 items-center gap-2 rounded-sm bg-ink-900 px-5 text-sm font-bold text-white disabled:opacity-60">
           {busy && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />} {category ? 'Save category' : 'Add category'}
         </button>
         {category && (

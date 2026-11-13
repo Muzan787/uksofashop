@@ -35,12 +35,12 @@ export default async function NewProductPage(props: { searchParams: Promise<{ fr
   return (
     <div className="mx-auto max-w-4xl space-y-5">
       <div className="flex items-start gap-3">
-        <Link href="/admin/inventory" className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-sm text-stone-500 hover:bg-stone-100" aria-label="Back to products">
+        <Link href="/admin/inventory" className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-sm text-ink-500 hover:bg-calico-100" aria-label="Back to products">
           <ArrowLeft className="h-5 w-5" aria-hidden="true" />
         </Link>
         <div className="min-w-0">
-          <h1 className="m-0 text-2xl font-bold text-stone-900 lg:text-3xl">{copyOf ? 'Copy of a product' : 'Add a product'}</h1>
-          <p className="m-0 mt-1 text-sm text-stone-500">
+          <h1 className="m-0 text-2xl font-bold text-ink-900 lg:text-3xl">{copyOf ? 'Copy of a product' : 'Add a product'}</h1>
+          <p className="m-0 mt-1 text-sm text-ink-500">
             {copyOf
               ? `Everything from ${copyOf} except the SKUs. Give each colourway its own SKU. It stays hidden until you tick "Shown in the shop".`
               : 'A product and its colourways. Save it hidden if it is not ready to sell.'}

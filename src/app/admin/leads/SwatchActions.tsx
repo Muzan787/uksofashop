@@ -58,7 +58,7 @@ export default function SwatchActions({ request }: { request: SwatchCopyInput })
       <button
         onClick={handleCopy}
         type="button"
-        className="flex items-center justify-center gap-2 rounded-sm bg-stone-100 px-4 py-2.5 text-sm font-bold text-stone-700 transition hover:bg-stone-200 active:scale-95"
+        className="flex items-center justify-center gap-2 rounded-sm bg-calico-100 px-4 py-2.5 text-sm font-bold text-ink-700 transition hover:bg-calico-300 active:scale-95"
         title="Copy the whole request as text"
         aria-label="Copy swatch request details"
       >

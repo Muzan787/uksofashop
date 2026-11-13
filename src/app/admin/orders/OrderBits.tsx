@@ -6,7 +6,7 @@
 import { adminStatusLabel } from '@/utils/adminStatus'
 
 const STATUS_STYLES: Record<string, string> = {
-  pending_cod: 'bg-stone-100 text-stone-700 border-stone-300',
+  pending_cod: 'bg-calico-100 text-ink-700 border-calico-300',
   confirmed: 'bg-amber-100 text-amber-800 border-amber-200',
   on_hold: 'bg-orange-100 text-orange-800 border-orange-200',
   delivered: 'bg-green-100 text-green-800 border-green-200',
@@ -54,7 +54,7 @@ export function OrderTags({ order, long = false }: { order: TaggableOrder; long?
     <>
       {channel === 'whatsapp' && <span className={`${tag} border-green-200 bg-green-50 text-green-800`}>WhatsApp</span>}
       {channel === 'phone' && <span className={`${tag} border-sky-200 bg-sky-50 text-sky-800`}>Phone</span>}
-      {!channel && <span className={`${tag} border-stone-200 bg-stone-50 text-stone-600`}>Website</span>}
+      {!channel && <span className={`${tag} border-calico-300 bg-calico-50 text-ink-700`}>Website</span>}
       {google && <span className={`${tag} border-sky-200 bg-sky-50 text-sky-800`}>Google attributed (click evidence)</span>}
       {meta && <span className={`${tag} border-blue-200 bg-blue-50 text-blue-800`}>Meta ad origin</span>}
       {futureRequested && <span className={`${tag} border-amber-200 bg-amber-50 text-amber-900`}>Future delivery request · reconfirm</span>}

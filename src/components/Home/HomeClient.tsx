@@ -11,6 +11,7 @@ import CraftStory from './CraftStory';
 import QuoteStrip from './QuoteStrip';
 import ReviewTicker, { type HomeReview } from './ReviewTicker';
 import ClosingCta from './ClosingCta';
+import SeasonalStrip from '@/components/Season/SeasonalStrip';
 import { canonicalCategory, canonicalProductPath } from '@/utils/productUrl';
 import { sale } from '@/utils/pricing';
 
@@ -163,6 +164,9 @@ export default function HomeClient({ categories, products, heroProduct, collecti
       />
 
       <TrustMarquee />
+
+      {/* Seasonal band: renders only between 14 Nov and 25 Dec, and states no price. */}
+      <SeasonalStrip />
 
       <ProductRail
         eyebrow="New in"

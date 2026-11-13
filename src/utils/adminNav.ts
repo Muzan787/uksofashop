@@ -87,3 +87,21 @@ export function activePhoneTab(pathname: string): PhoneTabKey | null {
   const tab = PHONE_TABS.find(t => t.key !== 'more' && sectionActive(pathname, t.href))
   return tab?.key ?? null
 }
+
+/**
+ * How the desktop sidebar groups the sections (admin redesign, 14 Nov 2026).
+ * Grouping is presentation only: ADMIN_SECTIONS stays the one list of
+ * sections and no address moves. A section missing from every group would
+ * disappear from the sidebar, so the tests check each is placed exactly once.
+ */
+export interface AdminGroup {
+  label: string
+  keys: AdminSectionKey[]
+}
+
+export const ADMIN_GROUPS: AdminGroup[] = [
+  { label: 'Work',             keys: ['home', 'orders', 'leads'] },
+  { label: 'Ads and evidence', keys: ['meta', 'google', 'journeys', 'adlinks'] },
+  { label: 'Shop',             keys: ['catalogue', 'inventory', 'categories', 'reviews', 'videos'] },
+  { label: 'System',           keys: ['status', 'settings'] },
+]

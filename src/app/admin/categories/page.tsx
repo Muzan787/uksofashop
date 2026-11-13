@@ -27,50 +27,50 @@ export default async function AdminCategoriesPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-5 animate-in fade-in duration-500">
       <div className="flex items-start gap-3">
-        <Link href="/admin/catalogue" className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-sm text-stone-500 hover:bg-stone-100" aria-label="Back to the catalogue">
+        <Link href="/admin/catalogue" className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-sm text-ink-500 hover:bg-calico-100" aria-label="Back to the catalogue">
           <ArrowLeft className="h-5 w-5" aria-hidden="true" />
         </Link>
         <div>
-          <h1 className="m-0 text-2xl font-bold tracking-tight text-stone-900 lg:text-3xl">Categories</h1>
-          <p className="m-0 mt-1 text-sm text-stone-500">Where products live in the shop&apos;s menu. Tap one to change it.</p>
+          <h1 className="m-0 text-2xl font-bold tracking-tight text-ink-900 lg:text-3xl">Categories</h1>
+          <p className="m-0 mt-1 text-sm text-ink-500">Where products live in the shop&apos;s menu. Tap one to change it.</p>
         </div>
       </div>
 
-      <details className="rounded-md border border-stone-200 bg-white p-4 shadow-sm">
+      <details className="rounded-md border border-calico-300 bg-white p-4 shadow-sm">
         <summary className="min-h-11 cursor-pointer list-none py-2 text-sm font-bold text-orange-700">+ Add a category</summary>
-        <div className="mt-3 border-t border-stone-100 pt-3">
+        <div className="mt-3 border-t border-calico-100 pt-3">
           <CategoryForm categories={categories} />
         </div>
       </details>
 
       {categories.length === 0 ? (
-        <div className="flex flex-col items-center rounded-lg border border-stone-200 bg-white px-4 py-12 text-center shadow-sm">
-          <FolderOpen className="mb-3 h-10 w-10 text-stone-300" aria-hidden="true" />
-          <p className="m-0 font-bold text-stone-900">No categories yet</p>
+        <div className="flex flex-col items-center rounded-lg border border-calico-300 bg-white px-4 py-12 text-center shadow-sm">
+          <FolderOpen className="mb-3 h-10 w-10 text-calico-300" aria-hidden="true" />
+          <p className="m-0 font-bold text-ink-900">No categories yet</p>
         </div>
       ) : (
         <ul className="m-0 list-none space-y-2 p-0">
           {categories.map(c => (
             <li key={c.id}>
-              <details className="rounded-md border border-stone-200 bg-white shadow-sm">
+              <details className="rounded-md border border-calico-300 bg-white shadow-sm">
                 <summary className="flex min-h-14 cursor-pointer list-none items-center gap-3 p-3">
                   {c.image_url ? (
                     // eslint-disable-next-line @next/next/no-img-element -- Admin thumbnail: behind auth, never indexed.
                     <img src={c.image_url} alt="" className="h-12 w-12 shrink-0 rounded-sm object-cover" />
-                  ) : <span className="h-12 w-12 shrink-0 rounded-sm bg-stone-100" />}
+                  ) : <span className="h-12 w-12 shrink-0 rounded-sm bg-calico-100" />}
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate font-bold text-stone-900">{c.name}</span>
-                    <span className="block truncate text-xs text-stone-500">
+                    <span className="block truncate font-bold text-ink-900">{c.name}</span>
+                    <span className="block truncate text-xs text-ink-500">
                       /shop/{c.slug} · {counts.get(c.id) ?? 0} products{c.parent_id ? ` · inside ${parentName.get(c.parent_id) ?? '?'}` : ''} · order {c.sort}
                     </span>
                   </span>
                   {!c.is_active && (
-                    <span className="inline-flex shrink-0 items-center gap-1 rounded-pill border border-stone-300 bg-stone-100 px-2 py-0.5 text-[10px] font-bold uppercase text-stone-700">
+                    <span className="inline-flex shrink-0 items-center gap-1 rounded-pill border border-calico-300 bg-calico-100 px-2 py-0.5 text-[10px] font-bold uppercase text-ink-700">
                       <EyeOff className="h-3 w-3" aria-hidden="true" /> Hidden
                     </span>
                   )}
                 </summary>
-                <div className="border-t border-stone-100 p-3">
+                <div className="border-t border-calico-100 p-3">
                   <CategoryForm category={c} categories={categories} />
                 </div>
               </details>

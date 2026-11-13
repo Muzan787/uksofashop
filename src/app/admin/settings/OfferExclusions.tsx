@@ -32,7 +32,7 @@ export interface OfferProductRow {
 }
 
 const button = 'inline-flex min-h-11 items-center justify-center gap-2 rounded-sm px-4 text-sm font-bold disabled:opacity-50'
-const input = 'min-h-11 w-full rounded-sm border border-stone-200 bg-white px-3 py-2 text-base text-stone-900 outline-none focus:border-orange-500'
+const input = 'min-h-11 w-full rounded-sm border border-calico-300 bg-white px-3 py-2 text-base text-ink-900 outline-none focus:border-orange-500'
 
 /** How many search results are shown at once. */
 const RESULTS = 8
@@ -79,23 +79,23 @@ export default function OfferExclusions({
   return (
     <div className="space-y-5">
       <div>
-        <h3 className="m-0 text-xs font-bold uppercase tracking-[0.14em] text-stone-500">Off the offer</h3>
+        <h3 className="m-0 text-xs font-bold uppercase tracking-[0.14em] text-ink-500">Off the offer</h3>
         {excluded.length === 0 ? (
-          <p className="m-0 mt-2 text-sm text-stone-500">
+          <p className="m-0 mt-2 text-sm text-ink-500">
             Nothing is excluded by hand. Every sofa at {gbpFigure(minPrice)} or more gets the money off for its tier.
           </p>
         ) : (
-          <ul className="m-0 mt-2 list-none divide-y divide-stone-100 p-0">
+          <ul className="m-0 mt-2 list-none divide-y divide-calico-100 p-0">
             {excluded.map(p => (
               <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
                 <div className="min-w-0">
-                  <p className="m-0 font-semibold text-stone-900">{p.title}</p>
-                  <p className="m-0 text-xs text-stone-500">{describe(p)}</p>
+                  <p className="m-0 font-semibold text-ink-900">{p.title}</p>
+                  <p className="m-0 text-xs text-ink-500">{describe(p)}</p>
                 </div>
                 <button
                   type="button"
                   disabled={busy !== null}
-                  className={`${button} border border-stone-300 bg-white text-stone-800`}
+                  className={`${button} border border-calico-300 bg-white text-ink-900`}
                   onClick={() => void toggle(p, false)}
                 >
                   {busy === p.id && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
@@ -107,12 +107,12 @@ export default function OfferExclusions({
         )}
       </div>
 
-      <div className="rounded-sm border border-stone-200 bg-stone-50 p-3">
-        <label htmlFor="offer-exclude-search" className="mb-1 block text-sm font-semibold text-stone-800">
+      <div className="rounded-sm border border-calico-300 bg-calico-50 p-3">
+        <label htmlFor="offer-exclude-search" className="mb-1 block text-sm font-semibold text-ink-900">
           Take a sofa off the offer
         </label>
         <div className="relative">
-          <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+          <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-500" />
           <input
             id="offer-exclude-search"
             value={query}
@@ -125,19 +125,19 @@ export default function OfferExclusions({
 
         {query.trim() !== '' && (
           matches.length === 0 ? (
-            <p className="m-0 mt-2 text-sm text-stone-500">No sofa on the offer matches that.</p>
+            <p className="m-0 mt-2 text-sm text-ink-500">No sofa on the offer matches that.</p>
           ) : (
-            <ul className="m-0 mt-2 list-none divide-y divide-stone-100 p-0">
+            <ul className="m-0 mt-2 list-none divide-y divide-calico-100 p-0">
               {matches.map(p => (
                 <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
                   <div className="min-w-0">
-                    <p className="m-0 font-semibold text-stone-900">{p.title}</p>
-                    <p className="m-0 text-xs text-stone-500">{describe(p)}</p>
+                    <p className="m-0 font-semibold text-ink-900">{p.title}</p>
+                    <p className="m-0 text-xs text-ink-500">{describe(p)}</p>
                   </div>
                   <button
                     type="button"
                     disabled={busy !== null}
-                    className={`${button} bg-stone-900 text-white`}
+                    className={`${button} bg-ink-900 text-white`}
                     onClick={() => void toggle(p, true)}
                   >
                     {busy === p.id && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
@@ -149,7 +149,7 @@ export default function OfferExclusions({
           )
         )}
 
-        <p className="m-0 mt-3 text-xs leading-relaxed text-stone-500">
+        <p className="m-0 mt-3 text-xs leading-relaxed text-ink-500">
           No need to list the cheap ones: nothing under {gbpFigure(minPrice)} carries the offer
           anyway{belowFloor > 0 ? `, which is ${belowFloor} of the sofas on sale now` : ''}. Change
           that figure under <strong>The visitor offer</strong> in Figures above.

@@ -9,6 +9,7 @@ import { loadOrder, loadPickers } from '../orderData'
 import { shortCode } from '../OrderBits'
 import { orderReviewLinks } from '@/utils/jobs/reviewRequests'
 import OrderView, { type OrderFlowSend } from './OrderView'
+import EvidenceTrail from './EvidenceTrail'
 
 export const dynamic = 'force-dynamic'
 
@@ -51,6 +52,7 @@ export default async function AdminOrderPage(props: { params: Params; searchPara
       pickers={pickers}
       userId={user?.id ?? null}
       sp={sp}
+      evidence={<EvidenceTrail order={order} />}
     />
   )
 }

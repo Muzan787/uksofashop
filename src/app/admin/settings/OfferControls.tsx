@@ -14,7 +14,7 @@ import { normaliseOfferCode, offerCodeProblem } from '@/utils/shopSettingsForm'
 import type { OfferCodeRow } from './SettingsView'
 
 const button = 'inline-flex min-h-11 items-center justify-center gap-2 rounded-sm px-4 text-sm font-bold disabled:opacity-50'
-const input = 'min-h-11 w-full rounded-sm border border-stone-200 bg-white px-3 py-2 text-base text-stone-900 outline-none focus:border-orange-500'
+const input = 'min-h-11 w-full rounded-sm border border-calico-300 bg-white px-3 py-2 text-base text-ink-900 outline-none focus:border-orange-500'
 
 export default function OfferControls({ enabled, openWindows, codes }: { enabled: boolean; openWindows: number | null; codes: OfferCodeRow[] }) {
   const router = useRouter()
@@ -41,7 +41,7 @@ export default function OfferControls({ enabled, openWindows, codes }: { enabled
         <p className={`m-0 font-bold ${enabled ? 'text-green-900' : 'text-amber-900'}`}>
           {enabled ? 'On: new visitors get the offer' : 'Off: no new visitor gets the offer'}
         </p>
-        <p className="m-0 mt-1 text-sm text-stone-700">
+        <p className="m-0 mt-1 text-sm text-ink-700">
           {open ? `${open} ` : ''}
           {enabled
             ? 'Turning it off stops new windows only; every window already given runs to its own deadline.'
@@ -50,7 +50,7 @@ export default function OfferControls({ enabled, openWindows, codes }: { enabled
         <button
           type="button"
           disabled={busy !== null}
-          className={`${button} mt-3 ${enabled ? 'border border-stone-300 bg-white text-stone-800' : 'bg-stone-900 text-white'}`}
+          className={`${button} mt-3 ${enabled ? 'border border-calico-300 bg-white text-ink-900' : 'bg-ink-900 text-white'}`}
           onClick={() => {
             const question = enabled
               ? 'Turn the offer off? No new visitor will get a window. Windows already given still run to their own deadline.'
@@ -65,28 +65,28 @@ export default function OfferControls({ enabled, openWindows, codes }: { enabled
       </div>
 
       <div>
-        <h3 className="m-0 text-xs font-bold uppercase tracking-[0.14em] text-stone-500">Offer codes</h3>
-        <p className="m-0 mt-1 text-sm text-stone-500">
+        <h3 className="m-0 text-xs font-bold uppercase tracking-[0.14em] text-ink-500">Offer codes</h3>
+        <p className="m-0 mt-1 text-sm text-ink-500">
           A code is accepted only inside a visitor&apos;s window, and labels the order. Orders keep their code, so deleting one never changes an order.
         </p>
         {codes.length === 0 ? (
-          <p className="m-0 mt-2 text-sm text-stone-500">No codes.</p>
+          <p className="m-0 mt-2 text-sm text-ink-500">No codes.</p>
         ) : (
-          <ul className="m-0 mt-2 list-none divide-y divide-stone-100 p-0">
+          <ul className="m-0 mt-2 list-none divide-y divide-calico-100 p-0">
             {codes.map(c => (
               <li key={c.code} className="flex flex-wrap items-center justify-between gap-2 py-2">
                 <div className="min-w-0">
-                  <p className="m-0 font-mono font-bold text-stone-900">
+                  <p className="m-0 font-mono font-bold text-ink-900">
                     {c.code}
-                    {!c.is_active && <span className="ml-2 rounded-pill border border-stone-200 bg-stone-50 px-2 py-0.5 font-sans text-[10px] font-bold uppercase tracking-wider text-stone-600">Off</span>}
+                    {!c.is_active && <span className="ml-2 rounded-pill border border-calico-300 bg-calico-50 px-2 py-0.5 font-sans text-[10px] font-bold uppercase tracking-wider text-ink-700">Off</span>}
                   </p>
-                  {c.label && <p className="m-0 text-xs text-stone-500">{c.label}</p>}
+                  {c.label && <p className="m-0 text-xs text-ink-500">{c.label}</p>}
                 </div>
                 <div className="flex gap-2">
                   <button
                     type="button"
                     disabled={busy !== null}
-                    className={`${button} border border-stone-300 bg-white text-stone-800`}
+                    className={`${button} border border-calico-300 bg-white text-ink-900`}
                     onClick={() => void run(`active-${c.code}`, () => setOfferCodeActive(c.code, !c.is_active), c.is_active ? `${c.code} is off.` : `${c.code} is on.`)}
                   >
                     {busy === `active-${c.code}` && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
@@ -111,7 +111,7 @@ export default function OfferControls({ enabled, openWindows, codes }: { enabled
         )}
 
         <form
-          className="mt-3 grid gap-2 rounded-sm border border-stone-200 bg-stone-50 p-3 sm:grid-cols-[1fr_1.5fr_auto] sm:items-end"
+          className="mt-3 grid gap-2 rounded-sm border border-calico-300 bg-calico-50 p-3 sm:grid-cols-[1fr_1.5fr_auto] sm:items-end"
           onSubmit={async e => {
             e.preventDefault()
             const normal = normaliseOfferCode(code)
@@ -122,14 +122,14 @@ export default function OfferControls({ enabled, openWindows, codes }: { enabled
           }}
         >
           <div>
-            <label htmlFor="offer-code" className="mb-1 block text-sm font-semibold text-stone-800">New code</label>
+            <label htmlFor="offer-code" className="mb-1 block text-sm font-semibold text-ink-900">New code</label>
             <input id="offer-code" value={code} onChange={e => setCode(e.target.value.toUpperCase())} maxLength={24} autoCapitalize="characters" autoComplete="off" spellCheck={false} className={`${input} font-mono`} placeholder="e.g. WINTER20" />
           </div>
           <div>
-            <label htmlFor="offer-code-label" className="mb-1 block text-sm font-semibold text-stone-800">Note (optional)</label>
+            <label htmlFor="offer-code-label" className="mb-1 block text-sm font-semibold text-ink-900">Note (optional)</label>
             <input id="offer-code-label" value={codeLabel} onChange={e => setCodeLabel(e.target.value)} maxLength={80} autoComplete="off" className={input} placeholder="Where it's used" />
           </div>
-          <button type="submit" disabled={busy !== null || code.trim() === ''} className={`${button} bg-stone-900 text-white`}>
+          <button type="submit" disabled={busy !== null || code.trim() === ''} className={`${button} bg-ink-900 text-white`}>
             {busy === 'add' && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />} Add code
           </button>
         </form>

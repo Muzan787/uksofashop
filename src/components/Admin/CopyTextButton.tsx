@@ -18,7 +18,7 @@ export default function CopyTextButton({ text, label, className }: { text: strin
         setCopied(true)
         setTimeout(() => setCopied(false), 2000)
       }}
-      className={className ?? 'inline-flex min-h-11 items-center gap-2 rounded-sm border border-stone-300 bg-white px-3 py-2 text-sm font-semibold text-stone-700 transition hover:border-stone-500'}
+      className={className ?? 'inline-flex min-h-11 items-center gap-2 rounded-sm border border-calico-300 bg-white px-3 py-2 text-sm font-semibold text-ink-700 transition hover:border-ink-500'}
     >
       {copied ? <Check className="h-4 w-4 text-green-600" aria-hidden="true" /> : <Copy className="h-4 w-4" aria-hidden="true" />}
       {copied ? 'Copied' : label}

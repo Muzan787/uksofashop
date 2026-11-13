@@ -42,24 +42,24 @@ export default async function CataloguePage() {
     <div className="mx-auto max-w-2xl space-y-5 animate-in fade-in duration-500">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="m-0 text-2xl font-bold tracking-tight text-stone-900 lg:text-3xl">Catalogue</h1>
-          <p className="m-0 mt-1 text-sm text-stone-500">What the shop sells, and how it is arranged.</p>
+          <h1 className="m-0 text-2xl font-bold tracking-tight text-ink-900 lg:text-3xl">Catalogue</h1>
+          <p className="m-0 mt-1 text-sm text-ink-500">What the shop sells, and how it is arranged.</p>
         </div>
         <Link href="/admin/inventory/new" className="inline-flex min-h-11 items-center gap-2 rounded-sm bg-orange-500 px-5 text-sm font-bold text-white shadow-sm hover:bg-orange-600">
           <Plus className="h-5 w-5" aria-hidden="true" /> Add a product
         </Link>
       </header>
 
-      <ul className="m-0 list-none divide-y divide-stone-200 overflow-hidden rounded-md border border-stone-200 bg-white p-0 shadow-sm">
+      <ul className="m-0 list-none divide-y divide-calico-300 overflow-hidden rounded-md border border-calico-300 bg-white p-0 shadow-sm">
         {rows.map(r => (
           <li key={r.href}>
-            <Link href={r.href} className="flex min-h-16 items-center gap-3 px-4 py-3 hover:bg-stone-50">
-              <r.icon className="h-5 w-5 shrink-0 text-stone-500" aria-hidden="true" />
+            <Link href={r.href} className="flex min-h-16 items-center gap-3 px-4 py-3 hover:bg-calico-50">
+              <r.icon className="h-5 w-5 shrink-0 text-ink-500" aria-hidden="true" />
               <span className="min-w-0 flex-1">
-                <span className="block font-bold text-stone-900">{r.title}</span>
-                <span className="block text-sm text-stone-500">{r.note}</span>
+                <span className="block font-bold text-ink-900">{r.title}</span>
+                <span className="block text-sm text-ink-500">{r.note}</span>
               </span>
-              <ChevronRight className="h-5 w-5 shrink-0 text-stone-400" aria-hidden="true" />
+              <ChevronRight className="h-5 w-5 shrink-0 text-ink-500" aria-hidden="true" />
             </Link>
             {'warn' in r && r.warn && (
               <Link href={r.warnHref!} className="mx-4 mb-3 inline-flex min-h-11 items-center rounded-pill border border-red-200 bg-red-50 px-3 text-xs font-bold text-red-800">

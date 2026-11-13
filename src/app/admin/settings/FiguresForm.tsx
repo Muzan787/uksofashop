@@ -12,8 +12,8 @@ import { saveShopFigures } from '@/app/actions/settings'
 import { checkFigures, FIGURE_GROUPS, TIER_OF_FIELD, type FigureKey } from '@/utils/shopSettingsForm'
 import type { OfferTier } from '@/utils/shopSettings'
 
-const label = 'mb-1 block text-sm font-semibold text-stone-800'
-const hint = 'mt-1 text-xs leading-relaxed text-stone-500'
+const label = 'mb-1 block text-sm font-semibold text-ink-900'
+const hint = 'mt-1 text-xs leading-relaxed text-ink-500'
 
 export default function FiguresForm({ initial, tierCounts }: { initial: Record<FigureKey, string>; tierCounts: Record<OfferTier, number> }) {
   const router = useRouter()
@@ -43,8 +43,8 @@ export default function FiguresForm({ initial, tierCounts }: { initial: Record<F
     >
       {FIGURE_GROUPS.map(group => (
         <fieldset key={group.id} className="m-0 min-w-0 border-0 p-0">
-          <legend className="p-0 text-xs font-bold uppercase tracking-[0.14em] text-stone-500">{group.title}</legend>
-          <p className="m-0 mt-1 text-sm text-stone-500">{group.intro}</p>
+          <legend className="p-0 text-xs font-bold uppercase tracking-[0.14em] text-ink-500">{group.title}</legend>
+          <p className="m-0 mt-1 text-sm text-ink-500">{group.intro}</p>
           <div className="mt-3 grid gap-4 sm:grid-cols-2">
             {group.fields.map(f => {
               const id = `figure-${f.key}`
@@ -56,8 +56,8 @@ export default function FiguresForm({ initial, tierCounts }: { initial: Record<F
               return (
                 <div key={f.key}>
                   <label htmlFor={id} className={label}>{f.label}</label>
-                  <div className={`flex min-h-11 items-center rounded-sm border bg-white focus-within:border-orange-500 ${wrong ? 'border-red-500' : 'border-stone-200'}`}>
-                    {f.kind === 'money' && <span className="pl-3 text-base text-stone-500" aria-hidden="true">£</span>}
+                  <div className={`flex min-h-11 items-center rounded-sm border bg-white focus-within:border-orange-500 ${wrong ? 'border-red-500' : 'border-calico-300'}`}>
+                    {f.kind === 'money' && <span className="pl-3 text-base text-ink-500" aria-hidden="true">£</span>}
                     <input
                       id={id}
                       inputMode={f.kind === 'money' ? 'decimal' : 'numeric'}
@@ -66,9 +66,9 @@ export default function FiguresForm({ initial, tierCounts }: { initial: Record<F
                       onChange={e => { setValues(v => ({ ...v, [f.key]: e.target.value })); if (message) setMessage(null) }}
                       aria-invalid={wrong ? true : undefined}
                       aria-describedby={note ? `${id}-note` : undefined}
-                      className="min-h-11 w-full min-w-0 flex-1 bg-transparent px-2 py-2 text-base tabular-nums text-stone-900 outline-none"
+                      className="min-h-11 w-full min-w-0 flex-1 bg-transparent px-2 py-2 text-base tabular-nums text-ink-900 outline-none"
                     />
-                    {f.unit && <span className="shrink-0 pr-3 text-sm text-stone-500">{f.unit}</span>}
+                    {f.unit && <span className="shrink-0 pr-3 text-sm text-ink-500">{f.unit}</span>}
                   </div>
                   {note && <p id={`${id}-note`} className={hint}>{note}</p>}
                 </div>
@@ -78,12 +78,12 @@ export default function FiguresForm({ initial, tierCounts }: { initial: Record<F
         </fieldset>
       ))}
 
-      <div className="flex flex-wrap items-center gap-3 border-t border-stone-100 pt-4">
-        <button type="submit" disabled={busy || !dirty} className="inline-flex min-h-11 items-center gap-2 rounded-sm bg-stone-900 px-5 text-sm font-bold text-white disabled:opacity-50">
+      <div className="flex flex-wrap items-center gap-3 border-t border-calico-100 pt-4">
+        <button type="submit" disabled={busy || !dirty} className="inline-flex min-h-11 items-center gap-2 rounded-sm bg-ink-900 px-5 text-sm font-bold text-white disabled:opacity-50">
           {busy && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />} Save figures
         </button>
         {dirty && !busy && (
-          <button type="button" onClick={() => { setValues(initial); setMessage(null) }} className="inline-flex min-h-11 items-center rounded-sm px-3 text-sm font-semibold text-stone-600 hover:bg-stone-100">
+          <button type="button" onClick={() => { setValues(initial); setMessage(null) }} className="inline-flex min-h-11 items-center rounded-sm px-3 text-sm font-semibold text-ink-700 hover:bg-calico-100">
             Undo changes
           </button>
         )}

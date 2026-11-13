@@ -41,8 +41,8 @@ export default function ReviewsView({ reviews, testOrders, knownOrders, done, fa
   return (
     <div className="mx-auto max-w-4xl space-y-6 animate-in fade-in duration-500 lg:space-y-8">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-stone-900 lg:text-3xl">Reviews</h1>
-        <p className="mt-1 text-sm text-stone-600">
+        <h1 className="text-2xl font-bold tracking-tight text-ink-900 lg:text-3xl">Reviews</h1>
+        <p className="mt-1 text-sm text-ink-700">
           Publish genuine reviews, good or bad. Hide or delete only spam, abuse or private details.
         </p>
       </div>
@@ -70,12 +70,12 @@ export default function ReviewsView({ reviews, testOrders, knownOrders, done, fa
           const isTest = review.order_id ? testOrders.includes(review.order_id) : false
 
           return (
-            <div key={review.id} className="flex flex-col gap-4 rounded-md border border-stone-200 bg-white p-5 shadow-sm sm:flex-row sm:gap-6 sm:p-6">
+            <div key={review.id} className="flex flex-col gap-4 rounded-md border border-calico-300 bg-white p-5 shadow-sm sm:flex-row sm:gap-6 sm:p-6">
               <div className="min-w-0 flex-1 space-y-3">
                 <div className="flex flex-wrap items-center gap-2">
                   <div className="flex text-amber-500" role="img" aria-label={`${review.rating} out of 5`}>
                     {[...Array(5)].map((_, i) => (
-                      <Star key={i} className={`h-4 w-4 ${i < review.rating ? 'fill-current' : 'text-stone-200'}`} aria-hidden="true" />
+                      <Star key={i} className={`h-4 w-4 ${i < review.rating ? 'fill-current' : 'text-calico-300'}`} aria-hidden="true" />
                     ))}
                   </div>
                   <span className={`rounded-sm px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest ${isLive ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-800'}`}>
@@ -87,7 +87,7 @@ export default function ReviewsView({ reviews, testOrders, knownOrders, done, fa
                 </div>
 
                 <div>
-                  <p className="m-0 text-base font-bold text-stone-900">{review.customer_name || 'Anonymous customer'}</p>
+                  <p className="m-0 text-base font-bold text-ink-900">{review.customer_name || 'Anonymous customer'}</p>
                   {/* Which reviews came through the signed link in a
                       post-delivery email, and which arrived some other way. */}
                   {review.order_id ? (
@@ -95,28 +95,28 @@ export default function ReviewsView({ reviews, testOrders, knownOrders, done, fa
                       <BadgeCheck className="h-3.5 w-3.5 text-green-500" aria-hidden="true" /> Verified buyer
                     </p>
                   ) : (
-                    <p className="m-0 mt-0.5 text-[11px] font-bold uppercase tracking-wide text-stone-400">Unverified</p>
+                    <p className="m-0 mt-0.5 text-[11px] font-bold uppercase tracking-wide text-ink-500">Unverified</p>
                   )}
-                  {review.created_at && <p className="m-0 mt-1 text-xs text-stone-400">Sent {dualTimeText(review.created_at)}</p>}
+                  {review.created_at && <p className="m-0 mt-1 text-xs text-ink-500">Sent {dualTimeText(review.created_at)}</p>}
                 </div>
 
                 <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
                   {productHref ? (
-                    <a href={productHref} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center gap-1.5 font-semibold text-stone-700 underline">
+                    <a href={productHref} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center gap-1.5 font-semibold text-ink-700 underline">
                       {product?.title} <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
                     </a>
                   ) : (
-                    <span className="inline-flex min-h-11 items-center text-stone-500">{product?.title ?? 'The shop in general'}</span>
+                    <span className="inline-flex min-h-11 items-center text-ink-500">{product?.title ?? 'The shop in general'}</span>
                   )}
                   {review.order_id && knownOrders.includes(review.order_id) && (
-                    <Link href={`/admin/orders/${review.order_id}`} className="inline-flex min-h-11 items-center font-semibold text-stone-700 underline">
+                    <Link href={`/admin/orders/${review.order_id}`} className="inline-flex min-h-11 items-center font-semibold text-ink-700 underline">
                       Order #{shortCode(review.order_id)}
                     </Link>
                   )}
                 </div>
 
-                <p className="m-0 whitespace-pre-line break-words rounded-sm border border-stone-100 bg-stone-50 p-4 text-sm text-stone-700">
-                  {review.comment?.trim() || <span className="text-stone-400">No text, just the stars.</span>}
+                <p className="m-0 whitespace-pre-line break-words rounded-sm border border-calico-100 bg-calico-50 p-4 text-sm text-ink-700">
+                  {review.comment?.trim() || <span className="text-ink-500">No text, just the stars.</span>}
                 </p>
 
                 {review.image_url && (
@@ -126,10 +126,10 @@ export default function ReviewsView({ reviews, testOrders, knownOrders, done, fa
                 )}
               </div>
 
-              <div className="flex shrink-0 gap-2 border-t border-stone-100 pt-4 sm:w-44 sm:flex-col sm:border-l sm:border-t-0 sm:pl-6 sm:pt-0">
+              <div className="flex shrink-0 gap-2 border-t border-calico-100 pt-4 sm:w-44 sm:flex-col sm:border-l sm:border-t-0 sm:pl-6 sm:pt-0">
                 <form action={isLive ? hideReview : approveReview} className="flex-1 sm:flex-none">
                   <input type="hidden" name="reviewId" value={review.id} />
-                  <ConfirmSubmit className={isLive ? `${button} border border-stone-300 bg-white text-stone-700 hover:border-stone-500` : `${button} bg-stone-900 text-white hover:bg-stone-800`}>
+                  <ConfirmSubmit className={isLive ? `${button} border border-calico-300 bg-white text-ink-700 hover:border-ink-500` : `${button} bg-ink-900 text-white hover:bg-ink-900`}>
                     {isLive ? <><EyeOff className="h-4 w-4" aria-hidden="true" /> Hide from the shop</> : <><Eye className="h-4 w-4" aria-hidden="true" /> Publish</>}
                   </ConfirmSubmit>
                 </form>
@@ -148,10 +148,10 @@ export default function ReviewsView({ reviews, testOrders, knownOrders, done, fa
         })}
 
         {reviews.length === 0 && !loadError && (
-          <div className="flex flex-col items-center justify-center rounded-lg border border-stone-200 bg-white px-4 py-16 text-center shadow-sm">
-            <MessageSquare className="mb-4 h-12 w-12 text-stone-300" aria-hidden="true" />
-            <p className="m-0 text-xl font-bold text-stone-900">No reviews yet</p>
-            <p className="m-0 mt-1 text-stone-500">Reviews customers write appear here before they show in the shop.</p>
+          <div className="flex flex-col items-center justify-center rounded-lg border border-calico-300 bg-white px-4 py-16 text-center shadow-sm">
+            <MessageSquare className="mb-4 h-12 w-12 text-calico-300" aria-hidden="true" />
+            <p className="m-0 text-xl font-bold text-ink-900">No reviews yet</p>
+            <p className="m-0 mt-1 text-ink-500">Reviews customers write appear here before they show in the shop.</p>
           </div>
         )}
       </div>

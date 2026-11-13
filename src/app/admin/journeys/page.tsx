@@ -43,7 +43,7 @@ export default async function Journeys({searchParams}:{searchParams:Promise<Reco
       {select('device',['mobile','tablet','desktop'])}{select('page_type',PAGE_TYPES)}
       {select('event',JOURNEY_KINDS)}{select('stage',['engagement','configuration','cart','checkout','enquiry','order'])}
       {['campaign','product','session'].map(name=><label key={name}>{name}<input name={name} defaultValue={sp[name]||''} className="block w-full rounded border p-2"/></label>)}
-      <button className="rounded bg-zinc-900 p-3 text-white">Apply filters</button>
+      <button className="rounded bg-ink-900 p-3 text-white">Apply filters</button>
     </form>
     {report.error && <p role="alert">{report.error}</p>}
     {report.truncated && <p role="status">Limited to the first 5,000 events. Narrow the date or source filter before interpreting totals.</p>}

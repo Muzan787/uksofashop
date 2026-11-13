@@ -23,11 +23,11 @@ export default function LeadsTabNav({ tab, counts }: { tab: LeadsTabKey; counts:
           aria-current={tab === t.key ? 'page' : undefined}
           title={`${counts[t.key]} ${COUNTED[t.key]}`}
           className={`inline-flex min-h-11 shrink-0 items-center rounded-sm px-3.5 text-sm font-bold transition ${
-            tab === t.key ? 'bg-zinc-900 text-white' : 'border border-zinc-200 bg-white text-zinc-600 hover:border-zinc-300'
+            tab === t.key ? 'bg-ink-900 text-white' : 'border border-calico-300 bg-white text-ink-700 hover:border-calico-300'
           }`}
         >
           {t.label}
-          <span className={`ml-1.5 rounded-full px-1.5 py-0.5 text-[11px] ${tab === t.key ? 'bg-white/15 text-white' : 'bg-zinc-100 text-zinc-500'}`}>
+          <span className={`ml-1.5 rounded-full px-1.5 py-0.5 text-[11px] ${tab === t.key ? 'bg-white/15 text-white' : 'bg-calico-100 text-ink-500'}`}>
             {counts[t.key]}
             <span className="sr-only"> {COUNTED[t.key]}</span>
           </span>

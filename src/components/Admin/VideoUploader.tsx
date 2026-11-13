@@ -108,10 +108,10 @@ export default function VideoUploader({ products }: Props) {
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-5 rounded-md border border-stone-200 bg-white p-5 shadow-sm sm:p-6">
+    <form onSubmit={onSubmit} className="space-y-5 rounded-md border border-calico-300 bg-white p-5 shadow-sm sm:p-6">
       <div className="flex items-center gap-3">
         <Video className="h-5 w-5 text-orange-500" />
-        <h2 className="m-0 text-lg font-bold text-stone-900">Add a video</h2>
+        <h2 className="m-0 text-lg font-bold text-ink-900">Add a video</h2>
       </div>
 
       {/* What kind of clip. The kind decides where it appears, so the
@@ -124,7 +124,7 @@ export default function VideoUploader({ products }: Props) {
             <label
               key={k}
               className={`cursor-pointer rounded-sm border-2 p-3 transition ${
-                active ? 'border-orange-500 bg-orange-50' : 'border-stone-200 bg-white hover:border-stone-300'
+                active ? 'border-orange-500 bg-orange-50' : 'border-calico-300 bg-white hover:border-calico-300'
               }`}
             >
               <input
@@ -135,8 +135,8 @@ export default function VideoUploader({ products }: Props) {
                 onChange={() => setKind(k)}
                 className="sr-only"
               />
-              <span className="block text-sm font-bold text-stone-900">{label}</span>
-              <span className="mt-1 block text-xs leading-snug text-stone-500">{where}</span>
+              <span className="block text-sm font-bold text-ink-900">{label}</span>
+              <span className="mt-1 block text-xs leading-snug text-ink-500">{where}</span>
             </label>
           )
         })}
@@ -144,12 +144,12 @@ export default function VideoUploader({ products }: Props) {
 
       {needsProduct && (
         <div>
-          <label className="mb-1 block text-xs font-bold uppercase tracking-widest text-stone-500">Product</label>
+          <label className="mb-1 block text-xs font-bold uppercase tracking-widest text-ink-500">Product</label>
           <select
             value={productId}
             onChange={e => setProductId(e.target.value)}
             required
-            className="w-full rounded-sm border border-stone-300 bg-white p-3 text-sm text-stone-900"
+            className="w-full rounded-sm border border-calico-300 bg-white p-3 text-sm text-ink-900"
           >
             <option value="">Choose the product this clip shows…</option>
             {products.map(p => (
@@ -160,8 +160,8 @@ export default function VideoUploader({ products }: Props) {
       )}
 
       <div>
-        <label className="mb-1 block text-xs font-bold uppercase tracking-widest text-stone-500">
-          Caption <span className="font-normal normal-case tracking-normal text-stone-400">(optional)</span>
+        <label className="mb-1 block text-xs font-bold uppercase tracking-widest text-ink-500">
+          Caption <span className="font-normal normal-case tracking-normal text-ink-500">(optional)</span>
         </label>
         <input
           type="text"
@@ -173,14 +173,14 @@ export default function VideoUploader({ products }: Props) {
             : kind === 'studio' ? 'e.g. The recliner going back, both sides'
             : 'e.g. Loading the van on a Thursday'
           }
-          className="w-full rounded-sm border border-stone-300 p-3 text-sm text-stone-900"
+          className="w-full rounded-sm border border-calico-300 p-3 text-sm text-ink-900"
         />
       </div>
 
       <div>
-        <label className="mb-1 block text-xs font-bold uppercase tracking-widest text-stone-500">Video file</label>
+        <label className="mb-1 block text-xs font-bold uppercase tracking-widest text-ink-500">Video file</label>
         <label className={`flex cursor-pointer items-center justify-center gap-3 rounded-sm border-2 border-dashed p-5 transition ${
-          file ? 'border-green-500 bg-green-50' : 'border-stone-300 bg-white hover:border-orange-500'
+          file ? 'border-green-500 bg-green-50' : 'border-calico-300 bg-white hover:border-orange-500'
         }`}>
           <input
             ref={fileRef}
@@ -190,22 +190,22 @@ export default function VideoUploader({ products }: Props) {
             className="hidden"
             disabled={busy}
           />
-          <Upload className="h-5 w-5 shrink-0 text-stone-400" />
-          <span className="min-w-0 truncate text-sm font-semibold text-stone-700">
+          <Upload className="h-5 w-5 shrink-0 text-ink-500" />
+          <span className="min-w-0 truncate text-sm font-semibold text-ink-700">
             {file ? `${file.name} · ${(file.size / 1024 / 1024).toFixed(1)}MB` : 'Tap to choose a video'}
           </span>
         </label>
-        <p className="mt-2 text-xs text-stone-500">
+        <p className="mt-2 text-xs text-ink-500">
           Up to 100MB. A minute at 1080p from a phone is about 60MB. Cloudinary makes the poster frame and the mobile version itself.
         </p>
       </div>
 
       {busy && (
         <div>
-          <div className="h-2 overflow-hidden rounded-pill bg-stone-200">
+          <div className="h-2 overflow-hidden rounded-pill bg-calico-300">
             <div className="h-full bg-orange-500 transition-[width]" style={{ width: `${progress}%` }} />
           </div>
-          <p className="mt-1 text-xs text-stone-500">{progress! < 100 ? `Uploading… ${progress}%` : 'Saving…'}</p>
+          <p className="mt-1 text-xs text-ink-500">{progress! < 100 ? `Uploading… ${progress}%` : 'Saving…'}</p>
         </div>
       )}
 
@@ -218,7 +218,7 @@ export default function VideoUploader({ products }: Props) {
       <button
         type="submit"
         disabled={busy}
-        className="flex w-full items-center justify-center gap-2 rounded-sm bg-stone-900 px-6 py-3 text-sm font-bold text-white transition hover:bg-orange-500 disabled:opacity-50 sm:w-auto"
+        className="flex w-full items-center justify-center gap-2 rounded-sm bg-ink-900 px-6 py-3 text-sm font-bold text-white transition hover:bg-orange-500 disabled:opacity-50 sm:w-auto"
       >
         {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
         {busy ? 'Uploading' : 'Upload video'}

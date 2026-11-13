@@ -12,7 +12,7 @@ import { useRouter } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
 import { checkOrderFlowReplies, sendOrderFlowTest, setOrderFlowEnabled } from '@/app/actions/settings'
 
-const button = 'inline-flex min-h-11 items-center justify-center gap-2 rounded-sm border border-stone-300 bg-white px-4 text-sm font-bold text-stone-800 disabled:opacity-50'
+const button = 'inline-flex min-h-11 items-center justify-center gap-2 rounded-sm border border-calico-300 bg-white px-4 text-sm font-bold text-ink-900 disabled:opacity-50'
 
 export default function OrderFlowControls({ connected, enabled, testOrderCode }: { connected: boolean; enabled: boolean; testOrderCode: string | null }) {
   const router = useRouter()
@@ -68,7 +68,7 @@ export default function OrderFlowControls({ connected, enabled, testOrderCode }:
           Check for replies
         </button>
       </div>
-      <p className="m-0 text-xs leading-relaxed text-stone-500">
+      <p className="m-0 text-xs leading-relaxed text-ink-500">
         {!connected && !enabled
           ? 'Sending can be switched on once OrderFlow’s address and key are in Supabase Vault.'
           : testOrderCode

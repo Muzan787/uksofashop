@@ -56,10 +56,10 @@ interface Line {
 
 const BLANK: Line = { variantId: '', quantity: 1, price: '', fabricId: '', customTitle: '' }
 
-const label = 'block text-[11px] font-bold uppercase tracking-wider text-stone-500 mb-1.5'
+const label = 'block text-[11px] font-bold uppercase tracking-wider text-ink-500 mb-1.5'
 const field =
-  'w-full rounded-sm border border-stone-300 bg-white px-3 py-2 text-sm text-stone-900 ' +
-  'focus:border-stone-900 focus:outline-none focus:ring-0'
+  'w-full rounded-sm border border-calico-300 bg-white px-3 py-2 text-sm text-ink-900 ' +
+  'focus:border-ink-900 focus:outline-none focus:ring-0'
 
 export default function NewWhatsAppOrder({
   variants,
@@ -222,7 +222,7 @@ export default function NewWhatsAppOrder({
       <button
         type="button"
         onClick={() => { setOpen(true); setDone(null) }}
-        className="inline-flex min-h-11 items-center gap-2 rounded-sm bg-stone-900 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-white transition hover:bg-stone-700"
+        className="inline-flex min-h-11 items-center gap-2 rounded-sm bg-ink-900 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-white transition hover:bg-ink-700"
       >
         <MessageCircle className="h-4 w-4" />
         Take a WhatsApp or phone order
@@ -231,14 +231,14 @@ export default function NewWhatsAppOrder({
   }
 
   return (
-    <div className="rounded-md border border-stone-200 bg-white p-5 shadow-sm">
+    <div className="rounded-md border border-calico-300 bg-white p-5 shadow-sm">
       <div className="mb-5 flex items-start justify-between gap-4">
         <div>
-          <h2 className="flex items-center gap-2 text-base font-bold text-stone-900">
+          <h2 className="flex items-center gap-2 text-base font-bold text-ink-900">
             <MessageCircle className="h-4 w-4" />
             {channel === 'phone' ? 'Phone order' : 'WhatsApp order'}
           </h2>
-          <p className="mt-1 text-xs leading-relaxed text-stone-500">
+          <p className="mt-1 text-xs leading-relaxed text-ink-500">
             Behaves exactly like a website order: saves as <strong>pending</strong>, emails
             the customer their receipt with the confirm link (if you enter an email), and
             emails you the new-order alert with the WhatsApp button that sends them the
@@ -250,7 +250,7 @@ export default function NewWhatsAppOrder({
         <button
           type="button"
           onClick={() => setOpen(false)}
-          className="rounded-sm p-1.5 text-stone-400 transition hover:bg-stone-100 hover:text-stone-700"
+          className="rounded-sm p-1.5 text-ink-500 transition hover:bg-calico-100 hover:text-ink-700"
           aria-label="Close"
         >
           <X className="h-4 w-4" />
@@ -275,7 +275,7 @@ export default function NewWhatsAppOrder({
             <label
               key={value}
               className={`inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-sm border px-4 py-2 text-sm font-semibold transition ${
-                channel === value ? 'border-stone-900 bg-stone-900 text-white' : 'border-stone-300 bg-white text-stone-700 hover:border-stone-500'
+                channel === value ? 'border-ink-900 bg-ink-900 text-white' : 'border-calico-300 bg-white text-ink-700 hover:border-ink-500'
               }`}
             >
               <input
@@ -290,9 +290,9 @@ export default function NewWhatsAppOrder({
               {text}
             </label>
           ))}
-          <label className="inline-flex sm:ml-auto min-h-11 cursor-pointer items-center gap-2 text-sm text-stone-700">
+          <label className="inline-flex sm:ml-auto min-h-11 cursor-pointer items-center gap-2 text-sm text-ink-700">
             <input type="checkbox" checked={isTest} onChange={e => setIsTest(e.target.checked)} className="h-5 w-5 accent-violet-600" />
-            Test order <span className="text-xs text-stone-400">(kept out of reports and ads)</span>
+            Test order <span className="text-xs text-ink-500">(kept out of reports and ads)</span>
           </label>
         </fieldset>
 
@@ -307,7 +307,7 @@ export default function NewWhatsAppOrder({
           </div>
           <div className="sm:col-span-2">
             <label className={label} htmlFor="wa-email">
-              Email <span className="font-normal normal-case tracking-normal text-stone-400">— optional, but it is the strongest thing Meta can match on</span>
+              Email <span className="font-normal normal-case tracking-normal text-ink-500">— optional, but it is the strongest thing Meta can match on</span>
             </label>
             <input id="wa-email" className={field} value={email} onChange={e => setEmail(e.target.value)} inputMode="email" autoComplete="off" />
           </div>
@@ -332,7 +332,7 @@ export default function NewWhatsAppOrder({
           <p className={label}>What they are buying</p>
           <div className="space-y-2">
             {lines.map((line, i) => (
-              <div key={i} className="rounded-sm border border-stone-200 bg-stone-50/60 p-3">
+              <div key={i} className="rounded-sm border border-calico-300 bg-calico-50/60 p-3">
                 <div className="flex gap-2">
                   <SearchSelect
                     className="flex-1"
@@ -346,7 +346,7 @@ export default function NewWhatsAppOrder({
                     <button
                       type="button"
                       onClick={() => setLines(ls => ls.filter((_, n) => n !== i))}
-                      className="shrink-0 rounded-sm px-2 text-stone-400 transition hover:bg-stone-200 hover:text-stone-700"
+                      className="shrink-0 rounded-sm px-2 text-ink-500 transition hover:bg-calico-300 hover:text-ink-700"
                       aria-label="Remove this line"
                     >
                       <X className="h-4 w-4" />
@@ -405,16 +405,16 @@ export default function NewWhatsAppOrder({
           <button
             type="button"
             onClick={() => setLines(ls => [...ls, { ...BLANK }])}
-            className="mt-2 inline-flex items-center gap-1.5 text-xs font-bold text-stone-600 transition hover:text-stone-900"
+            className="mt-2 inline-flex items-center gap-1.5 text-xs font-bold text-ink-700 transition hover:text-ink-900"
           >
             <Plus className="h-3.5 w-3.5" />
             Another sofa
           </button>
         </div>
 
-        <div className="rounded-sm border border-stone-200 bg-stone-50 p-4">
+        <div className="rounded-sm border border-calico-300 bg-calico-50 p-4">
           <label className={label} htmlFor="wa-reference">
-            WhatsApp reference <span className="font-normal normal-case tracking-normal text-stone-400">— best match when the customer sent it</span>
+            WhatsApp reference <span className="font-normal normal-case tracking-normal text-ink-500">— best match when the customer sent it</span>
           </label>
           <input
             id="wa-reference"
@@ -428,10 +428,10 @@ export default function NewWhatsAppOrder({
             autoComplete="off"
           />
 
-          <div className="my-3 flex items-center gap-3 text-[10px] font-bold uppercase tracking-[0.2em] text-stone-400">
-            <span className="h-px flex-1 bg-stone-200" />
+          <div className="my-3 flex items-center gap-3 text-[10px] font-bold uppercase tracking-[0.2em] text-ink-500">
+            <span className="h-px flex-1 bg-calico-300" />
             Or
-            <span className="h-px flex-1 bg-stone-200" />
+            <span className="h-px flex-1 bg-calico-300" />
           </div>
 
           {/* The other way a WhatsApp sale starts: they got as far as
@@ -440,7 +440,7 @@ export default function NewWhatsAppOrder({
               carries its own reference instead, printed on the card in
               /admin/leads and sent in the reminder itself. */}
           <label className={label} htmlFor="lead-reference">
-            Lead reference <span className="font-normal normal-case tracking-normal text-stone-400">&mdash; if they came from a checkout reminder</span>
+            Lead reference <span className="font-normal normal-case tracking-normal text-ink-500">&mdash; if they came from a checkout reminder</span>
           </label>
           <input
             id="lead-reference"
@@ -453,7 +453,7 @@ export default function NewWhatsAppOrder({
             placeholder="UKSS-LD-261006-7E1E91"
             autoComplete="off"
           />
-          <p className="mt-2 text-xs leading-relaxed text-stone-500">
+          <p className="mt-2 text-xs leading-relaxed text-ink-500">
             Copy it from the lead in <strong>Leads</strong>, or from the
             &ldquo;Ref:&rdquo; line at the bottom of the reminder we sent them.
             It moves that visit&rsquo;s ad click onto this order, so the sale
@@ -461,10 +461,10 @@ export default function NewWhatsAppOrder({
             already-used reference is ignored and the order still saves.
           </p>
 
-          <div className="my-3 flex items-center gap-3 text-[10px] font-bold uppercase tracking-[0.2em] text-stone-400">
-            <span className="h-px flex-1 bg-stone-200" />
+          <div className="my-3 flex items-center gap-3 text-[10px] font-bold uppercase tracking-[0.2em] text-ink-500">
+            <span className="h-px flex-1 bg-calico-300" />
             Or
-            <span className="h-px flex-1 bg-stone-200" />
+            <span className="h-px flex-1 bg-calico-300" />
           </div>
 
           {/* Everyone else - swatches, a call, a chat from a saved number:
@@ -472,7 +472,7 @@ export default function NewWhatsAppOrder({
               looked at. See FindVisit.tsx. */}
           {findingVisit || visit ? (
             <div className="rounded-sm border border-blue-100 bg-blue-50/60 p-3">
-              <p className="m-0 mb-3 text-xs leading-relaxed text-stone-600">
+              <p className="m-0 mb-3 text-xs leading-relaxed text-ink-700">
                 No reference? Find their visit by time. Lists people who were on the
                 website then, with the pages they opened. Pick the one that matches what
                 the customer said. Their ad click goes on the order when you save it.
@@ -489,7 +489,7 @@ export default function NewWhatsAppOrder({
             <button
               type="button"
               onClick={() => setFindingVisit(true)}
-              className="inline-flex min-h-11 items-center gap-2 rounded-sm border border-stone-300 bg-white px-3 py-2 text-xs font-bold text-stone-700 transition hover:border-stone-400"
+              className="inline-flex min-h-11 items-center gap-2 rounded-sm border border-calico-300 bg-white px-3 py-2 text-xs font-bold text-ink-700 transition hover:border-ink-400"
             >
               <Search className="h-4 w-4" />
               No reference? Find the website visit
@@ -536,7 +536,7 @@ export default function NewWhatsAppOrder({
                 top: the balance due on delivery is the total less this. It
                 shows on the order, the delivery note, the receipt and the
                 customer's confirmation page. */}
-            <label className={label} htmlFor="wa-deposit">Deposit paid <span className="font-normal normal-case tracking-normal text-stone-400">(optional)</span></label>
+            <label className={label} htmlFor="wa-deposit">Deposit paid <span className="font-normal normal-case tracking-normal text-ink-500">(optional)</span></label>
             <input
               id="wa-deposit"
               className={field}
@@ -548,7 +548,7 @@ export default function NewWhatsAppOrder({
             />
           </div>
           {deposit.trim() !== '' && (
-            <p className="m-0 self-end pb-2 text-xs leading-snug text-stone-500 sm:col-span-2">
+            <p className="m-0 self-end pb-2 text-xs leading-snug text-ink-500 sm:col-span-2">
               {!depositEntry.ok
                 ? 'Not a valid amount.'
                 : depositTooHigh
@@ -562,17 +562,17 @@ export default function NewWhatsAppOrder({
           <p className="rounded-sm border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700">{error}</p>
         )}
 
-        <div className="flex items-center justify-between gap-4 border-t border-stone-200 pt-4">
-          <p className="text-sm text-stone-600">
-            Total <strong className="text-lg font-bold text-stone-900">£{total.toFixed(2)}</strong>
+        <div className="flex items-center justify-between gap-4 border-t border-calico-300 pt-4">
+          <p className="text-sm text-ink-700">
+            Total <strong className="text-lg font-bold text-ink-900">£{total.toFixed(2)}</strong>
             {depositEntry.ok && depositAmount > 0 && !depositTooHigh && (
-              <span className="block text-xs text-stone-500">Deposit £{depositAmount.toFixed(2)} · balance £{(total - depositAmount).toFixed(2)}</span>
+              <span className="block text-xs text-ink-500">Deposit £{depositAmount.toFixed(2)} · balance £{(total - depositAmount).toFixed(2)}</span>
             )}
           </p>
           <button
             type="submit"
             disabled={pending}
-            className="inline-flex items-center gap-2 rounded-sm bg-stone-900 px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-white transition hover:bg-stone-700 disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-sm bg-ink-900 px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-white transition hover:bg-ink-700 disabled:opacity-50"
           >
             {pending && <Loader2 className="h-4 w-4 animate-spin" />}
             {pending ? 'Saving…' : 'Save order'}

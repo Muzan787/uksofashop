@@ -26,26 +26,26 @@ export default async function AdminStatusPage() {
       <header className="space-y-3">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-orange-600">Status</p>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight text-stone-900 lg:text-3xl">{report.headline}</h1>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight text-ink-900 lg:text-3xl">{report.headline}</h1>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <StatePill state={report.state} />
-          {counts.red > 0 && <span className="text-sm text-stone-600">{counts.red} {counts.red === 1 ? 'problem' : 'problems'}</span>}
-          {counts.amber > 0 && <span className="text-sm text-stone-600">{counts.amber} not set up yet</span>}
-          <span className="text-xs text-stone-400">Checked {dualTimeText(new Date())}</span>
+          {counts.red > 0 && <span className="text-sm text-ink-700">{counts.red} {counts.red === 1 ? 'problem' : 'problems'}</span>}
+          {counts.amber > 0 && <span className="text-sm text-ink-700">{counts.amber} not set up yet</span>}
+          <span className="text-xs text-ink-500">Checked {dualTimeText(new Date())}</span>
         </div>
       </header>
 
       <ul className="space-y-3">
         {report.checks.map(c => (
-          <li key={c.key} id={c.key} className={`scroll-mt-6 rounded-md border border-l-4 border-stone-200 bg-white p-4 shadow-sm ${STATE_EDGE[c.state]}`}>
+          <li key={c.key} id={c.key} className={`scroll-mt-6 rounded-md border border-l-4 border-calico-300 bg-white p-4 shadow-sm ${STATE_EDGE[c.state]}`}>
             <div className="flex items-start justify-between gap-3">
-              <h2 className="text-base font-bold text-stone-900">{c.title}</h2>
+              <h2 className="text-base font-bold text-ink-900">{c.title}</h2>
               <StatePill state={c.state} />
             </div>
-            <p className="mt-1.5 text-sm leading-relaxed text-stone-700">{c.summary}</p>
+            <p className="mt-1.5 text-sm leading-relaxed text-ink-700">{c.summary}</p>
             {c.details.length > 0 && (
-              <ul className="mt-2 space-y-1 border-t border-stone-100 pt-2 text-xs leading-relaxed text-stone-500">
+              <ul className="mt-2 space-y-1 border-t border-calico-100 pt-2 text-xs leading-relaxed text-ink-500">
                 {c.details.map((d, i) => <li key={i} className="break-words">{d}</li>)}
               </ul>
             )}

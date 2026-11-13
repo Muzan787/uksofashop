@@ -1567,3 +1567,28 @@ html.entrance .brand-entrance__rule {
 @media (width >= 64rem) {
   .pb-bottom-bar { padding-bottom: calc(1.5rem + var(--fab-extra, 0px)); }
 }
+
+/* ─── Seasonal snow (components/Season/SeasonalSnow.tsx) ──────────────────────
+ * Quiet, optional, decoration only. One transformed layer, no JavaScript.
+ * Off for reduced motion and below 640px, and the component is only ever
+ * mounted on the seasonal bands - never in the basket, checkout or admin.
+ */
+.season-snow { display: none; }
+@media (width >= 40rem) and (prefers-reduced-motion: no-preference) {
+  .season-snow { display: block; }
+  .season-snow::before {
+    content: "";
+    position: absolute;
+    inset: -400px 0 0 0;
+    background-image:
+      radial-gradient(2px 2px at 20px 30px, rgb(255 255 255 / 0.55) 50%, transparent 51%),
+      radial-gradient(1.5px 1.5px at 90px 80px, rgb(255 255 255 / 0.45) 50%, transparent 51%),
+      radial-gradient(2.5px 2.5px at 150px 140px, rgb(255 255 255 / 0.4) 50%, transparent 51%),
+      radial-gradient(1.5px 1.5px at 60px 170px, rgb(255 255 255 / 0.5) 50%, transparent 51%);
+    background-size: 200px 200px;
+    animation: season-fall 28s linear infinite;
+    will-change: transform;
+  }
+}
+/* 400px is two whole 200px tiles, so the loop is seamless. */
+@keyframes season-fall { from { transform: translateY(0); } to { transform: translateY(400px); } }

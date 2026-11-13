@@ -29,15 +29,15 @@ export default function DeleteProduct({ id, title, ordered, reviews }: { id: str
       <summary className="min-h-11 cursor-pointer list-none py-2 text-sm font-bold text-red-700">Delete this product</summary>
       <div className="mt-2 space-y-3 border-t border-red-100 pt-3">
         {blocked ? (
-          <p className="m-0 text-sm text-stone-700">{blocked}</p>
+          <p className="m-0 text-sm text-ink-700">{blocked}</p>
         ) : (
           <>
-            <p className="m-0 text-sm text-stone-700">
+            <p className="m-0 text-sm text-ink-700">
               This removes {title} and its colourways for good. It can&apos;t be undone. Type <strong>DELETE</strong> to confirm.
             </p>
             <label className="sr-only" htmlFor="confirm-delete">Type DELETE to confirm</label>
             <input id="confirm-delete" value={typed} onChange={e => setTyped(e.target.value)} autoCapitalize="characters" autoComplete="off"
-              className="min-h-11 w-full rounded-sm border border-stone-300 px-3 text-base sm:max-w-xs" placeholder="DELETE" />
+              className="min-h-11 w-full rounded-sm border border-calico-300 px-3 text-base sm:max-w-xs" placeholder="DELETE" />
             <button
               type="button"
               disabled={typed.trim() !== 'DELETE' || busy}

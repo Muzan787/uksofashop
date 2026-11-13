@@ -19,7 +19,7 @@ function SubmitButton() {
     <button
       type="submit"
       disabled={pending}
-      className="flex min-h-11 w-full items-center justify-center gap-2 rounded-sm bg-zinc-900 py-2.5 text-sm font-bold text-white transition hover:bg-zinc-800 active:scale-[0.98] disabled:opacity-60"
+      className="flex min-h-11 w-full items-center justify-center gap-2 rounded-sm bg-ink-900 py-2.5 text-sm font-bold text-white transition hover:bg-ink-900 active:scale-[0.98] disabled:opacity-60"
     >
       {pending
         ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
@@ -31,7 +31,7 @@ function SubmitButton() {
 
 function Sent({ label }: { label: string | null }) {
   return (
-    <p className="flex min-h-11 flex-1 items-center gap-1.5 rounded-sm bg-zinc-50 px-3 text-xs font-medium text-whatsapp-dark">
+    <p className="flex min-h-11 flex-1 items-center gap-1.5 rounded-sm bg-calico-50 px-3 text-xs font-medium text-whatsapp-dark">
       <Check className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
       <span>{label ? `Emailed ${label}` : 'Emailed'}. It only goes once.</span>
     </p>

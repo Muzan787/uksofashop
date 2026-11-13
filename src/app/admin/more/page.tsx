@@ -80,29 +80,29 @@ export default async function AdminMorePage() {
   return (
     <div className="mx-auto max-w-2xl space-y-6 animate-in fade-in duration-500">
       <header>
-        <h1 className="text-2xl lg:text-3xl font-bold tracking-tight text-stone-900">More</h1>
-        <p className="mt-1 text-sm text-stone-500">Everything that isn&apos;t on the bar below.</p>
+        <h1 className="text-2xl lg:text-3xl font-bold tracking-tight text-ink-900">More</h1>
+        <p className="mt-1 text-sm text-ink-500">Everything that isn&apos;t on the bar below.</p>
       </header>
 
-      <ul className="divide-y divide-stone-200 overflow-hidden rounded-md border border-stone-200 bg-white shadow-sm">
+      <ul className="divide-y divide-calico-300 overflow-hidden rounded-md border border-calico-300 bg-white shadow-sm">
         {sections.map(({ key, href, label }) => {
           const Icon = ICONS[key] ?? Tags
           const note = notes[key]
           return (
             <li key={key}>
-              <Link href={href} className="flex min-h-16 items-center gap-4 px-4 py-3 transition hover:bg-stone-50 active:bg-stone-100">
-                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-sm bg-stone-100 text-stone-600">
+              <Link href={href} className="flex min-h-16 items-center gap-4 px-4 py-3 transition hover:bg-calico-50 active:bg-calico-100">
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-sm bg-calico-100 text-ink-700">
                   <Icon className="h-5 w-5" aria-hidden="true" />
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block text-base font-semibold text-stone-900">{label}</span>
+                  <span className="block text-base font-semibold text-ink-900">{label}</span>
                   {note && (
-                    <span className={`mt-0.5 block text-sm ${note.waiting ? 'font-semibold text-amber-700' : 'text-stone-500'}`}>
+                    <span className={`mt-0.5 block text-sm ${note.waiting ? 'font-semibold text-amber-700' : 'text-ink-500'}`}>
                       {note.text}
                     </span>
                   )}
                 </span>
-                <ChevronRight className="h-5 w-5 shrink-0 text-stone-400" aria-hidden="true" />
+                <ChevronRight className="h-5 w-5 shrink-0 text-ink-500" aria-hidden="true" />
               </Link>
             </li>
           )

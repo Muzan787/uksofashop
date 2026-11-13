@@ -58,7 +58,7 @@ const when = (iso: string | null) => dualTimeText(iso) ?? ''
 export default function RemindersTab({ leads, holds, view }: { leads: RecoveryLead[]; holds: Map<string, LeadHold>; view: 'waiting' | 'done' }) {
   return (
     <div className="space-y-4">
-      <p className="m-0 text-sm text-zinc-500">
+      <p className="m-0 text-sm text-ink-500">
         Each of these asked for a reminder before leaving checkout. WhatsApp opens the chat with the message already typed;
         Email sends it straight away, and only ever once. Tick Done once it&apos;s concluded.
       </p>
@@ -70,7 +70,7 @@ export default function RemindersTab({ leads, holds, view }: { leads: RecoveryLe
             href={leadsHref('reminders', { view: v.key === 'waiting' ? null : v.key })}
             aria-current={view === v.key ? 'page' : undefined}
             className={`inline-flex min-h-11 shrink-0 items-center rounded-sm px-3.5 text-xs font-bold transition ${
-              view === v.key ? 'bg-zinc-900 text-white' : 'border border-zinc-200 bg-white text-zinc-600 hover:border-zinc-300'
+              view === v.key ? 'bg-ink-900 text-white' : 'border border-calico-300 bg-white text-ink-700 hover:border-calico-300'
             }`}
           >
             {v.label}
@@ -79,12 +79,12 @@ export default function RemindersTab({ leads, holds, view }: { leads: RecoveryLe
       </div>
 
       {leads.length === 0 ? (
-        <div className="flex min-h-64 flex-col items-center justify-center rounded-md border border-zinc-200 bg-white px-6 py-12 text-center shadow-sm">
-          <span className="grid h-12 w-12 place-items-center rounded-full bg-zinc-100 text-zinc-400">
+        <div className="flex min-h-64 flex-col items-center justify-center rounded-md border border-calico-300 bg-white px-6 py-12 text-center shadow-sm">
+          <span className="grid h-12 w-12 place-items-center rounded-full bg-calico-100 text-ink-500">
             <Inbox className="h-5 w-5" aria-hidden="true" />
           </span>
-          <h2 className="mt-4 text-base font-bold text-zinc-900">{view === 'done' ? 'Nothing marked done yet' : 'No leads waiting'}</h2>
-          <p className="mt-1 max-w-md text-sm leading-relaxed text-zinc-500">
+          <h2 className="mt-4 text-base font-bold text-ink-900">{view === 'done' ? 'Nothing marked done yet' : 'No leads waiting'}</h2>
+          <p className="mt-1 max-w-md text-sm leading-relaxed text-ink-500">
             {view === 'done'
               ? 'Leads you tick off from the waiting list stay here for 90 days, in case one needs putting back.'
               : 'When an unfinished checkout opts in to a reminder, it appears here with the product details and a message ready to send.'}
@@ -104,7 +104,7 @@ export default function RemindersTab({ leads, holds, view }: { leads: RecoveryLe
               : null
 
             return (
-              <article key={lead.id} className="flex flex-col rounded-md border border-zinc-200 bg-white p-5 shadow-sm">
+              <article key={lead.id} className="flex flex-col rounded-md border border-calico-300 bg-white p-5 shadow-sm">
                 <div className="mb-4 flex items-start justify-between gap-4">
                   <div>
                     {lead.done_at ? (
@@ -114,33 +114,33 @@ export default function RemindersTab({ leads, holds, view }: { leads: RecoveryLe
                     ) : (
                       <p className="text-xs font-bold uppercase tracking-[0.12em] text-orange-600">{ago(lead.updated_at)}</p>
                     )}
-                    <p className="mt-0.5 text-sm text-zinc-500">{when(lead.updated_at)}</p>
+                    <p className="mt-0.5 text-sm text-ink-500">{when(lead.updated_at)}</p>
                     {/* The join between this lead and an order taken by hand:
                         pasted into the order form's "Lead reference" box so the
                         sale keeps its attribution. */}
-                    <p className="mt-1 select-all font-mono text-xs text-zinc-400">{lead.reference}</p>
+                    <p className="mt-1 select-all font-mono text-xs text-ink-500">{lead.reference}</p>
                   </div>
-                  {total !== null && <p className="text-lg font-bold text-zinc-900">{gbp(total)}</p>}
+                  {total !== null && <p className="text-lg font-bold text-ink-900">{gbp(total)}</p>}
                 </div>
 
                 {/* What they were about to buy. Codes stay here, out of the message. */}
                 {lines.length === 0 ? (
-                  <p className="text-sm text-zinc-400">No product details</p>
+                  <p className="text-sm text-ink-500">No product details</p>
                 ) : (
-                  <ul className="divide-y divide-zinc-100 rounded-sm bg-zinc-50 px-4">
+                  <ul className="divide-y divide-calico-100 rounded-sm bg-calico-50 px-4">
                     {lines.map((line, i) => (
                       <li key={i} className="flex items-start justify-between gap-4 py-3 text-sm">
                         <div className="min-w-0">
-                          <p className="font-semibold text-zinc-900">
-                            {line.quantity > 1 && <span className="text-zinc-500">{line.quantity} × </span>}
+                          <p className="font-semibold text-ink-900">
+                            {line.quantity > 1 && <span className="text-ink-500">{line.quantity} × </span>}
                             {line.title}
                           </p>
-                          {line.detail && <p className="text-zinc-600">{line.detail}</p>}
+                          {line.detail && <p className="text-ink-700">{line.detail}</p>}
                           {(line.sku || line.fabricCode) && (
-                            <p className="mt-0.5 font-mono text-xs text-zinc-400">{[line.sku, line.fabricCode].filter(Boolean).join(' · ')}</p>
+                            <p className="mt-0.5 font-mono text-xs text-ink-500">{[line.sku, line.fabricCode].filter(Boolean).join(' · ')}</p>
                           )}
                         </div>
-                        {line.lineTotal !== null && <span className="shrink-0 font-medium text-zinc-900">{gbp(line.lineTotal)}</span>}
+                        {line.lineTotal !== null && <span className="shrink-0 font-medium text-ink-900">{gbp(line.lineTotal)}</span>}
                       </li>
                     ))}
                   </ul>
@@ -149,7 +149,7 @@ export default function RemindersTab({ leads, holds, view }: { leads: RecoveryLe
                 {/* The online offer, stated for the shop: open until when, or over.
                     This is the deadline to honour in the chat, and no later. */}
                 {hold && (
-                  <p className={`mt-3 rounded-sm px-3 py-2 text-xs font-semibold ${hold.ended ? 'bg-zinc-100 text-zinc-500' : 'bg-orange-50 text-orange-700'}`}>
+                  <p className={`mt-3 rounded-sm px-3 py-2 text-xs font-semibold ${hold.ended ? 'bg-calico-100 text-ink-500' : 'bg-orange-50 text-orange-700'}`}>
                     {hold.ended
                       ? `Online offer (£${Math.round(hold.amount)}) ended ${formatOfferDeadline(hold.expiresAt)} - full price now`
                       : `Online offer: £${Math.round(hold.amount)} off until ${formatOfferDeadline(hold.expiresAt)}`}
@@ -175,7 +175,7 @@ export default function RemindersTab({ leads, holds, view }: { leads: RecoveryLe
 
                 <div className="mt-3 flex items-center justify-between gap-3">
                   {/* The details themselves, for reading a number out or pasting it elsewhere. */}
-                  <p className="min-w-0 break-all text-xs text-zinc-500">
+                  <p className="min-w-0 break-all text-xs text-ink-500">
                     {[lead.phone ? formatUkMobile(lead.phone) : null, lead.email].filter(Boolean).join(' · ')}
                   </p>
 
@@ -185,10 +185,10 @@ export default function RemindersTab({ leads, holds, view }: { leads: RecoveryLe
                     <input type="hidden" name="done" value={lead.done_at ? 'false' : 'true'} />
                     <button
                       type="submit"
-                      className="inline-flex min-h-11 items-center gap-1.5 rounded-sm border border-zinc-200 bg-white px-3.5 text-xs font-bold text-zinc-700 transition hover:border-zinc-300 hover:bg-zinc-50 active:scale-[0.98]"
+                      className="inline-flex min-h-11 items-center gap-1.5 rounded-sm border border-calico-300 bg-white px-3.5 text-xs font-bold text-ink-700 transition hover:border-calico-300 hover:bg-calico-50 active:scale-[0.98]"
                     >
                       {lead.done_at ? (
-                        <><RotateCcw className="h-4 w-4 text-zinc-400" aria-hidden="true" /> Reopen</>
+                        <><RotateCcw className="h-4 w-4 text-ink-500" aria-hidden="true" /> Reopen</>
                       ) : (
                         <><Check className="h-4 w-4 text-whatsapp-dark" aria-hidden="true" /> Done</>
                       )}

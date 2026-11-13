@@ -8,6 +8,8 @@ import { createClient } from '@/utils/supabase/server'
 import { loadHealthReport } from '@/utils/health/loadHealth'
 import { waitingChips } from '@/utils/adminWaiting'
 import { newEnquiriesSince } from '@/utils/leadsTabs'
+import { loadTaskInput } from '@/utils/adminTaskData'
+import { buildTasks } from '@/utils/adminTasks'
 import HomeView from './HomeView'
 
 export const metadata: Metadata = { title: 'Overview' }
@@ -66,6 +68,9 @@ export default async function AdminDashboardPage() {
   const confirmedRevenue = real.filter(o => COUNTS_AS_REVENUE.includes(statusOf(o))).reduce((sum, o) => sum + Number(o.total_amount), 0)
   const leadsWaiting = reminders ?? 0
 
+  // The "Needs doing" queue: facts that cannot be loaded stay unknown, never zero.
+  const tasks = buildTasks(await loadTaskInput(leadsWaiting))
+
   const chips = waitingChips({ samples: samples ?? 0, messages: messages ?? 0, reviews: reviews ?? 0, reminders: leadsWaiting, enquiries: enquiries ?? 0 })
 
   return (
@@ -76,6 +81,7 @@ export default async function AdminDashboardPage() {
       productsOnSale={productCount ?? 0}
       confirmedRevenue={confirmedRevenue}
       chips={chips}
+      tasks={tasks}
       leadsWaiting={leadsWaiting}
       latest={latest ?? []}
       health={health}

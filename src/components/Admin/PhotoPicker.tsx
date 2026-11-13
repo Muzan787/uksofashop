@@ -71,7 +71,7 @@ export default function PhotoPicker(props: Props) {
       {!props.multiple && value && (
         <div className="flex items-center gap-3">
           {/* eslint-disable-next-line @next/next/no-img-element -- Admin preview: behind auth, never indexed. */}
-          <img src={value} alt="" className="h-16 w-16 shrink-0 rounded-sm border border-stone-200 object-cover" />
+          <img src={value} alt="" className="h-16 w-16 shrink-0 rounded-sm border border-calico-300 object-cover" />
           <button type="button" onClick={() => props.onChange('')} className="inline-flex min-h-11 items-center gap-1 text-xs font-bold text-red-600">
             <X className="h-4 w-4" aria-hidden="true" /> Remove photo
           </button>
@@ -79,7 +79,7 @@ export default function PhotoPicker(props: Props) {
       )}
 
       <div className="flex gap-2">
-        <label className={`${tab} cursor-pointer border-stone-300 bg-white text-stone-700 hover:border-orange-400 ${busy ? 'opacity-60' : ''}`}>
+        <label className={`${tab} cursor-pointer border-calico-300 bg-white text-ink-700 hover:border-orange-400 ${busy ? 'opacity-60' : ''}`}>
           {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <ImagePlus className="h-4 w-4" aria-hidden="true" />}
           {busy ? 'Uploading…' : 'Upload'}
           <input
@@ -93,11 +93,11 @@ export default function PhotoPicker(props: Props) {
           />
         </label>
         <button type="button" onClick={() => setMode(mode === 'link' ? 'none' : 'link')} aria-expanded={mode === 'link'}
-          className={`${tab} ${mode === 'link' ? 'border-stone-900 bg-stone-900 text-white' : 'border-stone-300 bg-white text-stone-700 hover:border-orange-400'}`}>
+          className={`${tab} ${mode === 'link' ? 'border-ink-900 bg-ink-900 text-white' : 'border-calico-300 bg-white text-ink-700 hover:border-orange-400'}`}>
           <Link2 className="h-4 w-4" aria-hidden="true" /> Paste link
         </button>
         <button type="button" onClick={() => (mode === 'pick' ? setMode('none') : void openLibrary())} aria-expanded={mode === 'pick'}
-          className={`${tab} ${mode === 'pick' ? 'border-stone-900 bg-stone-900 text-white' : 'border-stone-300 bg-white text-stone-700 hover:border-orange-400'}`}>
+          className={`${tab} ${mode === 'pick' ? 'border-ink-900 bg-ink-900 text-white' : 'border-calico-300 bg-white text-ink-700 hover:border-orange-400'}`}>
           <Images className="h-4 w-4" aria-hidden="true" /> Our photos
         </button>
       </div>
@@ -112,7 +112,7 @@ export default function PhotoPicker(props: Props) {
             value={link}
             onChange={e => setLink(e.target.value)}
             placeholder="https://res.cloudinary.com/…"
-            className="min-h-11 min-w-0 flex-1 rounded-sm border border-stone-300 bg-white px-3 text-base"
+            className="min-h-11 min-w-0 flex-1 rounded-sm border border-calico-300 bg-white px-3 text-base"
           />
           <button
             type="button"
@@ -122,7 +122,7 @@ export default function PhotoPicker(props: Props) {
               setLink('')
               choose([url])
             }}
-            className="inline-flex min-h-11 shrink-0 items-center gap-1 rounded-sm bg-stone-900 px-4 text-sm font-bold text-white"
+            className="inline-flex min-h-11 shrink-0 items-center gap-1 rounded-sm bg-ink-900 px-4 text-sm font-bold text-white"
           >
             <Check className="h-4 w-4" aria-hidden="true" /> Use
           </button>
@@ -130,7 +130,7 @@ export default function PhotoPicker(props: Props) {
       )}
 
       {mode === 'pick' && (
-        <div className="rounded-sm border border-stone-200 bg-white p-2">
+        <div className="rounded-sm border border-calico-300 bg-white p-2">
           <label className="sr-only" htmlFor={`pick-${props.label ?? 'photo'}`}>Search our photos</label>
           <input
             id={`pick-${props.label ?? 'photo'}`}
@@ -138,20 +138,20 @@ export default function PhotoPicker(props: Props) {
             value={q}
             onChange={e => setQ(e.target.value)}
             placeholder="Search by product or colour"
-            className="mb-2 min-h-11 w-full rounded-sm border border-stone-300 px-3 text-base"
+            className="mb-2 min-h-11 w-full rounded-sm border border-calico-300 px-3 text-base"
           />
           {library === null ? (
-            <p className="m-0 flex items-center gap-2 p-2 text-sm text-stone-500"><Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> Loading photos…</p>
+            <p className="m-0 flex items-center gap-2 p-2 text-sm text-ink-500"><Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> Loading photos…</p>
           ) : shown.length === 0 ? (
-            <p className="m-0 p-2 text-sm text-stone-500">No photos match that.</p>
+            <p className="m-0 p-2 text-sm text-ink-500">No photos match that.</p>
           ) : (
             <ul className="m-0 grid max-h-72 list-none grid-cols-3 gap-2 overflow-y-auto p-0 sm:grid-cols-5">
               {shown.map(p => (
                 <li key={p.url}>
                   <button type="button" onClick={() => choose([p.url])} className="block w-full text-left" title={p.label}>
                     {/* eslint-disable-next-line @next/next/no-img-element -- Admin preview: behind auth, never indexed. */}
-                    <img src={p.url} alt="" loading="lazy" className="aspect-square w-full rounded-sm border border-stone-200 object-cover" />
-                    <span className="mt-0.5 block truncate text-[10px] text-stone-500">{p.label}</span>
+                    <img src={p.url} alt="" loading="lazy" className="aspect-square w-full rounded-sm border border-calico-300 object-cover" />
+                    <span className="mt-0.5 block truncate text-[10px] text-ink-500">{p.label}</span>
                   </button>
                 </li>
               ))}

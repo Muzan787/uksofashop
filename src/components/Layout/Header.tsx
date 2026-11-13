@@ -12,6 +12,8 @@ import MobileMenu from './MobileMenu';
 import SearchOverlay from './SearchOverlay';
 import { useOffer } from '@/components/Offer/OfferProvider';
 import OfferAnnouncement from '@/components/Offer/OfferAnnouncement';
+import { useSeasonPhase } from '@/components/Season/useSeasonPhase';
+import { seasonBarText, seasonHref } from '@/utils/seasonal';
 
 /** One message. This bar used to cycle four of them every four seconds. */
 const ANNOUNCEMENT = ANNOUNCEMENTS[0];
@@ -79,9 +81,22 @@ export default function Header({ categories }: { categories: NavCategory[] }) {
   // took 72px off the top of every ad landing page. While the visitor's
   // window is open it is the countdown - its own component, so the tick
   // re-renders a line of text rather than this whole header.
+  //
+  // Seasonal clause (14 Nov to 25 Dec): a date or a prompt to check delivery,
+  // never a price or a sale - see utils/seasonal.ts. On a phone it replaces
+  // the standing promise and is left out beside the countdown, which is the
+  // more useful line there.
+  const season = useSeasonPhase();
+  const seasonText = seasonBarText(season);
+  const seasonLink = seasonHref(season);
+  const seasonal = seasonText && seasonLink
+    ? <Link href={seasonLink} className="text-ember-300 underline-offset-4 hover:underline">{seasonText}</Link>
+    : null;
   const announcement = offerActive
-    ? <OfferAnnouncement />
-    : ANNOUNCEMENT;
+    ? <><OfferAnnouncement />{seasonal && <span className="hidden sm:inline"> · {seasonal}</span>}</>
+    : seasonal
+      ? <>{seasonal}<span className="hidden sm:inline"> · {ANNOUNCEMENT}</span></>
+      : ANNOUNCEMENT;
 
   const [scrolled, setScrolled] = useState(false);
   const [scrollDir, setScrollDir] = useState<'up' | 'down'>('up');
