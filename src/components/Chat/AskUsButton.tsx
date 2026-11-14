@@ -14,11 +14,17 @@
 // an event; until it has, this renders nothing.
 
 import { useEffect, useState } from 'react';
-import { MessageCircleQuestionMark } from 'lucide-react';
+import { MessageCircleQuestionMark, Snowflake } from 'lucide-react';
+import { useSeasonPhase } from '@/components/Season/useSeasonPhase';
 import { ASSISTANT_OPEN_EVENT, ASSISTANT_READY_EVENT, assistantReady } from './assistantEvents';
 
 export default function AskUsButton() {
   const [ready, setReady] = useState(false);
+  // Seasonal accent (14 Nov - 25 Dec): one static snowflake and the question
+  // people actually ask in the run-up. No character, no motion: on a product
+  // page this row sits beside WhatsApp and Add to cart, and anything that moves
+  // there competes with them. See the Run 4 report for the decision.
+  const seasonal = useSeasonPhase() !== 'off';
 
   useEffect(() => {
     const check = () => setReady(assistantReady());
@@ -40,9 +46,14 @@ export default function AskUsButton() {
         <MessageCircleQuestionMark aria-hidden="true" className="h-4 w-4" />
       </span>
       <span className="flex min-w-0 flex-col">
-        <span className="eyebrow text-ink-900">Quick question? Ask us</span>
+        <span className="eyebrow flex items-center gap-1.5 text-ink-900">
+          Quick question? Ask us
+          {seasonal && <Snowflake aria-hidden="true" className="h-3.5 w-3.5 text-indigo-700" />}
+        </span>
         <span className="mt-0.5 text-caption leading-snug text-ink-500">
-          Instant answers on delivery, payment and whether it will fit.
+          {seasonal
+            ? 'Instant answers on delivery, payment, whether it will fit - and timing for Christmas.'
+            : 'Instant answers on delivery, payment and whether it will fit.'}
         </span>
       </span>
     </button>

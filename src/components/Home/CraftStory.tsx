@@ -114,27 +114,46 @@ export default function CraftStory() {
     const mq = window.matchMedia('(min-width: 1024px)');
     if (!mq.matches) return;
 
-    const io = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (!entry.isIntersecting) continue;
-          const i = Number((entry.target as HTMLElement).dataset.panel);
-          if (!Number.isNaN(i)) setActive(i);
-        }
-      },
-      // A band across the middle of the viewport: a panel becomes active as it
-      // comes level with the pinned photograph, not as it enters the screen.
-      { rootMargin: '-45% 0px -45% 0px', threshold: 0 },
-    );
-
-    panels.current.forEach((node) => node && io.observe(node));
-    return () => io.disconnect();
+    // Which panel's middle is nearest the middle of the screen. Measured on
+    // scroll (once per frame) rather than with an IntersectionObserver band:
+    // the band could miss a panel entirely on a fast scroll or a short
+    // viewport, and the photograph then stayed on step one for all three.
+    let frame = 0;
+    const pick = () => {
+      frame = 0;
+      const mid = window.innerHeight / 2;
+      let best = 0;
+      let bestDistance = Infinity;
+      panels.current.forEach((node, i) => {
+        if (!node) return;
+        const r = node.getBoundingClientRect();
+        const distance = Math.abs(r.top + r.height / 2 - mid);
+        if (distance < bestDistance) { bestDistance = distance; best = i; }
+      });
+      setActive(best);
+    };
+    const onScroll = () => { if (!frame) frame = window.requestAnimationFrame(pick); };
+    frame = window.requestAnimationFrame(pick);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+      if (frame) window.cancelAnimationFrame(frame);
+    };
   }, []);
 
   return (
+    // overflow-CLIP, not overflow-hidden (14 Nov 2026). `hidden` makes this
+    // section a scroll container, and a sticky child sticks to its nearest
+    // scroll container - this section, which never scrolls - so on desktop the
+    // photograph scrolled away with step one and steps two and three sat beside
+    // an empty indigo column. `clip` still trims the aurora but is not a scroll
+    // container, so the photograph pins to the viewport as designed. Proven in
+    // a 1366px browser: photo top -595 / -723px before, 96px for all three after.
     <section
       data-ground="dark"
-      className="grad-indigo grain relative isolate overflow-hidden bg-indigo-700 text-calico-50"
+      className="grad-indigo grain relative isolate overflow-clip bg-indigo-700 text-calico-50"
     >
       {/* The one cool section on the page, so it gets the cool wash and none of
           the ember. The warm blobs belong to the ink sections; running them
@@ -226,7 +245,7 @@ export default function CraftStory() {
                   <div
                     ref={(node) => { panels.current[i] = node; }}
                     data-panel={i}
-                    className="lg:flex lg:min-h-[85vh] lg:flex-col lg:justify-center"
+                    className="lg:flex lg:min-h-[70vh] lg:flex-col lg:justify-center"
                   >
                     {/* ── The trigger. Mobile only. ────────────────────── */}
                     <h3 className="m-0 lg:hidden">

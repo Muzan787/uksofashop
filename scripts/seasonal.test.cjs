@@ -44,7 +44,7 @@ test('days until Black Friday counts calendar days', () => {
 test('no seasonal sentence states a price, a discount figure, a stock level or a Christmas guarantee', () => {
   const words = []
   for (const phase of ['run_up', 'black_friday', 'christmas']) {
-    words.push(s.seasonBarText(phase))
+    for (const offer of [true, false]) { const b = s.seasonBar(phase, offer); words.push(b.lead, b.cta) }
     const strip = s.seasonStrip(phase)
     words.push(strip.eyebrow, strip.headline, strip.body, strip.cta)
   }
@@ -56,7 +56,8 @@ test('no seasonal sentence states a price, a discount figure, a stock level or a
 })
 
 test('off-season there is no bar text, no strip and no link', () => {
-  assert.equal(s.seasonBarText('off'), null)
+  assert.equal(s.seasonBar('off', true), null)
+  assert.equal(s.seasonBar('off', false), null)
   assert.equal(s.seasonStrip('off'), null)
   assert.equal(s.seasonHref('off'), null)
 })
@@ -64,4 +65,22 @@ test('off-season there is no bar text, no strip and no link', () => {
 test('Monday is the one day without delivery', () => {
   assert.equal(s.isDeliveryDay('2026-11-30'), false)
   assert.equal(s.isDeliveryDay('2026-11-27'), true)
+})
+
+test('the bar names an action and a real destination, and only mentions an offer when the visitor holds one', () => {
+  for (const phase of ['run_up', 'black_friday', 'christmas']) {
+    for (const offer of [true, false]) {
+      const b = s.seasonBar(phase, offer)
+      assert.ok(b.cta.length > 0)
+      assert.match(b.href, /^\/(shop\/all|black-friday|christmas)$/)
+      if (!offer) assert.doesNotMatch(b.lead + ' ' + b.cta, /your offer|your sofa offer/i, 'no offer claimed without an entitlement')
+    }
+  }
+  assert.doesNotMatch(s.seasonBar('run_up', false).lead, /^Black Friday is \d/, 'not a bare date any more')
+})
+
+test('the seasonal announcement has no stored dismissal: a refresh or a new page shows it again', () => {
+  const header = fs.readFileSync(path.join(__dirname, '..', 'src/components/Layout/Header.tsx'), 'utf8')
+  assert.match(header, /setAnnoVisible\(true\)/)
+  assert.doesNotMatch(header, /(localStorage|sessionStorage).*anno/i)
 })

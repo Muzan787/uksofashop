@@ -712,9 +712,40 @@ function DetailsStep({
         <ArrowLeft aria-hidden="true" className="h-3.5 w-3.5" /> Back to Cart
       </button>
 
+      {/* CRO, 14 Nov 2026 (Run 4, see the journey report). In 30 days of
+          mobile sessions, 163 reached this step without placing an order and
+          most never touched a field; only two met a validation error. On a
+          375px phone the first screen was the large WhatsApp panel, with the
+          first field (Full Name) starting below the fold, and the answer to
+          "what am I committing to?" sat at the very bottom beside Place Order.
+          Now, on phones only: the reassurance comes first, in two lines, and
+          the WhatsApp route is the same one-tap link used at the foot of this
+          form (same message, same tracking context), so Full Name is on the
+          first screen. Tablets and desktops keep the full panel. Every word is
+          already true further down this page; the form, totals, fees and
+          Place Order are unchanged. Reversible by restoring the panel. */}
+      <ul
+        data-checkout-reassurance=""
+        className="m-0 mb-4 grid list-none gap-1 rounded-sm border border-sage-300 bg-sage-50 px-3.5 py-2.5 text-caption leading-snug text-ink-900"
+      >
+        <li className="flex items-start gap-2">
+          <ShieldCheck aria-hidden="true" className="mt-px h-4 w-4 shrink-0 text-sage-700" />
+          <span>
+            <strong>No payment on this page.</strong>{' '}
+            {hasDepositLine(cartItems)
+              ? 'The balance is paid by cash or bank transfer when it is in your room.'
+              : 'You pay by cash or bank transfer when it is in your room.'}
+          </span>
+        </li>
+        <li className="flex items-start gap-2">
+          <Check aria-hidden="true" className="mt-px h-4 w-4 shrink-0 text-sage-700" />
+          <span>Five details: name, email, mobile, postcode and address.</span>
+        </li>
+      </ul>
+
       <OrderOnWhatsApp
         variant="panel"
-        className="mb-6"
+        className="mb-6 hidden sm:block"
         items={cartItems}
         total={Math.max(0, totalAmount - offerDiscount)}
         discounted={offerDiscount > 0}
@@ -723,6 +754,16 @@ function DetailsStep({
         preferredDeliveryDate={form.preferredDeliveryDate || undefined}
         deliveryFee={deliveryCheck?.status === 'mainland' ? deliveryCheck.fee : undefined}
         deliveryRegion={deliveryCheck?.status === 'mainland' ? deliveryCheck.region : undefined}
+        pageContext="checkout_details_whatsapp_order"
+      />
+      <OrderOnWhatsApp
+        variant="link"
+        className="mb-4 sm:hidden"
+        items={cartItems}
+        total={Math.max(0, totalAmount - offerDiscount)}
+        discounted={offerDiscount > 0}
+        postcode={form.postcode}
+        extras={extras}
         pageContext="checkout_details_whatsapp_order"
       />
 

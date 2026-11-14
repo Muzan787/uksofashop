@@ -13,7 +13,7 @@ import SearchOverlay from './SearchOverlay';
 import { useOffer } from '@/components/Offer/OfferProvider';
 import OfferAnnouncement from '@/components/Offer/OfferAnnouncement';
 import { useSeasonPhase } from '@/components/Season/useSeasonPhase';
-import { seasonBarText, seasonHref } from '@/utils/seasonal';
+import { seasonBar } from '@/utils/seasonal';
 
 /** One message. This bar used to cycle four of them every four seconds. */
 const ANNOUNCEMENT = ANNOUNCEMENTS[0];
@@ -87,16 +87,25 @@ export default function Header({ categories }: { categories: NavCategory[] }) {
   // the standing promise and is left out beside the countdown, which is the
   // more useful line there.
   const season = useSeasonPhase();
-  const seasonText = seasonBarText(season);
-  const seasonLink = seasonHref(season);
-  const seasonal = seasonText && seasonLink
-    ? <Link href={seasonLink} className="text-ember-300 underline-offset-4 hover:underline">{seasonText}</Link>
+  const bar = seasonBar(season, offerActive);
+  const seasonal = bar
+    ? (
+      // One link, so the whole line is the tap target on a phone. The action
+      // words join it from 640px up; below that the sentence alone fits on
+      // one line at 375px.
+      <Link href={bar.href} className="text-calico-300 no-underline hover:text-calico-50">
+        {bar.lead}
+        <span className="hidden sm:inline"> · <span className="text-ember-300 underline underline-offset-4">{bar.cta}</span></span>
+        <span aria-hidden="true" className="text-ember-300"> →</span>
+      </Link>
+    )
     : null;
+  // With a live offer the countdown stays first and whole: it is the real
+  // deadline. The seasonal sentence joins it from 640px up; on a phone the
+  // countdown keeps the one line.
   const announcement = offerActive
     ? <><OfferAnnouncement />{seasonal && <span className="hidden sm:inline"> · {seasonal}</span>}</>
-    : seasonal
-      ? <>{seasonal}<span className="hidden sm:inline"> · {ANNOUNCEMENT}</span></>
-      : ANNOUNCEMENT;
+    : seasonal ?? ANNOUNCEMENT;
 
   const [scrolled, setScrolled] = useState(false);
   const [scrollDir, setScrollDir] = useState<'up' | 'down'>('up');
@@ -144,6 +153,10 @@ export default function Header({ categories }: { categories: NavCategory[] }) {
   const [lastPath, setLastPath] = useState(pathname);
   if (pathname !== lastPath) {
     setLastPath(pathname);
+    // Dismissing the announcement hides it for this page view only (owner,
+    // 14 Nov 2026): a new page, or a refresh (fresh state), shows it again.
+    // Deliberately no localStorage/sessionStorage flag.
+    setAnnoVisible(true);
     setMenuOpen(false);
     setSearchOpen(false);
     setMegaOpen(false);

@@ -341,11 +341,12 @@ function renderPrompt(catalogue: string | null, fabrics: string | null, s: ShopS
 # The business
 
 - Name: UK Sofa Shop. Showroom: ${ADDRESS_LINE} (by appointment). Phone and WhatsApp: ${PHONE_DISPLAY}. Email: ${SUPPORT_EMAIL}. Hours: ${renderHours()}.
-- Website pages worth pointing to: /shop/all (every sofa), /shop/corner-sofa, /shop/fabric-sofa, /shop/leather-sofa, /shop/recliner, /shop/electric-sofa, /shop/3-2-seater, /fabrics (the fabric guide), /swatches (up to ${s.sampleLimit} fabric samples posted to UK Mainland for ${SAMPLE_FEE}, refunded against a later order), /size-guide (doorway calculator), /care-guide, /delivery-returns, /faq, /showroom, /contact, /reviews, /track-order.
+- Website pages worth pointing to: /shop/all (every sofa), /shop/corner-sofa, /shop/fabric-sofa, /shop/leather-sofa, /shop/recliner, /shop/electric-sofa, /shop/3-2-seater, /fabrics (the fabric guide), /swatches (up to ${s.sampleLimit} fabric samples posted to UK Mainland for ${SAMPLE_FEE}, refunded against a later order), /size-guide (doorway calculator), /care-guide, /delivery-returns, /faq, /showroom, /contact, /reviews, /track-order, /black-friday (how the online offers work), /christmas (Christmas delivery).
 
 # Promises
 
 - Delivery: ${PROMISES.delivery.long} ${PROMISES.delivery.timingLong} No minimum order.
+- Christmas and Black Friday: Black Friday is Friday 27 November and Christmas Day is Friday 25 December 2026. There is no separate Black Friday sale announced; the only reduction is the visitor's own online offer shown on each eligible sofa page. There is no published Christmas cut-off and no Christmas delivery is guaranteed: made-to-order sofas are built after ordering, so timing depends on the sofa, the fabric and the postcode. Point anyone asking whether a sofa can arrive before Christmas to WhatsApp with the sofa and their postcode, or to /christmas. Never promise a date.
 - Delivery charges by distance from Blackburn, by postcode district: ${DELIVERY_CHARGE_NOTE} Everywhere else on UK Mainland is free. If asked about a specific place, say which band it is likely in and that the postcode check on any product page, or checkout, gives the exact figure.
 - Delivery area: ${DELIVERY_AREA_NOTE} The team still delivers to those places - it is quoted individually on WhatsApp before the order is placed.
 - Payment: ${PROMISES.payment.long} Cash or bank transfer at the door. No card payments, no finance. ${DEPOSIT.terms} Do not quote a deposit figure: the team agrees it on the call.

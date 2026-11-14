@@ -45,20 +45,46 @@ export function daysUntil(dateKey: string, now: Date): number {
   return Math.round((b - a) / 86400000)
 }
 
+export interface SeasonBar {
+  /** The sentence. Never a price, a percentage or a deadline of its own. */
+  lead: string
+  /** The link's words: an action the visitor can take now. */
+  cta: string
+  href: string
+}
+
 /**
- * The seasonal clause for the announcement bar, or null. Short, because the
- * bar has one line at 375px; the full wording lives on the landing pages.
+ * The announcement bar's seasonal message, or null (14 Nov 2026 revision).
+ *
+ * The first version said only "Black Friday is 27 Nov": a date with no reason
+ * to act. This one gives the reason, chosen by what is TRUE for this visitor:
+ *   - `offerActive` - they hold a live SOFAEXTRA window. The countdown beside
+ *     this text is the real deadline; the message sends them to see their
+ *     price, which every eligible product page shows with the saving taken off.
+ *   - otherwise - no offer is claimed at all; the message is about choosing
+ *     the sofa in time, which is what the season really asks of a buyer of a
+ *     made-to-order sofa.
+ * The bar has one line at 375px, so `lead` stays short and the full detail
+ * lives on the pages it links to.
  */
-export function seasonBarText(phase: SeasonPhase): string | null {
+export function seasonBar(phase: SeasonPhase, offerActive: boolean): SeasonBar | null {
   switch (phase) {
-    case 'run_up': return 'Black Friday is 27 Nov'
-    case 'black_friday': return 'Black Friday weekend · Cyber Monday 30 Nov'
-    case 'christmas': return 'Christmas: check your delivery date'
-    default: return null
+    case 'run_up':
+      return offerActive
+        ? { lead: 'Your sofa offer is ready', cta: 'Check your price', href: '/shop/all' }
+        : { lead: 'Get set for Black Friday', cta: 'Explore the range', href: '/shop/all' }
+    case 'black_friday':
+      return offerActive
+        ? { lead: 'Black Friday weekend: your offer is on', cta: 'Check your price', href: '/shop/all' }
+        : { lead: 'Black Friday weekend', cta: 'See how our offers work', href: '/black-friday' }
+    case 'christmas':
+      return { lead: 'Planning for Christmas?', cta: 'Check delivery for your sofa', href: '/christmas' }
+    default:
+      return null
   }
 }
 
-/** Where the seasonal clause leads. */
+/** Where the seasonal landing for this phase is (the homepage band links here). */
 export function seasonHref(phase: SeasonPhase): string | null {
   switch (phase) {
     case 'run_up':
