@@ -143,9 +143,11 @@ export function buildReceipt(order: AdminOrderDisplay): Receipt {
       // The photo colourway is only said when no fabric was chosen: a sofa built
       // in "Chenille Mink" is not also "Grey".
       summary: [
-        item.fabric_code
-          ? `Fabric: ${finish.label ? `${finish.label} ` : ''}(${item.fabric_code})`
-          : item.product_variants?.color ? `Colour: ${item.product_variants.color}` : '',
+        finish.code
+          ? `Fabric: ${finish.label ? `${finish.label} ` : ''}(${finish.code})`
+          : finish.chosen
+            ? `Fabric: ${finish.label}`
+            : item.product_variants?.color ? `Colour: ${item.product_variants.color}` : '',
         item.product_variants?.sku ? `SKU ${item.product_variants.sku}` : '',
       ].filter(Boolean),
       details: describeCustomisation(item.customisation),

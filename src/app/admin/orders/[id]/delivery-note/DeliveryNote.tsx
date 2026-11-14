@@ -110,7 +110,7 @@ export default function DeliveryNote({ order }: { order: OrderWithLines }) {
                   <p className="m-0 text-base font-bold">{item.quantity} × {itemTitle(item)}</p>
                   <p className="m-0 text-sm text-ink-700">
                     {[
-                      finish.label && (finish.code ? `Fabric: ${finish.label} (${finish.code})` : `Colour: ${finish.label}`),
+                      finish.label && (finish.chosen ? `Fabric: ${finish.label}${finish.code ? ` (${finish.code})` : ''}` : `Colour: ${finish.label}`),
                       item.product_variants?.sku && `SKU ${item.product_variants.sku}`,
                     ].filter(Boolean).join(' · ')}
                   </p>

@@ -240,3 +240,26 @@ test('the text copied to WhatsApp states the balance to collect', () => {
   assert.match(withDeposit, /Total: £1330\.00\nDeposit paid: −£200\.00\nBalance to collect on delivery: £1130\.00/)
   assert.doesNotMatch(formatOrderForCopy(ORDER), /Deposit/)
 })
+
+// ── A fabric typed by hand (2026-11-14) ─────────────────────────────────────
+// Stored as fabric_name with no code: every reader prints it as the fabric.
+const { describeFinish, finishText } = load('src/utils/orderFinish.ts', {}, { env: {} })
+const TYPED = { ...ORDER.order_items[0], fabric_code: null, fabric_collection: null, fabric_id: null, fabric_name: 'Rust Leather' }
+
+test('a typed fabric is the fabric, not the photo colour', () => {
+  assert.deepEqual(plain(describeFinish({ ...TYPED, color: 'Grey' })), { label: 'Rust Leather', code: null, chosen: true })
+  assert.equal(finishText({ ...TYPED, color: 'Grey' }), 'Rust Leather')
+  // Nothing chosen: the colour, and it is not called a fabric.
+  assert.deepEqual(plain(describeFinish({ color: 'Grey' })), { label: 'Grey', code: null, chosen: false })
+  // A library fabric is unchanged.
+  assert.equal(finishText({ fabric_code: 'CH02', fabric_name: 'Mink', fabric_collection: 'Chenille', color: 'Grey' }), 'Chenille Mink (CH02)')
+})
+
+test('the receipt and the copied text print a typed fabric as the fabric', () => {
+  const r = buildReceipt({ ...ORDER, order_items: [TYPED] })
+  assert.deepEqual(plain(r.lines[0].summary), ['Fabric: Rust Leather', 'SKU VER-GR'])
+  const { formatOrderForCopy } = load('src/utils/orderText.ts', {}, { env: {} })
+  const text = formatOrderForCopy({ ...ORDER, order_items: [TYPED] })
+  assert.match(text, /Fabric: Rust Leather/)
+  assert.doesNotMatch(text, /Grey/)
+})

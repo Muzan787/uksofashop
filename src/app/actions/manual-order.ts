@@ -65,6 +65,12 @@ const itemSchema = z.object({
    * is still required: it prices the line and it is what every report counts.
    */
   custom_title: z.string().trim().max(120).nullish(),
+  /**
+   * A fabric the library does not hold, typed by staff (a leather, say). Used
+   * only when no fabric_id is given; stored as the line's fabric_name. See
+   * 20261114170000_order_item_custom_fabric.sql.
+   */
+  custom_fabric: z.string().trim().max(120).nullish(),
 })
 
 const schema = z.object({
@@ -332,6 +338,7 @@ export async function createWhatsAppOrder(input: ManualOrderInput): Promise<Manu
       unit_price: i.unit_price,
       fabric_id: i.fabric_id ?? null,
       custom_title: i.custom_title || null,
+      custom_fabric: i.fabric_id ? null : i.custom_fabric || null,
     })),
     p_delivery_charge: v.deliveryCharge,
     p_source: 'whatsapp',

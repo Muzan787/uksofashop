@@ -38,6 +38,8 @@ interface Line {
   fabricId: string
   /** A name of our own, for something built to order. Empty means the catalogue title. */
   customTitle: string
+  /** A fabric typed by hand, not in the library. Empty means none (or the library pick). */
+  customFabric: string
 }
 
 const label = 'block text-[11px] font-bold uppercase tracking-wider text-ink-500 mb-1.5'
@@ -59,6 +61,8 @@ function linesFrom(order: AdminOrderDisplay): Line[] {
     price: Number(item.price_at_time_of_purchase).toFixed(2),
     fabricId: item.fabric_id ?? '',
     customTitle: item.custom_title ?? '',
+    // A fabric name with no library fabric behind it is one typed by hand.
+    customFabric: item.fabric_id ? '' : (item.fabric_name ?? ''),
   }))
 }
 
@@ -156,6 +160,9 @@ export default function EditOrderForm({
           // Always sent, empty included: an empty one clears a name that is
           // wrong, rather than leaving the line with it forever.
           custom_title: l.customTitle,
+          // Likewise: an empty one clears a typed fabric. Ignored by the
+          // database when a library fabric is picked.
+          custom_fabric: l.fabricId ? '' : l.customFabric,
         })),
       })
       if ('error' in res) { setError(res.error); return }
@@ -280,19 +287,32 @@ export default function EditOrderForm({
                   <SearchSelect
                     options={fabricOptions}
                     value={line.fabricId}
-                    onChange={id => setLine(i, { fabricId: id })}
+                    // Picking from the library replaces a typed fabric.
+                    onChange={id => setLine(i, id ? { fabricId: id, customFabric: '' } : { fabricId: id })}
                     ariaLabel="Fabric"
                     placeholder="Search fabrics by name or code…"
                     emptyOptionLabel="No fabric chosen"
                   />
                 )}
+                {/* A fabric the library does not hold - a leather, a supplier's own
+                    range. Typing one replaces a library pick; it prints as the
+                    fabric on the order, the receipt, the note and the customer's pages. */}
+                <input
+                  className={field}
+                  value={line.customFabric}
+                  onChange={e => setLine(i, e.target.value.trim() ? { customFabric: e.target.value, fabricId: '' } : { customFabric: e.target.value })}
+                  maxLength={120}
+                  aria-label="Custom fabric"
+                  placeholder="Or type a fabric (optional)"
+                  autoComplete="off"
+                />
               </div>
             </div>
           ))}
         </div>
         <button
           type="button"
-          onClick={() => setLines(ls => [...ls, { itemId: null, variantId: '', fallbackLabel: '', quantity: 1, price: '', fabricId: '', customTitle: '' }])}
+          onClick={() => setLines(ls => [...ls, { itemId: null, variantId: '', fallbackLabel: '', quantity: 1, price: '', fabricId: '', customTitle: '', customFabric: '' }])}
           className="mt-2 inline-flex items-center gap-1.5 text-xs font-bold text-ink-700 transition hover:text-ink-900"
         >
           <Plus className="h-3.5 w-3.5" />

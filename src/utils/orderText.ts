@@ -17,7 +17,7 @@ import type { AdminOrderDisplay, AdminOrderItemDisplay } from '@/types/adminOrde
 import { describeCustomisation } from '@/utils/productOptions'
 import { formatPreferredDeliveryDate } from '@/utils/delivery'
 import { DELIVERY_DAYS } from '@/constants/promises'
-import { finishText } from '@/utils/orderFinish'
+import { describeFinish, finishText } from '@/utils/orderFinish'
 import { itemTitle } from '@/utils/orderItemTitle'
 import { depositFigures } from '@/utils/orderDeposit'
 
@@ -68,12 +68,12 @@ function itemBlock(item: AdminOrderItemDisplay): string {
     // The photo colourway, only when no fabric was chosen - a made-to-order
     // sofa is built in the fabric below, and "Grey" above "Chenille Mink"
     // reads as two instructions.
-    [!item.fabric_code && item.product_variants?.color, item.product_variants?.sku && `SKU: ${item.product_variants.sku}`]
+    [!describeFinish(item).chosen && item.product_variants?.color, item.product_variants?.sku && `SKU: ${item.product_variants.sku}`]
       .filter(Boolean)
       .join(' • '),
     // The fabric it gets built in, when one was chosen. Losing this on the way
     // into a chat is how a made-to-order sofa gets built in the wrong colour.
-    item.fabric_code && `Fabric: ${finishText(item)}`,
+    describeFinish(item).chosen && `Fabric: ${finishText(item)}`,
     // Everything the customer chose on /build, one line each. Same words the
     // customer read on the summary screen and the basket.
     ...describeCustomisation(item.customisation).map(line => `${line.label}: ${line.value}`),

@@ -238,7 +238,7 @@ export default async function ConfirmOrderPage({
               // variant's colourway for a stocked one, and calling a
               // photographed colourway a fabric is how somebody ends up
               // expecting grey chenille. See utils/orderFinish.ts.
-              const chose = describeFinish({ ...item, color: item.color }).code !== null
+              const chose = describeFinish({ ...item, color: item.color }).chosen
               const finish = finishText({ ...item, color: item.color })
               const build = describeCustomisation(item.customisation)
 

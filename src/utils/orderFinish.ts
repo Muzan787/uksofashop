@@ -25,10 +25,18 @@ interface FinishSource {
 interface Finish {
   /** "Chenille Mink" for a chosen fabric, else the variant colour, else null. */
   label: string | null
-  /** The fabric code the purchase order needs, when a fabric was chosen. */
+  /** The fabric code the purchase order needs, when a library fabric was chosen. */
   code: string | null
+  /**
+   * True when the line names a fabric - from the library, or typed by staff -
+   * rather than falling back to the photo colour. Decides "Fabric" vs "Colour".
+   */
+  chosen: boolean
 }
 
+// A typed fabric (2026-11-14): staff can enter one the library does not hold,
+// say a leather. It is stored as fabric_name with no code or collection, so a
+// name without a code is that fabric, not a gap in the data.
 export function describeFinish(item: FinishSource): Finish {
   const code = item.fabric_code?.trim() || null
   if (code) {
@@ -36,9 +44,11 @@ export function describeFinish(item: FinishSource): Finish {
       .map(s => s?.trim())
       .filter(Boolean)
       .join(' ')
-    return { label: label || null, code }
+    return { label: label || null, code, chosen: true }
   }
-  return { label: item.color?.trim() || null, code: null }
+  const typed = item.fabric_name?.trim()
+  if (typed) return { label: typed, code: null, chosen: true }
+  return { label: item.color?.trim() || null, code: null, chosen: false }
 }
 
 /** "Chenille Mink (CH02)" or "Grey" or "". */

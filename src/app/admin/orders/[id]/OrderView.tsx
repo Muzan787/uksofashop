@@ -32,6 +32,7 @@ import { firstName, orderWhatsAppMessage, postcodeOf } from '@/utils/orderWhatsA
 import { formatUkMobile, whatsAppLink } from '@/utils/phone'
 import { formatPreferredDeliveryDate } from '@/utils/delivery'
 import { itemTitle } from '@/utils/orderItemTitle'
+import { describeFinish } from '@/utils/orderFinish'
 import { asBuildSnapshot, describeBuild } from '@/types/build'
 import { describeOptions, isOptionsSnapshot } from '@/utils/productOptions'
 import { trustpilotInviteLink } from '@/constants/trustpilot'
@@ -369,16 +370,17 @@ export default function OrderView({ order, events, sends, reviewLinks, receiptSe
             // of a /build specification. Both live in customisation.
             const options = isOptionsSnapshot(item.customisation) ? describeOptions(item.customisation) : null
             const build = options ? null : asBuildSnapshot(item.customisation)
+            const finish = describeFinish({ ...item, color: item.product_variants?.color })
             return (
               <li key={item.id} className="flex items-start justify-between gap-3 py-3">
                 <div className="min-w-0 text-sm">
                   <p className="m-0 font-semibold text-ink-900">{item.quantity} × {itemTitle(item)}</p>
                   {/* The variant colour is the photograph; once a fabric is
                       chosen it is not printed, so the line reads as one colour. */}
-                  <p className="m-0 text-xs text-ink-500">{[!item.fabric_code && item.product_variants?.color, item.product_variants?.sku && `SKU ${item.product_variants.sku}`].filter(Boolean).join(' · ')}</p>
-                  {item.fabric_code && (
+                  <p className="m-0 text-xs text-ink-500">{[!finish.chosen && item.product_variants?.color, item.product_variants?.sku && `SKU ${item.product_variants.sku}`].filter(Boolean).join(' · ')}</p>
+                  {finish.chosen && (
                     <p className="m-0 mt-0.5 text-xs font-semibold text-amber-800">
-                      {item.fabric_collection} {item.fabric_name} <span className="font-mono text-ink-500">{item.fabric_code}</span>
+                      {finish.label}{finish.code ? <> <span className="font-mono text-ink-500">{finish.code}</span></> : <span className="font-normal text-ink-500"> (typed, not from the library)</span>}
                     </p>
                   )}
                   {options && options.length > 0 && (

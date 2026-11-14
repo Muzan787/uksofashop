@@ -263,6 +263,12 @@ const editLineSchema = z.object({
    * name alone, so an older caller cannot wipe it.
    */
   custom_title: z.string().trim().max(120).optional(),
+  /**
+   * A fabric typed by hand, used when no fabric_id is given. Sent always by
+   * the edit form (empty clears it); omitted, the database keeps the line's
+   * typed fabric as it was.
+   */
+  custom_fabric: z.string().trim().max(120).optional(),
 })
 
 const editSchema = z.object({
@@ -321,6 +327,7 @@ export async function updateOrderDetails(input: EditOrderInput): Promise<{ succe
       unit_price: i.unit_price,
       fabric_id: i.fabric_id ?? null,
       ...(i.custom_title === undefined ? {} : { custom_title: i.custom_title }),
+      ...(i.custom_fabric === undefined ? {} : { custom_fabric: i.fabric_id ? '' : i.custom_fabric }),
     })),
   })
 

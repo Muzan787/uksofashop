@@ -52,9 +52,11 @@ interface Line {
    * count. See utils/orderItemTitle.ts.
    */
   customTitle: string
+  /** A fabric typed by hand, for one the library does not hold. Empty means none. */
+  customFabric: string
 }
 
-const BLANK: Line = { variantId: '', quantity: 1, price: '', fabricId: '', customTitle: '' }
+const BLANK: Line = { variantId: '', quantity: 1, price: '', fabricId: '', customTitle: '', customFabric: '' }
 
 const label = 'block text-[11px] font-bold uppercase tracking-wider text-ink-500 mb-1.5'
 const field =
@@ -160,6 +162,8 @@ export default function NewWhatsAppOrder({
         unit_price: l.price.trim() === '' ? null : Number(l.price),
         fabric_id: l.fabricId || null,
         custom_title: l.customTitle.trim() || null,
+        // Only when no library fabric is picked: the two are either-or.
+        custom_fabric: l.fabricId ? null : l.customFabric.trim() || null,
       }))
 
     if (items.length === 0) {
@@ -391,12 +395,25 @@ export default function NewWhatsAppOrder({
                     <SearchSelect
                       options={fabricOptions}
                       value={line.fabricId}
-                      onChange={id => setLine(i, { fabricId: id })}
+                      // Picking from the library replaces a typed fabric.
+                      onChange={id => setLine(i, id ? { fabricId: id, customFabric: '' } : { fabricId: id })}
                       ariaLabel="Fabric"
                       placeholder="Search fabrics by name or code…"
                       emptyOptionLabel="No fabric chosen"
                     />
                   )}
+                  {/* A fabric the library does not hold - a leather, a supplier's own
+                      range. Typing one replaces a library pick; it prints as the
+                      fabric on the order, the receipt, the note and the customer's pages. */}
+                  <input
+                    className={field}
+                    value={line.customFabric}
+                    onChange={e => setLine(i, e.target.value.trim() ? { customFabric: e.target.value, fabricId: '' } : { customFabric: e.target.value })}
+                    maxLength={120}
+                    aria-label="Custom fabric"
+                    placeholder="Or type a fabric (optional)"
+                    autoComplete="off"
+                  />
                 </div>
               </div>
             ))}
