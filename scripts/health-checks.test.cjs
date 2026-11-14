@@ -220,7 +220,12 @@ test('the first run after deploy alerts about what is already red', () => {
 })
 
 test('sales waiting for the hand-copied Google Sheet are amber: no alert, no 503 (16 Oct 2026)', () => {
-  const report = broken(i => { Object.assign(i.snapshot.google_offline, { pending: 19, oldest_pending_at: hoursAgo(24 * 11) }) })
+  // Run 5: staged rows with no Google click are internal records, never a task.
+  const internal = broken(i => { Object.assign(i.snapshot.google_offline, { pending: 94, pending_internal_only: 94, pending_google_click: 0, oldest_pending_at: hoursAgo(24 * 27) }) })
+  assert.equal(stateOf(internal, 'google-ads'), 'ok')
+  assert.doesNotMatch(JSON.stringify(internal.checks.find(c => c.key === 'google-ads')), /waiting to be copied/)
+  // Only a genuine Google-click row waiting more than 3 days is amber.
+  const report = broken(i => { Object.assign(i.snapshot.google_offline, { pending: 19, pending_google_click: 1, oldest_pending_google_click_at: hoursAgo(24 * 11) }) })
   assert.equal(stateOf(report, 'google-ads'), 'amber')
   assert.notEqual(report.state, 'red')
   assert.equal(hasAlerts(planHealthAlerts(report, [], NOW)), false)

@@ -1,18 +1,20 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { requireAdmin } from '@/utils/auth'
-import { aggregateJourneys, loadJourneyReport, loadJourneyLifecycle, stageOf } from '@/utils/journeyReport'
+import { aggregateJourneys, loadJourneyReport, stageOf } from '@/utils/journeyReport'
 import { JOURNEY_KINDS, PAGE_TYPES } from '@/utils/journeyContract'
 import { dualTimeText } from '@/utils/adminTime'
 export const dynamic='force-dynamic'
-export const metadata:Metadata={title:'Journey Analytics',robots:{index:false,follow:false}}
+export const metadata:Metadata={title:'Technical event explorer',robots:{index:false,follow:false}}
+// Run 5: this is the raw explorer, moved from /admin/journeys. Its per-request order-association
+// lookup (the old lifecycle view) took 9.3 s for a one-day selection and broke the
+// page on the API's 8 s timeout, so it is gone; funnels and order links live on
+// /admin/journeys (the 15-minute session rollup).
 export default async function Journeys({searchParams}:{searchParams:Promise<Record<string,string|undefined>>}) {
   await requireAdmin()
   const sp=await searchParams
   const report=await loadJourneyReport(sp)
   const rows=report.rows, sessions=new Set(rows.map(r=>r.session_key)).size
-  const lifecycle=await loadJourneyLifecycle(rows)
-  const funnelCount=(key:'cart_attempted'|'cart_updated'|'checkout_started'|'whatsapp_clicked'|'enquiry_recorded'|'order_linked'|'order_confirmed'|'order_delivered')=>new Set(lifecycle.rows.filter(r=>r[key]).map(r=>r.session_key)).size
   const groups=[
     ['Source / campaign',aggregateJourneys(rows,r=>r.source+' / '+(r.campaign||'unattributed'))],
     ['Product engagement',aggregateJourneys(rows,r=>r.product_id||'No product context')],
@@ -34,7 +36,8 @@ export default async function Journeys({searchParams}:{searchParams:Promise<Reco
     </label>)
   const query=new URLSearchParams(Object.entries(sp).filter((e):e is [string,string]=>!!e[1]))
   return <div className="space-y-6">
-    <h1 className="text-3xl font-bold">Journey Analytics</h1>
+    <p className="m-0 text-sm"><Link className="font-semibold text-indigo-700 underline" href="/admin/journeys">← Journeys charts</Link></p>
+    <h1 className="text-3xl font-bold">Technical event explorer</h1>
     <p>Consented website interactions, retained for 90 days. Dates use Pakistan time. Staff tests are excluded. Earlier missing events were not previously instrumented; no history has been invented.</p>
     <form method="get" className="grid gap-3 rounded border bg-white p-4 sm:grid-cols-3">
       <label>From<input className="block w-full rounded border p-2" type="date" name="from" defaultValue={report.from}/></label>
@@ -50,12 +53,6 @@ export default async function Journeys({searchParams}:{searchParams:Promise<Reco
     <p>{rows.length.toLocaleString()} events · {sessions.toLocaleString()} masked sessions · {new Set(rows.map(r=>r.page_view_key)).size} page views.
       <Link className="ml-3 underline" href={'/admin/journeys/export?'+query}>Download filtered CSV</Link></p>
     <p>Rates below use observed consented sessions, not all visitors. Session linkage is limited to the established browser identity; cross-device continuity is not inferred. An exit reports the last touched field and active validation category, not a proven cause of abandonment. No typed values are captured.</p>
-    <section className="rounded border bg-white p-4"><h2 className="text-lg font-semibold">Session funnel and lawful order association</h2>
-      <p>These are established browser-session associations across retained history, not a claim that an interaction caused an order. Confirmed orders are not delivered revenue.</p>
-      {lifecycle.error && <p role="status">{lifecycle.error}</p>}
-      {lifecycle.limited && <p>Associations cover the first 300 selected sessions. Narrow the filter for complete coverage.</p>}
-      <div className="mt-3 grid gap-2 sm:grid-cols-4">{(['cart_attempted','cart_updated','checkout_started','whatsapp_clicked','enquiry_recorded','order_linked','order_confirmed','order_delivered'] as const).map(key=><p key={key}>{key.replaceAll('_',' ')}: <strong>{funnelCount(key)}</strong></p>)}</div>
-    </section>
     <div className="grid gap-4 lg:grid-cols-2">{groups.map(([title,buckets])=><section key={title} className="overflow-auto rounded border bg-white p-4">
       <h2 className="mb-3 text-lg font-semibold">{title}</h2>
       <table className="w-full text-sm"><thead><tr><th className="text-left">Interaction</th><th>Events</th><th>Sessions</th><th>% sessions</th></tr></thead>

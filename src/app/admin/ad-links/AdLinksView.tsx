@@ -72,9 +72,19 @@ export default function AdLinksView({ feed, ads, home, departments, ranges, prod
   return (
     <div className="mx-auto max-w-3xl space-y-5 animate-in fade-in duration-500">
       <header>
-        <h1 className="m-0 text-2xl font-bold tracking-tight text-ink-900 lg:text-3xl">Ad links</h1>
+        <h1 className="m-0 text-2xl font-bold tracking-tight text-ink-900 lg:text-3xl">Advertising links &amp; tests</h1>
         <p className="m-0 mt-1 text-sm text-ink-500">The catalogue Meta reads, and a ready link for every page an ad can open.</p>
       </header>
+
+      {/* Run 5: what this page is, in plain words, before any technical section. */}
+      <div className="rounded-lg border border-indigo-300 bg-indigo-50 p-4 text-sm leading-relaxed text-ink-900">
+        <p className="m-0 font-semibold">Copy the correct link when you set up an advertisement. This page does not publish an ad, and it is not where website pages or orders are managed.</p>
+        <ul className="m-0 mt-2 list-disc space-y-1 pl-5 text-ink-700">
+          <li><strong>Links for ads</strong> carry the shop&apos;s tracking (and, for Meta, the visitor&apos;s offer). Use these in Meta Ads Manager.</li>
+          <li><strong>The test link</strong> (further down) behaves like an ad click but records nothing and marks any order as a <em>test</em>, so it never counts as a real sale or a conversion.</li>
+          <li>Nothing here changes a price, an offer or a campaign.</li>
+        </ul>
+      </div>
 
       {/* ── O1: the catalogue feed ─────────────────────────────────────── */}
       <section className={section} aria-labelledby="feed-heading">

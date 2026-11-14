@@ -1,18 +1,23 @@
 // src/app/admin/leads/EnquiriesTab.tsx
 //
-// WhatsApp enquiries (admin upgrade I3): every tap on a WhatsApp button, with
-// the reference it carried into the chat, the product and page it came from,
-// and the campaign behind the visit. When a customer quotes the reference -
-// or it is in the chat - search for it here, then "Take this order" opens the
-// new order form with it filled in, which is what ties the sale to the ad.
-// Once an order was taken with it, the enquiry says so and links to it.
+// WhatsApp enquiries (admin upgrade I3, rebuilt in Run 5): every tap on a
+// WhatsApp button, with the reference it carried into the chat, the product
+// and page it came from, and the campaign behind the visit. A tap is not a
+// submitted lead and not a sale: the only stored facts are when it happened,
+// where it came from and whether an order was taken with its reference, so
+// those are the only statuses offered (utils/enquiryFilters.ts).
 //
-// Opens on the last 24 hours; Show all lists every one, 50 at a time.
+// "Take this order" opens the new order form with the reference filled in,
+// which is what ties the sale to the ad. Once an order was taken, the row says
+// so and links to it. Counts on the chips are real counts for the current
+// period and source, from the database, not from the page of rows shown.
 import Link from 'next/link'
 import { Inbox, Search } from 'lucide-react'
 import { shortCode } from '@/app/admin/orders/OrderBits'
 import { dualTimeText } from '@/utils/adminTime'
-import { leadsHref } from '@/utils/leadsTabs'
+import {
+  ENQUIRY_PERIODS, ENQUIRY_SOURCES, ENQUIRY_STATUSES, enquiryHref, type EnquiryFilters, type EnquiryStatus,
+} from '@/utils/enquiryFilters'
 
 export interface Enquiry {
   id: string
@@ -49,67 +54,102 @@ function pagePath(url: string | null): string | null {
   }
 }
 
-export default function EnquiriesTab({ enquiries, showAll, q, page, lastPage, total }: {
+const chip = (on: boolean) =>
+  `inline-flex min-h-10 items-center gap-2 rounded-pill border px-3.5 text-sm font-semibold ${on ? 'border-ink-900 bg-ink-900 text-white' : 'border-calico-300 bg-white text-ink-700 hover:bg-calico-50'}`
+
+export default function EnquiriesTab({ enquiries, filters, counts, page, lastPage, total, ageNow }: {
   enquiries: Enquiry[]
-  showAll: boolean
-  q: string
+  filters: EnquiryFilters
+  /** Real counts for the current period and source. */
+  counts: Record<EnquiryStatus, number | null>
   page: number
   lastPage: number
   total: number
+  /** Server clock, so "New" is decided once per render. */
+  ageNow: number
 }) {
-  const href = (p: number) => leadsHref('enquiries', { show: showAll ? 'all' : null, q: q || null, page: p > 1 ? p : null })
+  const href = (change: Parameters<typeof enquiryHref>[1]) => enquiryHref(filters, change)
+  const filtered = filters.q !== '' || filters.source !== 'all' || filters.status !== 'open' || filters.period !== '7d'
   return (
     <div className="space-y-4">
       <form action="/admin/leads" method="get" role="search" className="flex gap-2">
         <input type="hidden" name="tab" value="enquiries" />
-        <label htmlFor="enquiry-search" className="sr-only">Search by reference</label>
+        <input type="hidden" name="status" value={filters.status} />
+        <input type="hidden" name="period" value={filters.period} />
+        <input type="hidden" name="source" value={filters.source} />
+        <label htmlFor="enquiry-search" className="sr-only">Search by reference or product</label>
         <input
           id="enquiry-search"
           name="q"
           type="search"
-          defaultValue={q}
+          defaultValue={filters.q}
           maxLength={40}
           autoComplete="off"
-          autoCapitalize="characters"
-          placeholder="Reference, e.g. UKSS-WA-…"
-          className="min-h-11 min-w-0 flex-1 rounded-sm border border-calico-300 bg-white px-3 py-2.5 text-base text-ink-900 focus:border-ink-900 focus:outline-none"
+          placeholder="Reference (UKSS-WA-…) or product, e.g. Roma"
+          className="min-h-11 min-w-0 flex-1 rounded-md border border-calico-300 bg-white px-3 py-2.5 text-base text-ink-900 focus:border-ink-900 focus:outline-none"
         />
-        <button type="submit" className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-sm bg-ink-900 px-4 text-sm font-bold text-white hover:bg-ink-700">
+        <button type="submit" className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-md bg-ink-900 px-4 text-sm font-bold text-white hover:bg-ink-700">
           <Search className="h-4 w-4" aria-hidden="true" /> Search
         </button>
       </form>
 
+      <div className="space-y-2 rounded-lg border border-calico-300 bg-white p-3 shadow-sm">
+        <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Status">
+          <span className="mr-1 text-xs font-bold uppercase tracking-wider text-ink-500">Status</span>
+          {ENQUIRY_STATUSES.map(s => (
+            <Link key={s.key} href={href({ status: s.key, page: null })} aria-current={filters.status === s.key ? 'true' : undefined} className={chip(filters.status === s.key)}>
+              {s.label} <span className="tabular-nums opacity-70">{counts[s.key] ?? '–'}</span>
+            </Link>
+          ))}
+        </div>
+        <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Period">
+          <span className="mr-1 text-xs font-bold uppercase tracking-wider text-ink-500">Taps in</span>
+          {ENQUIRY_PERIODS.map(p => (
+            <Link key={p.key} href={href({ period: p.key, page: null })} aria-current={filters.period === p.key ? 'true' : undefined} className={chip(filters.period === p.key)}>{p.label}</Link>
+          ))}
+        </div>
+        <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Source">
+          <span className="mr-1 text-xs font-bold uppercase tracking-wider text-ink-500">Source</span>
+          {ENQUIRY_SOURCES.map(s => (
+            <Link key={s.key} href={href({ source: s.key, page: null })} aria-current={filters.source === s.key ? 'true' : undefined} className={chip(filters.source === s.key)}>{s.label}</Link>
+          ))}
+        </div>
+      </div>
+
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="m-0 text-sm text-ink-700">
-          {q
-            ? `${total} ${total === 1 ? 'enquiry matches' : 'enquiries match'} “${q}”.`
-            : showAll ? `Every WhatsApp tap, newest first (${total}).` : 'WhatsApp taps in the last 24 hours.'}
+        <p className="m-0 text-sm text-ink-700" role="status">
+          {total.toLocaleString('en-GB')} {total === 1 ? 'tap matches' : 'taps match'}{filters.q ? ` “${filters.q}”` : ''}. A tap is a visitor pressing a WhatsApp button; it is not a confirmed sale.
         </p>
-        <Link href={q ? leadsHref('enquiries') : leadsHref('enquiries', { show: showAll ? null : 'all' })} className="inline-flex min-h-11 items-center text-sm font-semibold text-ink-900 underline">
-          {q ? 'Clear search' : showAll ? 'Last 24 hours' : 'Show all'}
-        </Link>
+        {filtered && (
+          <Link href="/admin/leads?tab=enquiries" className="inline-flex min-h-11 items-center text-sm font-semibold text-indigo-700 underline">Reset filters</Link>
+        )}
       </div>
 
       {enquiries.length === 0 ? (
         <div className="rounded-xl border border-calico-300 bg-white px-4 py-16 text-center">
           <Inbox className="mx-auto mb-3 h-8 w-8 text-calico-300" aria-hidden="true" />
-          <p className="m-0 font-semibold text-ink-700">{q ? 'No enquiry with that reference' : 'No WhatsApp taps here'}</p>
-          <p className="m-0 mt-1 text-sm text-ink-500">{q ? 'Check the reference in the chat, or try Show all.' : 'Each tap on a WhatsApp button on the site appears here.'}</p>
+          <p className="m-0 font-semibold text-ink-700">No items match these filters</p>
+          <p className="m-0 mt-1 text-sm text-ink-500">Try a longer period or another status, or reset the filters.</p>
+          <Link href="/admin/leads?tab=enquiries" className="mt-3 inline-flex min-h-11 items-center rounded-md border border-calico-300 px-4 text-sm font-semibold text-ink-900 hover:bg-calico-50">Reset filters</Link>
         </div>
       ) : (
-        <ul className="m-0 list-none divide-y divide-calico-100 overflow-hidden rounded-md border border-calico-300 bg-white p-0 shadow-sm">
+        <ul className="m-0 list-none divide-y divide-calico-300 overflow-hidden rounded-lg border border-calico-300 bg-white p-0 shadow-sm">
           {enquiries.map(e => {
             const path = pagePath(e.page_url)
+            const isNew = !e.converted_order_id && ageNow - Date.parse(e.created_at) < 24 * 3600e3
             return (
               <li key={e.id} className="p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="select-all font-mono text-sm font-bold text-ink-900">{e.reference}</span>
+                  <span className="flex flex-wrap items-center gap-2">
+                    <span className="select-all font-mono text-sm font-bold text-ink-900">{e.reference}</span>
+                    {isNew && <span className="rounded-pill border border-indigo-300 bg-indigo-50 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-indigo-700">New</span>}
+                  </span>
                   {e.converted_order_id ? (
-                    <Link href={`/admin/orders/${e.converted_order_id}`} className="inline-flex min-h-11 items-center rounded-pill border border-green-200 bg-green-50 px-3 text-xs font-bold uppercase tracking-wider text-green-800">
+                    <Link href={`/admin/orders/${e.converted_order_id}`} className="inline-flex min-h-11 items-center rounded-pill border border-sage-300 bg-sage-50 px-3 text-xs font-bold uppercase tracking-wider text-sage-700">
                       Ordered #{shortCode(e.converted_order_id)}
                     </Link>
                   ) : (
-                    <Link href={`/admin/orders?ref=${encodeURIComponent(e.reference)}`} className="inline-flex min-h-11 items-center rounded-sm bg-[#128C7E] px-4 text-sm font-bold text-white hover:bg-[#0e7469]">
+                    <Link href={`/admin/orders?ref=${encodeURIComponent(e.reference)}`} className="inline-flex min-h-11 items-center rounded-md bg-[#128C7E] px-4 text-sm font-bold text-white hover:bg-[#0e7469]">
                       Take this order
                     </Link>
                   )}
@@ -128,9 +168,9 @@ export default function EnquiriesTab({ enquiries, showAll, q, page, lastPage, to
 
       {lastPage > 1 && (
         <div className="flex items-center justify-between gap-4">
-          {page > 1 ? <Link href={href(page - 1)} className="inline-flex min-h-11 items-center rounded-sm border border-calico-300 bg-white px-4 text-xs font-bold text-ink-700">← Newer</Link> : <span />}
+          {page > 1 ? <Link href={href({ page: page - 1 > 1 ? page - 1 : null })} className="inline-flex min-h-11 items-center rounded-md border border-calico-300 bg-white px-4 text-xs font-bold text-ink-700">← Newer</Link> : <span />}
           <span className="text-xs font-medium text-ink-500">Page {page} of {lastPage}</span>
-          {page < lastPage ? <Link href={href(page + 1)} className="inline-flex min-h-11 items-center rounded-sm border border-calico-300 bg-white px-4 text-xs font-bold text-ink-700">Older →</Link> : <span />}
+          {page < lastPage ? <Link href={href({ page: page + 1 })} className="inline-flex min-h-11 items-center rounded-md border border-calico-300 bg-white px-4 text-xs font-bold text-ink-700">Older →</Link> : <span />}
         </div>
       )}
     </div>

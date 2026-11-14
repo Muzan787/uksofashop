@@ -78,7 +78,9 @@ export default async function WebsitePage({ searchParams }: { searchParams: Prom
   const phase = seasonPhase(new Date())
   const barWithOffer = seasonBar(phase, true)
   const barWithout = seasonBar(phase, false)
-  const journeysLink = `/admin/journeys?from=${period.fromDay}&to=${period.toDay}${device ? `&device=${device}` : ''}${source ? `&source=${source}` : ''}`
+  // Run 5: the charts page with the same filters (the old link sent raw from/to
+  // to the slow event explorer, which is where 'Journeys does not load' came from).
+  const journeysLink = withParams('/admin/journeys', params, {})
 
   const funnel: { stage: string; value: number; of?: number; ofLabel?: string; note: string }[] = [
     { stage: 'Viewed a product', value: t.product_sessions ?? 0, note: 'Opened at least one product page.' },
@@ -111,7 +113,7 @@ export default async function WebsitePage({ searchParams }: { searchParams: Prom
         <Metric label="Website orders saved" value={summaryRes.error ? null : n(t.order_saved_sessions)} note={`${n(t.order_confirmed_sessions)} sessions linked to a confirmed order (any route)`} href={withParams('/admin/orders', {}, { status: 'all' })} />
       </section>
 
-      <Panel title="Buying journey on the website (same session)" aside={<Link href={journeysLink} className="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-indigo-700 underline">Investigate raw events <ArrowRight className="h-4 w-4" aria-hidden="true" /></Link>}>
+      <Panel title="Buying journey on the website (same session)" aside={<Link href={journeysLink} className="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-indigo-700 underline">Journey charts <ArrowRight className="h-4 w-4" aria-hidden="true" /></Link>}>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead><tr className="text-xs uppercase tracking-wider text-ink-500"><th scope="col" className="pb-2 pr-3">Stage</th><th scope="col" className="pb-2 pr-3 text-right">Sessions</th><th scope="col" className="w-1/3 pb-2 pr-3">&nbsp;</th><th scope="col" className="pb-2">Progress</th></tr></thead>

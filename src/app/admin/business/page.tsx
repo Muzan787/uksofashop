@@ -14,7 +14,9 @@ import { createUntypedAdminClient } from '@/utils/supabase/admin'
 import { parsePeriod } from '@/utils/websiteReport'
 import { automaticSource, reviewReason, type ReviewOrder } from '@/utils/sourceReview'
 import { contactChannelOf } from '@/utils/orderEvidence'
-import { Metric, PageHeader, Panel } from '@/components/Admin/ui/AdminUi'
+import { Metric, PageHeader, Panel, Pill } from '@/components/Admin/ui/AdminUi'
+import { StackedBar } from '@/components/Admin/ui/Charts'
+import { dualTimeText } from '@/utils/adminTime'
 import PeriodFilters from '@/components/Admin/ui/PeriodFilters'
 
 export const dynamic = 'force-dynamic'
@@ -43,13 +45,21 @@ export default async function BusinessPage({ searchParams }: { searchParams: Pro
   const params = { period: period.preset, from: period.preset === 'custom' ? period.fromDay : undefined, to: period.preset === 'custom' ? period.toDay : undefined }
   const db = createUntypedAdminClient()
   const cols = 'id,status,is_test,manual_acquisition_source,utm_source,gclid,gbraid,wbraid,fbclid,meta_fbc,visitor_id,whatsapp_reference,total_amount,created_at,delivered_at,cancellation_reason,channel,source'
-  const [placedRes, deliveredRes] = await Promise.all([
+  const [flowRes, placedRes, deliveredRes] = await Promise.all([
+    db.rpc('admin_orderflow_summary', { p_from: period.start.toISOString(), p_to: period.end.toISOString() }),
     db.from('orders').select(cols).eq('is_test', false).gte('created_at', period.start.toISOString()).lt('created_at', period.end.toISOString()).limit(5000),
     db.from('orders').select('total_amount').eq('is_test', false).eq('status', 'delivered').gte('delivered_at', period.start.toISOString()).lt('delivered_at', period.end.toISOString()).limit(5000),
   ])
   const placed = (placedRes.data ?? []) as unknown as Row[]
   const delivered = (deliveredRes.data ?? []) as { total_amount: number | null }[]
   const failed = Boolean(placedRes.error || deliveredRes.error)
+  const flow = (flowRes.data ?? null) as null | {
+    recording_since: string | null; attempts: number; accepted: number; refused: number; unanswered: number; orders_sent: number
+    last_accepted_at: string | null; orders_since_recording: number; orders_without_accepted_send: number; orders_latest_refused: number
+    by_source: { source: string; attempts: number; accepted: number; refused: number }[]
+    recent_refusals: { at: string; order_id: string | null; order_ref: string | null; status_code: number | null; message: string | null; source: string }[]
+  }
+  const SEND_SOURCE: Record<string, string> = { change: 'after an order change', resend: '15-minute re-send', before_recording: 'before recording began', by_hand: 'sent by hand' }
   const sum = (rows: { total_amount: number | null }[]) => rows.reduce((t, r) => t + Number(r.total_amount ?? 0), 0)
   const by = (s: string) => placed.filter(o => (o.status ?? 'pending_cod') === s)
   const kept = placed.filter(o => o.status !== 'cancelled')
@@ -114,6 +124,52 @@ export default async function BusinessPage({ searchParams }: { searchParams: Pro
           </table>
         </div>
         <p className="m-0 mt-2 text-xs text-ink-500">Source is the strongest evidence on the order: a staff review first, then an ad click id, then an ad tag. &ldquo;Via WhatsApp&rdquo; is how the customer got in touch, never by itself the advert. Going ahead = confirmed, on hold or delivered today.</p>
+      </Panel>
+
+      <Panel title="OrderFlow: are orders reaching it?" id="orderflow">
+        {flowRes.error || !flow ? (
+          <p className="m-0 text-sm text-ink-700">OrderFlow figures could not be loaded just now. This is unknown, not zero.</p>
+        ) : (
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center gap-2">
+              {flow.orders_without_accepted_send === 0 && flow.orders_latest_refused === 0
+                ? <Pill tone="good">Every real order since recording began has been accepted</Pill>
+                : <Pill tone="attention">{flow.orders_without_accepted_send + flow.orders_latest_refused} order(s) need a look</Pill>}
+              <span className="text-xs text-ink-500">Recording began {flow.recording_since ? dualTimeText(flow.recording_since) : 'unknown'}; last accepted {flow.last_accepted_at ? dualTimeText(flow.last_accepted_at) : 'never'}.</span>
+            </div>
+            <StackedBar
+              total={Math.max(1, flow.attempts)}
+              caption={`${flow.attempts.toLocaleString('en-GB')} send attempts in the period${flow.orders_sent ? `, covering ${flow.orders_sent} orders` : ''}. A send attempt is one transmission to OrderFlow: not a sale, and not a delivery to a customer.`}
+              segments={[
+                { label: 'accepted by OrderFlow', value: flow.accepted, tone: 'sage' },
+                { label: 'refused', value: flow.refused, tone: 'rust' },
+                { label: 'no answer yet', value: flow.unanswered, tone: 'ink' },
+              ]}
+            />
+            <ul className="m-0 grid list-none gap-2 p-0 text-sm sm:grid-cols-3">
+              <li className="rounded-md border border-calico-300 bg-calico-50 p-3"><strong className="tabular-nums">{flow.orders_since_recording}</strong> real orders since recording began<span className="block text-xs text-ink-500">each should have an accepted send</span></li>
+              <li className="rounded-md border border-calico-300 bg-calico-50 p-3"><strong className="tabular-nums">{flow.orders_without_accepted_send}</strong> without an accepted send<span className="block text-xs text-ink-500">cancelled orders excluded</span></li>
+              <li className="rounded-md border border-calico-300 bg-calico-50 p-3"><strong className="tabular-nums">{flow.orders_latest_refused}</strong> whose latest send was refused<span className="block text-xs text-ink-500">these may be missing or out of date there</span></li>
+            </ul>
+            {flow.by_source.length > 0 && (
+              <p className="m-0 text-xs text-ink-500">By trigger: {flow.by_source.map(b => `${SEND_SOURCE[b.source] ?? b.source} ${b.accepted}/${b.attempts} accepted`).join(' · ')}.</p>
+            )}
+            {flow.recent_refusals.length > 0 && (
+              <div>
+                <h3 className="m-0 mb-2 text-xs font-bold uppercase tracking-wider text-ink-500">Refused sends in this period</h3>
+                <ul className="m-0 list-none divide-y divide-calico-300 p-0 text-sm">
+                  {flow.recent_refusals.map((r, i) => (
+                    <li key={i} className="flex flex-wrap items-baseline justify-between gap-2 py-2">
+                      {r.order_id ? <Link href={`/admin/orders/${r.order_id}`} className="font-mono font-bold text-indigo-700 underline">#{r.order_ref}</Link> : <span className="text-ink-500">no order id (before recording)</span>}
+                      <span className="min-w-0 flex-1 text-ink-700">{r.status_code ?? ''} {r.message ?? ''}</span>
+                      <span className="text-xs text-ink-500">{dualTimeText(r.at)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
       </Panel>
 
       <div className="grid gap-6 lg:grid-cols-2">

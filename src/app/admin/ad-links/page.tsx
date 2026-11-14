@@ -13,7 +13,7 @@ import { MANUAL_META_ENTRIES } from '@/utils/offers/manualMetaEntries'
 import { feedLeftOut, SITE, TEST_LINK_QUERY, type FeedProduct } from '@/utils/adLinks'
 import AdLinksView, { type AdLink, type ProductLinks } from './AdLinksView'
 
-export const metadata: Metadata = { title: 'Ad links' }
+export const metadata: Metadata = { title: 'Advertising links & tests' }
 export const dynamic = 'force-dynamic'
 
 /** An offer-entry link: the page, arriving as a Meta ad visitor would. */

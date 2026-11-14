@@ -71,6 +71,9 @@ export interface HealthSnapshot {
   google_offline?: {
     pending?: number; oldest_pending_at?: Iso; held?: number; synced?: number
     last_sync_started_at?: Iso; last_sync_status?: string | null; sync_runs?: number
+    /** Run 5: only these rows carry a Google click id and can ever be uploaded. */
+    pending_google_click?: number; oldest_pending_google_click_at?: Iso
+    pending_internal_only?: number; synced_google_click?: number; verified?: number; needs_adjustment?: number
   }
   trustpilot?: { delivered_30d?: number; asked_30d?: number; invites_sent_30d?: number; invites_failed_7d?: number }
   feeds?: { feed: string; fetcher: string; last_at?: Iso; fetches_7d?: number }[]
@@ -335,18 +338,25 @@ function googleAdsCheck({ snapshot, now }: HealthInput): HealthCheck {
   const q = snapshot?.google_offline ?? {}
   const details = [
     n(q.sync_runs) ? `Last copied to the Google Sheet ${ago(q.last_sync_started_at, now)} (${q.last_sync_status ?? 'unknown'})` : 'Never copied to the Google Sheet',
-    `${n(q.synced)} synced so far`,
+    `${n(q.synced_google_click)} Google-click ${n(q.synced_google_click) === 1 ? 'row' : 'rows'} in the Sheet; Google Ads confirmation is checked in Google Ads, not here`,
     n(q.held) ? `${n(q.held)} held back (missing consent or details)` : '',
+    n(q.needs_adjustment) ? `${n(q.needs_adjustment)} imported before the order was cancelled: retract in Google Ads if they were uploaded` : '',
   ]
-  const oldest = hoursSince(q.oldest_pending_at, now)
-  // Amber, not red (Muaz, 16 Oct 2026): the Sheet is copied by hand when he
-  // chooses, and no sale has come from a Google ad, so a wait here is never
-  // an outage - it mustn't turn /api/health 503 or send an alert.
-  if (n(q.pending) > 0 && oldest !== null && oldest > 72) {
-    return check('google-ads', title, 'amber', `${plural(n(q.pending), 'sale is', 'sales are')} waiting to be copied to the Google Sheet by hand, the oldest since ${ago(q.oldest_pending_at, now)}.`, details)
+  // Run 5 (14 Nov 2026): `pending` counts every staged outbox row, and in
+  // production none of them carries a Google click id (94 of 94 were Meta,
+  // WhatsApp or direct orders kept for internal records). Only a row with a
+  // Google click can ever be uploaded, so only that count may become a task.
+  // Fixed in the database by 20261114180000_status_google_click_only.sql.
+  const eligible = n(q.pending_google_click)
+  const oldest = hoursSince(q.oldest_pending_google_click_at, now)
+  if (eligible > 0 && oldest !== null && oldest > 72) {
+    return check('google-ads', title, 'amber', `${plural(eligible, 'Google-click sale is', 'Google-click sales are')} waiting to be copied to the Google Sheet, the oldest since ${ago(q.oldest_pending_google_click_at, now)}.`, details)
+  }
+  if (eligible > 0) {
+    return check('google-ads', title, 'ok', `${plural(eligible, 'Google-click sale', 'Google-click sales')} queued for the next Sheet sync.`, details)
   }
   if (n(q.pending) > 0) {
-    return check('google-ads', title, 'ok', `${plural(n(q.pending), 'sale', 'sales')} queued for the next Sheet sync.`, details)
+    details.push(`${n(q.pending_internal_only ?? q.pending)} staged for internal records only (no Google click, never uploaded)`)
   }
   if (n(q.sync_runs) === 0) {
     return check('google-ads', title, 'amber', 'The Google Sheet sync has never run.', details)

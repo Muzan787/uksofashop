@@ -14,6 +14,7 @@ import { AlertTriangle, CheckCircle2 } from 'lucide-react'
 import { createClient } from '@/utils/supabase/server'
 import { offerHoldsForLeads } from '@/utils/offers/leadHold'
 import { newEnquiriesSince, pickLeadsTab, type LeadsCounts } from '@/utils/leadsTabs'
+import { NO_SOURCE_AND, SOURCE_OR, parseEnquiryFilters, periodStart } from '@/utils/enquiryFilters'
 import LeadsTabNav from './LeadsTabNav'
 import SamplesTab, { SAMPLE_FILTERS, type SampleRequest } from './SamplesTab'
 import MessagesTab, { type ContactMessage } from './MessagesTab'
@@ -27,8 +28,11 @@ export const revalidate = 0
 
 const ENQUIRIES_PER_PAGE = 50
 
+/** The server clock, read outside render so the purity rule holds. */
+function leadsClock(): number { return Date.now() }
+
 type SearchParams = Promise<{
-  tab?: string; view?: string; status?: string; show?: string; q?: string; page?: string; done?: string; error?: string
+  tab?: string; view?: string; status?: string; show?: string; q?: string; page?: string; done?: string; error?: string; period?: string; source?: string
 }>
 
 const DONE: Record<string, string> = {
@@ -84,24 +88,42 @@ export default async function AdminLeadsPage(props: { searchParams: SearchParams
     const { data, error } = await query.order('created_at', { ascending: false }).limit(200)
     content = error ? <LoadError /> : <MessagesTab messages={(data ?? []) as ContactMessage[]} showAll={showAll} />
   } else if (tab === 'enquiries') {
-    const q = (sp.q ?? '').toUpperCase().replace(/[^A-Z0-9-]/g, '').slice(0, 40)
-    const showAll = sp.show === 'all' || Boolean(q)
+    const f = parseEnquiryFilters(sp)
     const page = /^\d+$/.test(sp.page ?? '') ? Math.max(1, parseInt(sp.page!, 10)) : 1
     const from = (page - 1) * ENQUIRIES_PER_PAGE
-    let query = supabase
-      .from('whatsapp_enquiries')
-      .select('id, reference, created_at, page_url, page_context, product_name, utm_source, utm_campaign, fbclid, gclid, gbraid, wbraid, converted_order_id', { count: 'exact' })
-    if (q) query = query.ilike('reference', `%${q}%`)
-    else if (!showAll) query = query.gte('created_at', dayAgo)
-    const { data, error, count } = await query.order('created_at', { ascending: false }).range(from, from + ENQUIRIES_PER_PAGE - 1)
-    content = error ? <LoadError /> : (
+    const since = periodStart(f.period)
+    // One builder for the list and for each status count, so a chip's number is
+    // exactly what the list shows when that chip is chosen.
+    const base = (status: 'open' | 'ordered' | 'all', columns: string, opts?: { count: 'exact'; head?: boolean }) => {
+      let qb = supabase.from('whatsapp_enquiries').select(columns, opts)
+      if (since) qb = qb.gte('created_at', since)
+      if (status === 'open') qb = qb.is('converted_order_id', null)
+      if (status === 'ordered') qb = qb.not('converted_order_id', 'is', null)
+      if (f.source === 'meta' || f.source === 'google') qb = qb.or(SOURCE_OR[f.source])
+      if (f.source === 'none') for (const c of NO_SOURCE_AND) qb = qb.is(c, null)
+      if (f.q) {
+        // Reference fragment or product words; letters and digits only reach the pattern.
+        const term = f.q.replace(/[%_,()]/g, ' ').trim()
+        qb = qb.or(`reference.ilike.%${term.toUpperCase().replace(/ /g, '-')}%,product_name.ilike.%${term}%`)
+      }
+      return qb
+    }
+    const [list, cOpen, cOrdered, cAll] = await Promise.all([
+      base(f.status, 'id, reference, created_at, page_url, page_context, product_name, utm_source, utm_campaign, fbclid, gclid, gbraid, wbraid, converted_order_id', { count: 'exact' })
+        .order('created_at', { ascending: false }).range(from, from + ENQUIRIES_PER_PAGE - 1),
+      base('open', 'id', { count: 'exact', head: true }),
+      base('ordered', 'id', { count: 'exact', head: true }),
+      base('all', 'id', { count: 'exact', head: true }),
+    ])
+    content = list.error ? <LoadError /> : (
       <EnquiriesTab
-        enquiries={(data ?? []) as Enquiry[]}
-        showAll={sp.show === 'all'}
-        q={q}
+        enquiries={(list.data ?? []) as unknown as Enquiry[]}
+        filters={f}
+        counts={{ open: cOpen.error ? null : cOpen.count ?? 0, ordered: cOrdered.error ? null : cOrdered.count ?? 0, all: cAll.error ? null : cAll.count ?? 0 }}
         page={page}
-        total={count ?? 0}
-        lastPage={Math.max(1, Math.ceil((count ?? 0) / ENQUIRIES_PER_PAGE))}
+        total={list.count ?? 0}
+        lastPage={Math.max(1, Math.ceil((list.count ?? 0) / ENQUIRIES_PER_PAGE))}
+        ageNow={leadsClock()}
       />
     )
   } else if (tab === 'reminders') {
@@ -142,7 +164,7 @@ export default async function AdminLeadsPage(props: { searchParams: SearchParams
     <div className="mx-auto max-w-5xl space-y-5 animate-in fade-in duration-500">
       <header>
         <h1 className="m-0 text-2xl font-bold tracking-tight text-ink-900 lg:text-3xl">Leads</h1>
-        <p className="m-0 mt-1 text-sm text-ink-500">Samples to post, messages, WhatsApp enquiries, basket reminders and the newsletter.</p>
+        <p className="m-0 mt-1 text-sm text-ink-500">People who want something from us: samples to post, messages to answer, WhatsApp taps to follow up, baskets to remind and the newsletter. The number on each tab is what is waiting.</p>
       </header>
 
       <LeadsTabNav tab={tab} counts={counts} />

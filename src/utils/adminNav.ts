@@ -42,7 +42,7 @@ export const ADMIN_SECTIONS: AdminSection[] = [
   { key: 'videos',     href: '/admin/videos',     label: 'Videos' },
   { key: 'status',     href: '/admin/status',     label: 'Status' },
   { key: 'settings',   href: '/admin/settings',   label: 'Settings' },
-  { key: 'adlinks',    href: '/admin/ad-links',   label: 'Ad links' },
+  { key: 'adlinks',    href: '/admin/ad-links',   label: 'Advertising links & tests' },
 ]
 
 export type PhoneTabKey = 'home' | 'orders' | 'leads' | 'catalogue' | 'more'
