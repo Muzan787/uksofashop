@@ -11,6 +11,7 @@ import { META_EVENT_MAX_AGE_MS, classifyMetaEvent, type ConsentReason } from '@/
 import { META_SIGNAL_COLUMNS, type MetaSignalOrder } from '@/utils/metaSignals'
 import type { ConversionAttempt } from '@/utils/metaReply'
 import type { TaskInput } from '@/utils/adminTasks'
+import { reviewReason, type ReviewOrder } from '@/utils/sourceReview'
 
 const DAY = 86400 * 1000
 const OPEN_STATUSES = ['pending_cod', 'confirmed', 'on_hold', 'processing', 'shipped']
@@ -85,15 +86,25 @@ async function emailFacts(): Promise<Pick<TaskInput, 'failedEmails'>> {
   return { failedEmails: error ? null : count ?? 0 }
 }
 
+async function sourceFacts(): Promise<Pick<TaskInput, 'sourceReview'>> {
+  const db = createUntypedAdminClient()
+  const { data, error } = await db.from('orders')
+    .select('status,is_test,manual_acquisition_source,utm_source,gclid,gbraid,wbraid,fbclid,meta_fbc,visitor_id,whatsapp_reference')
+    .eq('is_test', false).neq('status', 'cancelled').limit(5000)
+  if (error) return { sourceReview: null }
+  return { sourceReview: ((data ?? []) as ReviewOrder[]).filter(o => reviewReason(o)).length }
+}
+
 /** All the facts for Home's queue. Never throws: a failed fact is null. */
 export async function loadTaskInput(leadsWaiting: number | null): Promise<TaskInput> {
   await requireAdmin()
   const safe = async <T,>(run: () => Promise<T>, fallback: T): Promise<T> => { try { return await run() } catch { return fallback } }
-  const [meta, orders, google, email] = await Promise.all([
+  const [meta, orders, google, email, source] = await Promise.all([
     safe(metaFacts, { metaEligible: null, metaSoonestHours: null } as Awaited<ReturnType<typeof metaFacts>>),
     safe(orderFacts, { waitingToConfirm: null, oldestWaitingDays: null, overdueDeliveries: null } as Awaited<ReturnType<typeof orderFacts>>),
     safe(googleFacts, { googleUnverified: null }),
     safe(emailFacts, { failedEmails: null }),
+    safe(sourceFacts, { sourceReview: null }),
   ])
-  return { ...meta, ...orders, ...google, ...email, leadsWaiting }
+  return { ...meta, ...orders, ...google, ...email, ...source, leadsWaiting }
 }

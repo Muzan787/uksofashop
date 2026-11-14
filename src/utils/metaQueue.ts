@@ -43,15 +43,16 @@ export interface QueueItem {
 export const META_EVENT_MAX_AGE_MS = 7 * 86400 * 1000
 
 export const QUEUE_LABEL: Record<QueueState, string> = {
-  eligible: 'Eligible to send',
-  accepted: 'Already accepted',
+  // Run 4 (14 Nov 2026): named by what staff can do, not by the system state.
+  eligible: 'Ready to send',
+  accepted: 'Sent & accepted',
   sent_unconfirmed: 'Sent, reply unclear',
-  awaiting_evidence: 'Awaiting evidence',
-  consent_unavailable: 'Consent unavailable',
-  too_old: 'Too old',
+  awaiting_evidence: 'Needs a visit match',
+  consent_unavailable: 'Cannot send: no ad consent',
+  too_old: 'Cannot send: too old',
   held: 'Held',
-  google_origin: 'Google origin',
-  not_ready: 'Not ready',
+  google_origin: 'Cannot send: Google order',
+  not_ready: 'Not ready yet',
   blocked: 'Blocked',
 }
 

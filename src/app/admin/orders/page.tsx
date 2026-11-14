@@ -55,12 +55,14 @@ export default async function AdminOrdersPage(props: { searchParams: SearchParam
   const statusOf = (row: OverviewRow) => row.status ?? 'pending_cod'
   // Test orders never count as work waiting, or as money to collect.
   const real = overview.filter(row => !row.is_test)
+  // Every count is real orders only; test orders have their own tab (Run 4:
+  // "All" used to read 145 while every other screen said 144 real orders).
   const counts: Record<string, number> = {
     attention: real.filter(row => NEEDS_ATTENTION.includes(statusOf(row))).length,
-    all: overview.length,
+    all: real.length,
     test: overview.length - real.length,
   }
-  for (const row of overview) counts[statusOf(row)] = (counts[statusOf(row)] ?? 0) + 1
+  for (const row of real) counts[statusOf(row)] = (counts[statusOf(row)] ?? 0) + 1
   const tiles = {
     attention: counts.attention,
     toCollect: real.filter(row => OPEN.has(statusOf(row))).reduce((sum, row) => sum + Number(row.total_amount ?? 0), 0),
@@ -108,7 +110,9 @@ export default async function AdminOrdersPage(props: { searchParams: SearchParam
   if (matched) query = query.in('id', matched.length ? matched : ['00000000-0000-0000-0000-000000000000'])
   if (status === 'attention') query = query.in('status', NEEDS_ATTENTION).eq('is_test', false)
   else if (status === 'test') query = query.eq('is_test', true)
-  else if (status !== 'all') query = query.eq('status', status)
+  else if (status !== 'all') query = query.eq('status', status).eq('is_test', false)
+  // A search still finds a test order by its code; browsing "All" shows real orders.
+  else if (!matched) query = query.eq('is_test', false)
 
   const [{ data: orders, error, count }, pickers] = await Promise.all([
     query.order('created_at', { ascending: false }).range(from, from + PER_PAGE - 1),
@@ -122,7 +126,7 @@ export default async function AdminOrdersPage(props: { searchParams: SearchParam
     <OrdersList
       orders={(orders ?? []) as ListOrder[]}
       total={total}
-      overall={overview.length}
+      overall={real.length}
       status={status}
       q={q}
       searchTooBroad={searchTooBroad}

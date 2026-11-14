@@ -89,7 +89,7 @@ export default function OrdersList({
 
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h1 className="m-0 text-2xl font-bold tracking-tight text-ink-900 lg:text-3xl">Orders</h1>
-        <span className="text-sm text-ink-500">{overall} in all · {total} in this view</span>
+        <span className="text-sm text-ink-500">{overall} real orders in all · {total} in this view</span>
       </div>
 
       {/* D6: after a delete. */}

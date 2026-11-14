@@ -41,6 +41,8 @@ export interface TaskInput {
   failedEmails: number | null
   /** Baskets waiting for a reminder. */
   leadsWaiting: number | null
+  /** Open orders whose advert source is missing or contradictory (utils/sourceReview.ts). */
+  sourceReview?: number | null
 }
 
 const unit = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
@@ -100,6 +102,15 @@ export function buildTasks(input: TaskInput): AdminTask[] {
       title: `${unit(input.googleUnverified, 'Google import is', 'Google imports are')} not yet verified`,
       detail: 'In the import Sheet is not the same as accepted by Google Ads. Check Goals → Uploads in Google Ads.',
       href: '/admin/google', count: input.googleUnverified,
+    })
+  }
+
+  if (input.sourceReview) {
+    out.push({
+      key: 'source', tone: 'info',
+      title: `${unit(input.sourceReview, 'order needs', 'orders need')} a source review`,
+      detail: 'No advert evidence, or contradictory evidence. Ask the customer how they found us and record it.',
+      href: '/admin/source-review', count: input.sourceReview,
     })
   }
 

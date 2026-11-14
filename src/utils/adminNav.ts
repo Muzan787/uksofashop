@@ -12,6 +12,7 @@
 export type AdminSectionKey =
   | 'home' | 'orders' | 'meta' | 'google' | 'leads' | 'journeys'
   | 'catalogue' | 'inventory' | 'categories' | 'reviews' | 'videos' | 'status' | 'settings' | 'adlinks'
+  | 'website' | 'business' | 'sourcereview'
 
 export interface AdminSection {
   key: AdminSectionKey
@@ -25,8 +26,11 @@ export interface AdminSection {
  * still works and opens that tab.
  */
 export const ADMIN_SECTIONS: AdminSection[] = [
-  { key: 'home',       href: '/admin',            label: 'Home' },
+  { key: 'home',       href: '/admin',            label: 'Today' },
   { key: 'orders',     href: '/admin/orders',     label: 'Orders' },
+  { key: 'sourcereview', href: '/admin/source-review', label: 'Source review' },
+  { key: 'website',    href: '/admin/website',    label: 'Website' },
+  { key: 'business',   href: '/admin/business',   label: 'Business' },
   { key: 'meta',       href: '/admin/meta',       label: 'Meta' },
   { key: 'google',     href: '/admin/google',     label: 'Google' },
   { key: 'leads',      href: '/admin/leads',      label: 'Leads' },
@@ -65,7 +69,7 @@ export const MORE_HREF = '/admin/more'
 
 /** The sections reached through More on a phone, in the More page's order. */
 export const MORE_SECTION_KEYS: AdminSectionKey[] = [
-  'meta', 'google', 'journeys', 'reviews', 'videos', 'status', 'settings', 'adlinks',
+  'website', 'business', 'sourcereview', 'meta', 'google', 'journeys', 'reviews', 'videos', 'status', 'settings', 'adlinks',
 ]
 
 /** The sections the phone's Catalogue tab covers: the hub, products and categories. */
@@ -100,8 +104,12 @@ export interface AdminGroup {
 }
 
 export const ADMIN_GROUPS: AdminGroup[] = [
-  { label: 'Work',             keys: ['home', 'orders', 'leads'] },
-  { label: 'Ads and evidence', keys: ['meta', 'google', 'journeys', 'adlinks'] },
-  { label: 'Shop',             keys: ['catalogue', 'inventory', 'categories', 'reviews', 'videos'] },
-  { label: 'System',           keys: ['status', 'settings'] },
+  // Run 4 (14 Nov 2026): grouped by the job a member of staff is doing, not
+  // by system. Meta and Google sit under Marketing as the conversion tools
+  // they are; every original address still works.
+  { label: 'Daily work',         keys: ['home', 'orders', 'leads', 'sourcereview'] },
+  { label: 'Website & business', keys: ['website', 'business', 'journeys'] },
+  { label: 'Marketing',          keys: ['meta', 'google', 'adlinks'] },
+  { label: 'Shop',               keys: ['catalogue', 'inventory', 'categories', 'reviews', 'videos'] },
+  { label: 'System',             keys: ['status', 'settings'] },
 ]

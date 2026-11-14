@@ -281,8 +281,6 @@ export default async function MetaAdminPage(props: { searchParams: SearchParams 
         </p>
       )}
 
-      <CancelledAfterSending orders={cancelledSent} />
-
       <div className="grid gap-3 sm:grid-cols-3">
         <Link
           href="/admin/meta"
@@ -344,10 +342,6 @@ export default async function MetaAdminPage(props: { searchParams: SearchParams 
           </div>
         </div>
       </div>
-
-      <ModeAndDevice mode={mode} liveServer={setup.find(item => item.key === 'live-server')?.state !== false} />
-      <SetupCard setup={setup} />
-      <LatestEvents events={latestEvents} />
 
       <div className="space-y-3">
         <div className="flex flex-wrap gap-2">
@@ -553,9 +547,9 @@ export default async function MetaAdminPage(props: { searchParams: SearchParams 
         {visible.length === 0 && (
           <div className="rounded-md border border-calico-300 bg-white py-12 text-center shadow-sm">
             <CheckCircle2 className="mx-auto h-10 w-10 text-green-500" />
-            <p className="m-0 mt-3 text-lg font-bold text-ink-900">Nothing pending here</p>
+            <p className="m-0 mt-3 text-lg font-bold text-ink-900">Nothing in this view</p>
             <p className="m-0 mt-1 text-sm text-ink-500">
-              This filter has no orders requiring a Meta action.
+              No orders match this filter. Other filters above may still have work.
             </p>
           </div>
         )}
@@ -565,13 +559,30 @@ export default async function MetaAdminPage(props: { searchParams: SearchParams 
         <p className="m-0 flex items-start gap-2">
           <Clock3 className="mt-0.5 h-4 w-4 shrink-0 text-ink-500" />
           <span>
-            <strong className="text-ink-900">Eligible means consent recorded and within Meta’s 7-day limit.</strong>{' '}Every other unsent event shows its reason: awaiting evidence (no linked visit), consent unavailable, too old, held or Google origin.{' '}
+            <strong className="text-ink-900">Ready to send means consent recorded and within Meta’s 7-day limit.</strong>{' '}Every other unsent event shows its reason: awaiting evidence (no linked visit), consent unavailable, too old, held or Google origin.{' '}
             A fresh COD submission is not a Purchase just because an order row exists. Purchase becomes actionable
             after confirmation; OrderDelivered becomes actionable after delivery. This keeps the Meta queue aligned
             with the real business funnel.
           </span>
         </p>
       </div>
+
+      {/* Run 4: the tools staff rarely need - tracking mode, this device's
+          exclusion, the setup check, the raw event log and the history of
+          Purchases sent before an order was cancelled - live here, closed by
+          default. They all still work exactly as before. */}
+      <details className="rounded-lg border border-calico-300 bg-white p-4 shadow-sm">
+        <summary className="flex min-h-11 cursor-pointer items-center justify-between text-sm font-bold text-ink-900">
+          Advanced and technical
+          <span className="text-xs font-normal text-ink-500">tracking mode, this device, setup, raw events, cancelled after sending ({cancelledSent.length})</span>
+        </summary>
+        <div className="mt-4 space-y-4 border-t border-calico-300 pt-4">
+          <ModeAndDevice mode={mode} liveServer={setup.find(item => item.key === 'live-server')?.state !== false} />
+          <SetupCard setup={setup} />
+          <LatestEvents events={latestEvents} />
+          <CancelledAfterSending orders={cancelledSent} />
+        </div>
+      </details>
     </div>
   )
 }

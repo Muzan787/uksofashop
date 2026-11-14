@@ -6,7 +6,7 @@ import type { Metadata } from 'next'
 // On a desktop the sidebar already lists everything, but the page works there
 // too.
 import Link from 'next/link'
-import { Activity, ChevronRight, Clapperboard, Link2, LogOut, Radio, Route, SlidersHorizontal, Star, Tags, type LucideIcon } from 'lucide-react'
+import { Activity, BarChart3, ChevronRight, Clapperboard, Globe, Link2, LogOut, Radio, Route, Search, SearchCheck, SlidersHorizontal, Star, Tags, type LucideIcon } from 'lucide-react'
 import { createClient } from '@/utils/supabase/server'
 import { logout } from '@/app/actions/auth'
 import { ADMIN_SECTIONS, MORE_SECTION_KEYS, type AdminSectionKey } from '@/utils/adminNav'
@@ -16,6 +16,9 @@ export const metadata: Metadata = { title: 'More' }
 export const dynamic = 'force-dynamic'
 
 const ICONS: Partial<Record<AdminSectionKey, LucideIcon>> = {
+  website: Globe,
+  business: BarChart3,
+  sourcereview: SearchCheck,
   meta: Radio,
   google: Activity,
   journeys: Route,
@@ -83,6 +86,15 @@ export default async function AdminMorePage() {
         <h1 className="text-2xl lg:text-3xl font-bold tracking-tight text-ink-900">More</h1>
         <p className="mt-1 text-sm text-ink-500">Everything that isn&apos;t on the bar below.</p>
       </header>
+
+      {/* The phone's way into the same search as the desktop sidebar. */}
+      <form method="get" action="/admin/orders" role="search">
+        <label htmlFor="more-search" className="sr-only">Search orders</label>
+        <div className="relative">
+          <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-500" />
+          <input id="more-search" name="q" type="search" placeholder="Order code, name, phone or postcode" className="min-h-12 w-full rounded-md border border-calico-300 bg-white pl-9 pr-3 text-base text-ink-900 placeholder:text-ink-500" />
+        </div>
+      </form>
 
       <ul className="divide-y divide-calico-300 overflow-hidden rounded-md border border-calico-300 bg-white shadow-sm">
         {sections.map(({ key, href, label }) => {

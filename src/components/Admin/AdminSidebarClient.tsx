@@ -8,7 +8,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, LayoutGrid, ShoppingCart, Package, Tags, LogOut, Star, UsersRound,
-  Clapperboard, Radio, Route, Ellipsis, Activity, SlidersHorizontal, Link2, type LucideIcon,
+  Clapperboard, Radio, Route, Ellipsis, Activity, SlidersHorizontal, Link2, Globe, BarChart3, SearchCheck, Search, type LucideIcon,
 } from 'lucide-react'
 import { logout } from '@/app/actions/auth'
 import {
@@ -31,6 +31,9 @@ const SECTION_ICONS: Record<AdminSectionKey, LucideIcon> = {
   status: Activity,
   settings: SlidersHorizontal,
   adlinks: Link2,
+  website: Globe,
+  business: BarChart3,
+  sourcereview: SearchCheck,
 }
 
 const TAB_ICONS: Record<PhoneTabKey, LucideIcon> = {
@@ -61,6 +64,22 @@ export default function AdminSidebarClient({ email }: { email: string }) {
             </p>
           )}
         </div>
+
+        {/* One search for the whole admin: an order code, a customer's name,
+            phone or postcode - the same search the Orders list runs. */}
+        <form method="get" action="/admin/orders" role="search" className="px-3 pt-4">
+          <label htmlFor="admin-search" className="sr-only">Search orders</label>
+          <div className="relative">
+            <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-500" />
+            <input
+              id="admin-search"
+              name="q"
+              type="search"
+              placeholder="Order code, name, phone"
+              className="min-h-11 w-full rounded-md border border-calico-300 bg-calico-50 pl-9 pr-3 text-sm text-ink-900 placeholder:text-ink-500 focus:border-ink-500 focus:outline-none"
+            />
+          </div>
+        </form>
 
         <nav aria-label="Admin sections" className="flex-1 overflow-y-auto px-3 py-4">
           {ADMIN_GROUPS.map(group => (
