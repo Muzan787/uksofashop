@@ -19,7 +19,7 @@ import WhatsAppLink from '@/components/UI/WhatsAppLink'
 import SeasonalSnow from '@/components/Season/SeasonalSnow'
 import { DELIVERY_CHARGE_NOTE, PROMISES } from '@/constants/promises'
 import type { ShopSettings } from '@/utils/shopSettings'
-import { BLACK_FRIDAY, CHRISTMAS_DAY, CYBER_MONDAY, daysUntil } from '@/utils/seasonal'
+import { BLACK_FRIDAY, CHRISTMAS_DAY, CYBER_MONDAY, MADE_TO_ORDER_HREF, daysUntil } from '@/utils/seasonal'
 
 const gbp = (n: number) => `£${Number(n).toLocaleString('en-GB')}`
 const longDate = (key: string) =>
@@ -86,7 +86,7 @@ export default function SeasonalLanding({ kind, settings }: { kind: 'black_frida
               <li>{PROMISES.payment.long}</li>
               <li>{PROMISES.delivery.deliveryDays}</li>
             </ul>
-            <p><Link href="/collection">Browse the sofas</Link> · <Link href="/delivery-returns">Delivery and returns</Link> · <Link href="/black-friday">How our offers work</Link></p>
+            <p><Link href={MADE_TO_ORDER_HREF}>Browse made-to-order sofas</Link> · <Link href="/delivery-returns">Delivery and returns</Link> · <Link href="/black-friday">How our offers work</Link></p>
           </EditorialLayout>
         </div>
       </>
@@ -127,8 +127,8 @@ export default function SeasonalLanding({ kind, settings }: { kind: 'black_frida
             <li>{PROMISES.payment.long}</li>
           </ul>
           <div className="not-prose grid gap-3 sm:grid-cols-2">
-            <Link href="/collection" className="flex min-h-14 items-center gap-3 rounded-sm border border-calico-300 bg-white p-4 font-semibold text-ink-900 no-underline hover:bg-calico-100">
-              <PackageCheck className="h-5 w-5 text-ember-700" aria-hidden="true" /> Browse the sofas
+            <Link href={MADE_TO_ORDER_HREF} className="flex min-h-14 items-center gap-3 rounded-sm border border-calico-300 bg-white p-4 font-semibold text-ink-900 no-underline hover:bg-calico-100">
+              <PackageCheck className="h-5 w-5 text-ember-700" aria-hidden="true" /> Shop made-to-order sofas
             </Link>
             <Link href="/christmas" className="flex min-h-14 items-center gap-3 rounded-sm border border-calico-300 bg-white p-4 font-semibold text-ink-900 no-underline hover:bg-calico-100">
               <Truck className="h-5 w-5 text-ember-700" aria-hidden="true" /> Christmas delivery

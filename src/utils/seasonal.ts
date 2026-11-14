@@ -67,16 +67,25 @@ export interface SeasonBar {
  * The bar has one line at 375px, so `lead` stays short and the full detail
  * lives on the pages it links to.
  */
+/**
+ * Where the seasonal bar sends shoppers: the Made-To-Order Sofas main collection
+ * (utils/mainCollections, /collection/made-to-order-sofas). Verified 14 Nov 2026:
+ * 59 active products, every one origin 'uk' and custom_made, and all 15 range
+ * sets on the page contain only such products. Imported ranges live in a
+ * separate collection and never appear on this path.
+ */
+export const MADE_TO_ORDER_HREF = '/collection/made-to-order-sofas'
+
 export function seasonBar(phase: SeasonPhase, offerActive: boolean): SeasonBar | null {
   switch (phase) {
     case 'run_up':
       return offerActive
-        ? { lead: 'Your sofa offer is ready', cta: 'Check your price', href: '/shop/all' }
-        : { lead: 'Get set for Black Friday', cta: 'Explore the range', href: '/shop/all' }
+        ? { lead: 'Your sofa offer is ready', cta: 'See made-to-order sofas', href: MADE_TO_ORDER_HREF }
+        : { lead: 'Get set for Black Friday', cta: 'Explore made-to-order sofas', href: MADE_TO_ORDER_HREF }
     case 'black_friday':
       return offerActive
-        ? { lead: 'Black Friday weekend: your offer is on', cta: 'Check your price', href: '/shop/all' }
-        : { lead: 'Black Friday weekend', cta: 'See how our offers work', href: '/black-friday' }
+        ? { lead: 'Black Friday weekend: your offer is on', cta: 'See made-to-order sofas', href: MADE_TO_ORDER_HREF }
+        : { lead: 'Black Friday weekend', cta: 'Shop made-to-order sofas', href: MADE_TO_ORDER_HREF }
     case 'christmas':
       return { lead: 'Planning for Christmas?', cta: 'Check delivery for your sofa', href: '/christmas' }
     default:

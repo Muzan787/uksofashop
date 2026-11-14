@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ShoppingBag, X, Search, ChevronDown, User, Heart, Sofa } from 'lucide-react';
+import { ShoppingBag, X, Search, ChevronDown, User, Heart, Sofa, Snowflake } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { ANNOUNCEMENTS } from '@/constants/promises';
 import type { NavCategory } from '@/utils/navigation';
@@ -94,6 +94,7 @@ export default function Header({ categories }: { categories: NavCategory[] }) {
       // words join it from 640px up; below that the sentence alone fits on
       // one line at 375px.
       <Link href={bar.href} className="text-calico-300 no-underline hover:text-calico-50">
+        <Snowflake aria-hidden="true" className="mr-1.5 inline h-3 w-3 -translate-y-px text-ember-300" />
         {bar.lead}
         <span className="hidden sm:inline"> · <span className="text-ember-300 underline underline-offset-4">{bar.cta}</span></span>
         <span aria-hidden="true" className="text-ember-300"> →</span>

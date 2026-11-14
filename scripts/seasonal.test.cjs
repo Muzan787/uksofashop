@@ -72,7 +72,8 @@ test('the bar names an action and a real destination, and only mentions an offer
     for (const offer of [true, false]) {
       const b = s.seasonBar(phase, offer)
       assert.ok(b.cta.length > 0)
-      assert.match(b.href, /^\/(shop\/all|black-friday|christmas)$/)
+      assert.match(b.href, /^\/(collection\/made-to-order-sofas|christmas)$/)
+      if (phase !== 'christmas') assert.equal(b.href, s.MADE_TO_ORDER_HREF, 'Black Friday links go to made-to-order sofas only, never /shop/all')
       if (!offer) assert.doesNotMatch(b.lead + ' ' + b.cta, /your offer|your sofa offer/i, 'no offer claimed without an entitlement')
     }
   }

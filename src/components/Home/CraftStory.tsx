@@ -182,7 +182,12 @@ export default function CraftStory() {
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-2 lg:gap-16">
           {/* ── The pinned photograph. Desktop only. ────────────────────── */}
           <div className="hidden lg:block">
-            <div className="sticky top-24 aspect-[4/5] overflow-hidden rounded-md bg-indigo-700">
+            {/* max-h keeps the whole photo inside a short laptop window (1366x768
+                leaves ~650px): without it the 4:5 frame was ~618px tall below a
+                96px offset and its foot was cut off. aspect-ratio still sets the
+                height on tall screens; on short ones the frame is simply wider
+                than 4:5 and the photo (object-cover) fills it. */}
+            <div className="sticky top-24 aspect-[4/5] max-h-[calc(100svh-8rem)] w-full overflow-hidden rounded-md bg-indigo-700">
               {PANELS.map((panel, i) => (
                 <Image
                   key={panel.image}

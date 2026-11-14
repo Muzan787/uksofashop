@@ -14,7 +14,8 @@
 // an event; until it has, this renders nothing.
 
 import { useEffect, useState } from 'react';
-import { MessageCircleQuestionMark, Snowflake } from 'lucide-react';
+import { MessageCircleQuestionMark } from 'lucide-react';
+import SantaHat from '@/components/Season/SantaHat';
 import { useSeasonPhase } from '@/components/Season/useSeasonPhase';
 import { ASSISTANT_OPEN_EVENT, ASSISTANT_READY_EVENT, assistantReady } from './assistantEvents';
 
@@ -42,13 +43,13 @@ export default function AskUsButton() {
       aria-haspopup="dialog"
       className="hover-btn flex w-full items-center gap-3 rounded-md border border-calico-300 bg-calico-50 p-3 text-left"
     >
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-pill bg-ink-900 text-calico-50">
+      <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-pill bg-ink-900 text-calico-50">
         <MessageCircleQuestionMark aria-hidden="true" className="h-4 w-4" />
+        {seasonal && <SantaHat className="-left-1 -top-2.5 -rotate-12" />}
       </span>
       <span className="flex min-w-0 flex-col">
         <span className="eyebrow flex items-center gap-1.5 text-ink-900">
           Quick question? Ask us
-          {seasonal && <Snowflake aria-hidden="true" className="h-3.5 w-3.5 text-indigo-700" />}
         </span>
         <span className="mt-0.5 text-caption leading-snug text-ink-500">
           {seasonal
