@@ -121,7 +121,10 @@ test('admin: new pages are behind requireAdmin and read the journey summary only
   for (const page of ['src/app/admin/website/page.tsx', 'src/app/admin/business/page.tsx', 'src/app/admin/source-review/page.tsx']) {
     assert.match(read(page), /await requireAdmin\(\)/, page)
   }
-  const migration = read('supabase/migrations/20261114120000_admin_website_summary.sql')
+  const migration = read('supabase/migrations/20261114150000_journey_session_rollup.sql')
+  assert.match(migration, /revoke all on public\.journey_session_rollup from public, anon, authenticated/)
+  assert.match(migration, /revoke all on public\.journey_session_products from public, anon, authenticated/)
+  assert.match(migration, /data_class' = 'consented_journey'/)
   assert.match(migration, /revoke all on function public\.admin_website_summary[^;]*from public, anon, authenticated/)
   assert.match(migration, /grant execute on function public\.admin_website_summary[^;]*to service_role/)
 })

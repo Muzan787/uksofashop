@@ -36,6 +36,7 @@ type Summary = {
   first_event_at: string | null
   last_event_at: string | null
   tracking_since: string | null
+  rollup_latest?: string | null
 }
 
 const n = (v: number | undefined | null) => (v ?? 0).toLocaleString('en-GB')
@@ -101,7 +102,7 @@ export default async function WebsitePage({ searchParams }: { searchParams: Prom
       <PeriodFilters base="/admin/website" period={period} params={params} device={device} source={source} />
 
       {summaryRes.error && <p role="alert" className="rounded-md border border-ember-500 bg-calico-100 p-4 text-sm">The website figures could not be loaded just now. Nothing below is a zero; it is unknown.</p>}
-      {summary && <p className="m-0 text-xs text-ink-500">Latest recorded activity: {summary.last_event_at ? dualTimeText(summary.last_event_at) : 'none in this period'}.</p>}
+      {summary && <p className="m-0 text-xs text-ink-500">Figures refresh every 15 minutes (latest activity included: {summary.rollup_latest ? dualTimeText(summary.rollup_latest) : 'none yet'}). Sessions count on the UK day they started; only shoppers who accepted analytics are recorded.</p>}
 
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="Headline figures">
         <Metric label="Sessions" value={summaryRes.error ? null : n(t.sessions)} note={`${n(t.page_views)} page views`} />
