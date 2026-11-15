@@ -96,7 +96,8 @@ export default function SeasonRotator({ phase, offerActive }: { phase: SeasonPha
             <span className="hidden sm:inline"> · code <span className="font-bold tracking-[0.12em] text-ember-300">{m.code}</span></span>
           )}
           {m.countdown && clock && (
-            <> · <span aria-hidden="true" className="font-data tabular-nums text-ember-300">{clock}</span></>
+            /* Phones: the short line only; the countdown would be cut off (Run 10). */
+            <span className="hidden sm:inline"> · <span aria-hidden="true" className="font-data tabular-nums text-ember-300">{clock}</span></span>
           )}
           <span aria-hidden="true" className="text-ember-300"> →</span>
         </Link>
