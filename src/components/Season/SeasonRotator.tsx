@@ -85,7 +85,7 @@ export default function SeasonRotator({ phase, offerActive }: { phase: SeasonPha
       <p
         aria-live={rotating ? 'off' : 'polite'}
         aria-atomic="true"
-        className="eyebrow m-0 min-w-0 truncate text-center text-calico-300"
+        className="eyebrow m-0 min-w-0 truncate text-center text-calico-300 max-sm:tracking-[0.08em]"
       >
         <Link key={m.key} href={m.href} className="season-bar-msg text-calico-300 no-underline hover:text-calico-50">
           <Snowflake aria-hidden="true" className="mr-1.5 inline h-3 w-3 -translate-y-px text-ember-300" />

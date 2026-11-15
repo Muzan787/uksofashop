@@ -14,7 +14,7 @@ import { ArrowRight } from 'lucide-react'
 import { requireAdmin } from '@/utils/auth'
 import { createUntypedAdminClient } from '@/utils/supabase/admin'
 import { getShopSettings } from '@/utils/shopSettingsServer'
-import { seasonBar, seasonPhase } from '@/utils/seasonal'
+import { seasonMessages, seasonPhase } from '@/utils/seasonal'
 import { dualTimeText } from '@/utils/adminTime'
 import {
   SOURCE_LABEL, parseDevice, parsePeriod, parseSource, rate, withParams,
@@ -79,8 +79,8 @@ export default async function WebsitePage({ searchParams }: { searchParams: Prom
   const convertedCount = convertedRes.error ? null : convertedRes.count ?? 0
   const statusCount = (s: string) => orders.filter(o => (o.status ?? 'pending_cod') === s).length
   const phase = seasonPhase(new Date())
-  const barWithOffer = seasonBar(phase, true)
-  const barWithout = seasonBar(phase, false)
+  const barWithOffer = seasonMessages(phase, true)
+  const barWithout = seasonMessages(phase, false)
   // Run 5: the charts page with the same filters (the old link sent raw from/to
   // to the slow event explorer, which is where 'Journeys does not load' came from).
   const journeysLink = withParams('/admin/journeys', params, {})
@@ -242,9 +242,9 @@ export default async function WebsitePage({ searchParams }: { searchParams: Prom
         <Panel title="Seasonal pages and offer (read only)">
           <dl className="m-0 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-sm">
             <dt className="text-ink-500">Season</dt><dd className="m-0">{phase === 'off' ? 'No seasonal message today' : <Pill tone="info">{phase.replace('_', ' ')}</Pill>}</dd>
-            <dt className="text-ink-500">Top bar, offer holders</dt><dd className="m-0">{barWithOffer ? `${barWithOffer.lead} · ${barWithOffer.cta} → ${barWithOffer.href}` : 'Standard message'}</dd>
-            <dt className="text-ink-500">Top bar, everyone else</dt><dd className="m-0">{barWithout ? `${barWithout.lead} · ${barWithout.cta} → ${barWithout.href}` : 'Standard message'}</dd>
-            <dt className="text-ink-500">Visitor offer</dt><dd className="m-0">£{settings.tierAmounts.STANDARD} / £{settings.tierAmounts.ROMA} / £{settings.tierAmounts.ELECTRIC} by sofa tier, {settings.offerWindowHours} hours ({Math.round(settings.offerWindowHours / 24 * 10) / 10} days) from first visit, sofas £{settings.offerMinPrice}+</dd>
+            <dt className="text-ink-500">Top bar, offer holders</dt><dd className="m-0">{barWithOffer.length ? barWithOffer.map(m => `${m.short} → ${m.href}`).join('  |  ') : 'Standard message'}</dd>
+            <dt className="text-ink-500">Top bar, everyone else</dt><dd className="m-0">{barWithout.length ? barWithout.map(m => `${m.short} → ${m.href}`).join('  |  ') : 'Standard message'}</dd>
+            <dt className="text-ink-500">Visitor offer</dt><dd className="m-0">£50 on each Made-To-Order product; other sofas £{settings.tierAmounts.STANDARD} / £{settings.tierAmounts.ROMA} / £{settings.tierAmounts.ELECTRIC} by tier (£{settings.offerMinPrice}+); {settings.offerWindowHours} hours ({Math.round(settings.offerWindowHours / 24 * 10) / 10} days) from first visit, once per visitor</dd>
           </dl>
           <p className="m-0 mt-3 flex flex-wrap gap-2 text-sm">
             {['/black-friday', '/christmas', '/shop/all'].map(href => <a key={href} href={`https://www.uksofashop.co.uk${href}`} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-10 items-center rounded-md border border-calico-300 px-3 font-semibold text-ink-900 hover:bg-calico-50">Preview {href}</a>)}

@@ -131,7 +131,7 @@ export default async function JourneysPage({ searchParams }: { searchParams: Pro
       <Panel title="Delivery step: this period vs the one before">
         {!prev || !daily.outcomes ? <p className="m-0 text-sm text-ink-500">No comparison available for this view.</p> : (
           <RateBars
-            caption="Of the sessions that reached delivery details: how many placed an order, switched to WhatsApp, or left without typing. Same device and source filters, previous period of the same length. Small numbers swing a lot; this is observation, not a test."
+            caption="Of the sessions that reached delivery details: how many placed an order, switched to WhatsApp, or left without typing. Same device and source filters, previous period of the same length. Small numbers swing a lot; this is observation, not a test. Journey tracking began on 17 Oct 2026, so a comparison period reaching before that date holds fewer sessions."
             rows={[
               { label: `This period (${daily.outcomes.reached_delivery} reached delivery)`, rates: [
                 { label: 'Placed order', part: daily.outcomes.placed_order, whole: daily.outcomes.reached_delivery },
