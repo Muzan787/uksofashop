@@ -1569,26 +1569,69 @@ html.entrance .brand-entrance__rule {
 }
 
 /* ─── Seasonal snow (components/Season/SeasonalSnow.tsx) ──────────────────────
- * Quiet, optional, decoration only. One transformed layer, no JavaScript.
- * Off for reduced motion and below 640px, and the component is only ever
- * mounted on the seasonal bands - never in the basket, checkout or admin.
+ * Decoration only. Three depth layers of real six-armed flakes (public/season/
+ * snow-*.svg, original artwork): fine slow powder far away, clearly
+ * recognisable flakes in the middle, a few larger softly out-of-focus flakes
+ * near. Bigger flakes fall faster, which is what gives the depth. Each layer
+ * is one transformed element (compositor only, no JavaScript, no layout), and
+ * the whole thing sits BEHIND the content: it can never cover a price, a button
+ * or text. Mounted only on seasonal bands, never in the basket, checkout or admin.
+ *
+ *   - phones: the middle layer only (fewer flakes, still recognisable);
+ *   - 640px and up: all three;
+ *   - prefers-reduced-motion: the middle layer, still, at lower strength.
+ * A tile is a whole number of its own size, so every loop is seamless.
  */
-.season-snow { display: none; }
-@media (width >= 40rem) and (prefers-reduced-motion: no-preference) {
+.season-snow { display: none; contain: paint; }
+.season-snow > i {
+  display: none;
+  position: absolute;
+  left: -40px;
+  right: -40px;
+  bottom: 0;
+  background-repeat: repeat;
+  pointer-events: none;
+}
+.season-snow .snow-far  { top: -420px; background-image: url("/season/snow-far.svg");  background-size: 420px 420px; }
+.season-snow .snow-mid  { top: -520px; background-image: url("/season/snow-mid.svg");  background-size: 520px 520px; }
+.season-snow .snow-near { top: -680px; background-image: url("/season/snow-near.svg"); background-size: 680px 680px; }
+@media (prefers-reduced-motion: no-preference) {
   .season-snow { display: block; }
-  .season-snow::before {
-    content: "";
-    position: absolute;
-    inset: -400px 0 0 0;
-    background-image:
-      radial-gradient(2px 2px at 20px 30px, rgb(255 255 255 / 0.55) 50%, transparent 51%),
-      radial-gradient(1.5px 1.5px at 90px 80px, rgb(255 255 255 / 0.45) 50%, transparent 51%),
-      radial-gradient(2.5px 2.5px at 150px 140px, rgb(255 255 255 / 0.4) 50%, transparent 51%),
-      radial-gradient(1.5px 1.5px at 60px 170px, rgb(255 255 255 / 0.5) 50%, transparent 51%);
-    background-size: 200px 200px;
-    animation: season-fall 28s linear infinite;
-    will-change: transform;
+  .season-snow > i { will-change: transform; }
+  .season-snow .snow-mid { display: block; animation: snow-fall-mid 38s linear infinite, snow-sway-a 11s ease-in-out infinite alternate; }
+}
+@media (width >= 40rem) and (prefers-reduced-motion: no-preference) {
+  .season-snow .snow-far  { display: block; animation: snow-fall-far 64s linear infinite, snow-sway-b 15s ease-in-out infinite alternate; }
+  .season-snow .snow-near { display: block; animation: snow-fall-near 24s linear infinite, snow-sway-a 8s ease-in-out infinite alternate; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .season-snow { display: block; }
+  .season-snow .snow-mid { display: block; top: 0; opacity: 0.5; }
+}
+@keyframes snow-fall-far  { to { transform: translateY(420px); } }
+@keyframes snow-fall-mid  { to { transform: translateY(520px); } }
+@keyframes snow-fall-near { to { transform: translateY(680px); } }
+@keyframes snow-sway-a { from { translate: -18px 0; } to { translate: 18px 0; } }
+@keyframes snow-sway-b { from { translate: 10px 0; } to { translate: -10px 0; } }
+/* A hero whose copy sits on the left: the snow is held back behind the words
+ * (40% strength) and runs at full strength to the right, so a flake can never
+ * make a headline, a price or a button hard to read. On a phone the copy fills
+ * the width, so the whole layer is quieter instead. */
+@media (width >= 64rem) {
+  .season-snow--quiet {
+    -webkit-mask-image: linear-gradient(to right, rgb(0 0 0 / 0.4) 0%, rgb(0 0 0 / 0.4) 46%, #000 72%);
+    mask-image: linear-gradient(to right, rgb(0 0 0 / 0.4) 0%, rgb(0 0 0 / 0.4) 46%, #000 72%);
   }
 }
-/* 400px is two whole 200px tiles, so the loop is seamless. */
-@keyframes season-fall { from { transform: translateY(0); } to { transform: translateY(400px); } }
+@media (width < 64rem) {
+  .season-snow--quiet { opacity: 0.5; }
+}
+
+/* ─── Christmas tree lights (components/Season/ChristmasTree.tsx) ─────────────
+ * Opacity only, so it costs nothing to composite. With reduced motion the
+ * lights are simply lit. */
+.tree-light { opacity: 0.95; }
+@media (prefers-reduced-motion: no-preference) {
+  .tree-light { animation: tree-twinkle 3.4s ease-in-out infinite; }
+}
+@keyframes tree-twinkle { 0%, 100% { opacity: 0.95; } 50% { opacity: 0.45; } }

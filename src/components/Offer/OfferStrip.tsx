@@ -15,7 +15,7 @@
 // THE COUNTDOWN IS REAL. Each visitor's window is the length set in Admin ->
 // Settings (72 hours since 13 Nov 2026) from their first
 // ad click, fixed: a later click does not extend it, and once it ends it is
-// not given again (see the 48-hour migration). When the clock reaches zero
+// not given again (see the fixed-window migration). When the clock reaches zero
 // the strip goes, the checkout stops taking the money off, and the code stops
 // working. That is the only kind of timer the DMCC Act allows - one that
 // restarted, or that the shop ignored, would be a banned practice.

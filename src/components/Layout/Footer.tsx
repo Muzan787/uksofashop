@@ -16,6 +16,7 @@ import {
 import TikTokIcon from '@/components/UI/TikTokIcon';
 import type { NavCategory } from '@/utils/navigation';
 import { usePhoneClick } from '@/utils/attribution/usePhoneClick';
+import { useSeasonPhase } from '@/components/Season/useSeasonPhase';
 
 /**
  * ─────────────────────────────────────────────────────────────────────────────
@@ -36,6 +37,11 @@ import { usePhoneClick } from '@/utils/attribution/usePhoneClick';
  * newsletter sits in the same glass panel as the hero badge, and the sign-up
  * button is the same ember gradient as every other primary action.
  */
+
+const SEASONAL_LINKS = [
+  { href: '/black-friday', label: 'Black Friday' },
+  { href: '/christmas', label: 'Christmas delivery' },
+];
 
 const supportLinks = [
   { href: '/contact',          label: 'Contact Us' },
@@ -301,6 +307,7 @@ export default function Footer({ categories }: { categories: NavCategory[] }) {
   // is what finally puts these links in the server HTML.
   const year = new Date().getFullYear();
   const onPhoneClick = usePhoneClick();
+  const season = useSeasonPhase();
 
   const shopLinks = [
     { href: '/shop/all', label: 'All Sofas' },
@@ -364,6 +371,14 @@ export default function Footer({ categories }: { categories: NavCategory[] }) {
           <nav aria-label="Shop">
             <ColumnHeading>Shop</ColumnHeading>
             <FooterLinks links={shopLinks} />
+            {/* Seasonal shopping (14 Nov to 25 Dec only): the two landing pages,
+                low-key, under the ordinary shop links. */}
+            {season !== 'off' && (
+              <div className="mt-6">
+                <ColumnHeading>Seasonal shopping</ColumnHeading>
+                <FooterLinks links={SEASONAL_LINKS} />
+              </div>
+            )}
           </nav>
 
           <nav aria-label="Support">

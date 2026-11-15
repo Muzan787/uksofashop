@@ -6,6 +6,7 @@ import type { Metadata } from 'next'
 import { pageMetadata } from '@/utils/pageMetadata'
 import { getShopSettings } from '@/utils/shopSettingsServer'
 import SeasonalLanding from '@/components/Season/SeasonalLanding'
+import { getSeasonProducts } from '@/utils/seasonProducts'
 
 export const revalidate = 3600
 
@@ -16,5 +17,6 @@ export const metadata: Metadata = pageMetadata({
 })
 
 export default async function BlackFridayPage() {
-  return <SeasonalLanding kind="black_friday" settings={await getShopSettings()} />
+  const [settings, products] = await Promise.all([getShopSettings(), getSeasonProducts()])
+  return <SeasonalLanding kind="black_friday" settings={settings} products={products} />
 }

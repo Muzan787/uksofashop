@@ -7,6 +7,7 @@ import { Magnetic, Parallax, Reveal, SplitText } from '@/components/Motion';
 import { PROMISES } from '@/constants/promises';
 import { HOME_ART, hasArt } from '@/constants/homeArt';
 import { blurDataURL, darkened, trimmed } from '@/utils/cloudinary';
+import ChristmasTree from '@/components/Season/ChristmasTree';
 
 interface Props {
   /** The sofa in the photograph — a real product, not a stock room. */
@@ -270,6 +271,10 @@ export default function Hero({ image, productTitle, productHref, fromPrice, wasP
             Replacing HOME_ART.heroSofa with a differently-shaped photograph
             means changing this ratio to match it. */}
         <div className="relative -mx-4 aspect-[1254/714] sm:-mx-6 lg:mx-0 lg:aspect-[5/4]">
+          {/* Christmas tree (14 Nov to 25 Dec, 640px and up): at the far right of
+              the stage and BEHIND the sofa, because it comes first and Parallax
+              comes after. Decoration only; see Season/ChristmasTree.tsx. */}
+          <ChristmasTree className="bottom-[4%] right-[1%] z-0 h-[96%] w-auto lg:right-[calc(-1*clamp(0px,(100vw_-_1180px)/2,110px))]" />
           <Parallax speed={0.1} className="absolute inset-0">
             {/* The pool of light it stands in. Wider than the sofa and centred
                 low, so the brightest part of it is under the seat rather than

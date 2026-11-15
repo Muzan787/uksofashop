@@ -7,7 +7,7 @@ const issueSchema = z.object({
   source: z.enum(['google_ads', 'meta_ads', 'meta_catalog', 'site_visit']),
   started_at: z.string(),
   expires_at: z.string(),
-  // Present from the 48-hour migration on. A missing value reads as "not
+  // Present from the fixed-window migration on. A missing value reads as "not
   // revoked", which is what every row issued before it was.
   revoked: z.boolean().optional(),
 })
@@ -37,7 +37,7 @@ export async function issueOfferEntitlement(
  * Whole seconds left on an issued window, or 0 if it has ended.
  *
  * The database never reissues or extends a window once it has ended - a
- * visitor whose 48 hours are up gets their old row back, unchanged - so the
+ * visitor whose window is over gets their old row back, unchanged - so the
  * routes that call issueOfferEntitlement have to look at the answer rather
  * than assume it is a fresh grant. 0 means: answer "inactive" and do not set
  * the cookie. Otherwise the cookie lives exactly as long as the window.

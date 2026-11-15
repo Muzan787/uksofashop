@@ -7,12 +7,24 @@ export const OFFER_ENTITLEMENT_COOKIE = 'uksofashop_offer'
  * shop_settings.offer_window_hours, which Admin -> Settings changes; this is
  * the default, and the copy reads the live figure through getShopSettings().
  */
-export const OFFER_WINDOW_HOURS = 48
+export const OFFER_WINDOW_HOURS = 96
 /**
  * The visitor's own code. It works only while their window is open - the
  * database refuses it otherwise - so it is never "passed on".
  */
 export const OFFER_PUBLIC_CODE = 'SOFAEXTRA'
+/**
+ * Seasonal spellings of the SAME offer (migration 20261115100000). The
+ * database prices the discount from the visitor's window and the sofa's tier,
+ * never from the typed code, so an alias is only a label: it adds no second
+ * discount and no second window. The shop still displays SOFAEXTRA.
+ */
+export const OFFER_ALIAS_CODES = ['BLACKFRIDAY', 'CHRISTMAS'] as const
+/** True for the displayed code and its seasonal spellings, whatever the case or spaces. */
+export function isOfferCode(value: string | null | undefined): boolean {
+  const code = (value ?? '').trim().toUpperCase()
+  return code === OFFER_PUBLIC_CODE || (OFFER_ALIAS_CODES as readonly string[]).includes(code)
+}
 
 export type PaidOfferSource = 'google_ads' | 'meta_ads' | 'meta_catalog'
 /**

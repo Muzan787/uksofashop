@@ -26,8 +26,8 @@ export function formatOfferDeadline(iso: string): string {
 }
 
 /**
- * "71:12:05" inside a window of up to three days (the 72-hour window since
- * 13 Nov 2026), or "3d 04:12:05" for anything longer. Zero-padded so the
+ * "95:12:05" inside a window of up to four days (the 96-hour window since
+ * 15 Nov 2026), or "4d 04:12:05" for anything longer. Zero-padded so the
  * width does not jitter as it ticks.
  */
 export function formatCountdown(ms: number): string {
@@ -37,9 +37,9 @@ export function formatCountdown(ms: number): string {
   const minutes = Math.floor((total % 3600) / 60)
   const seconds = total % 60
   const pad = (n: number) => String(n).padStart(2, '0')
-  // Inside the 72-hour window the hours run to 71 rather than switching to a
+  // Inside the 96-hour window the hours run to 95 rather than switching to a
   // day count part-way through the same customer's countdown.
-  if (days >= 3) return `${days}d ${pad(hours)}:${pad(minutes)}:${pad(seconds)}`
+  if (days >= 4) return `${days}d ${pad(hours)}:${pad(minutes)}:${pad(seconds)}`
   return `${pad(days * 24 + hours)}:${pad(minutes)}:${pad(seconds)}`
 }
 

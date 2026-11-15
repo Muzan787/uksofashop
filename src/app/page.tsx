@@ -6,6 +6,7 @@ import { priceAnchors, summariseCollections } from '@/utils/collections';
 import { getFabricLibrary } from '@/utils/fabrics';
 import { getBuildTeaser } from '@/utils/buildTeaser';
 import HomeClient from '@/components/Home/HomeClient';
+import { getSeasonProducts } from '@/utils/seasonProducts';
 import { HERO_PRODUCT_SLUG } from '@/constants/homeArt';
 import { CUSTOMER_REVIEWS } from '@/constants/socialReviews';
 import type { HomeReview } from '@/components/Home/ReviewTicker';
@@ -157,6 +158,8 @@ export default async function HomePage() {
   const {
     categories, categoryStats, featuredProducts, groupsData, sofaCount, reviewRows, heroProduct, buildTeaser, bedProducts,
   } = await getHomeData();
+  // The Christmas band's sofas (cached, ten minutes). The band itself draws only 14 Nov to 25 Dec.
+  const seasonItems = await getSeasonProducts();
 
   // "from £149" under Fabric Sofas was the Sims footstool. The tile says
   // "sofas", so the price anchor is the cheapest thing that is one: footstools
@@ -242,6 +245,7 @@ export default async function HomePage() {
         reviews={reviews}
         buildTeaser={buildTeaser}
         beds={(bedProducts ?? []).map(toCardShape)}
+        seasonItems={seasonItems}
       />
     </>
   );

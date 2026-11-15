@@ -114,6 +114,8 @@ const applyOfferFloor = async pg => {
   await pg.exec(read(`supabase/migrations/${OFFER_FLOOR_MIGRATION}`))
   // The 72-hour visitor window (13 Nov 2026), so the row matches today's figures.
   await pg.exec(read('supabase/migrations/20261114090000_offer_window_default_72.sql'))
+  // The 96-hour window (15 Nov 2026) and the two seasonal spellings of the code.
+  await pg.exec(read('supabase/migrations/20261115100000_offer_window_96_hours.sql'))
 }
 
 /** Everything, as production has it. */
@@ -433,6 +435,79 @@ test('saving the settings is for admins only', async () => {
   }
   // A refused save changes nothing.
   assert.equal(Number((await pg.query(`select assembly_fee from shop_settings`)).rows[0].assembly_fee), 30)
+})
+
+// ── 96-hour window, 15 Nov 2026 ─────────────────────────────────────────────
+
+test('a new visitor gets 96 hours, and the row and default say so', async () => {
+  const pg = await checkoutDb()
+  await applyAll(pg)
+  const v = '66666666-6666-4666-8666-666666666666'
+  const a = await issue(pg, v)
+  assert.equal((new Date(a.expires_at) - new Date(a.started_at)) / 3600000, 96)
+  assert.equal((await pg.query(`select offer_window_hours h from shop_settings`)).rows[0].h, 96)
+  assert.equal(settings.DEFAULT_SHOP_SETTINGS.offerWindowHours, 96)
+  // A second visit changes nothing.
+  const again = await issue(pg, v)
+  assert.equal(again.expires_at, a.expires_at)
+})
+
+test('open 72-hour windows are extended once; ended, revoked and other-length ones are not', async () => {
+  const pg = await checkoutDb()
+  await applyAll(pg)
+  const ins = (id, started, hours, revoked) => pg.query(
+    `insert into offer_entitlements (token, visitor_id, source, started_at, expires_at, revoked_at, updated_at)
+     values (gen_random_uuid(), $1, 'site_visit', now() - ($2 || ' hours')::interval, now() - ($2 || ' hours')::interval + ($3 || ' hours')::interval, $4, now())`,
+    [id, String(started), String(hours), revoked ? new Date().toISOString() : null])
+  const open72 = '71111111-1111-4111-8111-111111111111'
+  const ended72 = '72222222-2222-4222-8222-222222222222'
+  const revoked72 = '73333333-3333-4333-8333-333333333333'
+  const open48 = '74444444-4444-4444-8444-444444444444'
+  await ins(open72, 10, 72, false)
+  await ins(ended72, 80, 72, false)
+  await ins(revoked72, 10, 72, true)
+  await ins(open48, 10, 48, false)
+  const snap = async () => Object.fromEntries((await pg.query(`select visitor_id v, started_at, expires_at, revoked_at from offer_entitlements`)).rows.map(r => [r.v, r]))
+  const before = await snap()
+  await pg.exec(read('supabase/migrations/20261115100000_offer_window_96_hours.sql'))
+  const after = await snap()
+  const hours = r => (new Date(r.expires_at) - new Date(r.started_at)) / 3600000
+  assert.equal(hours(after[open72]), 96)
+  assert.equal(hours(after[ended72]), 72)
+  assert.equal(after[ended72].expires_at.toISOString(), before[ended72].expires_at.toISOString())
+  assert.equal(hours(after[revoked72]), 72)
+  assert.equal(hours(after[open48]), 48)
+  for (const id of [open72, ended72, revoked72, open48]) assert.equal(after[id].started_at.toISOString(), before[id].started_at.toISOString())
+  // Run again: nothing moves a second time.
+  await pg.exec(read('supabase/migrations/20261115100000_offer_window_96_hours.sql'))
+  const third = await snap()
+  for (const id of [open72, ended72, revoked72, open48]) assert.equal(third[id].expires_at.toISOString(), after[id].expires_at.toISOString())
+  // A later visit by an extended visitor issues nothing new.
+  const back = await issue(pg, open72)
+  assert.equal(Date.parse(back.expires_at), after[open72].expires_at.getTime())
+})
+
+test('BLACKFRIDAY and CHRISTMAS are spellings of one offer: same discount, no second one', async () => {
+  const pg = await checkoutDb()
+  await applyAll(pg)
+  const token = (await issue(pg)).token
+  const items = JSON.stringify([{ variant_id: V_STANDARD, quantity: 1 }])
+  const offer = async (code, tok) => (await pg.query(`select calculate_order_offer($1::jsonb, $2, $3) r`, [items, code, tok])).rows[0].r
+  const base = await offer('SOFAEXTRA', token)
+  for (const code of ['BLACKFRIDAY', 'christmas ', 'Sofaextra']) {
+    const q = await offer(code, token)
+    assert.equal(Number(q.discount_amount), Number(base.discount_amount), `${code} is the same amount`)
+    assert.equal(q.code_valid, true)
+  }
+  assert.equal(Number(base.discount_amount), 20)
+  // Outside a window no code, alias or not, takes anything off.
+  for (const code of ['BLACKFRIDAY', 'CHRISTMAS', 'SOFAEXTRA']) {
+    const q = await offer(code, null)
+    assert.equal(Number(q.discount_amount), 0)
+    assert.equal(q.code_valid, false)
+  }
+  // One discount only: the amount never exceeds the tier amount whatever is typed.
+  assert.equal(Number((await offer('BLACKFRIDAY', token)).discount_amount), 20)
 })
 
 // ── The pure rules ──────────────────────────────────────────────────────────
