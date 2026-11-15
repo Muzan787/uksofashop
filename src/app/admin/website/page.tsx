@@ -223,7 +223,7 @@ export default async function WebsitePage({ searchParams }: { searchParams: Prom
             {cohortRes?.error || !c ? <p className="m-0 text-sm text-ink-500">The cohort report could not be loaded.</p> : (
               <>
                 <RateBars
-                  caption={`Visitors whose first offer window started 12 Oct to ${c.cohort_to.slice(0, 10)} (at least 14 days ago). A return is a new tracked session in the same browser; other devices and untracked visits are not seen. Those windows were 48-96 hours long, so this shows when people come back, not the effect of the 7-day offer.`}
+                  caption={`Visitors whose first offer window started 12 Oct to ${c.cohort_to.slice(0, 10)} (at least 14 days ago). A return is a new tracked session in the same browser; other devices and untracked visits are not seen. Those windows were 48-96 hours long, so this shows when people come back, not the effect of the current 14-day offer.`}
                   rows={rows.map(r => ({ label: `${r.origin === 'ad' ? 'From an ad' : 'Other visitors'} (${r.visitors})`, rates: [
                     { label: 'Back after day 4', part: r.returned_after_day4, whole: r.visitors },
                     { label: 'Back on days 5-7', part: r.returned_day5to7, whole: r.visitors },

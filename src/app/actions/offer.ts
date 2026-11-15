@@ -31,7 +31,7 @@ function asSource(value: unknown): OfferSource | null {
 /**
  * Ask the database for the current authoritative basket offer. The caller may
  * supply the customer-facing code - valid only inside the visitor's own
- * 7-day window - but never a paid entitlement token, tier or amount. The opaque Phase C bearer is read only from the HttpOnly
+ * 14-day window - but never a paid entitlement token, tier or amount. The opaque Phase C bearer is read only from the HttpOnly
  * first-party cookie on this server action and is revalidated by PostgreSQL.
  */
 export async function quoteOffer(

@@ -21,7 +21,7 @@ const seasonal = load('src/utils/seasonal.ts')
 const daily = load('src/utils/businessDaily.ts')
 
 test('7 days everywhere: constant, default, migration; no customer copy says 96 hours', () => {
-  assert.match(read('src/utils/offers/constants.ts'), /OFFER_WINDOW_HOURS = 168/)
+  assert.match(read('src/utils/offers/constants.ts'), /OFFER_WINDOW_HOURS = 336/)
   const sql = read('supabase/migrations/20261115220000_offer_window_168_hours.sql')
   assert.match(sql, /set default 168/)
   assert.match(sql, /expires_at = started_at \+ interval '96 hours'/)
@@ -46,7 +46,11 @@ test('hero chip: £50 only with a live window on a Made-To-Order sofa, no was-pr
   assert.match(chip, /const off = madeToOrder && ready && active \? Math\.min\(MTO_OFFER_AMOUNT, fromPrice\) : 0/)
   const offerBranch = chip.slice(chip.indexOf('if (off > 0)'), chip.indexOf('data-hero-offer="active"'))
   assert.doesNotMatch(offerBranch, /<s |wasPrice!/)
-  assert.match(read('src/components/Home/Hero.tsx'), /<HeroPriceChip/)
+  const hero = read('src/components/Home/Hero.tsx')
+  assert.match(hero, /<HeroPriceChip/)
+  // Run 10: the chip sits below the stage, not on the photograph.
+  assert.ok(hero.indexOf('<HeroPriceChip') > hero.indexOf('</Parallax>'))
+  assert.doesNotMatch(hero, /absolute bottom-\[26%\] left-4/)
   assert.match(read('src/app/page.tsx'), /main_collections\(slug\)/)
 })
 

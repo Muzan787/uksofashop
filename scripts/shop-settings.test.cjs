@@ -118,6 +118,8 @@ const applyOfferFloor = async pg => {
   await pg.exec(read('supabase/migrations/20261115100000_offer_window_96_hours.sql'))
   // The 7-day window (Run 9, 15 Nov 2026).
   await pg.exec(read('supabase/migrations/20261115220000_offer_window_168_hours.sql'))
+  // The 14-day relaunch (Run 10, 15 Nov 2026).
+  await pg.exec(read('supabase/migrations/20261115240000_offer_relaunch_14_days.sql'))
 }
 
 /** Everything, as production has it. */
@@ -441,14 +443,15 @@ test('saving the settings is for admins only', async () => {
 
 // ── 96-hour window, 15 Nov 2026 ─────────────────────────────────────────────
 
-test('a new visitor gets 168 hours (7 days), and the row and default say so', async () => {
+test('a new visitor gets 336 hours (14 days) of the current generation, and the row and default say so', async () => {
   const pg = await checkoutDb()
   await applyAll(pg)
   const v = '66666666-6666-4666-8666-666666666666'
   const a = await issue(pg, v)
-  assert.equal((new Date(a.expires_at) - new Date(a.started_at)) / 3600000, 168)
-  assert.equal((await pg.query(`select offer_window_hours h from shop_settings`)).rows[0].h, 168)
-  assert.equal(settings.DEFAULT_SHOP_SETTINGS.offerWindowHours, 168)
+  assert.equal((new Date(a.expires_at) - new Date(a.started_at)) / 3600000, 336)
+  assert.equal((await pg.query(`select offer_window_hours h from shop_settings`)).rows[0].h, 336)
+  assert.equal(settings.DEFAULT_SHOP_SETTINGS.offerWindowHours, 336)
+  assert.equal((await pg.query(`select generation g from offer_entitlements where visitor_id = $1`, [v])).rows[0].g, 'run10_2026_11_15_14d')
   // A second visit changes nothing.
   const again = await issue(pg, v)
   assert.equal(again.expires_at, a.expires_at)
@@ -549,6 +552,90 @@ test('Run 9: open 96-hour windows become 7 days once; ended, revoked and others 
   const old = await issue(pg, past96)
   assert.ok(Date.parse(old.expires_at) < Date.now())
   assert.equal((await pg.query(`select count(*)::int n from offer_entitlements where visitor_id = $1`, [past96])).rows[0].n, 1)
+})
+
+// ── Run 10: the 14-day relaunch, one fresh window per visitor ────────────────
+
+test('Run 10 relaunch: one fresh 14-day window per visitor at their first visit, never a second', async () => {
+  const pg = await checkoutDb()
+  await applyAll(pg)
+  const ins = (id, startedAgoH, lenH, revoked, gen = null) => pg.query(
+    `insert into offer_entitlements (token, visitor_id, source, started_at, expires_at, revoked_at, updated_at, generation)
+     values (gen_random_uuid(), $1, 'google_ads', now() - ($2 || ' hours')::interval, now() - ($2 || ' hours')::interval + ($3 || ' hours')::interval, $4, now(), $5)`,
+    [id, String(startedAgoH), String(lenH), revoked ? new Date().toISOString() : null, gen])
+  const row = async id => (await pg.query(`select token, source, started_at, expires_at, revoked_at, generation from offer_entitlements where visitor_id = $1`, [id])).rows[0]
+  const count = async () => (await pg.query(`select count(*)::int n from offer_entitlements`)).rows[0].n
+  const hours = r => (Date.parse(r.expires_at) - Date.parse(r.started_at)) / 3600000
+
+  const expiredOld = 'a1111111-1111-4111-8111-111111111111'
+  const openOld = 'a2222222-2222-4222-8222-222222222222'
+  const revokedOld = 'a3333333-3333-4333-8333-333333333333'
+  const untouched = 'a4444444-4444-4444-8444-444444444444'
+  await ins(expiredOld, 300, 168, false)
+  await ins(openOld, 48, 168, false)
+  await ins(revokedOld, 10, 168, true)
+  await ins(untouched, 300, 168, false)
+  const before = { e: await row(expiredOld), o: await row(openOld), u: await row(untouched) }
+  const total = await count()
+
+  // Nothing is granted by the migration itself (re-applying it changes no row).
+  await pg.exec(read('supabase/migrations/20261115240000_offer_relaunch_14_days.sql'))
+  assert.equal((await row(untouched)).token, before.u.token)
+  assert.equal((await row(untouched)).generation, null)
+
+  // An ended old window: a fresh 14-day window from now, new token, archived history.
+  const e1 = await issue(pg, expiredOld)
+  assert.equal(hours(e1), 336)
+  assert.notEqual(e1.token, before.e.token)
+  assert.ok(Date.parse(e1.started_at) > Date.parse(before.e.started_at))
+  assert.equal(e1.source, 'meta_ads', 'the fresh window takes THIS arrival\u2019s source')
+  // ... and a revisit returns exactly the same window.
+  const e2 = await issue(pg, expiredOld, 'site_visit')
+  assert.equal(e2.token, e1.token); assert.equal(e2.expires_at, e1.expires_at); assert.equal(e2.started_at, e1.started_at)
+
+  // An old window still open switches to 14 days from this first revisit, once.
+  const o1 = await issue(pg, openOld)
+  assert.equal(hours(o1), 336)
+  assert.notEqual(o1.token, before.o.token)
+  const o2 = await issue(pg, openOld)
+  assert.equal(o2.expires_at, o1.expires_at)
+
+  // A revoked window is an explicit block: never regranted.
+  const r1 = await issue(pg, revokedOld)
+  assert.equal(r1.revoked, true)
+  assert.equal((await row(revokedOld)).generation, null)
+
+  // No duplicate rows, one archive row per regrant, the absent visitor untouched.
+  assert.equal(await count(), total)
+  const hist = (await pg.query(`select visitor_id, reason, new_generation from private.offer_entitlement_history order by id`)).rows
+  assert.equal(hist.length, 2)
+  assert.equal(hist[0].reason, 'relaunch_regrant_from_ended_window')
+  assert.equal(hist[1].reason, 'relaunch_regrant_from_open_window')
+  assert.ok(hist.every(h => h.new_generation === 'run10_2026_11_15_14d'))
+  assert.equal((await row(untouched)).token, before.u.token)
+
+  // When the new window itself has ended there is no further grant.
+  await pg.query(`update offer_entitlements set expires_at = now() - interval '1 minute' where visitor_id = $1`, [expiredOld])
+  const e3 = await issue(pg, expiredOld)
+  assert.ok(Date.parse(e3.expires_at) < Date.now())
+  assert.equal(e3.token, e1.token)
+
+  // The offer price follows the new token only.
+  const items = JSON.stringify([{ variant_id: V_STANDARD, quantity: 1 }])
+  const q = async tok => Number((await pg.query(`select calculate_order_offer($1::jsonb, 'BLACKFRIDAY', $2) r`, [items, tok])).rows[0].r.discount_amount)
+  assert.equal(await q(o1.token), 20, 'tier rules unchanged for a non-made-to-order product')
+  assert.equal(await q(before.o.token), 0, 'the old token no longer prices anything')
+})
+
+test('Run 10 relaunch: parallel first visits make exactly one grant', async () => {
+  const pg = await checkoutDb()
+  await applyAll(pg)
+  const v = 'a5555555-5555-4555-8555-555555555555'
+  await pg.query(`insert into offer_entitlements (token, visitor_id, source, started_at, expires_at, updated_at) values (gen_random_uuid(), $1, 'site_visit', now() - interval '20 days', now() - interval '13 days', now())`, [v])
+  const [a, b] = await Promise.all([issue(pg, v), issue(pg, v)])
+  assert.equal(a.token, b.token)
+  assert.equal(a.expires_at, b.expires_at)
+  assert.equal((await pg.query(`select count(*)::int n from private.offer_entitlement_history where visitor_id = $1`, [v])).rows[0].n, 1)
 })
 
 // ── The pure rules ──────────────────────────────────────────────────────────

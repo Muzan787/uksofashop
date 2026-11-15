@@ -45,8 +45,8 @@ test('the countdown reads in days, then hours on the last day (Run 9, 7-day wind
 })
 
 test('the window is 96 hours in the constant, the default and the migration', () => {
-  assert.equal(constants.OFFER_WINDOW_HOURS, 168)
-  assert.match(read('src/utils/shopSettings.ts'), /offerWindowHours:\s*168/)
+  assert.equal(constants.OFFER_WINDOW_HOURS, 336)
+  assert.match(read('src/utils/shopSettings.ts'), /offerWindowHours:\s*336/)
   assert.match(read('supabase/migrations/20261115220000_offer_window_168_hours.sql'), /coalesce\(v_s\.offer_window_hours, 168\)/)
   const sql = read('supabase/migrations/20261115100000_offer_window_96_hours.sql')
   assert.match(sql, /set default 96/)

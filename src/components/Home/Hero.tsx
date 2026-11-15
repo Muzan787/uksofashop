@@ -274,6 +274,9 @@ export default function Hero({ image, productTitle, productHref, fromPrice, wasP
             WhatsApp button already lives.
             Replacing HOME_ART.heroSofa with a differently-shaped photograph
             means changing this ratio to match it. */}
+        {/* Run 10: the stage and, below it, the price chip - the chip no longer
+            sits on the photograph, so it never covers the sofa. */}
+        <div className="min-w-0">
         <div className="relative -mx-4 aspect-[1254/714] sm:-mx-6 lg:mx-0 lg:aspect-[5/4]">
           {/* Christmas tree (14 Nov to 25 Dec, 640px and up): at the far right of
               the stage and BEHIND the sofa, because it comes first and Parallax
@@ -342,19 +345,20 @@ export default function Hero({ image, productTitle, productHref, fromPrice, wasP
 
                 It carries the product name in its label because the caption
                 rail that used to name the sofa is desktop-only now. */}
-            {/* Offer-aware since Run 9: £799 with the code for a visitor holding a live
-                window on a Made-To-Order sofa, the listed price otherwise. See HeroPriceChip. */}
-            {typeof fromPrice === 'number' && productHref && (
-              <HeroPriceChip
-                productHref={productHref}
-                productTitle={productTitle ?? null}
-                fromPrice={fromPrice}
-                wasPrice={wasPrice ?? null}
-                madeToOrder={Boolean(madeToOrder)}
-                className="glass-dark-panel hover-btn hover-btn-dark absolute bottom-[26%] left-4 z-raised flex items-center gap-2.5 rounded-pill py-2.5 pl-4 pr-3 no-underline sm:left-6 lg:bottom-[22%] lg:left-0"
-              />
-            )}
           </Parallax>
+        </div>
+        {typeof fromPrice === 'number' && productHref && (
+          <div className="relative z-raised mt-3 flex justify-start lg:mt-5 lg:justify-center">
+            <HeroPriceChip
+              productHref={productHref}
+              productTitle={productTitle ?? null}
+              fromPrice={fromPrice}
+              wasPrice={wasPrice ?? null}
+              madeToOrder={Boolean(madeToOrder)}
+              className="glass-dark-panel hover-btn hover-btn-dark inline-flex max-w-full items-center gap-2.5 rounded-pill py-2.5 pl-4 pr-3 no-underline"
+            />
+          </div>
+        )}
         </div>
       </div>
 

@@ -7,7 +7,7 @@ export const OFFER_ENTITLEMENT_COOKIE = 'uksofashop_offer'
  * shop_settings.offer_window_hours, which Admin -> Settings changes; this is
  * the default, and the copy reads the live figure through getShopSettings().
  */
-export const OFFER_WINDOW_HOURS = 168
+export const OFFER_WINDOW_HOURS = 336
 /**
  * The visitor's own code. It works only while their window is open - the
  * database refuses it otherwise - so it is never "passed on".

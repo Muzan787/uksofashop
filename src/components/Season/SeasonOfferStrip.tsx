@@ -2,7 +2,7 @@
 // src/components/Season/SeasonOfferStrip.tsx
 //
 // The seasonal pages' offer line, inside the collection hero (Run 7).
-//   - With a live 7-day window: "£50 off every made-to-order sofa · code
+//   - With a live 14-day window: "£50 off every made-to-order sofa · code
 //     BLACKFRIDAY · ends Thu 19 Nov, 1:16pm", with a copy button. The amount is
 //     what calculate_order_offer takes off each made-to-order line; the
 //     deadline is the persisted window's own expiry.

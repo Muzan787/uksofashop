@@ -120,7 +120,7 @@ export interface SeasonMessage {
 /**
  * The rotating announcement bar (Run 7, owner decision). Three true messages,
  * chosen by what holds for THIS visitor:
- *   - with a live 7-day window: the £50 off every Made-To-Order product
+ *   - with a live 14-day window: the £50 off every Made-To-Order product
  *     (calculate_order_offer takes it off the listed price of each line), the
  *     seasonal code to use, and the real countdown;
  *   - without one: no code and no money claim at all, just where to shop.
@@ -144,7 +144,7 @@ export function seasonMessages(phase: SeasonPhase, offerActive: boolean): Season
 
 /**
  * The moving trust marquee's seasonal lines (Run 8). A code and the £50 only
- * for a visitor whose 7-day window is live (the £50 applies to Made-To-Order
+ * for a visitor whose 14-day window is live (the £50 applies to Made-To-Order
  * products only, so the line says so); otherwise no money claim at all.
  * SOFAEXTRA is never shown.
  */

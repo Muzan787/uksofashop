@@ -2,7 +2,7 @@
 // src/components/Season/SeasonRotator.tsx
 //
 // The announcement bar's seasonal messages, rotating (Run 7). Messages come
-// from utils/seasonal.ts seasonMessages(): with a live 7-day window the
+// from utils/seasonal.ts seasonMessages(): with a live 14-day window the
 // visitor sees the £50 Made-To-Order offer, the code to use and their real
 // countdown; without one, no code and no money claim.
 //

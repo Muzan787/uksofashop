@@ -15,7 +15,7 @@
 //
 // Claims: the £50 is shown only to a visitor holding a live window (the offer
 // strip), and it is described as what it is - £50 off the CURRENT listed price
-// of each made-to-order product, inside the visitor's 7-day window. No was-price, no
+// of each made-to-order product, inside the visitor's 14-day window. No was-price, no
 // "save £50 compared with" anything, no timer of our own, no Christmas
 // delivery guarantee.
 import Link from 'next/link'
@@ -98,7 +98,7 @@ export default function SeasonalLanding({
           <Fold title={`How the £${MTO_OFFER_AMOUNT} made-to-order offer works`}>
             <ul className="m-0 list-disc space-y-1 pl-5">
               <li>Inside your {windowLabel(settings.offerWindowHours)} offer window, every made-to-order sofa, set, chair and footstool has £{MTO_OFFER_AMOUNT} taken off its current listed price: £{MTO_OFFER_AMOUNT} for each one in your basket.</li>
-              <li>Your window starts on your first visit and does not restart. Each sofa&apos;s page shows the price you pay and when your window ends.</li>
+              <li>Your 14-day window starts on your first visit from 15 November 2026 (earlier visitors included) and runs once: revisiting does not restart it. Each sofa&apos;s page shows the price you pay and when your window ends.</li>
               <li>Use code {code}. BLACKFRIDAY, CHRISTMAS and SOFAEXTRA are the same offer: one offer, never added together.</li>
               <li>The £{MTO_OFFER_AMOUNT} is a voucher on today&apos;s listed price. It is not a comparison with any earlier price.</li>
               <li>Sofas outside the made-to-order collection keep their own offer, shown on their page.</li>
