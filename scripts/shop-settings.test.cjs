@@ -116,6 +116,8 @@ const applyOfferFloor = async pg => {
   await pg.exec(read('supabase/migrations/20261114090000_offer_window_default_72.sql'))
   // The 96-hour window (15 Nov 2026) and the two seasonal spellings of the code.
   await pg.exec(read('supabase/migrations/20261115100000_offer_window_96_hours.sql'))
+  // The 7-day window (Run 9, 15 Nov 2026).
+  await pg.exec(read('supabase/migrations/20261115220000_offer_window_168_hours.sql'))
 }
 
 /** Everything, as production has it. */
@@ -439,14 +441,14 @@ test('saving the settings is for admins only', async () => {
 
 // ── 96-hour window, 15 Nov 2026 ─────────────────────────────────────────────
 
-test('a new visitor gets 96 hours, and the row and default say so', async () => {
+test('a new visitor gets 168 hours (7 days), and the row and default say so', async () => {
   const pg = await checkoutDb()
   await applyAll(pg)
   const v = '66666666-6666-4666-8666-666666666666'
   const a = await issue(pg, v)
-  assert.equal((new Date(a.expires_at) - new Date(a.started_at)) / 3600000, 96)
-  assert.equal((await pg.query(`select offer_window_hours h from shop_settings`)).rows[0].h, 96)
-  assert.equal(settings.DEFAULT_SHOP_SETTINGS.offerWindowHours, 96)
+  assert.equal((new Date(a.expires_at) - new Date(a.started_at)) / 3600000, 168)
+  assert.equal((await pg.query(`select offer_window_hours h from shop_settings`)).rows[0].h, 168)
+  assert.equal(settings.DEFAULT_SHOP_SETTINGS.offerWindowHours, 168)
   // A second visit changes nothing.
   const again = await issue(pg, v)
   assert.equal(again.expires_at, a.expires_at)
@@ -508,6 +510,45 @@ test('BLACKFRIDAY and CHRISTMAS are spellings of one offer: same discount, no se
   }
   // One discount only: the amount never exceeds the tier amount whatever is typed.
   assert.equal(Number((await offer('BLACKFRIDAY', token)).discount_amount), 20)
+})
+
+test('Run 9: open 96-hour windows become 7 days once; ended, revoked and others untouched; no new window', async () => {
+  const pg = await checkoutDb()
+  await applyAll(pg)
+  const ins = (id, startedAgoH, lenH, revoked) => pg.query(
+    `insert into offer_entitlements (token, visitor_id, source, started_at, expires_at, revoked_at, updated_at)
+     values (gen_random_uuid(), $1, 'meta_ads', now() - ($2 || ' hours')::interval, now() - ($2 || ' hours')::interval + ($3 || ' hours')::interval, $4, now())`,
+    [id, String(startedAgoH), String(lenH), revoked ? new Date().toISOString() : null])
+  const open96 = '81111111-1111-4111-8111-111111111111'
+  const ended96 = '82222222-2222-4222-8222-222222222222'
+  const revoked96 = '83333333-3333-4333-8333-333333333333'
+  const past96 = '84444444-4444-4444-8444-444444444444' // 100 h old: ended at 96 h, must stay ended
+  await ins(open96, 50, 96, false)
+  await ins(ended96, 120, 96, false)
+  await ins(revoked96, 10, 96, true)
+  await ins(past96, 100, 96, false)
+  const snap = async () => Object.fromEntries((await pg.query(`select visitor_id v, token, source, started_at, expires_at from offer_entitlements`)).rows.map(r => [r.v, r]))
+  const before = await snap()
+  await pg.exec(read('supabase/migrations/20261115220000_offer_window_168_hours.sql'))
+  const after = await snap()
+  const hours = r => (new Date(r.expires_at) - new Date(r.started_at)) / 3600000
+  assert.equal(hours(after[open96]), 168)
+  for (const id of [ended96, revoked96, past96]) assert.equal(after[id].expires_at.getTime(), before[id].expires_at.getTime())
+  for (const id of [open96, ended96, revoked96, past96]) {
+    assert.equal(after[id].token, before[id].token, 'same token')
+    assert.equal(after[id].source, before[id].source, 'same source')
+    assert.equal(after[id].started_at.getTime(), before[id].started_at.getTime())
+  }
+  // Re-running moves nothing; a revisit returns the same window (the cookie is re-set to it).
+  await pg.exec(read('supabase/migrations/20261115220000_offer_window_168_hours.sql'))
+  assert.equal((await snap())[open96].expires_at.getTime(), after[open96].expires_at.getTime())
+  const back = await issue(pg, open96)
+  assert.equal(back.token, after[open96].token)
+  assert.equal(Date.parse(back.expires_at), after[open96].expires_at.getTime())
+  // An ended visitor coming back gets their ended row, not a new window.
+  const old = await issue(pg, past96)
+  assert.ok(Date.parse(old.expires_at) < Date.now())
+  assert.equal((await pg.query(`select count(*)::int n from offer_entitlements where visitor_id = $1`, [past96])).rows[0].n, 1)
 })
 
 // ── The pure rules ──────────────────────────────────────────────────────────

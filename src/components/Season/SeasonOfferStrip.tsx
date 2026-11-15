@@ -2,7 +2,7 @@
 // src/components/Season/SeasonOfferStrip.tsx
 //
 // The seasonal pages' offer line, inside the collection hero (Run 7).
-//   - With a live 96-hour window: "£50 off every made-to-order sofa · code
+//   - With a live 7-day window: "£50 off every made-to-order sofa · code
 //     BLACKFRIDAY · ends Thu 19 Nov, 1:16pm", with a copy button. The amount is
 //     what calculate_order_offer takes off each made-to-order line; the
 //     deadline is the persisted window's own expiry.
@@ -12,10 +12,13 @@ import Link from 'next/link'
 import { ArrowDown, Check, Copy, MessageCircle, Truck } from 'lucide-react'
 import WhatsAppLink from '@/components/UI/WhatsAppLink'
 import { useOfferCountdown } from '@/components/Offer/useOfferCountdown'
+import { useOffer } from '@/components/Offer/OfferProvider'
+import { formatOfferDeadline } from '@/utils/offers/deadline'
 import { MTO_OFFER_AMOUNT } from '@/utils/offers/amount'
 
 export default function SeasonOfferStrip({ kind }: { kind: 'black_friday' | 'christmas' }) {
-  const { active, deadline } = useOfferCountdown()
+  const { active, deadline, clock } = useOfferCountdown()
+  const { endedAt } = useOffer()
   const [copied, setCopied] = useState(false)
   const code = kind === 'christmas' ? 'CHRISTMAS' : 'BLACKFRIDAY'
 
@@ -31,7 +34,7 @@ export default function SeasonOfferStrip({ kind }: { kind: 'black_friday' | 'chr
     <div className="mt-6 flex flex-col gap-3">
       {active && deadline && (
         <p className="m-0 inline-flex max-w-full flex-wrap items-center gap-x-3 gap-y-2 self-start rounded-md border border-ember-300/40 bg-calico-50/[0.06] px-4 py-2.5 text-body-sm text-calico-50">
-          <span className="font-semibold">£{MTO_OFFER_AMOUNT} off every made-to-order sofa</span>
+          <span className="font-semibold">£{MTO_OFFER_AMOUNT} OFF every made-to-order sofa <span className="font-normal text-calico-300">(£{MTO_OFFER_AMOUNT} each, not a percentage)</span></span>
           <button
             type="button"
             onClick={copy}
@@ -41,7 +44,12 @@ export default function SeasonOfferStrip({ kind }: { kind: 'black_friday' | 'chr
             {code}
             {copied ? <Check className="h-3.5 w-3.5" aria-hidden="true" /> : <Copy className="h-3.5 w-3.5" aria-hidden="true" />}
           </button>
-          <span className="text-calico-300">ends {deadline}</span>
+          <span className="text-calico-300">{clock && <>ends in <span className="font-data tabular-nums text-ember-300">{clock}</span> · </>}{deadline}</span>
+        </p>
+      )}
+      {!active && endedAt && (
+        <p className="m-0 max-w-xl self-start rounded-md border border-calico-50/15 bg-calico-50/[0.04] px-4 py-2.5 text-body-sm text-calico-300">
+          Your one-time online offer ended on {formatOfferDeadline(endedAt)}. Every range is still here to browse at today&apos;s listed prices.
         </p>
       )}
       <div className="flex flex-wrap items-center gap-3">

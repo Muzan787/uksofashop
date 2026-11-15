@@ -108,13 +108,13 @@ test('ended offer: said plainly with its date, never reopened; hat on the offer 
   const q = read('src/app/api/offer/qualify/route.ts')
   assert.match(q, /endedAt: issued\.revoked \? null : issued\.expires_at/)
   const strip = read('src/components/Offer/OfferStrip.tsx')
-  assert.match(strip, /Your 96-hour online offer ended on/)
+  assert.match(strip, /Your one-time online offer ended on/)
   assert.match(strip, /<LogoHat placement=/)
 })
 
 test('phone tree larger and lower; band snow as quiet as the hero; £50 per sofa', () => {
   assert.match(read('src/components/Home/Hero.tsx'), /variant="phone" className="right-1 top-\[88px\] h-\[106px\] w-auto"/)
-  assert.match(read('src/components/Season/SeasonalStrip.tsx'), /season-snow--home h-full/)
+  assert.match(read('src/components/Season/SeasonalStrip.tsx'), /season-snow--strip h-full/)
   const sql = read('supabase/migrations/20261115210000_mto_offer_per_sofa.sql')
   assert.match(sql, /least\(line_total, v_mto_amount \* qty\)/)
 })

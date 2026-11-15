@@ -35,8 +35,6 @@ import { usePathname } from 'next/navigation';
 import { MessageCircleQuestionMark, RotateCcw, SendHorizontal, X } from 'lucide-react';
 import { useWhatsAppCTA } from '@/utils/attribution/useWhatsAppCTA';
 import { useCompactFab } from '@/components/Layout/useCompactFab';
-import SantaHat from '@/components/Season/SantaHat';
-import { useSeasonPhase } from '@/components/Season/useSeasonPhase';
 import { PHONE_DISPLAY } from '@/constants/contact';
 import { trackOperationalAction } from '@/utils/tracking';
 import { useBodyLock } from '@/components/UI/useBodyLock';
@@ -112,8 +110,7 @@ export default function ChatWidget() {
   const [narrow, setNarrow] = useState(false);
   const loaded = useRef(false);
   const compact = useCompactFab();
-  // A small static winter hat on the icon between 14 Nov and 25 Dec (SantaHat.tsx).
-  const festive = useSeasonPhase() !== 'off';
+  // The seasonal hat moved to the WhatsApp button (Run 9).
 
   // No floating pill on a product page. There it is a row beside the
   // WhatsApp agent link (AskUsButton), opened through ASSISTANT_OPEN_EVENT,
@@ -297,7 +294,6 @@ export default function ChatWidget() {
       >
         <span className="relative inline-flex shrink-0">
           <MessageCircleQuestionMark className="h-5 w-5 shrink-0" aria-hidden="true" />
-          {festive && <SantaHat className="-left-1.5 -top-3 -rotate-12" />}
         </span>
         <span
           aria-hidden={compact || undefined}

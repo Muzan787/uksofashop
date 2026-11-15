@@ -5,7 +5,8 @@ import { z } from 'zod'
 import { createAdminClient } from '@/utils/supabase/admin'
 import type { CartItem } from '@/app/actions/checkout'
 import type { OfferQuote, OfferQuoteResult, OfferTier, OfferSource } from '@/types/offers'
-import { OFFER_ENTITLEMENT_COOKIE, OFFER_PUBLIC_CODE, isOfferCode } from '@/utils/offers/constants'
+import { OFFER_ENTITLEMENT_COOKIE, isOfferCode } from '@/utils/offers/constants'
+import { windowLabel } from '@/utils/offers/deadline'
 import { getShopSettings } from '@/utils/shopSettingsServer'
 
 const itemsSchema = z.array(z.object({
@@ -30,7 +31,7 @@ function asSource(value: unknown): OfferSource | null {
 /**
  * Ask the database for the current authoritative basket offer. The caller may
  * supply the customer-facing code - valid only inside the visitor's own
- * 96-hour window - but never a paid entitlement token, tier or amount. The opaque Phase C bearer is read only from the HttpOnly
+ * 7-day window - but never a paid entitlement token, tier or amount. The opaque Phase C bearer is read only from the HttpOnly
  * first-party cookie on this server action and is revalidated by PostgreSQL.
  */
 export async function quoteOffer(
@@ -87,7 +88,7 @@ export async function quoteOffer(
     // visitor's own window is open. Say that, rather than "not recognised",
     // to someone who saw it on the site and is entitled to know why.
     message = isOfferCode(promotionCode)
-      ? `${OFFER_PUBLIC_CODE} works for ${(await getShopSettings()).offerWindowHours} hours from your first visit, in the browser you visited on. It has ended, or isn't active here.`
+      ? `Your code works for ${windowLabel((await getShopSettings()).offerWindowHours)} from your first visit, in the browser you visited on. It has ended, or isn't active here.`
       : 'Offer code not recognised.'
   } else if (!valid) {
     message = ''

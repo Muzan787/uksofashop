@@ -35,15 +35,18 @@ export default async function JourneysPage({ searchParams }: { searchParams: Pro
   const params = { period: period.preset, from: period.preset === 'custom' ? period.fromDay : undefined, to: period.preset === 'custom' ? period.toDay : undefined, device: device ?? undefined, source: source ?? undefined }
   const db = createUntypedAdminClient()
   const args = { p_from: period.start.toISOString(), p_to: period.end.toISOString(), p_device: device, p_source: source }
-  const [summaryRes, dailyRes] = await Promise.all([
+  const [summaryRes, dailyRes, prevRes] = await Promise.all([
     db.rpc('admin_website_summary', args),
     db.rpc('admin_journey_daily', args),
+    // Run 9: the same-length period just before, for a like-for-like comparison.
+    db.rpc('admin_journey_daily', { ...args, p_from: new Date(period.start.getTime() - (period.end.getTime() - period.start.getTime())).toISOString(), p_to: period.start.toISOString() }),
   ])
   const failed = Boolean(summaryRes.error || dailyRes.error)
   const summary = (summaryRes.data ?? {}) as { totals?: Totals; by_device?: Segment[] }
   const t: Totals = summary.totals ?? {}
   const daily = (dailyRes.data ?? {}) as { days?: DailyRow[]; outcomes?: JourneyOutcomes; refresh?: { last_status?: string; last_end?: string } }
   const days = daily.days ?? []
+  const prev = ((prevRes?.data ?? {}) as { outcomes?: JourneyOutcomes }).outcomes ?? null
   const o = daily.outcomes
   const loss = biggestLoss(t)
   const explorer = `/admin/journeys/explorer?from=${period.fromDay}&to=${period.toDay}${device ? `&device=${device}` : ''}${source ? `&source=${source}` : ''}`
@@ -123,6 +126,27 @@ export default async function JourneysPage({ searchParams }: { searchParams: Pro
           />
         </Panel>
       </div>
+
+      {/* Run 9: the delivery step, this period against the same-length period before. */}
+      <Panel title="Delivery step: this period vs the one before">
+        {!prev || !daily.outcomes ? <p className="m-0 text-sm text-ink-500">No comparison available for this view.</p> : (
+          <RateBars
+            caption="Of the sessions that reached delivery details: how many placed an order, switched to WhatsApp, or left without typing. Same device and source filters, previous period of the same length. Small numbers swing a lot; this is observation, not a test."
+            rows={[
+              { label: `This period (${daily.outcomes.reached_delivery} reached delivery)`, rates: [
+                { label: 'Placed order', part: daily.outcomes.placed_order, whole: daily.outcomes.reached_delivery },
+                { label: 'Switched to WhatsApp', part: daily.outcomes.switched_to_whatsapp, whole: daily.outcomes.reached_delivery },
+                { label: 'Left untouched', part: daily.outcomes.left_untouched, whole: daily.outcomes.reached_delivery },
+              ] },
+              { label: `Period before (${prev.reached_delivery} reached delivery)`, rates: [
+                { label: 'Placed order', part: prev.placed_order, whole: prev.reached_delivery },
+                { label: 'Switched to WhatsApp', part: prev.switched_to_whatsapp, whole: prev.reached_delivery },
+                { label: 'Left untouched', part: prev.left_untouched, whole: prev.reached_delivery },
+              ] },
+            ]}
+          />
+        )}
+      </Panel>
 
       <Panel title="Day by day">
         {days.length === 0 ? <p className="m-0 text-sm text-ink-500">No sessions in this view.</p> : (

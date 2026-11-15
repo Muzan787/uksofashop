@@ -116,11 +116,9 @@ test('the winter hat is decorative, static, positioned over the icon and seasona
   assert.match(hat, /aria-hidden="true"/)
   assert.match(hat, /pointer-events-none absolute/)
   assert.doesNotMatch(hat, /animate|transition|@keyframes|setInterval|requestAnimationFrame/)
-  for (const f of ['src/components/Chat/ChatWidget.tsx', 'src/components/Chat/AskUsButton.tsx']) {
-    const src = read(f)
-    assert.match(src, /SantaHat/, f)
-    assert.match(src, /useSeasonPhase\(\)/, f)
-  }
+  // Run 9: the hat moved from Ask us to the WhatsApp button.
+  for (const f of ['src/components/Chat/ChatWidget.tsx', 'src/components/Chat/AskUsButton.tsx']) assert.doesNotMatch(read(f), /<SantaHat|<LogoHat/, f)
+  assert.match(read('src/components/Layout/WhatsAppFab.tsx'), /<LogoHat placement=/)
   // No third floating control: the hat is not a button and ChatWidget still renders one launcher.
   assert.equal((read('src/components/Chat/ChatWidget.tsx').match(/aria-label="Ask us a question"/g) || []).length, 1)
 })

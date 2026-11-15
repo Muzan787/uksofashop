@@ -2,7 +2,7 @@
 // src/components/Season/SeasonRotator.tsx
 //
 // The announcement bar's seasonal messages, rotating (Run 7). Messages come
-// from utils/seasonal.ts seasonMessages(): with a live 96-hour window the
+// from utils/seasonal.ts seasonMessages(): with a live 7-day window the
 // visitor sees the £50 Made-To-Order offer, the code to use and their real
 // countdown; without one, no code and no money claim.
 //
@@ -20,7 +20,7 @@ import { Pause, Play, SkipForward, Snowflake } from 'lucide-react'
 import { seasonMessages, type SeasonPhase } from '@/utils/seasonal'
 import { useOfferCountdown } from '@/components/Offer/useOfferCountdown'
 
-const DWELL_MS = 7000
+const DWELL_MS = 5000
 const PAUSE_KEY = 'ukss_bar_paused'
 
 function readPaused(): boolean {

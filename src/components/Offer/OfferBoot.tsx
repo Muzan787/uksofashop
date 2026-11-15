@@ -103,7 +103,7 @@ export default function OfferBoot() {
       body: JSON.stringify({ landingPath }),
     })
 
-    // Every visitor gets the 96-hour offer since 2026-10-12, so the first
+    // Every visitor gets the 7-day offer since 2026-10-12, so the first
     // page of a visit asks for a window rather than only reading one. The
     // server returns the visitor's existing window untouched if they have
     // one (an ended one stays ended), or opens a new one. A paid landing

@@ -46,6 +46,8 @@ interface Props {
   buildTeaser: BuildTeaser;
   /** The beds, for their own rail under the builder. Empty hides it. */
   beds?: Product[];
+  /** The hero product is in the Made-To-Order collection (Run 9, offer-aware chip). */
+  heroMadeToOrder?: boolean;
   /** Made-to-order sofas for the Christmas band; the band shows only 14 Nov to 25 Dec. */
   seasonItems?: SeasonProduct[];
 }
@@ -143,7 +145,7 @@ function toCard(product: Product) {
 }
 
 // ─── Main export ──────────────────────────────────────────────────────────────
-export default function HomeClient({ categories, products, heroProduct, collections, sofaCount, reviews, buildTeaser, beds = [], seasonItems = [] }: Props) {
+export default function HomeClient({ categories, products, heroProduct, collections, sofaCount, reviews, buildTeaser, beds = [], seasonItems = [], heroMadeToOrder = false }: Props) {
   // The pinned sofa where there is one, and otherwise the first card in the
   // rail below. It used to be only the latter, which made the hero's link and
   // price follow whatever was uploaded last while the photograph above them
@@ -165,6 +167,7 @@ export default function HomeClient({ categories, products, heroProduct, collecti
         fromPrice={leadPrice?.price ?? null}
         wasPrice={leadPrice?.wasPrice ?? null}
         sofaCount={sofaCount}
+        madeToOrder={heroMadeToOrder && lead === heroProduct}
       />
 
       <TrustMarquee />

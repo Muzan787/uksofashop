@@ -15,7 +15,8 @@ import { parsePeriod } from '@/utils/websiteReport'
 import { automaticSource, reviewReason, type ReviewOrder } from '@/utils/sourceReview'
 import { contactChannelOf } from '@/utils/orderEvidence'
 import { Metric, PageHeader, Panel, Pill } from '@/components/Admin/ui/AdminUi'
-import { StackedBar } from '@/components/Admin/ui/Charts'
+import { StackedBar, TrendChart } from '@/components/Admin/ui/Charts'
+import { dayRange, ordersByDay } from '@/utils/businessDaily'
 import { dualTimeText } from '@/utils/adminTime'
 import PeriodFilters from '@/components/Admin/ui/PeriodFilters'
 
@@ -48,10 +49,10 @@ export default async function BusinessPage({ searchParams }: { searchParams: Pro
   const [flowRes, placedRes, deliveredRes] = await Promise.all([
     db.rpc('admin_orderflow_summary', { p_from: period.start.toISOString(), p_to: period.end.toISOString() }),
     db.from('orders').select(cols).eq('is_test', false).gte('created_at', period.start.toISOString()).lt('created_at', period.end.toISOString()).limit(5000),
-    db.from('orders').select('total_amount').eq('is_test', false).eq('status', 'delivered').gte('delivered_at', period.start.toISOString()).lt('delivered_at', period.end.toISOString()).limit(5000),
+    db.from('orders').select('total_amount, delivered_at').eq('is_test', false).eq('status', 'delivered').gte('delivered_at', period.start.toISOString()).lt('delivered_at', period.end.toISOString()).limit(5000),
   ])
   const placed = (placedRes.data ?? []) as unknown as Row[]
-  const delivered = (deliveredRes.data ?? []) as { total_amount: number | null }[]
+  const delivered = (deliveredRes.data ?? []) as { total_amount: number | null; delivered_at: string | null }[]
   const failed = Boolean(placedRes.error || deliveredRes.error)
   const flow = (flowRes.data ?? null) as null | {
     recording_since: string | null; attempts: number; accepted: number; refused: number; unanswered: number; orders_sent: number
@@ -99,6 +100,25 @@ export default async function BusinessPage({ searchParams }: { searchParams: Pro
         <Metric label="Cancelled" value={cancelled.length} note={`${placed.length ? Math.round(cancelled.length / placed.length * 100) : 0}% of orders placed in the period`} href="/admin/orders?status=cancelled" tone={cancelled.length ? 'attention' : 'plain'} />
         <Metric label="Delivered in period" value={delivered.length} note={`${money(sum(delivered))} order value delivered`} href="/admin/orders?status=delivered" tone="good" />
       </section>
+
+      {/* Run 9: the period day by day, from the same rows as the figures above. */}
+      <Panel title="Orders day by day">
+        {failed ? <p className="m-0 text-sm text-mulberry-700">Orders could not be loaded, so this chart is not shown.</p> : (() => {
+          const daily = ordersByDay(dayRange(period.fromDay, period.toDay), placed as unknown as { created_at: string; status: string }[], delivered)
+          return daily.length < 2 ? <p className="m-0 text-sm text-ink-500">Choose a period of two days or more to see a trend.</p> : (
+            <TrendChart
+              caption="Placed: orders created that UK day, split by where they stand now (still going ahead or cancelled). Delivered: orders whose delivery was recorded that day. Real orders only, test orders excluded."
+              days={daily.map(d => d.day)}
+              series={[
+                { label: 'Placed', values: daily.map(d => d.placed), tone: 'ink' },
+                { label: 'Still going ahead', values: daily.map(d => d.stillGoing), tone: 'indigo' },
+                { label: 'Cancelled', values: daily.map(d => d.cancelled), tone: 'rust' },
+                { label: 'Delivered', values: daily.map(d => d.delivered), tone: 'sage' },
+              ]}
+            />
+          )
+        })()}
+      </Panel>
 
       <Panel title="Where today's orders stand (placed in this period)">
         <ul className="m-0 grid list-none grid-cols-2 gap-2 p-0 text-sm sm:grid-cols-5">

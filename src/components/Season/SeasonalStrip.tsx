@@ -16,7 +16,7 @@ export default function SeasonalStrip() {
   if (!strip) return null
   return (
     <section data-ground="dark" aria-label="Seasonal" className="relative overflow-hidden bg-ink-900">
-      <SeasonalSnow className="season-snow--home h-full" />
+      <SeasonalSnow className="season-snow--strip h-full" />
       <div className="relative mx-auto flex max-w-shell flex-col gap-4 px-4 py-8 sm:px-6 sm:py-10 lg:flex-row lg:items-center lg:justify-between lg:px-8">
         <div className="min-w-0 max-w-2xl">
           <p className="m-0 font-data text-eyebrow uppercase tracking-[0.2em] text-ember-300">{strip.eyebrow}</p>

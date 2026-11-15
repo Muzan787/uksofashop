@@ -29,11 +29,11 @@ export interface WorkItem {
 }
 
 export const WORK_GROUPS: { key: WorkGroup; label: string }[] = [
-  { key: 'urgent', label: 'Urgent' },
+  { key: 'urgent', label: 'Do today' },
   { key: 'action', label: 'Needs action' },
   { key: 'waiting', label: 'Waiting on customer' },
   { key: 'review', label: 'Needs review' },
-  { key: 'completed', label: 'Completed (7 days)' },
+  { key: 'completed', label: 'Done (7 days)' },
 ]
 
 export const WORK_TYPES: { key: WorkType; label: string }[] = [

@@ -1618,6 +1618,13 @@ html.entrance .brand-entrance__rule {
 .season-snow--home { opacity: 0.28; }
 .season-snow--home .snow-near { display: none !important; }
 @media (width < 40rem) { .season-snow--home { opacity: 0.18; } }
+/* The seasonal band under the marquee (Run 9): its flat ink ground shows every
+ * flake at full contrast, where the hero's photograph and aurora soften them,
+ * so the same opacity read brighter. Far layer only, and lower. */
+.season-snow--strip { opacity: 0.16; }
+.season-snow--strip .snow-mid, .season-snow--strip .snow-near { display: none !important; }
+.season-snow--strip .snow-far { display: block; }
+@media (width < 40rem) { .season-snow--strip { opacity: 0.12; } }
 
 /* A hero whose copy sits on the left: the snow is held back behind the words
  * (20% strength, Run 7: half of Run 6) and at 70% to the right, so a flake can never

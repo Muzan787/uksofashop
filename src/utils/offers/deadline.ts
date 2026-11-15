@@ -26,9 +26,10 @@ export function formatOfferDeadline(iso: string): string {
 }
 
 /**
- * "95:12:05" inside a window of up to four days (the 96-hour window since
- * 15 Nov 2026), or "4d 04:12:05" for anything longer. Zero-padded so the
- * width does not jitter as it ticks.
+ * "6d 23:12:05" for a day or more, then "23:12:05" for the last day (Run 9,
+ * 7-day window). Zero-padded so the width does not jitter as it ticks. The
+ * deadline is always the persisted entitlement's own expires_at; this only
+ * formats the time left.
  */
 export function formatCountdown(ms: number): string {
   const total = Math.max(0, Math.floor(ms / 1000))
@@ -37,10 +38,13 @@ export function formatCountdown(ms: number): string {
   const minutes = Math.floor((total % 3600) / 60)
   const seconds = total % 60
   const pad = (n: number) => String(n).padStart(2, '0')
-  // Inside the 96-hour window the hours run to 95 rather than switching to a
-  // day count part-way through the same customer's countdown.
-  if (days >= 4) return `${days}d ${pad(hours)}:${pad(minutes)}:${pad(seconds)}`
-  return `${pad(days * 24 + hours)}:${pad(minutes)}:${pad(seconds)}`
+  if (days >= 1) return `${days}d ${pad(hours)}:${pad(minutes)}:${pad(seconds)}`
+  return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`
+}
+
+/** "7-day" for whole days, otherwise "36-hour": how the shop names its window. */
+export function windowLabel(hours: number): string {
+  return hours % 24 === 0 ? `${hours / 24}-day` : `${hours}-hour`
 }
 
 export interface OfferHold {

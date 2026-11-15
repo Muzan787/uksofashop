@@ -119,7 +119,7 @@ const getHomeData = unstable_cache(
       HERO_PRODUCT_SLUG
         ? supabase
             .from('products')
-            .select('id, title, slug, base_price, was_price, gallery_images, average_rating, review_count, product_variants(id, image_url, color, color_hex, price_adjustment, priority), categories!products_category_id_fkey(slug, name), product_categories(categories(slug, name))')
+            .select('id, title, slug, base_price, was_price, gallery_images, average_rating, review_count, product_variants(id, image_url, color, color_hex, price_adjustment, priority), categories!products_category_id_fkey(slug, name), product_categories(categories(slug, name)), main_collections(slug)')
             .eq('slug', HERO_PRODUCT_SLUG)
             .eq('is_active', true)
             .order('priority', { referencedTable: 'product_variants', ascending: true })
@@ -250,6 +250,8 @@ export default async function HomePage() {
         // The pinned sofa the hero is a photograph of. Null falls the hero
         // back to the first featured product — see HERO_PRODUCT_SLUG.
         heroProduct={heroProduct ? toCardShape(heroProduct) : null}
+        // Run 9: the hero chip shows the £50 price only for a Made-To-Order sofa.
+        heroMadeToOrder={(() => { const mc = (heroProduct as { main_collections?: { slug?: string } | { slug?: string }[] | null } | null)?.main_collections; const one = Array.isArray(mc) ? mc[0] : mc; return one?.slug === 'made-to-order-sofas' })()}
         collections={collectionsData}
         sofaCount={sofaCount ?? 0}
         reviews={reviews}

@@ -42,7 +42,8 @@ test('rotating bar: three true messages with the right destinations', () => {
   const on = seasonal.seasonMessages('black_friday', true)
   assert.equal(on.length, 3)
   assert.equal(JSON.stringify(on.map(m => m.href)), JSON.stringify(['/black-friday', '/christmas', '/collection/made-to-order-sofas']))
-  assert.equal(on[0].code, 'BLACKFRIDAY'); assert.equal(on[1].code, 'CHRISTMAS')
+  // Run 9: the code leads the line itself.
+  assert.equal(on[0].short, 'BLACKFRIDAY · £50 OFF'); assert.equal(on[1].short, 'CHRISTMAS · £50 OFF')
   assert.equal(on[2].countdown, true)
   assert.ok(on.every(m => !JSON.stringify(m).includes('SOFAEXTRA')))
   assert.ok(on.every(m => m.short.length <= 26), 'one line at 320px')
@@ -59,7 +60,7 @@ test('rotating bar: three true messages with the right destinations', () => {
 
 test('rotating bar: pause button, 7 s dwell, reduced motion, quiet while rotating, sticky at the top', () => {
   const src = read('src/components/Season/SeasonRotator.tsx')
-  assert.match(src, /const DWELL_MS = 7000/)
+  assert.match(src, /const DWELL_MS = 5000/)
   assert.match(src, /'Pause messages'/); assert.match(src, /'Play messages'/)
   assert.match(src, /prefers-reduced-motion: reduce/)
   assert.match(src, /aria-live=\{rotating \? 'off' : 'polite'\}/)

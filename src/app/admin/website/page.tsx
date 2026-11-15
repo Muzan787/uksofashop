@@ -21,6 +21,7 @@ import {
 } from '@/utils/websiteReport'
 import { Metric, PageHeader, Panel, Pill } from '@/components/Admin/ui/AdminUi'
 import PeriodFilters from '@/components/Admin/ui/PeriodFilters'
+import { RateBars } from '@/components/Admin/ui/Charts'
 
 export const dynamic = 'force-dynamic'
 export const metadata: Metadata = { title: 'Website' }
@@ -61,13 +62,15 @@ export default async function WebsitePage({ searchParams }: { searchParams: Prom
   const startIso = period.start.toISOString()
   const endIso = period.end.toISOString()
 
-  const [summaryRes, ordersRes, enquiriesRes, convertedRes, settings] = await Promise.all([
+  const [summaryRes, ordersRes, enquiriesRes, convertedRes, settings, cohortRes] = await Promise.all([
     db.rpc('admin_website_summary', { p_from: startIso, p_to: endIso, p_device: device, p_source: source }),
     db.from('orders').select('status, channel, source').eq('is_test', false).gte('created_at', startIso).lt('created_at', endIso).limit(5000),
     // Counted in the database, not fetched: a long period has more rows than one response carries.
     db.from('whatsapp_enquiries').select('id', { count: 'exact', head: true }).gte('created_at', startIso).lt('created_at', endIso),
     db.from('whatsapp_enquiries').select('id', { count: 'exact', head: true }).gte('created_at', startIso).lt('created_at', endIso).not('converted_order_id', 'is', null),
     getShopSettings(),
+    // Run 9: read-only returning-after-offer cohorts (mature, same browser).
+    db.rpc('admin_offer_return_cohorts'),
   ])
   const summary = (summaryRes.data ?? null) as Summary | null
   const t: Totals = summary?.totals ?? {}
@@ -210,12 +213,38 @@ export default async function WebsitePage({ searchParams }: { searchParams: Prom
             {' '}· {convertedCount ?? 'unknown'} became an order. The order lists show today&apos;s status, not the status on the day.
           </p>
         </Panel>
+      {/* Run 9: does anyone come back after their offer window? */}
+      {(() => {
+        type Cohort = { origin: string; visitors: number; returned_after_day4: number; returned_day4to5: number; returned_day5to7: number; returned_after_day7: number; orders_after_day4: number; orders_day5to7: number; any_order: number }
+        const c = (cohortRes?.data ?? null) as null | { cohort_to: string; rows: Cohort[] }
+        const rows = c?.rows ?? []
+        return (
+          <Panel title="Returning after the offer (mature cohorts, same browser)">
+            {cohortRes?.error || !c ? <p className="m-0 text-sm text-ink-500">The cohort report could not be loaded.</p> : (
+              <>
+                <RateBars
+                  caption={`Visitors whose first offer window started 12 Oct to ${c.cohort_to.slice(0, 10)} (at least 14 days ago). A return is a new tracked session in the same browser; other devices and untracked visits are not seen. Those windows were 48-96 hours long, so this shows when people come back, not the effect of the 7-day offer.`}
+                  rows={rows.map(r => ({ label: `${r.origin === 'ad' ? 'From an ad' : 'Other visitors'} (${r.visitors})`, rates: [
+                    { label: 'Back after day 4', part: r.returned_after_day4, whole: r.visitors },
+                    { label: 'Back on days 5-7', part: r.returned_day5to7, whole: r.visitors },
+                    { label: 'Back after day 7', part: r.returned_after_day7, whole: r.visitors },
+                  ] }))}
+                />
+                <p className="m-0 mt-3 text-xs text-ink-500">
+                  Orders matched by the same browser: after day 4 {rows.reduce((n, r) => n + r.orders_after_day4, 0)}, on days 5-7 {rows.reduce((n, r) => n + r.orders_day5to7, 0)}, any time {rows.reduce((n, r) => n + r.any_order, 0)}. WhatsApp and phone orders are often not linked to a browser, so real orders can be higher.
+                </p>
+              </>
+            )}
+          </Panel>
+        )
+      })()}
+
         <Panel title="Seasonal pages and offer (read only)">
           <dl className="m-0 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-sm">
             <dt className="text-ink-500">Season</dt><dd className="m-0">{phase === 'off' ? 'No seasonal message today' : <Pill tone="info">{phase.replace('_', ' ')}</Pill>}</dd>
             <dt className="text-ink-500">Top bar, offer holders</dt><dd className="m-0">{barWithOffer ? `${barWithOffer.lead} · ${barWithOffer.cta} → ${barWithOffer.href}` : 'Standard message'}</dd>
             <dt className="text-ink-500">Top bar, everyone else</dt><dd className="m-0">{barWithout ? `${barWithout.lead} · ${barWithout.cta} → ${barWithout.href}` : 'Standard message'}</dd>
-            <dt className="text-ink-500">Visitor offer</dt><dd className="m-0">£{settings.tierAmounts.STANDARD} / £{settings.tierAmounts.ROMA} / £{settings.tierAmounts.ELECTRIC} by sofa tier, {settings.offerWindowHours} hours from first visit, sofas £{settings.offerMinPrice}+</dd>
+            <dt className="text-ink-500">Visitor offer</dt><dd className="m-0">£{settings.tierAmounts.STANDARD} / £{settings.tierAmounts.ROMA} / £{settings.tierAmounts.ELECTRIC} by sofa tier, {settings.offerWindowHours} hours ({Math.round(settings.offerWindowHours / 24 * 10) / 10} days) from first visit, sofas £{settings.offerMinPrice}+</dd>
           </dl>
           <p className="m-0 mt-3 flex flex-wrap gap-2 text-sm">
             {['/black-friday', '/christmas', '/shop/all'].map(href => <a key={href} href={`https://www.uksofashop.co.uk${href}`} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-10 items-center rounded-md border border-calico-300 px-3 font-semibold text-ink-900 hover:bg-calico-50">Preview {href}</a>)}

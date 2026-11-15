@@ -121,7 +121,7 @@ export default function SettingsView(props: SettingsViewProps) {
       <section className={section} aria-labelledby="offer-heading">
         <h2 id="offer-heading" className={sectionTitle}>Visitor offer</h2>
         <p className={sectionIntro}>
-          Each new visitor gets a {settings.offerWindowHours}-hour window with money off ({gbpFigure(settings.tierAmounts.ELECTRIC)}, {gbpFigure(settings.tierAmounts.ROMA)} or {gbpFigure(settings.tierAmounts.STANDARD)} by tier) on sofas at {gbpFigure(settings.offerMinPrice)} or more. A window never moves and never comes back once it ends.
+          Each new visitor gets a {settings.offerWindowHours}-hour ({Math.round(settings.offerWindowHours / 24 * 10) / 10}-day) window with money off ({gbpFigure(settings.tierAmounts.ELECTRIC)}, {gbpFigure(settings.tierAmounts.ROMA)} or {gbpFigure(settings.tierAmounts.STANDARD)} by tier) on sofas at {gbpFigure(settings.offerMinPrice)} or more. A window never moves and never comes back once it ends.
         </p>
         <div className="mt-4">
           <OfferControls enabled={settings.offerEnabled} openWindows={openWindows} codes={codes} />

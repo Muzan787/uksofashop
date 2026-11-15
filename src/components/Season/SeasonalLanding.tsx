@@ -15,7 +15,7 @@
 //
 // Claims: the £50 is shown only to a visitor holding a live window (the offer
 // strip), and it is described as what it is - £50 off the CURRENT listed price
-// of each made-to-order product, inside the 96-hour window. No was-price, no
+// of each made-to-order product, inside the visitor's 7-day window. No was-price, no
 // "save £50 compared with" anything, no timer of our own, no Christmas
 // delivery guarantee.
 import Link from 'next/link'
@@ -26,6 +26,7 @@ import SeasonalSnow from '@/components/Season/SeasonalSnow'
 import SeasonOfferStrip from '@/components/Season/SeasonOfferStrip'
 import { DELIVERY_CHARGE_NOTE, PROMISES } from '@/constants/promises'
 import { MTO_OFFER_AMOUNT } from '@/utils/offers/amount'
+import { windowLabel } from '@/utils/offers/deadline'
 import { priceAnchors } from '@/utils/collections'
 import { mainCollectionSummaryLine, splitCollectionMembers, type MainCollectionMember } from '@/utils/mainCollections'
 import type { ShopSettings } from '@/utils/shopSettings'
@@ -96,7 +97,7 @@ export default function SeasonalLanding({
         <section aria-label="Good to know" className="mx-auto mt-14 max-w-3xl space-y-3 lg:mt-20">
           <Fold title={`How the £${MTO_OFFER_AMOUNT} made-to-order offer works`}>
             <ul className="m-0 list-disc space-y-1 pl-5">
-              <li>Inside your {settings.offerWindowHours}-hour offer window, every made-to-order sofa, set, chair and footstool has £{MTO_OFFER_AMOUNT} taken off its current listed price, once per item line in your basket.</li>
+              <li>Inside your {windowLabel(settings.offerWindowHours)} offer window, every made-to-order sofa, set, chair and footstool has £{MTO_OFFER_AMOUNT} taken off its current listed price: £{MTO_OFFER_AMOUNT} for each one in your basket.</li>
               <li>Your window starts on your first visit and does not restart. Each sofa&apos;s page shows the price you pay and when your window ends.</li>
               <li>Use code {code}. BLACKFRIDAY, CHRISTMAS and SOFAEXTRA are the same offer: one offer, never added together.</li>
               <li>The £{MTO_OFFER_AMOUNT} is a voucher on today&apos;s listed price. It is not a comparison with any earlier price.</li>

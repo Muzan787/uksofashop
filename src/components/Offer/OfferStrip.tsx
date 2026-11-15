@@ -81,7 +81,7 @@ export default function OfferStrip({ tier, price, className = '' }: Props) {
     if (!endedAt) return null
     return (
       <p className={`m-0 rounded-sm border border-calico-300 bg-calico-100 px-3.5 py-2.5 text-caption text-ink-700 ${className}`}>
-        Your 96-hour online offer ended on {formatOfferDeadline(endedAt)}. The price shown is the price today. Questions about it? Message us on WhatsApp.
+        Your one-time online offer ended on {formatOfferDeadline(endedAt)}. The price shown is the price today. Questions about it? Message us on WhatsApp.
       </p>
     )
   }

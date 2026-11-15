@@ -34,19 +34,20 @@ const season = load('src/utils/seasonProducts.ts', {
 
 // ── 96 hours ────────────────────────────────────────────────────────────────
 
-test('the countdown runs in hours through the whole 96-hour window', () => {
+test('the countdown reads in days, then hours on the last day (Run 9, 7-day window)', () => {
   const H = 3600000
-  assert.equal(deadline.formatCountdown(96 * H - 1000), '95:59:59')
-  assert.equal(deadline.formatCountdown(72 * H + 5000), '72:00:05')
-  assert.equal(deadline.formatCountdown(47 * H + 12 * 60000 + 5000), '47:12:05')
+  assert.equal(deadline.formatCountdown(168 * H - 1000), '6d 23:59:59')
+  assert.equal(deadline.formatCountdown(72 * H + 5000), '3d 00:00:05')
+  assert.equal(deadline.formatCountdown(23 * H + 12 * 60000 + 5000), '23:12:05')
   assert.equal(deadline.formatCountdown(0), '00:00:00')
-  // Only past four days does it switch to a day count.
-  assert.match(deadline.formatCountdown(5 * 24 * H), /^5d /)
+  assert.equal(deadline.windowLabel(168), '7-day')
+  assert.equal(deadline.windowLabel(36), '36-hour')
 })
 
 test('the window is 96 hours in the constant, the default and the migration', () => {
-  assert.equal(constants.OFFER_WINDOW_HOURS, 96)
-  assert.match(read('src/utils/shopSettings.ts'), /offerWindowHours:\s*96/)
+  assert.equal(constants.OFFER_WINDOW_HOURS, 168)
+  assert.match(read('src/utils/shopSettings.ts'), /offerWindowHours:\s*168/)
+  assert.match(read('supabase/migrations/20261115220000_offer_window_168_hours.sql'), /coalesce\(v_s\.offer_window_hours, 168\)/)
   const sql = read('supabase/migrations/20261115100000_offer_window_96_hours.sql')
   assert.match(sql, /set default 96/)
   assert.match(sql, /coalesce\(v_s\.offer_window_hours, 96\)/)

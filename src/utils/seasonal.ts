@@ -120,7 +120,7 @@ export interface SeasonMessage {
 /**
  * The rotating announcement bar (Run 7, owner decision). Three true messages,
  * chosen by what holds for THIS visitor:
- *   - with a live 96-hour window: the £50 off every Made-To-Order product
+ *   - with a live 7-day window: the £50 off every Made-To-Order product
  *     (calculate_order_offer takes it off the listed price of each line), the
  *     seasonal code to use, and the real countdown;
  *   - without one: no code and no money claim at all, just where to shop.
@@ -129,13 +129,13 @@ export interface SeasonMessage {
 export function seasonMessages(phase: SeasonPhase, offerActive: boolean): SeasonMessage[] {
   if (phase === 'off') return []
   const bf: SeasonMessage = offerActive
-    ? { key: 'black_friday', lead: 'Black Friday: £50 off every made-to-order sofa', short: '£50 off: BLACKFRIDAY', code: 'BLACKFRIDAY', href: '/black-friday' }
+    ? { key: 'black_friday', lead: 'BLACKFRIDAY · £50 OFF every made-to-order sofa', short: 'BLACKFRIDAY · £50 OFF', code: null, href: '/black-friday' }
     : { key: 'black_friday', lead: 'Black Friday is Friday 27 November', short: 'Black Friday · 27 Nov', code: null, href: '/black-friday' }
   const xmas: SeasonMessage = offerActive
-    ? { key: 'christmas', lead: 'Christmas: £50 off every made-to-order sofa', short: '£50 off: CHRISTMAS', code: 'CHRISTMAS', href: '/christmas' }
+    ? { key: 'christmas', lead: 'CHRISTMAS · £50 OFF every made-to-order sofa', short: 'CHRISTMAS · £50 OFF', code: null, href: '/christmas' }
     : { key: 'christmas', lead: 'Planning for Christmas? Check delivery for your sofa', short: 'Christmas: check delivery', code: null, href: '/christmas' }
   const mto: SeasonMessage = offerActive
-    ? { key: 'made_to_order', lead: '£50 off the listed price of every made-to-order sofa', short: '£50 off made-to-order', code: null, href: MADE_TO_ORDER_HREF, countdown: true }
+    ? { key: 'made_to_order', lead: '£50 OFF MADE-TO-ORDER · £50 off the listed price', short: '£50 OFF MADE-TO-ORDER', code: null, href: MADE_TO_ORDER_HREF, countdown: true }
     : { key: 'made_to_order', lead: 'Made-to-order sofas, built to your size', short: 'Shop made-to-order sofas', code: null, href: MADE_TO_ORDER_HREF }
   const promise: SeasonMessage = { key: 'promise', lead: 'Free delivery to most of the UK · pay on delivery', short: 'Free UK delivery · pay on delivery', code: null, href: '/delivery-returns' }
   if (phase === 'christmas') return [xmas, mto, promise]
@@ -144,7 +144,7 @@ export function seasonMessages(phase: SeasonPhase, offerActive: boolean): Season
 
 /**
  * The moving trust marquee's seasonal lines (Run 8). A code and the £50 only
- * for a visitor whose 96-hour window is live (the £50 applies to Made-To-Order
+ * for a visitor whose 7-day window is live (the £50 applies to Made-To-Order
  * products only, so the line says so); otherwise no money claim at all.
  * SOFAEXTRA is never shown.
  */

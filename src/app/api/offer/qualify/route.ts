@@ -73,7 +73,7 @@ export async function POST(request: Request) {
   // (for example %20 versus +). Classify the browser's actual Referer query
   // rather than trusting the JSON copy supplied by React.
   //
-  // Since 2026-10-12 every visitor gets the 96-hour offer, so a landing with
+  // Since 2026-10-12 every visitor gets the 7-day offer, so a landing with
   // no paid evidence is a 'site_visit' rather than a refusal. The paid
   // classification still matters: it decides which source the window is
   // credited to, and a paid source outranks a site visit in the database.

@@ -8,6 +8,7 @@ import { PROMISES } from '@/constants/promises';
 import { HOME_ART, hasArt } from '@/constants/homeArt';
 import { blurDataURL, darkened, trimmed } from '@/utils/cloudinary';
 import ChristmasTree from '@/components/Season/ChristmasTree';
+import HeroPriceChip from './HeroPriceChip';
 import HomeSnow from '@/components/Season/HomeSnow';
 
 interface Props {
@@ -27,6 +28,8 @@ interface Props {
   wasPrice?: number | null;
   /** How many sofas are live right now. */
   sofaCount: number;
+  /** The pictured sofa is in the Made-To-Order collection (flat £50 offer). */
+  madeToOrder?: boolean;
 }
 
 /**
@@ -85,16 +88,11 @@ interface Props {
  * shadow under it. Both are finished designs. The hero never waits on artwork.
  */
 
-const money = (n: number) => `£${Math.round(n).toLocaleString('en-GB')}`;
-
-export default function Hero({ image, productTitle, productHref, fromPrice, wasPrice, sofaCount }: Props) {
+export default function Hero({ image, productTitle, productHref, fromPrice, wasPrice, sofaCount, madeToOrder }: Props) {
   const cutout = hasArt(HOME_ART.heroSofa) ? HOME_ART.heroSofa : null;
   const room = hasArt(HOME_ART.heroRoom) ? HOME_ART.heroRoom : null;
 
-  // Guarded rather than trusted: a was price at or below the live one would
-  // put a strikethrough on the hero claiming a saving that is not there.
-  const reduced =
-    typeof fromPrice === 'number' && typeof wasPrice === 'number' && wasPrice > fromPrice;
+  // The was-price guard now lives in HeroPriceChip (Run 9).
 
   /*
    * WHY THE HEIGHT IS NOT 100svh.
@@ -344,37 +342,17 @@ export default function Hero({ image, productTitle, productHref, fromPrice, wasP
 
                 It carries the product name in its label because the caption
                 rail that used to name the sofa is desktop-only now. */}
+            {/* Offer-aware since Run 9: £799 with the code for a visitor holding a live
+                window on a Made-To-Order sofa, the listed price otherwise. See HeroPriceChip. */}
             {typeof fromPrice === 'number' && productHref && (
-              <Link
-                href={productHref}
-                aria-label={[
-                  productTitle ?? 'This sofa',
-                  reduced ? `now ${money(fromPrice)}, was ${money(wasPrice!)}` : `from ${money(fromPrice)}`,
-                ].join(', ')}
-                /* Left of the sofa, level with the footstool, so the arrow
-                   runs into the product rather than away from it.
-                   It was top right, which was the right answer when the sofa
-                   was small and bottom-aligned: the top of the stage was the
-                   empty half, and the floating WhatsApp button owns the bottom
-                   right of a phone screen. Now that the cut-out fills the
-                   stage there is no empty half, so the chip sits ON the
-                   photograph, and the left is the side WhatsApp does not take. */
+              <HeroPriceChip
+                productHref={productHref}
+                productTitle={productTitle ?? null}
+                fromPrice={fromPrice}
+                wasPrice={wasPrice ?? null}
+                madeToOrder={Boolean(madeToOrder)}
                 className="glass-dark-panel hover-btn hover-btn-dark absolute bottom-[26%] left-4 z-raised flex items-center gap-2.5 rounded-pill py-2.5 pl-4 pr-3 no-underline sm:left-6 lg:bottom-[22%] lg:left-0"
-              >
-                {/* "From" is a range; a sofa with a was price is one figure
-                    reduced to another, and saying both at once would be two
-                    different claims in one chip. */}
-                <span className="eyebrow text-calico-300">{reduced ? 'Now' : 'From'}</span>
-                <span className="font-data text-body font-semibold tabular-nums text-calico-50">
-                  {money(fromPrice)}
-                </span>
-                {reduced && (
-                  <s className="font-data text-caption tabular-nums text-calico-300">
-                    {money(wasPrice!)}
-                  </s>
-                )}
-                <ArrowRight aria-hidden="true" className="h-4 w-4 text-ember-300" />
-              </Link>
+              />
             )}
           </Parallax>
         </div>
