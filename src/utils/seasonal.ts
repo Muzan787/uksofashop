@@ -129,10 +129,10 @@ export interface SeasonMessage {
 export function seasonMessages(phase: SeasonPhase, offerActive: boolean): SeasonMessage[] {
   if (phase === 'off') return []
   const bf: SeasonMessage = offerActive
-    ? { key: 'black_friday', lead: 'Black Friday: £50 off every made-to-order sofa', short: 'Black Friday · £50 off', code: 'BLACKFRIDAY', href: '/black-friday' }
+    ? { key: 'black_friday', lead: 'Black Friday: £50 off every made-to-order sofa', short: '£50 off: BLACKFRIDAY', code: 'BLACKFRIDAY', href: '/black-friday' }
     : { key: 'black_friday', lead: 'Black Friday is Friday 27 November', short: 'Black Friday · 27 Nov', code: null, href: '/black-friday' }
   const xmas: SeasonMessage = offerActive
-    ? { key: 'christmas', lead: 'Christmas: £50 off every made-to-order sofa', short: 'Christmas · £50 off', code: 'CHRISTMAS', href: '/christmas' }
+    ? { key: 'christmas', lead: 'Christmas: £50 off every made-to-order sofa', short: '£50 off: CHRISTMAS', code: 'CHRISTMAS', href: '/christmas' }
     : { key: 'christmas', lead: 'Planning for Christmas? Check delivery for your sofa', short: 'Christmas: check delivery', code: null, href: '/christmas' }
   const mto: SeasonMessage = offerActive
     ? { key: 'made_to_order', lead: '£50 off the listed price of every made-to-order sofa', short: '£50 off made-to-order', code: null, href: MADE_TO_ORDER_HREF, countdown: true }

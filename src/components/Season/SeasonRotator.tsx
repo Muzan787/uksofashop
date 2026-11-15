@@ -89,10 +89,11 @@ export default function SeasonRotator({ phase, offerActive }: { phase: SeasonPha
       >
         <Link key={m.key} href={m.href} className="season-bar-msg text-calico-300 no-underline hover:text-calico-50">
           <Snowflake aria-hidden="true" className="mr-1.5 inline h-3 w-3 -translate-y-px text-ember-300" />
+          {/* On a phone the short line already carries the code. */}
           <span className="sm:hidden">{m.short}</span>
           <span className="hidden sm:inline">{m.lead}</span>
           {m.code && (
-            <> · <span className="hidden sm:inline">code </span><span className="font-bold tracking-[0.12em] text-ember-300">{m.code}</span></>
+            <span className="hidden sm:inline"> · code <span className="font-bold tracking-[0.12em] text-ember-300">{m.code}</span></span>
           )}
           {m.countdown && clock && (
             <> · <span aria-hidden="true" className="font-data tabular-nums text-ember-300">{clock}</span></>

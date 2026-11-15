@@ -18,14 +18,9 @@ export default function LogoHat() {
       data-logo-hat
       className="pointer-events-none absolute -left-[0.36em] -top-[0.66em] h-[0.9em] w-[1.1em] -rotate-[16deg] drop-shadow-[0_1px_1px_rgba(0,0,0,0.35)]"
     >
-      <defs>
-        <linearGradient id="lh-red" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#e0483a" />
-          <stop offset="1" stopColor="#a8281d" />
-        </linearGradient>
-      </defs>
       {/* the hat, flopping over to the right */}
-      <path d="M4 19 C5 10 11 3 19 3 C24 3 27.5 6 28.5 10.5 C26.4 9 24.2 8.8 22.6 9.6 C24.2 12.6 25 16 25.2 19 Z" fill="url(#lh-red)" />
+      <path d="M4 19 C5 10 11 3 19 3 C24 3 27.5 6 28.5 10.5 C26.4 9 24.2 8.8 22.6 9.6 C24.2 12.6 25 16 25.2 19 Z" fill="#d23b2e" />
+      <path d="M22.6 9.6 C24.2 12.6 25 16 25.2 19 L19 19 C20 15 21 12 22.6 9.6 Z" fill="#a8281d" />
       <path d="M19 3 C24 3 27.5 6 28.5 10.5 C26.4 9 24.2 8.8 22.6 9.6" fill="none" stroke="#5e1711" strokeOpacity=".5" strokeWidth=".8" />
       {/* fur trim */}
       <rect x="1.5" y="17.6" width="26" height="6.4" rx="3.2" fill="#FBFAF7" />
