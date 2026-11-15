@@ -6,17 +6,18 @@ import type { Metadata } from 'next'
 import { pageMetadata } from '@/utils/pageMetadata'
 import { getShopSettings } from '@/utils/shopSettingsServer'
 import SeasonalLanding from '@/components/Season/SeasonalLanding'
-import { getSeasonProducts } from '@/utils/seasonProducts'
+import { getMadeToOrderMembers } from '@/utils/seasonProducts'
+import type { MainCollectionMember } from '@/utils/mainCollections'
 
 export const revalidate = 3600
 
 export const metadata: Metadata = pageMetadata({
   title: 'Black Friday at UK Sofa Shop',
-  description: 'Black Friday is 27 November. What offers are genuinely on, how long they last and how we show prices. Free delivery to most of the UK, pay on delivery.',
+  description: 'Black Friday made-to-order sofa ranges, built to your size. £50 off the listed price of every made-to-order sofa in your 96-hour offer window with code BLACKFRIDAY. Free delivery to most of the UK.',
   path: '/black-friday',
 })
 
 export default async function BlackFridayPage() {
-  const [settings, products] = await Promise.all([getShopSettings(), getSeasonProducts()])
-  return <SeasonalLanding kind="black_friday" settings={settings} products={products} />
+  const [settings, mto] = await Promise.all([getShopSettings(), getMadeToOrderMembers()])
+  return <SeasonalLanding kind="black_friday" settings={settings} members={mto.members as MainCollectionMember[]} />
 }

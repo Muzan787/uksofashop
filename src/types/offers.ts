@@ -1,4 +1,5 @@
-export type OfferTier = 'ELECTRIC' | 'ROMA' | 'STANDARD' | 'EXCLUDED'
+/** MADE_TO_ORDER: the flat £50 on the Made-To-Order Sofas collection (Run 7). */
+export type OfferTier = 'ELECTRIC' | 'ROMA' | 'STANDARD' | 'EXCLUDED' | 'MADE_TO_ORDER'
 export type OfferSource = 'manual_code' | 'paid_entitlement'
 
 /**

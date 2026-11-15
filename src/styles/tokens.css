@@ -61,6 +61,18 @@
   --color-indigo-50:  #EDF1F6;   /* panel tint on light grounds */
   --color-indigo-300: #8FA9CC;   /* indigo text on dark grounds */
   --color-indigo-700: #2B3A52;
+  --color-indigo-900: #1E2A3C;   /* admin sidebar ground (Run 7) */
+
+  /* Admin status accents (Run 7). Used only in the admin, for states, never as
+   * decoration: pine = done/accepted, ocean = information/in progress,
+   * mulberry = blocked/refused, frost = a cool neutral panel. */
+  --color-pine-50:  #E6F0EC;
+  --color-pine-700: #24584B;
+  --color-ocean-50:  #E5EFF6;
+  --color-ocean-700: #326A8E;
+  --color-mulberry-50:  #F5EAEE;
+  --color-mulberry-700: #84485A;
+  --color-frost-50: #E8F1F4;
 
   /* Sage — free, confirmed, in stock, delivered. */
   --color-sage-50:  #EDF1E9;     /* success panel on light grounds */

@@ -126,3 +126,44 @@ export async function getSeasonProducts(): Promise<SeasonProduct[]> {
     return []
   }
 }
+
+/**
+ * The Made-To-Order Sofas collection's members, fetched exactly as
+ * /collection/[slug] fetches them, so /black-friday and /christmas build their
+ * range cards (splitCollectionMembers -> CollectionCard) from the same rows the
+ * collection page does (Run 7). Kept ten minutes; never throws.
+ */
+const readMadeToOrderMembers = unstable_cache(
+  async () => {
+    const supabase = createPublicClient()
+    const slug = MADE_TO_ORDER_HREF.split('/').pop() as string
+    const { data: main } = await supabase.from('main_collections').select('id, name, slug, standfirst').eq('slug', slug).maybeSingle()
+    if (!main) return { main: null, members: [] as unknown[] }
+    const { data: members } = await supabase
+      .from('products')
+      .select(`
+        id, title, slug, base_price, was_price, average_rating, review_count,
+        size_label, variant_group_id, gallery_images, is_active,
+        product_variants ( id, image_url, color, color_hex, price_adjustment, priority ),
+        variant_groups ( id, name, slug ),
+        categories!products_category_id_fkey ( slug ),
+        product_categories ( categories ( slug ) )
+      `)
+      .eq('main_collection_id', main.id)
+      .eq('is_active', true)
+      .order('base_price', { ascending: false })
+      .order('priority', { referencedTable: 'product_variants', ascending: true })
+    return { main, members: (members ?? []) as unknown[] }
+  },
+  ['season-mto-members-v1'],
+  { revalidate: 600, tags: ['season', 'home'] },
+)
+
+export async function getMadeToOrderMembers(): Promise<{ main: { id: string; name: string; slug: string; standfirst: string | null } | null; members: unknown[] }> {
+  try {
+    return await readMadeToOrderMembers()
+  } catch (err) {
+    console.error('Made-to-order members could not be read:', err)
+    return { main: null, members: [] }
+  }
+}

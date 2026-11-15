@@ -51,16 +51,16 @@ export default function AdminSidebarClient({ email }: { email: string }) {
 
   return (
     <>
-      {/* Desktop: a light labelled sidebar. Groups say what each section is
+      {/* Desktop: a midnight-indigo labelled sidebar (Run 7). Groups say what each section is
           for; the current page is marked by colour AND by aria-current. */}
-      <aside className="hidden lg:flex flex-col fixed inset-y-0 left-0 w-64 bg-white border-r border-calico-300 z-40 print:hidden">
-        <div className="px-5 pb-4 pt-5 border-b border-calico-300">
-          <div className="text-lg font-bold tracking-tight text-ink-900">
-            UK Sofa Shop <span className="font-semibold text-ember-700">Admin</span>
+      <aside data-ground="dark" className="hidden lg:flex flex-col fixed inset-y-0 left-0 w-64 bg-indigo-900 text-calico-100 z-40 print:hidden">
+        <div className="px-5 pb-4 pt-5 border-b border-calico-50/10">
+          <div className="text-lg font-bold tracking-tight text-calico-50">
+            UK Sofa Shop <span className="font-semibold text-ember-300">Admin</span>
           </div>
           {email && (
-            <p className="mt-1.5 truncate text-xs text-ink-500" title={email}>
-              Signed in as <span className="text-ink-700">{email}</span>
+            <p className="mt-1.5 truncate text-xs text-indigo-300" title={email}>
+              Signed in as <span className="text-calico-100">{email}</span>
             </p>
           )}
         </div>
@@ -70,13 +70,13 @@ export default function AdminSidebarClient({ email }: { email: string }) {
         <form method="get" action="/admin/orders" role="search" className="px-3 pt-4">
           <label htmlFor="admin-search" className="sr-only">Search orders</label>
           <div className="relative">
-            <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-500" />
+            <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-indigo-300" />
             <input
               id="admin-search"
               name="q"
               type="search"
               placeholder="Order code, name, phone"
-              className="min-h-11 w-full rounded-md border border-calico-300 bg-calico-50 pl-9 pr-3 text-sm text-ink-900 placeholder:text-ink-500 focus:border-ink-500 focus:outline-none"
+              className="min-h-11 w-full rounded-md border border-calico-50/15 bg-calico-50/[0.07] pl-9 pr-3 text-sm text-calico-50 placeholder:text-indigo-300 focus:border-ember-300 focus:outline-none"
             />
           </div>
         </form>
@@ -84,7 +84,7 @@ export default function AdminSidebarClient({ email }: { email: string }) {
         <nav aria-label="Admin sections" className="flex-1 overflow-y-auto px-3 py-4">
           {ADMIN_GROUPS.map(group => (
             <div key={group.label} className="mb-5">
-              <p className="m-0 mb-1.5 px-3 text-[11px] font-bold uppercase tracking-wider text-ink-500">{group.label}</p>
+              <p className="m-0 mb-1.5 px-3 text-[11px] font-bold uppercase tracking-wider text-indigo-300">{group.label}</p>
               <ul className="m-0 list-none space-y-0.5 p-0">
                 {group.keys.map(key => {
                   const section = byKey.get(key)
@@ -95,11 +95,11 @@ export default function AdminSidebarClient({ email }: { email: string }) {
                     <li key={section.href}>
                       <Link href={section.href}
                         aria-current={active ? 'page' : undefined}
-                        className={`flex min-h-11 items-center gap-3 rounded-md px-3 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember-700 ${
-                          active ? 'bg-calico-100 text-ink-900 shadow-[inset_3px_0_0_var(--color-ember-500)]' : 'text-ink-500 hover:bg-calico-50 hover:text-ink-900'
+                        className={`flex min-h-11 items-center gap-3 rounded-md px-3 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember-300 ${
+                          active ? 'bg-calico-50/[0.12] text-calico-50 shadow-[inset_3px_0_0_var(--color-ember-500)]' : 'text-calico-300 hover:bg-calico-50/[0.06] hover:text-calico-50'
                         }`}
                       >
-                        <Icon className={`h-[18px] w-[18px] ${active ? 'text-ember-700' : ''}`} aria-hidden="true" />
+                        <Icon className={`h-[18px] w-[18px] ${active ? 'text-ember-300' : 'text-indigo-300'}`} aria-hidden="true" />
                         {section.label}
                       </Link>
                     </li>
@@ -110,9 +110,9 @@ export default function AdminSidebarClient({ email }: { email: string }) {
           ))}
         </nav>
 
-        <div className="border-t border-calico-300 p-3">
+        <div className="border-t border-calico-50/10 p-3">
           <form action={logout}>
-            <button type="submit" className="flex min-h-11 w-full items-center gap-3 rounded-md px-3 text-sm font-semibold text-ink-500 transition-colors hover:bg-calico-50 hover:text-ink-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember-700">
+            <button type="submit" className="flex min-h-11 w-full items-center gap-3 rounded-md px-3 text-sm font-semibold text-calico-300 transition-colors hover:bg-calico-50/[0.06] hover:text-calico-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember-300">
               <LogOut className="h-[18px] w-[18px]" aria-hidden="true" />
               Sign out
             </button>

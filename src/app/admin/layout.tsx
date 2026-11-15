@@ -34,8 +34,13 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           padding clears the tab bar - its height plus the safe area it pads
           itself by - so the last thing on a page is never behind it. When
           printing, the menus are hidden and the page takes the full sheet. */}
-      <main className="lg:ml-64 pb-[calc(6rem+env(safe-area-inset-bottom))] lg:pb-8 min-h-screen pt-4 px-4 lg:p-10 max-w-7xl mx-auto print:ml-0 print:min-h-0 print:max-w-none print:p-0">
-        {children}
+      {/* lg:pl-64 makes room for the fixed sidebar and the content column is
+          centred in what is left (Run 7: it used to sit against the sidebar
+          with all the spare width on the right of a wide laptop screen). */}
+      <main className="lg:pl-64 pb-[calc(6rem+env(safe-area-inset-bottom))] lg:pb-8 min-h-screen print:pl-0 print:min-h-0">
+        <div className="mx-auto max-w-7xl px-4 pt-4 lg:p-10 print:max-w-none print:p-0">
+          {children}
+        </div>
       </main>
     </div>
   )

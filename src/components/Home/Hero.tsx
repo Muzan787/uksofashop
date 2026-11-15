@@ -8,6 +8,7 @@ import { PROMISES } from '@/constants/promises';
 import { HOME_ART, hasArt } from '@/constants/homeArt';
 import { blurDataURL, darkened, trimmed } from '@/utils/cloudinary';
 import ChristmasTree from '@/components/Season/ChristmasTree';
+import HomeSnow from '@/components/Season/HomeSnow';
 
 interface Props {
   /** The sofa in the photograph — a real product, not a stock room. */
@@ -152,10 +153,15 @@ export default function Hero({ image, productTitle, productHref, fromPrice, wasP
         className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-ink-900 via-ink-900/55 to-transparent"
       />
 
+      {/* Quiet seasonal snow (14 Nov to 25 Dec), behind the copy and the sofa. */}
+      <HomeSnow />
+
       {/* ── 4. The stage ─────────────────────────────────────────────────── */}
       <div className="relative mx-auto flex w-full max-w-shell flex-1 flex-col gap-2 px-4 pb-1 pt-[4.25rem] sm:px-6 lg:grid lg:grid-cols-[1.04fr_1fr] lg:items-center lg:gap-12 lg:pb-10 lg:pt-28">
         {/* ── Copy ──────────────────────────────────────────────────────── */}
-        <div className="shrink-0">
+        <div className="relative shrink-0">
+          {/* Phone tree (360-639px): under the badge, in the gap right of "Sink into" and "something"; measured clear of text and buttons at 360-393px. */}
+          <ChristmasTree variant="phone" className="right-0 top-[46px] h-[92px] w-auto" />
           {/* The live badge. A real count of real products, not a claim. */}
           <Reveal distance={12} amount={0.1} className="inline-block">
             <span className="ring-gradient glass-dark-panel inline-flex items-center gap-2.5 rounded-pill py-2 pl-3 pr-4">
@@ -274,7 +280,7 @@ export default function Hero({ image, productTitle, productHref, fromPrice, wasP
           {/* Christmas tree (14 Nov to 25 Dec, 640px and up): at the far right of
               the stage and BEHIND the sofa, because it comes first and Parallax
               comes after. Decoration only; see Season/ChristmasTree.tsx. */}
-          <ChristmasTree className="bottom-[4%] right-[1%] z-0 h-[96%] w-auto lg:right-[calc(-1*clamp(0px,(100vw_-_1180px)/2,110px))]" />
+          <ChristmasTree variant="stage" className="bottom-[4%] right-[1%] z-0 h-[84%] w-auto lg:right-[calc(-1*clamp(0px,(100vw_-_1100px)/2,200px))]" />
           <Parallax speed={0.1} className="absolute inset-0">
             {/* The pool of light it stands in. Wider than the sofa and centred
                 low, so the brightest part of it is under the seat rather than

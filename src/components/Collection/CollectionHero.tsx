@@ -22,6 +22,10 @@ interface Props {
    */
   summary?: string;
   trail: Crumb[];
+  /** Decoration behind the type, aria-hidden by its owner (the seasonal snow). */
+  decoration?: React.ReactNode;
+  /** Extra content under the summary (the seasonal offer strip). */
+  children?: React.ReactNode;
 }
 
 /**
@@ -39,7 +43,7 @@ interface Props {
  * rather than a wrapping trail, because a long collection name at the end of
  * it took two rows on a phone.
  */
-export default function CollectionHero({ eyebrow, title, standfirst, summary, trail }: Props) {
+export default function CollectionHero({ eyebrow, title, standfirst, summary, trail, decoration, children }: Props) {
   return (
     <section
       data-ground="dark"
@@ -49,6 +53,8 @@ export default function CollectionHero({ eyebrow, title, standfirst, summary, tr
         <span className="aurora__warm" />
         <span className="aurora__deep" />
       </div>
+
+      {decoration}
 
       <div className="relative mx-auto max-w-shell px-4 pb-9 pt-6 sm:px-6 lg:pb-14 lg:pt-10">
         <nav
@@ -107,6 +113,8 @@ export default function CollectionHero({ eyebrow, title, standfirst, summary, tr
             <p className="m-0 mt-3 font-data text-data tabular-nums text-calico-300">{summary}</p>
           </>
         )}
+
+        {children}
       </div>
 
       {/* The bottom edge. A fading ember hairline rather than the flat 2px bar

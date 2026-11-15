@@ -1613,18 +1613,24 @@ html.entrance .brand-entrance__rule {
 @keyframes snow-fall-near { to { transform: translateY(680px); } }
 @keyframes snow-sway-a { from { translate: -18px 0; } to { translate: 18px 0; } }
 @keyframes snow-sway-b { from { translate: 10px 0; } to { translate: -10px 0; } }
+/* Homepage hero (Run 7): far and middle layers only, at under a third of the
+ * landing pages' strength, so the headline and the sofa stay untouched. */
+.season-snow--home { opacity: 0.28; }
+.season-snow--home .snow-near { display: none !important; }
+@media (width < 40rem) { .season-snow--home { opacity: 0.18; } }
+
 /* A hero whose copy sits on the left: the snow is held back behind the words
- * (40% strength) and runs at full strength to the right, so a flake can never
+ * (20% strength, Run 7: half of Run 6) and at 70% to the right, so a flake can never
  * make a headline, a price or a button hard to read. On a phone the copy fills
  * the width, so the whole layer is quieter instead. */
 @media (width >= 64rem) {
   .season-snow--quiet {
-    -webkit-mask-image: linear-gradient(to right, rgb(0 0 0 / 0.4) 0%, rgb(0 0 0 / 0.4) 46%, #000 72%);
-    mask-image: linear-gradient(to right, rgb(0 0 0 / 0.4) 0%, rgb(0 0 0 / 0.4) 46%, #000 72%);
+    -webkit-mask-image: linear-gradient(to right, rgb(0 0 0 / 0.2) 0%, rgb(0 0 0 / 0.2) 50%, rgb(0 0 0 / 0.7) 76%);
+    mask-image: linear-gradient(to right, rgb(0 0 0 / 0.2) 0%, rgb(0 0 0 / 0.2) 50%, rgb(0 0 0 / 0.7) 76%);
   }
 }
 @media (width < 64rem) {
-  .season-snow--quiet { opacity: 0.5; }
+  .season-snow--quiet { opacity: 0.25; }
 }
 
 /* ─── Christmas tree lights (components/Season/ChristmasTree.tsx) ─────────────

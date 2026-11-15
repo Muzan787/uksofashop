@@ -10,6 +10,7 @@ import { createClient } from '@/utils/supabase/server';
 import { createAdminClient } from '@/utils/supabase/admin';
 import { createPublicClient } from '@/utils/supabase/public';
 import type { OfferTier } from '@/types/offers';
+import { MADE_TO_ORDER_SLUG } from '@/utils/offers/amount';
 import { deliveryWindow } from '@/utils/delivery';
 import { getShopSettings } from '@/utils/shopSettingsServer';
 import ProductPageClient from '../../../../components/Product/ProductPageClient';
@@ -88,7 +89,7 @@ const getProductPageData = unstable_cache(
     // else below, so it is one round trip. A product with no variant_group_id
     // asks nothing of variant_groups, and a stocked recliner does not load 70
     // fabrics.
-    const [group, related, fabrics, videos, offerTierRow, offerExcludedRow, addonRows] = await Promise.all([
+    const [group, related, fabrics, videos, offerTierRow, offerExcludedRow, addonRows, mainCollectionRow] = await Promise.all([
       product.variant_group_id
         ? Promise.all([
             db
@@ -164,9 +165,15 @@ const getProductPageData = unstable_cache(
             .eq('product_id', product.id)
             .then(r => r.data ?? [])
         : [],
+
+      // Which part of the shop it is in: the Made-To-Order Sofas collection
+      // carries the flat £50 offer (Run 7), whatever its tier row says.
+      product.main_collection_id
+        ? db.from('main_collections').select('slug').eq('id', product.main_collection_id).maybeSingle().then(r => r.data)
+        : null,
     ]);
 
-    return { product, categoryData, group, related, fabrics, videos, offerTierRow, offerExcludedRow, addonRows };
+    return { product, categoryData, group, related, fabrics, videos, offerTierRow, offerExcludedRow, addonRows, mainCollectionRow };
   },
   ['uksofashop-product-page-v1'],
   { revalidate: 300, tags: ['product'] },
@@ -262,7 +269,7 @@ export default async function ProductPage(props: { params: Params, searchParams:
   ]);
 
   if (!data) notFound();
-  const { product, group, related, fabrics, videos, offerTierRow, offerExcludedRow, addonRows } = data;
+  const { product, group, related, fabrics, videos, offerTierRow, offerExcludedRow, addonRows, mainCollectionRow } = data;
   const productType = asProductType(product.product_type);
 
   // The category in the URL has to be one this product genuinely belongs to.
@@ -316,7 +323,9 @@ export default async function ProductPage(props: { params: Params, searchParams:
   // (components/Offer/OfferStrip), because a £399 sofa and a £450 colourway
   // of it are not the same answer.
   const offerTier: OfferTier | null =
-    offerExcludedRow
+    mainCollectionRow?.slug === MADE_TO_ORDER_SLUG
+      ? 'MADE_TO_ORDER'
+      : offerExcludedRow
       ? null
       : offerTierRow?.tier === 'ELECTRIC' || offerTierRow?.tier === 'ROMA' ||
         offerTierRow?.tier === 'STANDARD' || offerTierRow?.tier === 'EXCLUDED'

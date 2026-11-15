@@ -15,17 +15,21 @@ import { useEffect, useState } from 'react'
 import { Check, Clock, Copy, Truck, Wallet } from 'lucide-react'
 import Modal from '@/components/UI/Modal'
 import { OFFER_OPEN_EVENT, OFFER_PUBLIC_CODE } from '@/utils/offers/constants'
+import { seasonCode } from '@/utils/seasonal'
+import { useSeasonPhase } from '@/components/Season/useSeasonPhase'
 import { trackOfferAction } from '@/utils/tracking'
 import { useOffer } from './OfferProvider'
 import { useOfferCountdown } from './useOfferCountdown'
 
 function OfferContent({ amount, onCopied }: { amount: number | null; onCopied: () => void }) {
+  // In season the shop shows BLACKFRIDAY or CHRISTMAS; all spellings are one offer.
+  const code = seasonCode(useSeasonPhase()) ?? OFFER_PUBLIC_CODE
   const [copied, setCopied] = useState(false)
   const { clock, deadline } = useOfferCountdown()
 
   const copy = async () => {
     try {
-      await navigator.clipboard.writeText(OFFER_PUBLIC_CODE)
+      await navigator.clipboard.writeText(code)
       onCopied()
       setCopied(true)
       setTimeout(() => setCopied(false), 1800)
@@ -76,7 +80,7 @@ function OfferContent({ amount, onCopied }: { amount: number | null; onCopied: (
 
       <div className="mt-4 flex items-center justify-between gap-3 rounded-sm border border-ember-500/30 bg-ember-500/[0.08] px-3.5 py-2.5">
         <code className="select-all font-data text-body font-extrabold tracking-[0.12em] text-ink-900">
-          {OFFER_PUBLIC_CODE}
+          {code}
         </code>
         <button
           type="button"

@@ -18,7 +18,7 @@ const itemsSchema = z.array(z.object({
 const tokenSchema = z.string().uuid()
 
 function asTier(value: unknown): OfferTier | null {
-  return value === 'ELECTRIC' || value === 'ROMA' || value === 'STANDARD' || value === 'EXCLUDED'
+  return value === 'ELECTRIC' || value === 'ROMA' || value === 'STANDARD' || value === 'EXCLUDED' || value === 'MADE_TO_ORDER'
     ? value
     : null
 }

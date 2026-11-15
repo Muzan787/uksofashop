@@ -104,8 +104,8 @@ test('the snow component is decoration: aria-hidden, no pointer events, behind c
   const src = read('src/components/Season/SeasonalSnow.tsx')
   assert.match(src, /aria-hidden="true"/)
   assert.match(src, /pointer-events-none/)
-  const landing = read('src/components/Season/SeasonalLanding.tsx')
-  assert.ok(landing.indexOf('<SeasonalSnow') < landing.indexOf('relative mx-auto grid'), 'snow comes before (under) the content')
+  const hero = read('src/components/Collection/CollectionHero.tsx')
+  assert.ok(hero.indexOf('{decoration}') < hero.indexOf('relative mx-auto max-w-shell'), 'snow comes before (under) the content')
 })
 
 // ── Tree and band ───────────────────────────────────────────────────────────

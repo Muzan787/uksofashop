@@ -29,6 +29,17 @@ export function ukDateKey(now: Date): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now)
 }
 
+/**
+ * The code the shop SHOWS in each phase (Run 7, owner decision). All three
+ * spellings are one offer in the database; SOFAEXTRA stays accepted but is not
+ * advertised in season.
+ */
+export function seasonCode(phase: SeasonPhase): 'BLACKFRIDAY' | 'CHRISTMAS' | null {
+  if (phase === 'run_up' || phase === 'black_friday') return 'BLACKFRIDAY'
+  if (phase === 'christmas') return 'CHRISTMAS'
+  return null
+}
+
 export function seasonPhase(now: Date): SeasonPhase {
   const day = ukDateKey(now)
   if (day < SEASON_START) return 'off'
@@ -91,6 +102,44 @@ export function seasonBar(phase: SeasonPhase, offerActive: boolean): SeasonBar |
     default:
       return null
   }
+}
+
+export interface SeasonMessage {
+  key: 'black_friday' | 'christmas' | 'made_to_order' | 'promise'
+  /** Full sentence, 640px and up. */
+  lead: string
+  /** One line at 320-393px. */
+  short: string
+  /** The code to show, only when the visitor holds a live window. */
+  code: 'BLACKFRIDAY' | 'CHRISTMAS' | null
+  href: string
+  /** Show the visitor's live countdown beside it. */
+  countdown?: boolean
+}
+
+/**
+ * The rotating announcement bar (Run 7, owner decision). Three true messages,
+ * chosen by what holds for THIS visitor:
+ *   - with a live 96-hour window: the £50 off every Made-To-Order product
+ *     (calculate_order_offer takes it off the listed price of each line), the
+ *     seasonal code to use, and the real countdown;
+ *   - without one: no code and no money claim at all, just where to shop.
+ * SOFAEXTRA still works but is never advertised here.
+ */
+export function seasonMessages(phase: SeasonPhase, offerActive: boolean): SeasonMessage[] {
+  if (phase === 'off') return []
+  const bf: SeasonMessage = offerActive
+    ? { key: 'black_friday', lead: 'Black Friday: £50 off every made-to-order sofa', short: 'Black Friday · £50 off', code: 'BLACKFRIDAY', href: '/black-friday' }
+    : { key: 'black_friday', lead: 'Black Friday is Friday 27 November', short: 'Black Friday · 27 Nov', code: null, href: '/black-friday' }
+  const xmas: SeasonMessage = offerActive
+    ? { key: 'christmas', lead: 'Christmas: £50 off every made-to-order sofa', short: 'Christmas · £50 off', code: 'CHRISTMAS', href: '/christmas' }
+    : { key: 'christmas', lead: 'Planning for Christmas? Check delivery for your sofa', short: 'Christmas: check delivery', code: null, href: '/christmas' }
+  const mto: SeasonMessage = offerActive
+    ? { key: 'made_to_order', lead: '£50 off the listed price of every made-to-order sofa', short: '£50 off made-to-order', code: null, href: MADE_TO_ORDER_HREF, countdown: true }
+    : { key: 'made_to_order', lead: 'Made-to-order sofas, built to your size', short: 'Shop made-to-order sofas', code: null, href: MADE_TO_ORDER_HREF }
+  const promise: SeasonMessage = { key: 'promise', lead: 'Free delivery to most of the UK · pay on delivery', short: 'Free UK delivery · pay on delivery', code: null, href: '/delivery-returns' }
+  if (phase === 'christmas') return [xmas, mto, promise]
+  return [bf, xmas, mto]
 }
 
 /** Where the seasonal landing for this phase is (the homepage band links here). */

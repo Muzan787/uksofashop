@@ -27,8 +27,8 @@ export function Panel({ title, aside, children, id }: { title?: string; aside?: 
   return (
     <section aria-labelledby={title ? `${id ?? title}-h` : undefined} className="rounded-lg border border-calico-300 bg-white p-4 shadow-sm lg:p-5">
       {(title || aside) && (
-        <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-          {title && <h2 id={`${id ?? title}-h`} className="m-0 text-xs font-bold uppercase tracking-wider text-ink-500">{title}</h2>}
+        <div className="-mx-4 -mt-4 mb-4 flex flex-wrap items-center justify-between gap-2 rounded-t-lg border-b border-calico-300/70 bg-calico-50 px-4 py-2.5 lg:-mx-5 lg:-mt-5 lg:px-5">
+          {title && <h2 id={`${id ?? title}-h`} className="m-0 text-xs font-bold uppercase tracking-wider text-indigo-700">{title}</h2>}
           {aside}
         </div>
       )}
@@ -40,7 +40,9 @@ export function Panel({ title, aside, children, id }: { title?: string; aside?: 
 export function Metric({ label, value, note, href, tone = 'plain' }: {
   label: string; value: ReactNode; note?: ReactNode; href?: string; tone?: 'plain' | 'attention' | 'good'
 }) {
-  const color = tone === 'attention' ? 'text-ember-700' : tone === 'good' ? 'text-sage-700' : 'text-ink-900'
+  const color = tone === 'attention' ? 'text-ember-700' : tone === 'good' ? 'text-pine-700' : 'text-ink-900'
+  // A coloured edge says the state before the number is read (Run 7).
+  const edge = tone === 'attention' ? 'border-l-ember-500' : tone === 'good' ? 'border-l-pine-700' : 'border-l-indigo-700'
   const body = (
     <>
       <p className="m-0 text-[11px] font-bold uppercase tracking-wider text-ink-500">{label}</p>
@@ -48,15 +50,16 @@ export function Metric({ label, value, note, href, tone = 'plain' }: {
       {note && <p className="m-0 mt-1 text-xs text-ink-500">{note}</p>}
     </>
   )
-  const cls = 'block min-w-0 rounded-lg border border-calico-300 bg-white p-4 shadow-sm'
+  const cls = `block min-w-0 rounded-lg border border-l-4 border-calico-300 ${edge} bg-white p-4 shadow-sm`
   return href
     ? <Link href={href} className={`${cls} transition hover:border-ink-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember-700`}>{body}</Link>
     : <div className={cls}>{body}</div>
 }
 
 const PILL_TONE = {
-  good: 'border-sage-300 bg-sage-50 text-sage-700',
-  info: 'border-indigo-300 bg-indigo-50 text-indigo-700',
+  good: 'border-pine-700/30 bg-pine-50 text-pine-700',
+  info: 'border-ocean-700/30 bg-ocean-50 text-ocean-700',
+  blocked: 'border-mulberry-700/30 bg-mulberry-50 text-mulberry-700',
   attention: 'border-ember-500 bg-calico-100 text-ember-700',
   quiet: 'border-calico-300 bg-calico-100 text-ink-500',
 } as const

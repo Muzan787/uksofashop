@@ -34,6 +34,9 @@ import { ChevronRight, Tag } from 'lucide-react'
 import { OFFER_OPEN_EVENT, OFFER_PUBLIC_CODE } from '@/utils/offers/constants'
 import { useShopSettings } from '@/components/ShopSettingsProvider'
 import type { OfferTier } from '@/types/offers'
+import { offerAmountFor } from '@/utils/offers/amount'
+import { seasonCode } from '@/utils/seasonal'
+import { useSeasonPhase } from '@/components/Season/useSeasonPhase'
 import { useOfferCountdown } from './useOfferCountdown'
 
 const money = (n: number) => `£${n.toLocaleString('en-GB', { maximumFractionDigits: 2 })}`
@@ -59,9 +62,14 @@ export default function OfferStrip({ tier, price, className = '' }: Props) {
   // The tier amounts and the floor from Admin -> Settings, the same ones
   // checkout prices by.
   const { tierAmounts, offerMinPrice } = useShopSettings()
-  const amount = tier ? tierAmounts[tier] : 0
+  const phase = useSeasonPhase()
+  // In season the shop shows BLACKFRIDAY or CHRISTMAS; all spellings are one offer.
+  const code = seasonCode(phase) ?? OFFER_PUBLIC_CODE
+  const madeToOrder = tier === 'MADE_TO_ORDER'
+  // The same rule as checkout: a flat £50 on Made-To-Order, otherwise the
+  // tier amount and the floor (see utils/offers/amount.ts).
+  const amount = offerAmountFor(tier, price ?? 0, tierAmounts, price === undefined ? 0 : offerMinPrice)
   if (!active || amount <= 0) return null
-  if (price !== undefined && price < offerMinPrice) return null
 
   const open = () => {
     window.dispatchEvent(new CustomEvent(OFFER_OPEN_EVENT, { detail: { amount } }))
@@ -78,7 +86,7 @@ export default function OfferStrip({ tier, price, className = '' }: Props) {
       </span>
       <span className="min-w-0 flex-1">
         <span className="block text-body-sm font-semibold leading-snug text-ink-900">
-          £{amount} off this sofa with <code className="font-data font-extrabold tracking-[0.08em]">{OFFER_PUBLIC_CODE}</code>
+          £{amount} off this {madeToOrder ? 'made-to-order sofa' : 'sofa'} with <code className="font-data font-extrabold tracking-[0.08em]">{code}</code>
         </span>
         {/* The price actually payable. Nothing is estimated: it is the price on
             screen minus the same amount checkout takes off, so the two can
@@ -86,7 +94,7 @@ export default function OfferStrip({ tier, price, className = '' }: Props) {
         {price !== undefined && (
           <span className="mt-0.5 block text-caption font-semibold text-ink-900">
             You pay <span className="tabular-nums">{money(price - amount)}</span> with the offer
-            <span className="font-normal text-ink-500"> (otherwise <span className="tabular-nums">{money(price)}</span>)</span>
+            <span className="font-normal text-ink-500"> (listed price <span className="tabular-nums">{money(price)}</span>)</span>
           </span>
         )}
         <span className="mt-0.5 block text-caption text-ink-500">

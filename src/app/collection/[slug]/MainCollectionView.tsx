@@ -5,13 +5,11 @@
 // main collection rather than a set — see the note there about why both live
 // under one segment.
 
-import CollectionCard from '@/components/Product/CollectionCard'
+import RangeGrid from '@/components/Collection/RangeGrid'
 import CollectionEmpty from '@/components/Collection/CollectionEmpty'
 import CollectionHero from '@/components/Collection/CollectionHero'
 import ProductCard from '@/components/Product/ProductCard'
 import SectionHeading from '@/components/UI/SectionHeading'
-import { Reveal } from '@/components/Motion'
-import { staggerDelay } from '@/components/Motion/tokens'
 import { canonicalProductPath } from '@/utils/productUrl'
 import { priceAnchors } from '@/utils/collections'
 import { sale } from '@/utils/pricing'
@@ -85,24 +83,7 @@ export default function MainCollectionView({ name, standfirst, members }: MainCo
           />
         ) : (
           <>
-            {sets.length > 0 && (
-              <section aria-label={`Ranges in ${name}`}>
-                <SectionHeading
-                  eyebrow="Sold as a set"
-                  heading="The ranges."
-                  emphasise="ranges."
-                  level="section"
-                  className="mb-6 lg:mb-8"
-                />
-                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6">
-                  {sets.map((set, i) => (
-                    <Reveal key={set.id} delay={staggerDelay(i)} distance={20} amount={0.12}>
-                      <CollectionCard {...set} />
-                    </Reveal>
-                  ))}
-                </div>
-              </section>
-            )}
+            {sets.length > 0 && <RangeGrid sets={sets} label={`Ranges in ${name}`} />}
 
             {singles.length > 0 && (
               <section

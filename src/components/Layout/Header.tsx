@@ -12,6 +12,8 @@ import MobileMenu from './MobileMenu';
 import SearchOverlay from './SearchOverlay';
 import { useOffer } from '@/components/Offer/OfferProvider';
 import OfferAnnouncement from '@/components/Offer/OfferAnnouncement';
+import SeasonRotator from '@/components/Season/SeasonRotator';
+import LogoHat from '@/components/Season/LogoHat';
 import { useSeasonPhase } from '@/components/Season/useSeasonPhase';
 import { seasonBar } from '@/utils/seasonal';
 
@@ -66,7 +68,9 @@ function Wordmark({ light, className = '' }: { light: boolean; className?: strin
             ground, which fails AA. tokens.css says it plainly: amber text is
             ember-700 on light and ember-300 on dark. This span was the one
             place in the site that ignored it, on every page. */}
-        UK Sofa<span className={light ? 'text-ember-300' : 'text-ember-700'}>Shop</span>
+        {/* The seasonal hat sits on the U (Run 7); it is absolutely placed, so
+            the wordmark itself never moves. */}
+        <span className="relative inline-block">U<LogoHat /></span>K Sofa<span className={light ? 'text-ember-300' : 'text-ember-700'}>Shop</span>
       </span>
     </Link>
   );
@@ -225,11 +229,17 @@ export default function Header({ categories }: { categories: NavCategory[] }) {
       {annoVisible && (
         <div
           data-ground="dark"
-          className="grad-ink relative flex min-h-9 items-center justify-center bg-ink-900 px-12 py-2"
+          className="grad-ink sticky top-0 z-scroll-rail flex h-9 items-center justify-center bg-ink-900 px-12"
         >
-          <p aria-live="polite" className="eyebrow m-0 text-center text-calico-300">
-            {announcement}
-          </p>
+          {/* In season (14 Nov to 25 Dec): the rotating messages (Run 7).
+              Otherwise the single line as before. */}
+          {season !== 'off' ? (
+            <SeasonRotator phase={season} offerActive={offerActive} />
+          ) : (
+            <p aria-live="polite" className="eyebrow m-0 min-w-0 truncate text-center text-calico-300">
+              {announcement}
+            </p>
+          )}
 
           {/* The fading ember hairline along the bottom edge, so the bar hands
               over to whatever is beneath it rather than simply stopping. */}
@@ -252,7 +262,9 @@ export default function Header({ categories }: { categories: NavCategory[] }) {
       {/* ── Header bar ────────────────────────────────────────────────────── */}
       <header
         className={[
-          'relative sticky top-0 z-header transition-[transform,background-color,box-shadow] duration-base ease-out-expo',
+          'relative sticky z-header transition-[transform,background-color,box-shadow] duration-base ease-out-expo',
+          // Under the sticky announcement bar while it is shown (h-9).
+          annoVisible ? 'top-9' : 'top-0',
           hidden ? '-translate-y-full' : 'translate-y-0',
           onHero ? 'bg-transparent' : 'bg-calico-50 shadow-e1',
           isHome ? '-mb-14' : '',
