@@ -142,6 +142,19 @@ export function seasonMessages(phase: SeasonPhase, offerActive: boolean): Season
   return [bf, xmas, mto]
 }
 
+/**
+ * The moving trust marquee's seasonal lines (Run 8). A code and the £50 only
+ * for a visitor whose 96-hour window is live (the £50 applies to Made-To-Order
+ * products only, so the line says so); otherwise no money claim at all.
+ * SOFAEXTRA is never shown.
+ */
+export function marqueeSeasonLines(phase: SeasonPhase, offerActive: boolean): string[] {
+  const code = seasonCode(phase)
+  if (!code) return []
+  if (offerActive) return [`£50 off made-to-order sofas with ${code}`, 'One offer per order · UK-made to your size']
+  return [phase === 'christmas' ? 'Christmas: check delivery for your sofa' : 'Black Friday · Friday 27 November', 'Made-to-order sofas, built to your size']
+}
+
 /** Where the seasonal landing for this phase is (the homepage band links here). */
 export function seasonHref(phase: SeasonPhase): string | null {
   switch (phase) {

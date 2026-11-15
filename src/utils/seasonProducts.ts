@@ -55,6 +55,13 @@ export function seasonShape(slug: string): SeasonShape {
 
 const ORDER: SeasonShape[] = ['family', 'u_shape', 'corner', 'three_two']
 
+/**
+ * The homepage band's first three, owner's choice (Run 8): one Ashton and two
+ * other ranges, none of them in the main rail above. Missing or inactive picks
+ * are skipped; the round-robin below fills the rest.
+ */
+export const SHOWCASE_PICKS = ['ashton-high-back-u-shape', 'salone-5-seater-corner-2c2', 'rio-chesterfield-high-back-3and2-seater']
+
 export function pickSeasonProducts(raw: RawProduct[], limit: number): SeasonProduct[] {
   const usable: SeasonProduct[] = []
   for (const p of raw) {
@@ -76,8 +83,15 @@ export function pickSeasonProducts(raw: RawProduct[], limit: number): SeasonProd
   const byShape = new Map<SeasonShape, SeasonProduct[]>()
   for (const s of ORDER) byShape.set(s, usable.filter(x => x.shape === s).sort(rank))
 
-  // Round-robin across shapes, so the first cards already show the range.
+  // The owner's picks first, then round-robin across shapes.
   const out: SeasonProduct[] = []
+  for (const slug of SHOWCASE_PICKS) {
+    const hit = usable.find(x => x.slug === slug)
+    if (hit && out.length < limit) {
+      out.push(hit)
+      byShape.set(hit.shape, (byShape.get(hit.shape) ?? []).filter(x => x.slug !== slug))
+    }
+  }
   let progressed = true
   while (out.length < limit && progressed) {
     progressed = false

@@ -12,7 +12,7 @@
 export type AdminSectionKey =
   | 'home' | 'orders' | 'meta' | 'google' | 'leads' | 'journeys'
   | 'catalogue' | 'inventory' | 'categories' | 'reviews' | 'videos' | 'status' | 'settings' | 'adlinks'
-  | 'website' | 'business' | 'sourcereview'
+  | 'website' | 'business' | 'sourcereview' | 'workstation'
 
 export interface AdminSection {
   key: AdminSectionKey
@@ -27,6 +27,7 @@ export interface AdminSection {
  */
 export const ADMIN_SECTIONS: AdminSection[] = [
   { key: 'home',       href: '/admin',            label: 'Today' },
+  { key: 'workstation', href: '/admin/workstation', label: 'Workstation' },
   { key: 'orders',     href: '/admin/orders',     label: 'Orders' },
   { key: 'sourcereview', href: '/admin/source-review', label: 'Source review' },
   { key: 'website',    href: '/admin/website',    label: 'Website' },
@@ -69,7 +70,7 @@ export const MORE_HREF = '/admin/more'
 
 /** The sections reached through More on a phone, in the More page's order. */
 export const MORE_SECTION_KEYS: AdminSectionKey[] = [
-  'website', 'business', 'sourcereview', 'meta', 'google', 'journeys', 'reviews', 'videos', 'status', 'settings', 'adlinks',
+  'workstation', 'website', 'business', 'sourcereview', 'meta', 'google', 'journeys', 'reviews', 'videos', 'status', 'settings', 'adlinks',
 ]
 
 /** The sections the phone's Catalogue tab covers: the hub, products and categories. */
@@ -107,7 +108,7 @@ export const ADMIN_GROUPS: AdminGroup[] = [
   // Run 4 (14 Nov 2026): grouped by the job a member of staff is doing, not
   // by system. Meta and Google sit under Marketing as the conversion tools
   // they are; every original address still works.
-  { label: 'Daily work',         keys: ['home', 'orders', 'leads', 'sourcereview'] },
+  { label: 'Daily work',         keys: ['home', 'workstation', 'orders', 'leads', 'sourcereview'] },
   { label: 'Website & business', keys: ['website', 'business', 'journeys'] },
   { label: 'Marketing',          keys: ['meta', 'google', 'adlinks'] },
   { label: 'Shop',               keys: ['catalogue', 'inventory', 'categories', 'reviews', 'videos'] },

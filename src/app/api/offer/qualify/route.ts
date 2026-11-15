@@ -106,7 +106,9 @@ export async function POST(request: Request) {
   // and leave no cookie behind: the countdown must never restart.
   const remaining = secondsLeft(issued)
   if (remaining <= 0) {
-    const ended = json(INACTIVE_OFFER_ENTITLEMENT)
+    // Say WHEN it ended (Run 8), so the product page can tell a returning
+    // visitor plainly rather than show nothing. Still no cookie, still no new window.
+    const ended = json({ ...INACTIVE_OFFER_ENTITLEMENT, endedAt: issued.revoked ? null : issued.expires_at })
     ended.cookies.set(OFFER_ENTITLEMENT_COOKIE, '', {
       httpOnly: true,
       secure: origin.startsWith('https:'),

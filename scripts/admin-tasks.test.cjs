@@ -32,7 +32,7 @@ test('a Meta event close to the 7-day limit is urgent and listed first', () => {
   assert.equal(tasks[0].key, 'meta')
   assert.equal(tasks[0].tone, 'urgent')
   assert.match(tasks[0].detail, /20 h/)
-  assert.equal(tasks[0].href, '/admin/meta?queue=eligible')
+  assert.equal(tasks[0].href, '/admin/workstation?type=meta_send')
 })
 
 test('a Meta event with days left is a normal task, not an alarm', () => {

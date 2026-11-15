@@ -64,7 +64,7 @@ export function buildTasks(input: TaskInput): AdminTask[] {
       detail: hrs === null ? 'Consent is recorded and each is inside Meta’s 7-day limit.'
         : soon ? `The soonest runs out in ${Math.max(1, Math.floor(hrs))} h and cannot be sent after that.`
         : `The soonest has ${Math.floor(hrs / 24)} days left before Meta refuses it.`,
-      href: '/admin/meta?queue=eligible', count: input.metaEligible,
+      href: '/admin/workstation?type=meta_send', count: input.metaEligible,
     })
   }
 
@@ -74,7 +74,7 @@ export function buildTasks(input: TaskInput): AdminTask[] {
       key: 'confirm', tone: days !== null && days >= 3 ? 'urgent' : 'attention',
       title: `${unit(input.waitingToConfirm, 'order is', 'orders are')} waiting for the customer to confirm`,
       detail: days !== null ? `The oldest has been waiting ${days} ${days === 1 ? 'day' : 'days'}. Ring or message them.` : 'Ring or message them.',
-      href: '/admin/orders?status=pending_cod', count: input.waitingToConfirm,
+      href: '/admin/workstation?type=confirm_order', count: input.waitingToConfirm,
     })
   }
 
@@ -83,7 +83,7 @@ export function buildTasks(input: TaskInput): AdminTask[] {
       key: 'overdue', tone: 'urgent',
       title: `${unit(input.overdueDeliveries, 'order is', 'orders are')} past the date the customer asked for`,
       detail: 'Only orders whose own requested date has passed are counted. A later date is never flagged.',
-      href: '/admin/orders?status=attention', count: input.overdueDeliveries,
+      href: '/admin/workstation?type=overdue_delivery', count: input.overdueDeliveries,
     })
   }
 
@@ -110,7 +110,7 @@ export function buildTasks(input: TaskInput): AdminTask[] {
       key: 'source', tone: 'info',
       title: `${unit(input.sourceReview, 'order needs', 'orders need')} a source review`,
       detail: 'No advert evidence, or contradictory evidence. Ask the customer how they found us and record it.',
-      href: '/admin/source-review', count: input.sourceReview,
+      href: '/admin/workstation?type=source_review', count: input.sourceReview,
     })
   }
 

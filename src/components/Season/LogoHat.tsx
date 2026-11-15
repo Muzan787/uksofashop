@@ -8,7 +8,10 @@
 // not move by a pixel.
 import { useSeasonPhase } from './useSeasonPhase'
 
-export default function LogoHat() {
+const WORDMARK = '-left-[0.36em] -top-[0.66em] h-[0.9em] w-[1.1em] -rotate-[16deg]'
+
+/** `placement` overrides where and how big (the offer tag uses it). */
+export default function LogoHat({ placement = WORDMARK }: { placement?: string }) {
   if (useSeasonPhase() === 'off') return null
   return (
     <svg
@@ -16,7 +19,7 @@ export default function LogoHat() {
       focusable="false"
       viewBox="0 0 32 26"
       data-logo-hat
-      className="pointer-events-none absolute -left-[0.36em] -top-[0.66em] h-[0.9em] w-[1.1em] -rotate-[16deg] drop-shadow-[0_1px_1px_rgba(0,0,0,0.35)]"
+      className={`pointer-events-none absolute drop-shadow-[0_1px_1px_rgba(0,0,0,0.35)] ${placement}`}
     >
       {/* the hat, flopping over to the right */}
       <path d="M4 19 C5 10 11 3 19 3 C24 3 27.5 6 28.5 10.5 C26.4 9 24.2 8.8 22.6 9.6 C24.2 12.6 25 16 25.2 19 Z" fill="#d23b2e" />

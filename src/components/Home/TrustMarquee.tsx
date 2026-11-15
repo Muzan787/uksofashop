@@ -1,7 +1,12 @@
 // src/components/Home/TrustMarquee.tsx
 
+'use client';
+
 import { Marquee } from '@/components/Motion';
 import { ANNOUNCEMENTS } from '@/constants/promises';
+import { useOffer } from '@/components/Offer/OfferProvider';
+import { useSeasonPhase } from '@/components/Season/useSeasonPhase';
+import { marqueeSeasonLines } from '@/utils/seasonal';
 
 /**
  * The ember band, directly under the hero.
@@ -27,6 +32,10 @@ import { ANNOUNCEMENTS } from '@/constants/promises';
  * src/styles/tokens.css — white on ember is 2.9:1 and fails.
  */
 export default function TrustMarquee() {
+  // Up to two seasonal lines (Run 8): the code only for a visitor holding a
+  // live window; otherwise no money claim. See marqueeSeasonLines.
+  const { active } = useOffer();
+  const lines = [...marqueeSeasonLines(useSeasonPhase(), active), ...ANNOUNCEMENTS];
   return (
     <section
       aria-label="What we promise"
@@ -37,7 +46,7 @@ export default function TrustMarquee() {
       <span aria-hidden="true" className="absolute inset-x-0 top-0 h-px bg-ember-900/25" />
 
       <Marquee duration={44} gap="2.5rem" className="py-3.5">
-        {ANNOUNCEMENTS.map((line) => (
+        {lines.map((line) => (
           <span key={line} className="flex shrink-0 items-center gap-10">
             <span className="eyebrow whitespace-nowrap text-ink-900">{line}</span>
             {/* The separator. A diamond rather than a bullet — a bullet at

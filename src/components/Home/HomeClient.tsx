@@ -173,8 +173,8 @@ export default function HomeClient({ categories, products, heroProduct, collecti
       <SeasonalStrip />
 
       <ProductRail
-        eyebrow="New in"
-        heading="The latest through the door."
+        eyebrow="Our picks"
+        heading="Sofas worth making room for."
         emphasise="latest"
         items={products.map(toCard)}
         viewAllHref="/shop/all"

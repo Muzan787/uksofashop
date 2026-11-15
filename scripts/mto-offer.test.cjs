@@ -7,7 +7,8 @@ const fs = require('node:fs')
 const path = require('node:path')
 const { PGlite } = require('@electric-sql/pglite')
 
-const MIGRATION = fs.readFileSync(path.join(__dirname, '../supabase/migrations/20261115200000_made_to_order_50_offer.sql'), 'utf8')
+const MIGRATION = fs.readFileSync(path.join(__dirname, '../supabase/migrations/20261115200000_made_to_order_50_offer.sql'), 'utf8') +
+  '\n' + fs.readFileSync(path.join(__dirname, '../supabase/migrations/20261115210000_mto_offer_per_sofa.sql'), 'utf8')
 const MTO = '00000000-0000-4000-8000-0000000000aa'
 const IMP = '00000000-0000-4000-8000-0000000000bb'
 const P = n => `aaaaaaaa-0000-4000-8000-${String(n).padStart(12, '0')}`
@@ -108,7 +109,7 @@ test('other collections keep exactly the old rules', async () => {
 
 test('baskets: £50 per Made-To-Order line, once per line; the rest by the old rule; never stacked', async () => {
   assert.equal(Number((await quote([[1], [3]])).discount_amount), 100, 'two sofas, two lines')
-  assert.equal(Number((await quote([[1, 2]])).discount_amount), 50, 'one line of two is still one £50')
+  assert.equal(Number((await quote([[1, 2]])).discount_amount), 100, 'two of the same sofa: £50 each (Run 8)')
   const mixed = await quote([[1], [7]])
   assert.equal(Number(mixed.discount_amount), 70, '£50 sofa + £20 on the imported sofa')
   assert.equal(Number(mixed.made_to_order_discount), 50)

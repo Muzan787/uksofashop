@@ -161,7 +161,7 @@ export default function Hero({ image, productTitle, productHref, fromPrice, wasP
         {/* ── Copy ──────────────────────────────────────────────────────── */}
         <div className="relative shrink-0">
           {/* Phone tree (360-639px): under the badge, in the gap right of "Sink into" and "something"; measured clear of text and buttons at 360-393px. */}
-          <ChristmasTree variant="phone" className="right-0 top-[46px] h-[92px] w-auto" />
+          <ChristmasTree variant="phone" className="right-1 top-[88px] h-[106px] w-auto" />
           {/* The live badge. A real count of real products, not a claim. */}
           <Reveal distance={12} amount={0.1} className="inline-block">
             <span className="ring-gradient glass-dark-panel inline-flex items-center gap-2.5 rounded-pill py-2 pl-3 pr-4">

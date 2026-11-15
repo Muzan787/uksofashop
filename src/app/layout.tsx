@@ -24,6 +24,7 @@ import { ANALYTICS_REDACTION_SNIPPET } from '@/utils/redactUrl';
 import { PALETTE } from '@/constants/palette';
 import { OfferProvider } from '@/components/Offer/OfferProvider';
 import OfferBoot from '@/components/Offer/OfferBoot';
+import VersionGuard from '@/components/Layout/VersionGuard';
 import OfferPrompt from '@/components/Offer/OfferPrompt';
 
 
@@ -273,6 +274,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <JourneyAnalytics />
           <Suspense fallback={null}>
             <OfferBoot />
+            <VersionGuard />
           </Suspense>
           <OfferPrompt />
 

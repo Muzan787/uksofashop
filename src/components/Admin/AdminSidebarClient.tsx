@@ -8,8 +8,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, LayoutGrid, ShoppingCart, Package, Tags, LogOut, Star, UsersRound,
-  Clapperboard, Radio, Route, Ellipsis, Activity, SlidersHorizontal, Link2, Globe, BarChart3, SearchCheck, Search, type LucideIcon,
-} from 'lucide-react'
+  Clapperboard, Radio, Route, Ellipsis, Activity, SlidersHorizontal, Link2, Globe, BarChart3, SearchCheck, Search, ListChecks, type LucideIcon } from 'lucide-react'
 import { logout } from '@/app/actions/auth'
 import {
   ADMIN_GROUPS, ADMIN_SECTIONS, PHONE_TABS, activePhoneTab, sectionActive,
@@ -34,6 +33,7 @@ const SECTION_ICONS: Record<AdminSectionKey, LucideIcon> = {
   website: Globe,
   business: BarChart3,
   sourcereview: SearchCheck,
+  workstation: ListChecks,
 }
 
 const TAB_ICONS: Record<PhoneTabKey, LucideIcon> = {

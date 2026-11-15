@@ -38,6 +38,9 @@ import { offerAmountFor } from '@/utils/offers/amount'
 import { seasonCode } from '@/utils/seasonal'
 import { useSeasonPhase } from '@/components/Season/useSeasonPhase'
 import { useOfferCountdown } from './useOfferCountdown'
+import { useOffer } from './OfferProvider'
+import LogoHat from '@/components/Season/LogoHat'
+import { formatOfferDeadline } from '@/utils/offers/deadline'
 
 const money = (n: number) => `£${n.toLocaleString('en-GB', { maximumFractionDigits: 2 })}`
 
@@ -69,7 +72,19 @@ export default function OfferStrip({ tier, price, className = '' }: Props) {
   // The same rule as checkout: a flat £50 on Made-To-Order, otherwise the
   // tier amount and the floor (see utils/offers/amount.ts).
   const amount = offerAmountFor(tier, price ?? 0, tierAmounts, price === undefined ? 0 : offerMinPrice)
-  if (!active || amount <= 0) return null
+  const { endedAt } = useOffer()
+  if (amount <= 0) return null
+  // A returning visitor whose one-time window has ended (Run 8): say so
+  // plainly, with the date, rather than show nothing. The window is NOT
+  // reopened - it was promised to run once, from the first visit.
+  if (!active) {
+    if (!endedAt) return null
+    return (
+      <p className={`m-0 rounded-sm border border-calico-300 bg-calico-100 px-3.5 py-2.5 text-caption text-ink-700 ${className}`}>
+        Your 96-hour online offer ended on {formatOfferDeadline(endedAt)}. The price shown is the price today. Questions about it? Message us on WhatsApp.
+      </p>
+    )
+  }
 
   const open = () => {
     window.dispatchEvent(new CustomEvent(OFFER_OPEN_EVENT, { detail: { amount } }))
@@ -81,7 +96,9 @@ export default function OfferStrip({ tier, price, className = '' }: Props) {
       onClick={open}
       className={`hover-btn flex w-full items-center gap-3 rounded-sm border border-ember-500/40 bg-ember-500/[0.08] px-3.5 py-3 text-left transition-colors duration-swift ease-out-expo ${className}`}
     >
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-pill bg-ember-500 text-ink-900">
+      <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-pill bg-ember-500 text-ink-900">
+        {/* Seasonal hat on the tag (14 Nov to 25 Dec; owner request, 15 Nov). */}
+        <LogoHat placement="-left-2 -top-3 h-[18px] w-[22px] -rotate-[22deg]" />
         <Tag aria-hidden="true" className="h-4 w-4" />
       </span>
       <span className="min-w-0 flex-1">

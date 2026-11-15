@@ -7,6 +7,12 @@ export interface PublicOfferEntitlement {
   startedAt: string | null
   expiresAt: string | null
   offerAvailable: boolean
+  /**
+   * Set only when this visitor's one-time window has ENDED (Run 8): when it
+   * ended, so the product page can say so honestly instead of silently
+   * showing nothing. It never reopens the window.
+   */
+  endedAt?: string | null
 }
 
 export const INACTIVE_OFFER_ENTITLEMENT: PublicOfferEntitlement = {

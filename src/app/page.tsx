@@ -6,6 +6,7 @@ import { priceAnchors, summariseCollections } from '@/utils/collections';
 import { getFabricLibrary } from '@/utils/fabrics';
 import { getBuildTeaser } from '@/utils/buildTeaser';
 import HomeClient from '@/components/Home/HomeClient';
+import { HOME_PICKS, orderHomePicks } from '@/constants/homePicks';
 import { getSeasonProducts } from '@/utils/seasonProducts';
 import { HERO_PRODUCT_SLUG } from '@/constants/homeArt';
 import { CUSTOMER_REVIEWS } from '@/constants/socialReviews';
@@ -48,6 +49,7 @@ const getHomeData = unstable_cache(
       heroProduct,
       fabricLibrary,
       { data: bedProducts },
+      { data: pickedProducts },
     ] = await Promise.all([
       // Categories
       // Shown ones, in the admin's order (by name until one is set).
@@ -140,6 +142,14 @@ const getHomeData = unstable_cache(
         .order('base_price', { ascending: false })
         .order('priority', { referencedTable: 'product_variants', ascending: true })
         .limit(6),
+
+      // The owner's homepage picks (constants/homePicks.ts), read live.
+      supabase
+        .from('products')
+        .select('id, title, slug, base_price, was_price, gallery_images, average_rating, review_count, product_variants(id, image_url, color, color_hex, price_adjustment, priority), categories!products_category_id_fkey(slug, name), product_categories(categories(slug, name))')
+        .eq('is_active', true)
+        .in('slug', [...HOME_PICKS])
+        .order('priority', { referencedTable: 'product_variants', ascending: true }),
     ]);
 
     // The "build your own" board - the frame it is photographed with, the
@@ -148,9 +158,9 @@ const getHomeData = unstable_cache(
     // needs the library.
     const buildTeaser = await getBuildTeaser(fabricLibrary, supabase);
 
-    return { categories, categoryStats, featuredProducts, groupsData, sofaCount, reviewRows, heroProduct, buildTeaser, bedProducts };
+    return { categories, categoryStats, featuredProducts: orderHomePicks(pickedProducts ?? [], featuredProducts ?? []), groupsData, sofaCount, reviewRows, heroProduct, buildTeaser, bedProducts };
   },
-  ['uksofashop-home-data-v2'],
+  ['uksofashop-home-data-v3'],
   { revalidate: 300, tags: ['home'] },
 );
 

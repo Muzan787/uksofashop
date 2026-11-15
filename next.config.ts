@@ -9,6 +9,24 @@ const withPWA = withPWAInit({
 
 const isProduction = process.env.NODE_ENV === 'production'
 
+/**
+ * The release this build is (Run 8): the git commit when the build host has
+ * the repository, else a host-provided commit variable, else 'none' (which
+ * switches VersionGuard off rather than risking a reload loop). It must be the
+ * same in the server and the browser bundles, so it is never a timestamp.
+ */
+function buildStamp(): string {
+  const fromEnv = process.env.SOURCE_COMMIT || process.env.GITHUB_SHA || process.env.COMMIT_REF || process.env.VERCEL_GIT_COMMIT_SHA
+  if (fromEnv) return fromEnv.slice(0, 12)
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    return require('node:child_process').execSync('git rev-parse --short=12 HEAD', { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim() || 'none'
+  } catch {
+    return 'none'
+  }
+}
+const BUILD_STAMP = buildStamp()
+
 // Which Google path the build bakes in: the GTM container, the Tag Assistant
 // QA container, or plain gtag.
 //
@@ -34,11 +52,11 @@ const googleTrackingProduction = trackingEnv === 'production'
 
 const nextConfig: NextConfig = {
   reactCompiler: true,
-  ...(googleTrackingPreviewQA ? {
-    env: { NEXT_PUBLIC_GOOGLE_TRACKING_MODE: 'gtm-qa' },
-  } : googleTrackingProduction ? {
-    env: { NEXT_PUBLIC_GOOGLE_TRACKING_MODE: 'gtm-v1' },
-  } : {}),
+  env: {
+    NEXT_PUBLIC_BUILD_STAMP: BUILD_STAMP,
+    ...(googleTrackingPreviewQA ? { NEXT_PUBLIC_GOOGLE_TRACKING_MODE: 'gtm-qa' }
+      : googleTrackingProduction ? { NEXT_PUBLIC_GOOGLE_TRACKING_MODE: 'gtm-v1' } : {}),
+  },
 
   /**
    * View Transitions.
