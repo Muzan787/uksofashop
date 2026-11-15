@@ -45,8 +45,8 @@ export default function HeroPriceChip({ productHref, productTitle, fromPrice, wa
       >
         <span className="font-data text-body font-semibold tabular-nums text-calico-50">{money(pay)}</span>
         <span className="flex flex-col leading-tight">
-          <span className="eyebrow text-ember-300">with {code}</span>
-          <span className="font-data text-caption tabular-nums text-calico-300">listed {money(fromPrice)}</span>
+          <span className="eyebrow text-ember-300 max-sm:tracking-[0.06em]">with {code}</span>
+          <span className="font-data text-caption tabular-nums text-calico-300 max-sm:text-[11px]">listed {money(fromPrice)}</span>
         </span>
         <ArrowRight aria-hidden="true" className="h-4 w-4 text-ember-300" />
       </Link>

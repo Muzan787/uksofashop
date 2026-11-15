@@ -355,7 +355,7 @@ export default function Hero({ image, productTitle, productHref, fromPrice, wasP
               fromPrice={fromPrice}
               wasPrice={wasPrice ?? null}
               madeToOrder={Boolean(madeToOrder)}
-              className="glass-dark-panel hover-btn hover-btn-dark inline-flex max-w-full items-center gap-2.5 rounded-pill py-2.5 pl-4 pr-3 no-underline"
+              className="glass-dark-panel hover-btn hover-btn-dark inline-flex max-w-full items-center gap-2 rounded-pill py-2 pl-3 pr-2.5 no-underline sm:gap-2.5 sm:py-2.5 sm:pl-4 sm:pr-3"
             />
           </div>
         )}
