@@ -13,7 +13,7 @@ are kept to a handful and put on their own lines at the foot.
 
 Talk to a person.
 
-WhatsApp or call 07462 258934, email enquiries@uksofashop.co.uk, or find every sofa at uksofashop.co.uk. We answer ourselves — no bots, no ticket numbers.
+WhatsApp or call 07476 616022, email enquiries@uksofashop.co.uk, or find every sofa at uksofashop.co.uk. We answer ourselves — no bots, no ticket numbers.
 
 Free UK Mainland delivery · Cash on delivery · 1-year frame guarantee · 14 days to change your mind
 
@@ -23,7 +23,7 @@ Free UK Mainland delivery · Cash on delivery · 1-year frame guarantee · 14 da
 
 The Hannah Electric Corner in beige micro fabric. 290cm each way, electric recline, USB ports and cup holders built in. £999, delivered free across mainland UK.
 
-Message us on WhatsApp — 07462 258934 — or see it at uksofashop.co.uk
+Message us on WhatsApp — 07476 616022 — or see it at uksofashop.co.uk
 
 #UKSofaShop #ElectricRecliner #CornerSofa #ReclinerSofa #SofaUK
 
@@ -33,7 +33,7 @@ Welcome to UK Sofa Shop.
 
 Choose the shape, the fabric and the colour. We make it, we deliver it free across mainland UK, and you pay when it arrives — cash on delivery, nothing upfront.
 
-Every sofa is here: uksofashop.co.uk. Questions go to WhatsApp, 07462 258934.
+Every sofa is here: uksofashop.co.uk. Questions go to WhatsApp, 07476 616022.
 
 #UKSofaShop #SofaUK #MadeToOrderSofa #BritishSofas #NewSofa
 
@@ -45,7 +45,7 @@ The Roma Recliner corner in brown real leather or grey fabric — the same manua
 
 Free UK Mainland delivery. Cash on delivery if you'd rather.
 
-WhatsApp 07462 258934 · uksofashop.co.uk
+WhatsApp 07476 616022 · uksofashop.co.uk
 
 #UKSofaShop #ReclinerSofa #LeatherSofa #CornerSofa #SofaUK
 
@@ -57,7 +57,7 @@ Malibu 3+2 Seater in oatmeal marble fabric, high-backed and buttoned, every cush
 
 1-year frame guarantee, and 14 days to change your mind.
 
-WhatsApp 07462 258934 · uksofashop.co.uk
+WhatsApp 07476 616022 · uksofashop.co.uk
 
 #UKSofaShop #MalibuSofa #HighBackSofa #MadeToOrderSofa #SofaUK
 
@@ -69,7 +69,7 @@ The Sims 5 Seater Corner in plush velvet — grey, black, navy and beige. Swipe 
 
 Free UK Mainland delivery, brought to your ground floor.
 
-WhatsApp 07462 258934 · uksofashop.co.uk
+WhatsApp 07476 616022 · uksofashop.co.uk
 
 #UKSofaShop #SimsSofa #CornerSofa #VelvetSofa #MadeToOrderSofa #SofaUK
 
@@ -81,7 +81,7 @@ High back, plush velvet, 240 × 300 × 180cm, 95cm tall, 90cm deep. All cushions
 
 Cash on delivery — pay when it arrives.
 
-WhatsApp 07462 258934 · uksofashop.co.uk
+WhatsApp 07476 616022 · uksofashop.co.uk
 
 #UKSofaShop #SimsSofa #UShapedSofa #VelvetSofa #SofaUK
 
@@ -93,7 +93,7 @@ That's the whole idea. Pick the shape you need and the cloth you want; we make i
 
 1-year frame guarantee on every sofa we make.
 
-WhatsApp 07462 258934 · uksofashop.co.uk
+WhatsApp 07476 616022 · uksofashop.co.uk
 
 #UKSofaShop #MadeToOrderSofa #BritishSofas #SofaUK #CustomSofa
 
@@ -105,7 +105,7 @@ Loose cushions you can sink into, on a frame we guarantee for a year. 240 × 240
 
 Free UK Mainland delivery. Cash on delivery.
 
-WhatsApp 07462 258934 · uksofashop.co.uk
+WhatsApp 07476 616022 · uksofashop.co.uk
 
 #UKSofaShop #VeronaSofa #CornerSofa #MadeToOrderSofa #SofaUK
 
@@ -121,7 +121,7 @@ The Verona Scattered Back comes in seven shapes, from the armchair at £249 to t
 
 Free UK Mainland delivery. 1-year frame guarantee.
 
-WhatsApp 07462 258934 · uksofashop.co.uk
+WhatsApp 07476 616022 · uksofashop.co.uk
 
 #UKSofaShop #VeronaSofa #ScatterBackSofa #MadeToOrderSofa #SofaUK
 
@@ -133,7 +133,7 @@ The Verona Scattered Back 3+2 set, by the numbers.
 
 Cash on delivery — nothing upfront.
 
-WhatsApp 07462 258934 · uksofashop.co.uk
+WhatsApp 07476 616022 · uksofashop.co.uk
 
 #UKSofaShop #VeronaSofa #SofaSet #MadeToOrderSofa #SofaUK
 
@@ -145,7 +145,7 @@ Swipe through the whole Verona Scattered Back set: armchair £249, 2 seater £34
 
 Free UK Mainland delivery, and 14 days to change your mind.
 
-WhatsApp 07462 258934 · uksofashop.co.uk
+WhatsApp 07476 616022 · uksofashop.co.uk
 
 #UKSofaShop #VeronaSofa #CornerSofa #SofaSet #MadeToOrderSofa #SofaUK
 
@@ -161,7 +161,7 @@ The Verona High Back: seven shapes from £279, made to order, with the scatter c
 
 Free UK Mainland delivery. 1-year frame guarantee.
 
-WhatsApp 07462 258934 · uksofashop.co.uk
+WhatsApp 07476 616022 · uksofashop.co.uk
 
 #UKSofaShop #VeronaSofa #HighBackSofa #MadeToOrderSofa #SofaUK
 
@@ -173,7 +173,7 @@ The Verona High Back 3+2 set, by the numbers.
 
 Cash on delivery — pay when it arrives.
 
-WhatsApp 07462 258934 · uksofashop.co.uk
+WhatsApp 07476 616022 · uksofashop.co.uk
 
 #UKSofaShop #VeronaSofa #SofaSet #HighBackSofa #SofaUK
 
@@ -185,7 +185,7 @@ Swipe through the Verona High Back: armchair £279, 2 seater £369, 3 seater £4
 
 Free UK Mainland delivery, and 14 days to change your mind.
 
-WhatsApp 07462 258934 · uksofashop.co.uk
+WhatsApp 07476 616022 · uksofashop.co.uk
 
 #UKSofaShop #VeronaSofa #HighBackSofa #CornerSofa #MadeToOrderSofa #SofaUK
 
@@ -201,7 +201,7 @@ The Roma is a manual recliner from £280 for the armchair, £650 for the corner 
 
 Free UK Mainland delivery. Cash on delivery.
 
-WhatsApp 07462 258934 · uksofashop.co.uk
+WhatsApp 07476 616022 · uksofashop.co.uk
 
 #UKSofaShop #RomaRecliner #ReclinerSofa #LeatherSofa #SofaUK
 
@@ -213,7 +213,7 @@ The Roma Recliner 3+2 set, by the numbers.
 
 1-year frame guarantee, 14 days to change your mind.
 
-WhatsApp 07462 258934 · uksofashop.co.uk
+WhatsApp 07476 616022 · uksofashop.co.uk
 
 #UKSofaShop #RomaRecliner #ReclinerSofa #SofaSet #SofaUK
 
@@ -225,7 +225,7 @@ Swipe through the Roma 3+2 set at £599: black, brown, cream and grey real leath
 
 Free UK Mainland delivery, brought to your ground floor.
 
-WhatsApp 07462 258934 · uksofashop.co.uk
+WhatsApp 07476 616022 · uksofashop.co.uk
 
 #UKSofaShop #RomaRecliner #ReclinerSofa #LeatherSofa #SofaSet #SofaUK
 
@@ -241,7 +241,7 @@ The Sims High Back: four shapes from £749, made to order in grey, black, navy o
 
 Free UK Mainland delivery. 1-year frame guarantee.
 
-WhatsApp 07462 258934 · uksofashop.co.uk
+WhatsApp 07476 616022 · uksofashop.co.uk
 
 #UKSofaShop #SimsSofa #VelvetSofa #HighBackSofa #MadeToOrderSofa #SofaUK
 
@@ -253,7 +253,7 @@ The Sims High Back 3+2 set, by the numbers.
 
 Cash on delivery — nothing upfront.
 
-WhatsApp 07462 258934 · uksofashop.co.uk
+WhatsApp 07476 616022 · uksofashop.co.uk
 
 #UKSofaShop #SimsSofa #VelvetSofa #SofaSet #SofaUK
 
@@ -265,7 +265,7 @@ Swipe through the Sims High Back: 3+2 set in grey £749, 5 seater corner in navy
 
 Free UK Mainland delivery, and 14 days to change your mind.
 
-WhatsApp 07462 258934 · uksofashop.co.uk
+WhatsApp 07476 616022 · uksofashop.co.uk
 
 #UKSofaShop #SimsSofa #VelvetSofa #CornerSofa #UShapedSofa #MadeToOrderSofa
 
@@ -281,7 +281,7 @@ The Sims Scattered Back: a 3+2 set or a five-seater corner, £699 either way, ma
 
 Free UK Mainland delivery. 1-year frame guarantee.
 
-WhatsApp 07462 258934 · uksofashop.co.uk
+WhatsApp 07476 616022 · uksofashop.co.uk
 
 #UKSofaShop #SimsSofa #ScatterBackSofa #VelvetSofa #MadeToOrderSofa
 
@@ -293,7 +293,7 @@ The Sims Scattered Back 3+2 set, by the numbers.
 
 Cash on delivery — pay when it arrives.
 
-WhatsApp 07462 258934 · uksofashop.co.uk
+WhatsApp 07476 616022 · uksofashop.co.uk
 
 #UKSofaShop #SimsSofa #VelvetSofa #SofaSet #SofaUK
 
@@ -305,7 +305,7 @@ Swipe through the Sims Scattered Back — the 3+2 set and the five-seater corner
 
 Free UK Mainland delivery, and 14 days to change your mind.
 
-WhatsApp 07462 258934 · uksofashop.co.uk
+WhatsApp 07476 616022 · uksofashop.co.uk
 
 #UKSofaShop #SimsSofa #ScatterBackSofa #CornerSofa #VelvetSofa #MadeToOrderSofa
 
@@ -321,7 +321,7 @@ The Malibu High Back: four shapes from £399, made to order, every cushion inclu
 
 Free UK Mainland delivery. 1-year frame guarantee.
 
-WhatsApp 07462 258934 · uksofashop.co.uk
+WhatsApp 07476 616022 · uksofashop.co.uk
 
 #UKSofaShop #MalibuSofa #HighBackSofa #MadeToOrderSofa #SofaUK
 
@@ -333,7 +333,7 @@ The Malibu High Back 3+2 set, by the numbers.
 
 Cash on delivery — nothing upfront.
 
-WhatsApp 07462 258934 · uksofashop.co.uk
+WhatsApp 07476 616022 · uksofashop.co.uk
 
 #UKSofaShop #MalibuSofa #SofaSet #HighBackSofa #SofaUK
 
@@ -345,7 +345,7 @@ Swipe through the Malibu High Back: 2 seater £399, 3 seater £449, 3+2 set £74
 
 Free UK Mainland delivery, and 14 days to change your mind.
 
-WhatsApp 07462 258934 · uksofashop.co.uk
+WhatsApp 07476 616022 · uksofashop.co.uk
 
 #UKSofaShop #MalibuSofa #HighBackSofa #CornerSofa #MadeToOrderSofa #SofaUK
 
@@ -361,7 +361,7 @@ The Nova Electric Recliner in elephant grey tech leather: USB ports and cup hold
 
 Free UK Mainland delivery. Cash on delivery.
 
-WhatsApp 07462 258934 · uksofashop.co.uk
+WhatsApp 07476 616022 · uksofashop.co.uk
 
 #UKSofaShop #NovaRecliner #ElectricRecliner #ReclinerSofa #SofaUK
 
@@ -373,7 +373,7 @@ The Nova Electric Recliner 3 seater, by the numbers.
 
 1-year frame guarantee, 14 days to change your mind.
 
-WhatsApp 07462 258934 · uksofashop.co.uk
+WhatsApp 07476 616022 · uksofashop.co.uk
 
 #UKSofaShop #NovaRecliner #ElectricRecliner #ReclinerSofa #SofaUK
 
@@ -385,7 +385,7 @@ Swipe through the Nova Electric Recliner: 2 seater £550, 3 seater £599, 3+2 se
 
 Free UK Mainland delivery, brought to your ground floor.
 
-WhatsApp 07462 258934 · uksofashop.co.uk
+WhatsApp 07476 616022 · uksofashop.co.uk
 
 #UKSofaShop #NovaRecliner #ElectricRecliner #CornerSofa #ReclinerSofa #SofaUK
 
@@ -401,7 +401,7 @@ The Orlando 3+2 set at £999: black, brown, cream or grey real leather, with USB
 
 Free UK Mainland delivery. Cash on delivery.
 
-WhatsApp 07462 258934 · uksofashop.co.uk
+WhatsApp 07476 616022 · uksofashop.co.uk
 
 #UKSofaShop #OrlandoRecliner #ElectricRecliner #LeatherSofa #SofaUK
 
@@ -413,7 +413,7 @@ The Orlando Electric Recliner 3+2 set, by the numbers.
 
 1-year frame guarantee, 14 days to change your mind.
 
-WhatsApp 07462 258934 · uksofashop.co.uk
+WhatsApp 07476 616022 · uksofashop.co.uk
 
 #UKSofaShop #OrlandoRecliner #ElectricRecliner #SofaSet #LeatherSofa
 
@@ -425,7 +425,7 @@ Swipe through the Orlando Electric Recliner 3+2 set in black, brown, cream and g
 
 Free UK Mainland delivery, brought to your ground floor.
 
-WhatsApp 07462 258934 · uksofashop.co.uk
+WhatsApp 07476 616022 · uksofashop.co.uk
 
 #UKSofaShop #OrlandoRecliner #ElectricRecliner #LeatherSofa #ReclinerSofa #SofaUK
 
@@ -441,7 +441,7 @@ The Oxford Electric Corner, 240 × 240cm, in black or grey leather, with USB por
 
 Free UK Mainland delivery. Cash on delivery.
 
-WhatsApp 07462 258934 · uksofashop.co.uk
+WhatsApp 07476 616022 · uksofashop.co.uk
 
 #UKSofaShop #OxfordSofa #ElectricRecliner #CornerSofa #SofaUK
 
@@ -453,7 +453,7 @@ The Oxford Electric Corner, by the numbers.
 
 1-year frame guarantee, 14 days to change your mind.
 
-WhatsApp 07462 258934 · uksofashop.co.uk
+WhatsApp 07476 616022 · uksofashop.co.uk
 
 #UKSofaShop #OxfordSofa #ElectricRecliner #CornerSofa #LeatherSofa
 
@@ -465,7 +465,7 @@ Swipe to see the Oxford Electric Corner in both leathers. £999 either way, with
 
 Free UK Mainland delivery, brought to your ground floor.
 
-WhatsApp 07462 258934 · uksofashop.co.uk
+WhatsApp 07476 616022 · uksofashop.co.uk
 
 #UKSofaShop #OxfordSofa #ElectricRecliner #CornerSofa #ReclinerSofa #SofaUK
 
@@ -481,7 +481,7 @@ The Hannah Electric Corner, 290cm each way, in grey or beige, with USB ports and
 
 Free UK Mainland delivery. Cash on delivery.
 
-WhatsApp 07462 258934 · uksofashop.co.uk
+WhatsApp 07476 616022 · uksofashop.co.uk
 
 #UKSofaShop #HannahSofa #ElectricRecliner #CornerSofa #SofaUK
 
@@ -493,7 +493,7 @@ The Hannah Electric Corner, by the numbers.
 
 1-year frame guarantee, 14 days to change your mind.
 
-WhatsApp 07462 258934 · uksofashop.co.uk
+WhatsApp 07476 616022 · uksofashop.co.uk
 
 #UKSofaShop #HannahSofa #ElectricRecliner #CornerSofa #FabricSofa
 
@@ -505,7 +505,7 @@ Swipe to see the Hannah Electric Corner in both micro fabrics. £999 either way.
 
 Free UK Mainland delivery, brought to your ground floor.
 
-WhatsApp 07462 258934 · uksofashop.co.uk
+WhatsApp 07476 616022 · uksofashop.co.uk
 
 #UKSofaShop #HannahSofa #ElectricRecliner #CornerSofa #ReclinerSofa #SofaUK
 
@@ -521,7 +521,7 @@ The Bishop U-Shape, scattered back, 190 × 320 × 190cm in truffle Tokyo fabric.
 
 Free UK Mainland delivery. 1-year frame guarantee.
 
-WhatsApp 07462 258934 · uksofashop.co.uk
+WhatsApp 07476 616022 · uksofashop.co.uk
 
 #UKSofaShop #BishopSofa #UShapedSofa #ScatterBackSofa #MadeToOrderSofa
 
@@ -533,7 +533,7 @@ The Bishop U-Shape, by the numbers.
 
 Cash on delivery — nothing upfront.
 
-WhatsApp 07462 258934 · uksofashop.co.uk
+WhatsApp 07476 616022 · uksofashop.co.uk
 
 #UKSofaShop #BishopSofa #UShapedSofa #SofaUK
 
@@ -545,6 +545,6 @@ Swipe to see the Bishop whole: scattered back, truffle Tokyo fabric, 190 × 320 
 
 Free UK Mainland delivery, and 14 days to change your mind.
 
-WhatsApp 07462 258934 · uksofashop.co.uk
+WhatsApp 07476 616022 · uksofashop.co.uk
 
 #UKSofaShop #BishopSofa #UShapedSofa #MadeToOrderSofa #SofaUK

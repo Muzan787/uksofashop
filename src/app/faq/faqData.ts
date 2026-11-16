@@ -31,7 +31,7 @@ export function faqGroupsFor(
       },
       {
         q: 'Do you deliver to Northern Ireland or the Scottish Islands?',
-        a: `Not through the website: website orders are for UK Mainland only, and that includes the Isle of Wight and the Isles of Scilly. Get in touch before you order, at ${SUPPORT_EMAIL}, on 07462 258934 or on WhatsApp, and we’ll give you the details and arrange it with you directly.`,
+        a: `Not through the website: website orders are for UK Mainland only, and that includes the Isle of Wight and the Isles of Scilly. Get in touch before you order, at ${SUPPORT_EMAIL}, on 07476 616022 or on WhatsApp, and we’ll give you the details and arrange it with you directly.`,
       },
       {
         q: 'Do you deliver upstairs?',

@@ -13,7 +13,7 @@ import EditorialSchema from '@/components/Editorial/EditorialSchema'
  * page's own schema node.
  */
 const DESCRIPTION =
-  'Call 07462 258934 or email us about a sofa, a delivery, or whether something will fit. Mon–Fri 9am–6pm, Sat 10am–4pm, based in Blackburn.'
+  'Call 07476 616022 or email us about a sofa, a delivery, or whether something will fit. Mon–Fri 9am–6pm, Sat 10am–4pm, based in Blackburn.'
 
 export const metadata: Metadata = pageMetadata({
   title: 'Contact Us',

@@ -88,7 +88,7 @@ export default function FitCheckForm() {
         </p>
         <p className="m-0 mx-auto mt-2 max-w-[36ch] text-body-sm leading-relaxed text-ink-700">
           Someone will go through them and come back to you, usually the same working day. If it
-          is urgent, call us on 07462 258934 instead of waiting.
+          is urgent, call us on 07476 616022 instead of waiting.
         </p>
         <button
           type="button"
