@@ -68,7 +68,7 @@ export default function DeliveryDayPreparation() {
       </ul>
       <p>
         If you have already ordered and realise you need one of these, ring rather than wait —{' '}
-        <Link href="/contact">07476 616022</Link> — and we will sort it before the van is loaded.
+        <Link href="/contact">07462 258934</Link> — and we will sort it before the van is loaded.
       </p>
 
       <h2 id="slot">Confirm the day, and protect it</h2>

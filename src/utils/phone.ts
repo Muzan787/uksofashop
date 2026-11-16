@@ -3,11 +3,11 @@
 // One place that understands UK phone numbers.
 //
 // The WhatsApp links in src/utils/email.ts and the admin orders page build
-// wa.me URLs, which need a bare international number (447476616022 - no plus,
+// wa.me URLs, which need a bare international number (447462258934 - no plus,
 // no spaces). The previous inline version had a real bug: a number already
-// entered as "+447476616022" didn't start with "0", and didn't start with "44"
+// entered as "+447462258934" didn't start with "0", and didn't start with "44"
 // either because of the leading plus, so it fell through to the last branch and
-// became "44+447476616022" - a dead link, silently.
+// became "44+447462258934" - a dead link, silently.
 
 /** Digits only, with a leading + preserved if the user typed one. */
 function tidy(input: string): string {
@@ -20,10 +20,10 @@ function tidy(input: string): string {
  * Convert any way a customer might type a UK mobile into the bare
  * international form wa.me expects. Returns null if it isn't a valid UK mobile.
  *
- *   07476 616022    -> 447476616022
- *   +44 7476 616022 -> 447476616022
- *   447476616022    -> 447476616022
- *   0044 7476616022 -> 447476616022
+ *   07462 258934    -> 447462258934
+ *   +44 7462 258934 -> 447462258934
+ *   447462258934    -> 447462258934
+ *   0044 7462258934 -> 447462258934
  */
 export function normaliseUkMobile(input: string): string | null {
   let n = tidy(input)
@@ -43,7 +43,7 @@ export function isValidUkMobile(input: string): boolean {
   return normaliseUkMobile(input) !== null
 }
 
-/** 447476616022 -> 07476 616022, for reading back to a human. */
+/** 447462258934 -> 07462 258934, for reading back to a human. */
 export function formatUkMobile(input: string): string {
   const n = normaliseUkMobile(input)
   if (!n) return input

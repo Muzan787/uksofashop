@@ -75,7 +75,7 @@ ${ARTICLES_BY_DATE.map(a => `- [${a.title}](${url(`/journal/${a.slug}`)}): ${a.d
 
 - [About UK Sofa Shop](${url('/about')})
 - [Blackburn showroom](${url('/showroom')}): ${ADDRESS.street}, ${ADDRESS.locality} ${ADDRESS.postcode}. By appointment.
-- [Contact](${url('/contact')}): 07476 616022, Mon-Fri 9am-6pm, Sat 10am-4pm.
+- [Contact](${url('/contact')}): 07462 258934, Mon-Fri 9am-6pm, Sat 10am-4pm.
 - [Customer reviews](${url('/reviews')})
 
 ## Facts worth quoting correctly

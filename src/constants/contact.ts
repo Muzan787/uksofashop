@@ -11,19 +11,19 @@
 // "tel:447476616022" (a number no phone can dial) on the product page.
 
 /** E.164. The only format structured data and Google Business Profile want. */
-export const PHONE_E164 = '+447476616022'
+export const PHONE_E164 = '+447462258934'
 
 /** How the number is written for a human to read. UK national format. */
-export const PHONE_DISPLAY = '07476 616022'
+export const PHONE_DISPLAY = '07462 258934'
 
 /**
  * href for a click-to-call link. Always E.164 with the leading "+": a bare
- * "tel:447476616022" is dialled as a domestic number and fails.
+ * "tel:447462258934" is dialled as a domestic number and fails.
  */
 export const PHONE_HREF = `tel:${PHONE_E164}`
 
 /** wa.me wants the international number with no "+" and no spaces. */
-const WHATSAPP_NUMBER = '447476616022'
+const WHATSAPP_NUMBER = '447462258934'
 
 /** A wa.me link, optionally pre-filled with a message. */
 export function whatsAppHref(message?: string): string {
