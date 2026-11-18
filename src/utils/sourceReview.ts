@@ -46,7 +46,7 @@ export const REVIEW_HELP: Record<ReviewReason, string> = {
   no_evidence: 'Nothing recorded where this customer came from. Ask them how they found us and record the answer.',
 }
 
-const META_TAGS = ['fb', 'ig', 'meta', 'facebook', 'instagram']
+const META_TAGS = ['fb', 'ig', 'meta', 'facebook', 'instagram', 'msg', 'an']
 
 export function reviewReason(o: ReviewOrder): ReviewReason | null {
   if (o.is_test) return null

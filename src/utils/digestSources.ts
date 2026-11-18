@@ -46,12 +46,14 @@ export interface SourceOrder {
 
 const META_UTM = /^(meta|facebook|fb|instagram|ig)$/i
 const GOOGLE_UTM = /^(google|adwords|gads)$/i
+const META_PLACEMENT_UTM = /^(msg|an)$/i
 
 export function orderSource(o: SourceOrder): SourceKey {
   const staff = o.manual_acquisition_source
   if (staff === 'meta' || staff === 'google' || staff === 'direct' || staff === 'referral' || staff === 'other') return staff
   if (META_UTM.test(o.utm_source?.trim() ?? '') || o.fbclid || o.meta_fbc) return 'meta'
   if (GOOGLE_UTM.test(o.utm_source?.trim() ?? '') || o.gclid || o.gbraid || o.wbraid) return 'google'
+  if (META_PLACEMENT_UTM.test(o.utm_source?.trim() ?? '')) return 'meta'
   if (o.channel === 'phone') return 'phone'
   if (o.source === 'whatsapp') return 'whatsapp'
   return 'direct'

@@ -72,6 +72,10 @@ const order = (over = {}) => ({ status: 'confirmed', is_test: false, manual_acqu
 test('source review lists conflicts, tag-only and no-evidence orders only', () => {
   assert.equal(r.reviewReason(order({ fbclid: 'f', gclid: 'g' })), 'conflict')
   assert.equal(r.reviewReason(order({ utm_source: 'fb' })), 'tag_only')
+  for (const source of ['msg', 'an']) {
+    assert.equal(r.reviewReason(order({ utm_source: source })), 'tag_only')
+    assert.equal(r.automaticSource(order({ utm_source: source })), 'Meta tag only')
+  }
   assert.equal(r.reviewReason(order()), 'no_evidence')
 })
 

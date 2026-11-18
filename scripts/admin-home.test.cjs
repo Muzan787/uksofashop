@@ -60,6 +60,10 @@ test('confirmed orders are counted by where they came from', () => {
   assert.equal(orderSource(blank), 'direct')
   assert.equal(orderSource({ ...blank, utm_source: 'meta' }), 'meta')
   assert.equal(orderSource({ ...blank, utm_source: 'Facebook' }), 'meta')
+  for (const source of ['msg', 'an']) {
+    assert.equal(orderSource({ ...blank, utm_source: source }), 'meta')
+    assert.equal(orderSource({ ...blank, utm_source: source, gclid: 'existing' }), 'google')
+  }
   assert.equal(orderSource({ ...blank, meta_fbc: 'fb.1.x' }), 'meta')
   assert.equal(orderSource({ ...blank, gclid: 'g' }), 'google')
   assert.equal(orderSource({ ...blank, source: 'whatsapp', channel: 'whatsapp' }), 'whatsapp')
